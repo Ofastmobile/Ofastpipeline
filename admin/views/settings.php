@@ -19,7 +19,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
     <!-- ── DEFAULT PIPELINE MESSAGES ─────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3>📝 Default Pipeline Messages</h3>
+        <h3> Default Pipeline Messages</h3>
         <p class="ofp-hint">
             These are the default messages pre-filled when a new client is onboarded.
             Each client can customise their own messages from their dashboard → Pipeline Settings.<br>
@@ -49,7 +49,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
     <!-- ── SMTP ───────────────────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3>📧 SMTP Configuration</h3>
+        <h3> SMTP Configuration</h3>
         <p class="ofp-hint">
             Only fill this in if <strong>Ofast Toolkit SMTP</strong> is not active on this site.
             When Ofast Toolkit SMTP is enabled (priority 999), it handles all delivery automatically
@@ -96,17 +96,16 @@ include OFP_PATH . 'admin/views/partials/header.php';
             </div>
         </div>
         <div class="ofp-form-actions" style="border:0;padding:0;margin-top:12px;">
-            <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;">
-                <?php wp_nonce_field( 'ofp_test_email' ); ?>
-                <input type="hidden" name="action" value="ofp_test_email">
-                <button type="submit" class="button">📨 Send Test Email to Me</button>
-            </form>
+            <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_test_email' ), 'ofp_test_email' ) ); ?>"
+               class="button"
+               onclick="return confirm('Send a test email to your admin address?');"
+            > Send Test Email to Me</a>
         </div>
     </div>
 
     <!-- ── PAYMENT GATEWAY ────────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3>💳 Payment Gateway</h3>
+        <h3> Payment Gateway</h3>
         <p class="ofp-hint">
             Select your active payment provider. All providers create dedicated virtual accounts
             per client. Switching provider here requires no code changes — only credentials below.
@@ -187,7 +186,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
     <!-- ── Africa's Talking ───────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3>📱 Africa's Talking (SMS & Voice)</h3>
+        <h3> Africa's Talking (SMS & Voice)</h3>
         <div class="ofp-form-grid">
             <div class="ofp-field">
                 <label>AT Username</label>
@@ -215,7 +214,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
     <!-- ── BulkSMS Nigeria ────────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3>📨 BulkSMS Nigeria (Fallback SMS)</h3>
+        <h3> BulkSMS Nigeria (Fallback SMS)</h3>
         <div class="ofp-form-grid">
             <div class="ofp-field">
                 <label>BulkSMS API Key</label>
@@ -232,7 +231,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
     <!-- ── Cloudflare Turnstile ───────────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3>🛡️ Cloudflare Turnstile</h3>
+        <h3> Cloudflare Turnstile</h3>
         <p class="ofp-hint">Bot protection on lead capture forms, /login, and /signup. Leave blank during local development — Turnstile is automatically bypassed when no secret key is set.</p>
         <div class="ofp-form-grid">
             <div class="ofp-field">
@@ -249,7 +248,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
     <!-- ── Property Listing Fee ──────────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3>🏠 Property Listing Fee</h3>
+        <h3> Property Listing Fee</h3>
         <div class="ofp-form-grid">
             <div class="ofp-field">
                 <label>Monthly Listing Fee (NGN)</label>
@@ -265,6 +264,71 @@ include OFP_PATH . 'admin/views/partials/header.php';
     </div>
 
 </form>
+
+<div class="ofp-settings-section">
+    <h3>Plans &amp; Pricing</h3>
+    <p class="ofp-hint">
+        Monthly CRM plan fees, one-time setup fees, and the property listing fee.
+        These values are read live across signup, wp-admin client creation, and payment amount matching.
+    </p>
+
+    <?php
+    $ofp_plan_prices = OFP_Subscription::get_plan_prices();
+    $ofp_setup_fees  = OFP_Subscription::get_setup_fees();
+    $ofp_listing_fee = OFP_Subscription::get_listing_fee();
+    $ofp_plan_labels = [
+        'starter' => 'Starter',
+        'growth'  => 'Growth',
+        'pro'     => 'Pro',
+    ];
+    ?>
+
+    <form method="post" action="">
+        <?php wp_nonce_field( 'ofp_save_plan_pricing_action', 'ofp_plan_pricing_nonce' ); ?>
+
+        <table class="form-table" role="presentation">
+            <?php foreach ( OFP_Subscription::PLAN_KEYS as $ofp_plan ) : ?>
+                <tr>
+                    <th scope="row"><?php echo esc_html( $ofp_plan_labels[ $ofp_plan ] ); ?> Plan</th>
+                    <td>
+                        <label style="margin-right:24px;">
+                            Monthly fee (NGN)
+                            <input type="number" step="0.01" min="0"
+                                   name="price_<?php echo esc_attr( $ofp_plan ); ?>"
+                                   value="<?php echo esc_attr( $ofp_plan_prices[ $ofp_plan ] ); ?>"
+                                   style="width:140px;">
+                        </label>
+                        <label>
+                            Setup fee (NGN, one-time)
+                            <input type="number" step="0.01" min="0"
+                                   name="setup_<?php echo esc_attr( $ofp_plan ); ?>"
+                                   value="<?php echo esc_attr( $ofp_setup_fees[ $ofp_plan ] ); ?>"
+                                   style="width:140px;">
+                        </label>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            <tr>
+                <th scope="row">Property Listing Fee</th>
+                <td>
+                    <label>
+                        Monthly fee per property (NGN)
+                        <input type="number" step="0.01" min="0"
+                               name="listing_fee"
+                               value="<?php echo esc_attr( $ofp_listing_fee ); ?>"
+                               style="width:140px;">
+                    </label>
+                </td>
+            </tr>
+        </table>
+
+        <p class="submit">
+            <button type="submit" name="ofp_save_plan_pricing" value="1" class="button button-primary">
+                Save Pricing
+            </button>
+        </p>
+    </form>
+</div>
 
 <script>
 // Show/hide gateway credential fields based on selected provider.

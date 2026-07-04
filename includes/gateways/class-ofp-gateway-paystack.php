@@ -83,6 +83,56 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
     }
 
     /**
+     * Initiate a Paystack checkout transaction for credit top-up.
+     *
+     * @param array $args
+     * @return string|null
+     */
+    public function initiate_transaction( array $args ): ?string {
+        $secret_key = get_option( 'ofp_paystack_secret_key' );
+
+        if ( ! $secret_key ) {
+            error_log( 'OFP Paystack initiate_transaction — missing secret key' );
+            return null;
+        }
+
+        $amount_kobo = (int) round( (float) $args['amount'] * 100 );
+
+        $response = wp_remote_post( 'https://api.paystack.co/transaction/initialize', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $secret_key,
+                'Content-Type'  => 'application/json',
+            ],
+            'body' => wp_json_encode( [
+                'email'        => $args['email'],
+                'amount'       => $amount_kobo,
+                'currency'     => 'NGN',
+                'reference'    => $args['reference'],
+                'callback_url' => $args['redirect_url'],
+                'metadata'     => [
+                    'client_id'   => $args['client_id'],
+                    'description' => $args['description'],
+                ],
+            ] ),
+            'timeout' => 20,
+        ] );
+
+        if ( is_wp_error( $response ) ) {
+            error_log( 'OFP Paystack initiate_transaction request error: ' . $response->get_error_message() );
+            return null;
+        }
+
+        $body = json_decode( wp_remote_retrieve_body( $response ) );
+
+        if ( empty( $body->status ) || empty( $body->data->authorization_url ) ) {
+            error_log( 'OFP Paystack initiate_transaction unexpected response: ' . wp_remote_retrieve_body( $response ) );
+            return null;
+        }
+
+        return $body->data->authorization_url;
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function handle_webhook( WP_REST_Request $request ): WP_REST_Response {
@@ -103,6 +153,14 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         // Only process successful charges.
         if ( $event !== 'charge.success' ) {
             return new WP_REST_Response( [ 'status' => 'ignored' ], 200 );
+        }
+
+        $reference = $data->data->reference ?? '';
+
+        if ( $reference && OFP_Payment::is_credit_topup_reference( $reference ) ) {
+            $amount_paid = ( (float) ( $data->data->amount ?? 0 ) ) / 100;
+            OFP_Payment::confirm_credit_topup( $reference, $amount_paid, (string) ( $data->data->id ?? '' ) );
+            return new WP_REST_Response( [ 'status' => 'credit_topup_processed' ], 200 );
         }
 
         // Extract client ID from metadata.

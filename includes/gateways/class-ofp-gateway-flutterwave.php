@@ -82,6 +82,60 @@ class OFP_Gateway_Flutterwave implements OFP_Gateway_Interface {
     }
 
     /**
+     * Initiate a Flutterwave checkout transaction for credit top-up.
+     *
+     * @param array $args
+     * @return string|null
+     */
+    public function initiate_transaction( array $args ): ?string {
+        $secret_key = get_option( 'ofp_flutterwave_secret_key' );
+
+        if ( ! $secret_key ) {
+            error_log( 'OFP Flutterwave initiate_transaction — missing secret key' );
+            return null;
+        }
+
+        $response = wp_remote_post( 'https://api.flutterwave.com/v3/payments', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $secret_key,
+                'Content-Type'  => 'application/json',
+            ],
+            'body' => wp_json_encode( [
+                'tx_ref'       => $args['reference'],
+                'amount'       => $args['amount'],
+                'currency'     => 'NGN',
+                'redirect_url' => $args['redirect_url'],
+                'customer'     => [
+                    'email'       => $args['email'],
+                    'name'        => $args['name'],
+                    'phonenumber' => $args['phone'],
+                ],
+                'customizations' => [
+                    'title' => $args['description'],
+                ],
+                'meta' => [
+                    'client_id' => $args['client_id'],
+                ],
+            ] ),
+            'timeout' => 20,
+        ] );
+
+        if ( is_wp_error( $response ) ) {
+            error_log( 'OFP Flutterwave initiate_transaction request error: ' . $response->get_error_message() );
+            return null;
+        }
+
+        $body = json_decode( wp_remote_retrieve_body( $response ) );
+
+        if ( empty( $body->status ) || $body->status !== 'success' || empty( $body->data->link ) ) {
+            error_log( 'OFP Flutterwave initiate_transaction unexpected response: ' . wp_remote_retrieve_body( $response ) );
+            return null;
+        }
+
+        return $body->data->link;
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function handle_webhook( WP_REST_Request $request ): WP_REST_Response {
@@ -102,8 +156,15 @@ class OFP_Gateway_Flutterwave implements OFP_Gateway_Interface {
             return new WP_REST_Response( [ 'status' => 'ignored' ], 200 );
         }
 
+        $tx_ref = $data->data->tx_ref ?? '';
+
+        if ( $tx_ref && OFP_Payment::is_credit_topup_reference( $tx_ref ) ) {
+            $amount_paid = (float) ( $data->data->amount ?? 0 );
+            OFP_Payment::confirm_credit_topup( $tx_ref, $amount_paid, (string) ( $data->data->id ?? '' ) );
+            return new WP_REST_Response( [ 'status' => 'credit_topup_processed' ], 200 );
+        }
+
         // Extract client ID from the tx_ref "ofp_client_{id}".
-        $tx_ref    = $data->data->tx_ref ?? '';
         $amount    = (float) ( $data->data->amount ?? 0 );
         $flw_ref   = sanitize_text_field( $data->data->flw_ref ?? '' );
 

@@ -93,6 +93,52 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
     }
 
     /**
+     * Initiate a Monnify checkout transaction for credit top-up.
+     *
+     * @param array $args
+     * @return string|null
+     */
+    public function initiate_transaction( array $args ): ?string {
+        $token = $this->get_access_token();
+        if ( ! $token ) {
+            error_log( 'OFP Monnify initiate_transaction — failed to obtain access token' );
+            return null;
+        }
+
+        $response = wp_remote_post( $this->base_url . '/api/v1/merchant/transactions/init-transaction', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $token,
+                'Content-Type'  => 'application/json',
+            ],
+            'body' => wp_json_encode( [
+                'amount'             => $args['amount'],
+                'customerName'       => $args['name'],
+                'customerEmail'      => $args['email'],
+                'paymentReference'   => $args['reference'],
+                'paymentDescription' => $args['description'],
+                'currencyCode'       => 'NGN',
+                'contractCode'       => $this->contract_code,
+                'redirectUrl'        => $args['redirect_url'],
+            ] ),
+            'timeout' => 20,
+        ] );
+
+        if ( is_wp_error( $response ) ) {
+            error_log( 'OFP Monnify initiate_transaction request error: ' . $response->get_error_message() );
+            return null;
+        }
+
+        $body = json_decode( wp_remote_retrieve_body( $response ) );
+
+        if ( empty( $body->requestSuccessful ) || empty( $body->responseBody->checkoutUrl ) ) {
+            error_log( 'OFP Monnify initiate_transaction unexpected response: ' . wp_remote_retrieve_body( $response ) );
+            return null;
+        }
+
+        return $body->responseBody->checkoutUrl;
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function handle_webhook( WP_REST_Request $request ): WP_REST_Response {
@@ -112,6 +158,18 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
         // Only process successful transactions.
         if ( ( $data->eventType ?? '' ) !== 'SUCCESSFUL_TRANSACTION' ) {
             return new WP_REST_Response( [ 'status' => 'ignored' ], 200 );
+        }
+
+        $topup_reference = $data->eventData->paymentReference ?? '';
+
+        if ( $topup_reference && OFP_Payment::is_credit_topup_reference( $topup_reference ) ) {
+            $amount_paid = (float) ( $data->eventData->amountPaid ?? 0 );
+            OFP_Payment::confirm_credit_topup(
+                $topup_reference,
+                $amount_paid,
+                (string) ( $data->eventData->transactionReference ?? '' )
+            );
+            return new WP_REST_Response( [ 'status' => 'credit_topup_processed' ], 200 );
         }
 
         $account_ref = $data->eventData->product->reference ?? '';

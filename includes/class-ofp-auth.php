@@ -239,19 +239,25 @@ class OFP_Auth {
         return true;
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // PASSWORD RESET (Phase 13)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const RESET_TOKEN_TTL_MINUTES = 30;
+
     /**
-     * Generate a password reset token and store it temporarily in wp_options.
-     * A proper reset flow would email this to the client and verify it on submission.
+     * Request a password reset email for a client.
+     * Generates a token, hashes it, saves to DB, and sends the email.
      *
-     * @param  string $email Client email.
-     * @return string|false  The reset token, or false if email not found.
+     * @param string $email Client email address
+     * @return bool True if successful, false if email not found
      */
-    public static function generate_reset_token( string $email ): string|false {
+    public static function request_password_reset( string $email ): bool {
         global $wpdb;
 
         $client = $wpdb->get_row(
             $wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1",
+                "SELECT * FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1",
                 sanitize_email( $email )
             )
         );
@@ -260,16 +266,119 @@ class OFP_Auth {
             return false;
         }
 
-        $token   = bin2hex( random_bytes( 32 ) );
-        $expires = time() + 3600; // 1 hour
+        // Generate 32 bytes of secure randomness
+        $raw_token = bin2hex( random_bytes( 32 ) );
+        $hashed_token = self::hash_reset_token( $raw_token );
+        $expires_at = gmdate( 'Y-m-d H:i:s', time() + ( self::RESET_TOKEN_TTL_MINUTES * 60 ) );
 
-        update_option(
-            'ofp_reset_' . $client->id,
-            [ 'token' => $token, 'expires' => $expires ],
-            false // do not autoload
+        $updated = $wpdb->update(
+            $wpdb->prefix . 'ofp_clients',
+            [
+                'reset_token_hash'    => $hashed_token,
+                'reset_token_expires' => $expires_at,
+            ],
+            [ 'id' => $client->id ]
         );
 
-        return $token;
+        if ( false === $updated ) {
+            return false;
+        }
+
+        $reset_url = add_query_arg(
+            [
+                'token' => $raw_token,
+                'email' => rawurlencode( $client->email ),
+            ],
+            home_url( '/reset-password' )
+        );
+
+        // Uses the existing mailer method which accepts ($client, $reset_url)
+        OFP_Mailer::send_password_reset( $client, $reset_url );
+
+        return true;
+    }
+
+    /**
+     * Verify if a reset token is valid and not expired.
+     *
+     * @param string $email
+     * @param string $raw_token
+     * @return bool True if valid, false if invalid or expired
+     */
+    public static function verify_reset_token( string $email, string $raw_token ): bool {
+        global $wpdb;
+
+        $client = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT id, reset_token_hash, reset_token_expires FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1",
+                sanitize_email( $email )
+            )
+        );
+
+        if ( ! $client || empty( $client->reset_token_hash ) || empty( $client->reset_token_expires ) ) {
+            return false;
+        }
+
+        // Check expiration
+        if ( strtotime( $client->reset_token_expires ) < time() ) {
+            return false;
+        }
+
+        // Verify token hash
+        $expected_hash = self::hash_reset_token( $raw_token );
+        if ( ! hash_equals( $expected_hash, $client->reset_token_hash ) ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Complete the password reset. Verifies token and updates password.
+     *
+     * @param string $email
+     * @param string $raw_token
+     * @param string $new_password
+     * @return bool
+     */
+    public static function complete_password_reset( string $email, string $raw_token, string $new_password ): bool {
+        global $wpdb;
+
+        if ( ! self::verify_reset_token( $email, $raw_token ) ) {
+            return false;
+        }
+
+        $new_hash = password_hash( $new_password, PASSWORD_BCRYPT );
+
+        $updated = $wpdb->update(
+            $wpdb->prefix . 'ofp_clients',
+            [
+                'password'            => $new_hash,
+                'reset_token_hash'    => null, // Consume the token
+                'reset_token_expires' => null,
+            ],
+            [ 'email' => sanitize_email( $email ) ]
+        );
+
+        // Delete any active sessions so they have to log in again
+        if ( $updated ) {
+            $client_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE email = %s", sanitize_email( $email ) ) );
+            if ( $client_id ) {
+                $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'client_id' => $client_id ] );
+            }
+        }
+
+        return (bool) $updated;
+    }
+
+    /**
+     * Hash the raw reset token for secure DB storage.
+     *
+     * @param string $raw_token
+     * @return string
+     */
+    private static function hash_reset_token( string $raw_token ): string {
+        return hash( 'sha256', $raw_token );
     }
 
     // ─────────────────────────────────────────────────────────────────────────

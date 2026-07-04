@@ -51,6 +51,7 @@ class OFP_Admin_Menu {
         add_action( 'admin_post_ofp_restore_client',  [ $this, 'handle_restore_client' ] );
         add_action( 'admin_post_ofp_preview_client',  [ $this, 'handle_preview_client' ] );
         add_action( 'admin_post_ofp_topup_credit',    [ $this, 'handle_topup_credit' ] );
+        add_action( 'admin_init', [ $this, 'handle_save_plan_pricing' ] );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -433,6 +434,50 @@ class OFP_Admin_Menu {
         $this->set_message( '✅ Admin removed.', 'success' );
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-admins' ) );
         exit;
+    }
+
+    /**
+     * Handles the Plans & Pricing form submission from Settings.
+     *
+     * @return void
+     */
+    public function handle_save_plan_pricing(): void {
+        if ( empty( $_POST['ofp_save_plan_pricing'] ) ) {
+            return;
+        }
+
+        if ( ! OFP_Auth::is_admin_user() ) {
+            return;
+        }
+
+        if ( OFP_Auth::current_admin_role() !== 'super_admin' ) {
+            wp_die( 'Access denied. Only the super admin can change pricing.' );
+        }
+
+        check_admin_referer( 'ofp_save_plan_pricing_action', 'ofp_plan_pricing_nonce' );
+
+        $plan_prices = [];
+        $setup_fees  = [];
+
+        foreach ( OFP_Subscription::PLAN_KEYS as $plan ) {
+            $plan_prices[ $plan ] = isset( $_POST[ "price_{$plan}" ] )
+                ? (float) $_POST[ "price_{$plan}" ]
+                : 0.0;
+
+            $setup_fees[ $plan ] = isset( $_POST[ "setup_{$plan}" ] )
+                ? (float) $_POST[ "setup_{$plan}" ]
+                : 0.0;
+        }
+
+        $listing_fee = isset( $_POST['listing_fee'] ) ? (float) $_POST['listing_fee'] : 0.0;
+
+        OFP_Subscription::save_pricing( $plan_prices, $setup_fees, $listing_fee );
+
+        add_action( 'admin_notices', function () {
+            echo '<div class="notice notice-success is-dismissible"><p>'
+                . esc_html__( 'Plan pricing updated.', 'ofast-pipeline' )
+                . '</p></div>';
+        } );
     }
 
     /**

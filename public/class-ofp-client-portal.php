@@ -49,6 +49,8 @@ class OFP_Client_Portal {
         // ── Public routes (no login required) ────────────────────────────────
         'login'             => 'login.php',
         'signup'            => 'signup.php',            // v2.1 — self-serve onboarding
+        'forgot-password'   => 'forgot-password.php',   // v2.2 — Phase 13: password reset request
+        'reset-password'    => 'reset-password.php',    // v2.2 — Phase 13: set new password
 
         // ── Private routes (login required) ──────────────────────────────────
         'dashboard'         => 'dashboard.php',
@@ -70,6 +72,8 @@ class OFP_Client_Portal {
     private array $public_routes = [
         'login',
         'signup',
+        'forgot-password',
+        'reset-password',
     ];
 
     /**

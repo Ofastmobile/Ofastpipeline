@@ -42,6 +42,114 @@ class OFP_Subscription {
         'pro'     => 75000,
     ];
 
+    const PLAN_KEYS = [ 'starter', 'growth', 'pro' ];
+
+    const DEFAULT_PLAN_PRICES = [
+        'starter' => 25000.00,
+        'growth'  => 45000.00,
+        'pro'     => 75000.00,
+    ];
+
+    const DEFAULT_SETUP_FEES = [
+        'starter' => 15000.00,
+        'growth'  => 25000.00,
+        'pro'     => 40000.00,
+    ];
+
+    const DEFAULT_LISTING_FEE = 7500.00;
+
+    /**
+     * Returns all CRM monthly plan prices.
+     *
+     * @return array
+     */
+    public static function get_plan_prices(): array {
+        $prices = [];
+        foreach ( self::PLAN_KEYS as $plan ) {
+            $prices[ $plan ] = (float) get_option( "ofp_plan_price_{$plan}", self::DEFAULT_PLAN_PRICES[ $plan ] );
+        }
+
+        return $prices;
+    }
+
+    /**
+     * Returns all CRM setup fees.
+     *
+     * @return array
+     */
+    public static function get_setup_fees(): array {
+        $fees = [];
+        foreach ( self::PLAN_KEYS as $plan ) {
+            $fees[ $plan ] = (float) get_option( "ofp_plan_setup_fee_{$plan}", self::DEFAULT_SETUP_FEES[ $plan ] );
+        }
+
+        return $fees;
+    }
+
+    /**
+     * Get a single plan monthly price.
+     *
+     * @param string|null $plan
+     * @return float
+     */
+    public static function get_plan_price( ?string $plan ): float {
+        if ( ! $plan || ! in_array( $plan, self::PLAN_KEYS, true ) ) {
+            return 0.0;
+        }
+
+        return (float) get_option( "ofp_plan_price_{$plan}", self::DEFAULT_PLAN_PRICES[ $plan ] );
+    }
+
+    /**
+     * Get a single setup fee.
+     *
+     * @param string|null $plan
+     * @return float
+     */
+    public static function get_setup_fee( ?string $plan ): float {
+        if ( ! $plan || ! in_array( $plan, self::PLAN_KEYS, true ) ) {
+            return 0.0;
+        }
+
+        return (float) get_option( "ofp_plan_setup_fee_{$plan}", self::DEFAULT_SETUP_FEES[ $plan ] );
+    }
+
+    /**
+     * Get the listing fee.
+     *
+     * @return float
+     */
+    public static function get_listing_fee(): float {
+        return (float) get_option( 'ofp_listing_fee_monthly', self::DEFAULT_LISTING_FEE );
+    }
+
+    /**
+     * Persist pricing values.
+     *
+     * @param array $plan_prices
+     * @param array $setup_fees
+     * @param float $listing_fee
+     * @return bool
+     */
+    public static function save_pricing( array $plan_prices, array $setup_fees, float $listing_fee ): bool {
+        foreach ( self::PLAN_KEYS as $plan ) {
+            $price = isset( $plan_prices[ $plan ] )
+                ? max( 0.0, (float) $plan_prices[ $plan ] )
+                : self::DEFAULT_PLAN_PRICES[ $plan ];
+
+            $fee = isset( $setup_fees[ $plan ] )
+                ? max( 0.0, (float) $setup_fees[ $plan ] )
+                : self::DEFAULT_SETUP_FEES[ $plan ];
+
+            update_option( "ofp_plan_price_{$plan}", $price );
+            update_option( "ofp_plan_setup_fee_{$plan}", $fee );
+        }
+
+        update_option( 'ofp_listing_fee_monthly', max( 0.0, $listing_fee ) );
+
+        return true;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // CREATE
     // ─────────────────────────────────────────────────────────────────────────
@@ -226,7 +334,7 @@ class OFP_Subscription {
         );
 
         if ( $has_crm && $client ) {
-            $total += self::CRM_PRICES[ $client->plan ] ?? 0;
+            $total += self::get_plan_price( $client->plan );
         }
 
         // Add listing fee if client has an active or pending listing subscription.
@@ -241,7 +349,7 @@ class OFP_Subscription {
         );
 
         if ( $has_listing ) {
-            $total += (float) get_option( 'ofp_listing_fee_monthly', 7500 );
+            $total += self::get_listing_fee();
         }
 
         return $total;
@@ -434,11 +542,11 @@ class OFP_Subscription {
      */
     public static function resolve_amount( string $type, ?string $plan ): float {
         if ( $type === 'crm' ) {
-            return (float) ( self::CRM_PRICES[ $plan ] ?? 0 );
+            return self::get_plan_price( $plan );
         }
 
         if ( $type === 'listing' ) {
-            return (float) get_option( 'ofp_listing_fee_monthly', 7500 );
+            return self::get_listing_fee();
         }
 
         return 0.0;

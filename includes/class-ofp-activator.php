@@ -82,6 +82,15 @@ class OFP_Activator {
         if ( empty( $column_exists ) ) {
             $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN trashed_at DATETIME DEFAULT NULL AFTER business_category" );
         }
+
+        // reset_token_hash and reset_token_expires columns on ofp_clients (added for Phase 13 password reset).
+        $reset_column_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'reset_token_hash'"
+        );
+        if ( empty( $reset_column_exists ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN reset_token_hash VARCHAR(64) DEFAULT NULL AFTER trashed_at" );
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN reset_token_expires DATETIME DEFAULT NULL AFTER reset_token_hash" );
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

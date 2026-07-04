@@ -260,7 +260,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                 >
             </div>
 
-            <a class="ofp-forgot" href="<?php echo esc_url( home_url( '/login?reset=1' ) ); ?>">
+            <a class="ofp-forgot" href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>">
                 Forgot password?
             </a>
 

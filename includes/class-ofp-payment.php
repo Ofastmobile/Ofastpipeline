@@ -94,6 +94,123 @@ class OFP_Payment {
     }
 
     /**
+     * Initiate a self-serve credit top-up checkout with the active gateway.
+     *
+     * @param int    $client_id
+     * @param string $channel
+     * @param float  $amount
+     * @return string|null
+     */
+    public static function initiate_credit_topup( int $client_id, string $channel, float $amount ): ?string {
+        if ( ! in_array( $channel, [ 'sms', 'voice' ], true ) ) {
+            return null;
+        }
+
+        $client = OFP_Client::get( $client_id );
+        if ( ! $client ) {
+            return null;
+        }
+
+        $reference = self::generate_credit_topup_reference( $client_id, $channel );
+        $gateway   = self::get_gateway();
+
+        if ( ! $gateway || ! method_exists( $gateway, 'initiate_transaction' ) ) {
+            error_log( 'OFP_Payment::initiate_credit_topup — active gateway missing initiate_transaction().' );
+            return null;
+        }
+
+        return $gateway->initiate_transaction( [
+            'client_id'    => $client_id,
+            'amount'       => $amount,
+            'reference'    => $reference,
+            'email'        => $client->email,
+            'name'         => $client->owner_name,
+            'phone'        => $client->phone,
+            'description'  => ucfirst( $channel ) . ' Credit Top-Up',
+            'redirect_url' => home_url( '/credits?topup_status=pending' ),
+        ] );
+    }
+
+    /**
+     * Build a unique credit top-up reference.
+     *
+     * @param int    $client_id
+     * @param string $channel
+     * @return string
+     */
+    public static function generate_credit_topup_reference( int $client_id, string $channel ): string {
+        return sprintf( 'ofp_credit_%s_%d_%s', $channel, $client_id, wp_generate_password( 8, false, false ) );
+    }
+
+    /**
+     * Check whether a reference is for a self-serve credit top-up.
+     *
+     * @param string $reference
+     * @return bool
+     */
+    public static function is_credit_topup_reference( string $reference ): bool {
+        return (bool) preg_match( '/^ofp_credit_(sms|voice)_(\d+)_/', $reference );
+    }
+
+    /**
+     * Parse a credit top-up reference into its channel and client id.
+     *
+     * @param string $reference
+     * @return array|null
+     */
+    public static function parse_credit_topup_reference( string $reference ): ?array {
+        if ( ! preg_match( '/^ofp_credit_(sms|voice)_(\d+)_/', $reference, $matches ) ) {
+            return null;
+        }
+
+        return [
+            'channel'   => $matches[1],
+            'client_id' => (int) $matches[2],
+        ];
+    }
+
+    /**
+     * Confirm a top-up payment and credit the client balance.
+     *
+     * @param string $reference
+     * @param float  $amount_paid
+     * @param string $provider_ref
+     * @return bool
+     */
+    public static function confirm_credit_topup( string $reference, float $amount_paid, string $provider_ref = '' ): bool {
+        $parsed = self::parse_credit_topup_reference( $reference );
+        if ( ! $parsed ) {
+            return false;
+        }
+
+        $client = OFP_Client::get( $parsed['client_id'] );
+        if ( ! $client ) {
+            error_log( "OFP_Payment::confirm_credit_topup — reference {$reference} points to a missing client" );
+            return false;
+        }
+
+        global $wpdb;
+
+        $already_processed = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}ofp_credit_transactions WHERE reference = %s AND type = 'topup' LIMIT 1",
+            $reference
+        ) );
+
+        if ( $already_processed ) {
+            return true;
+        }
+
+        if ( $amount_paid <= 0 ) {
+            error_log( "OFP_Payment::confirm_credit_topup — reference {$reference} had non-positive amount {$amount_paid}" );
+            return false;
+        }
+
+        OFP_Credit::topup( $parsed['client_id'], $parsed['channel'], $amount_paid, $reference );
+
+        return true;
+    }
+
+    /**
      * Handle an incoming payment webhook from the configured gateway.
      *
      * Called by OFP_REST_API::payment_webhook().
