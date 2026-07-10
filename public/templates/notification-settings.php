@@ -39,61 +39,73 @@ $current_pref = $client->ofp_notification_pref ?? OFP_Notification::PREF_BOTH;
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Notification Settings — OFast Pipeline</title>
 	<?php wp_head(); ?>
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
 </head>
-<body>
-<div class="ofp-dashboard-wrapper">
-	<h1>Notification Settings</h1>
+<body class="ofp-portal-body">
+    <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
-	<?php if ( $error ) : ?>
-		<div class="ofp-notice ofp-notice-error"><?php echo esc_html( $error ); ?></div>
-	<?php endif; ?>
-	<?php if ( $success ) : ?>
-		<div class="ofp-notice ofp-notice-success"><?php echo esc_html( $success ); ?></div>
-	<?php endif; ?>
+    <div class="ofp-container">
+        <div style="padding-bottom: 60px;">
+            <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 24px; letter-spacing:-0.01em;">
+                Notification Settings
+            </h1>
 
-	<div class="ofp-card">
-		<p class="ofp-muted">
-			Choose how you want to receive notifications — when a
-			funding request is reviewed, a property is approved, or
-			anything else happens on your account.
-		</p>
+            <?php if ( $error ) : ?>
+                <div class="ofp-alert ofp-alert-error"><?php echo esc_html( $error ); ?></div>
+            <?php endif; ?>
+            <?php if ( $success ) : ?>
+                <div class="ofp-alert ofp-alert-success"><?php echo esc_html( $success ); ?></div>
+            <?php endif; ?>
 
-		<form method="POST" class="ofp-notif-pref-form">
-			<?php wp_nonce_field( 'ofp_notif_pref_action', 'ofp_notif_pref_nonce' ); ?>
+            <div class="ofp-card" style="max-width: 600px;">
+                <h3 style="margin-top:0; margin-bottom:12px; color:var(--text-main); font-size:18px;">Preferences</h3>
+                <p class="ofp-hint" style="margin-bottom: 24px;">
+                    Choose how you want to receive notifications — when a
+                    funding request is reviewed, a property is approved, or
+                    anything else happens on your account.
+                </p>
 
-			<label class="ofp-radio-row">
-				<input type="radio" name="notification_pref" value="both"
-					<?php checked( $current_pref, 'both' ); ?>>
-				<span>
-					<strong>Bell + Email</strong><br>
-					<span class="ofp-muted">Get notified inside the app AND by email.</span>
-				</span>
-			</label>
+                <form method="POST" class="ofp-notif-pref-form">
+                    <?php wp_nonce_field( 'ofp_notif_pref_action', 'ofp_notif_pref_nonce' ); ?>
 
-			<label class="ofp-radio-row">
-				<input type="radio" name="notification_pref" value="bell"
-					<?php checked( $current_pref, 'bell' ); ?>>
-				<span>
-					<strong>Bell only</strong><br>
-					<span class="ofp-muted">Only see notifications inside the app. No emails.</span>
-				</span>
-			</label>
+                    <div style="display:flex; flex-direction:column; gap:16px;">
+                        <label style="display:flex; align-items:flex-start; gap:12px; padding:16px; border:1px solid var(--border-light); border-radius:12px; cursor:pointer; background:#fff; transition:border-color 0.2s;">
+                            <input type="radio" name="notification_pref" value="both" style="margin-top:4px;"
+                                <?php checked( $current_pref, 'both' ); ?>>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <strong style="color:var(--text-dark); font-size:15px;">Bell + Email</strong>
+                                <span class="ofp-hint" style="margin:0;">Get notified inside the app AND by email.</span>
+                            </div>
+                        </label>
 
-			<label class="ofp-radio-row">
-				<input type="radio" name="notification_pref" value="email"
-					<?php checked( $current_pref, 'email' ); ?>>
-				<span>
-					<strong>Email only</strong><br>
-					<span class="ofp-muted">Only receive notifications by email. Nothing shows in the bell.</span>
-				</span>
-			</label>
+                        <label style="display:flex; align-items:flex-start; gap:12px; padding:16px; border:1px solid var(--border-light); border-radius:12px; cursor:pointer; background:#fff; transition:border-color 0.2s;">
+                            <input type="radio" name="notification_pref" value="bell" style="margin-top:4px;"
+                                <?php checked( $current_pref, 'bell' ); ?>>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <strong style="color:var(--text-dark); font-size:15px;">Bell only</strong>
+                                <span class="ofp-hint" style="margin:0;">Only see notifications inside the app. No emails.</span>
+                            </div>
+                        </label>
 
-			<button type="submit" name="ofp_save_notif_pref" value="1" class="ofp-btn ofp-btn-primary">
-				Save Preference
-			</button>
-		</form>
-	</div>
-</div>
+                        <label style="display:flex; align-items:flex-start; gap:12px; padding:16px; border:1px solid var(--border-light); border-radius:12px; cursor:pointer; background:#fff; transition:border-color 0.2s;">
+                            <input type="radio" name="notification_pref" value="email" style="margin-top:4px;"
+                                <?php checked( $current_pref, 'email' ); ?>>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <strong style="color:var(--text-dark); font-size:15px;">Email only</strong>
+                                <span class="ofp-hint" style="margin:0;">Only receive notifications by email. Nothing shows in the bell.</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div style="margin-top: 24px;">
+                        <button type="submit" name="ofp_save_notif_pref" value="1" class="ofp-btn ofp-btn-primary">
+                            Save Preference
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 <?php wp_footer(); ?>
 </body>
 </html>

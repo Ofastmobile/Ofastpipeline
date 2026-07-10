@@ -9,6 +9,33 @@ $has_crm     = OFP_Subscription::has_active( 'crm',     $client->id );
 $has_listing = OFP_Subscription::has_active( 'listing', $client->id );
 $current_url = home_url( parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH ) );
 
+// ── Notification Action Handlers ───────────────────────────────────────────
+if (
+	$_SERVER['REQUEST_METHOD'] === 'POST' &&
+	isset( $_POST['ofp_mark_all_read'] ) &&
+	wp_verify_nonce( $_POST['ofp_notif_nonce'] ?? '', 'ofp_notifications_action' )
+) {
+	OFP_Notification::mark_all_read( $client->id );
+}
+
+if (
+	$_SERVER['REQUEST_METHOD'] === 'POST' &&
+	isset( $_POST['ofp_mark_read'] ) &&
+	wp_verify_nonce( $_POST['ofp_notif_nonce'] ?? '', 'ofp_notifications_action' )
+) {
+	OFP_Notification::mark_read( (int) $_POST['notification_id'], $client->id );
+}
+
+// Fetch recent notifications for the dropdown
+global $wpdb;
+$ofp_recent_notifications = $wpdb->get_results( $wpdb->prepare(
+	"SELECT * FROM {$wpdb->prefix}ofp_notifications
+	 WHERE client_id = %d
+	 ORDER BY created_at DESC
+	 LIMIT 5",
+	$client->id
+) );
+
 // ── SVG allowlist ────────────────────────────────────────────────────────
 $allowed_svg = [
     'svg'  => [ 'xmlns' => true, 'fill' => true, 'viewbox' => true, 'stroke-width' => true, 'stroke' => true, 'class' => true, 'aria-hidden' => true ],
@@ -173,17 +200,62 @@ $nav_items[] = [
 
                 <!-- Theme Toggle Desktop Icon -->
                 <button class="ofp-icon-btn" id="ofp-theme-toggle" title="Toggle Theme">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
                 </button>
 
-                <!-- Notification Icon -->
+                <!-- Notification Dropdown Menu -->
                 <?php $ofp_unread = OFP_Notification::unread_count( $client->id ); ?>
-                <a href="<?php echo esc_url( home_url( '/notifications' ) ); ?>" class="ofp-icon-btn" title="Notifications" style="position:relative;">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>
-                    <?php if ( $ofp_unread > 0 ) : ?>
-                        <span style="position:absolute; top:2px; right:2px; background:var(--accent-red); color:#fff; font-size:10px; font-weight:bold; height:16px; min-width:16px; border-radius:100px; display:flex; align-items:center; justify-content:center; padding:0 4px;"><?php echo esc_html( $ofp_unread ); ?></span>
-                    <?php endif; ?>
-                </a>
+                <div class="ofp-user-menu" style="position:relative;">
+                    <div class="ofp-icon-btn" style="cursor:pointer; position:relative;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>
+                        <?php if ( $ofp_unread > 0 ) : ?>
+                            <span style="position:absolute; top:2px; right:2px; background:var(--accent-red); color:#fff; font-size:10px; font-weight:bold; height:16px; min-width:16px; border-radius:100px; display:flex; align-items:center; justify-content:center; padding:0 4px;"><?php echo esc_html( $ofp_unread ); ?></span>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="ofp-dropdown" style="width: 320px; right: -10px; padding-bottom:0;">
+                        <div class="ofp-dropdown-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px;">
+                            <strong style="margin:0; font-size:14px;">Notifications</strong>
+                            <?php if ( $ofp_unread > 0 ) : ?>
+                            <form method="POST" style="margin:0;">
+                                <?php wp_nonce_field( 'ofp_notifications_action', 'ofp_notif_nonce' ); ?>
+                                <button type="submit" name="ofp_mark_all_read" value="1" style="background:none;border:none;color:#3b82f6;font-size:12px;font-weight:500;cursor:pointer;padding:0;">Mark all read</button>
+                            </form>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="ofp-dropdown-body" style="max-height: 350px; overflow-y: auto; padding: 0;">
+                            <?php if ( empty( $ofp_recent_notifications ) ) : ?>
+                                <div style="padding:24px 16px; text-align:center; color:var(--text-muted); font-size:13px;">
+                                    No notifications yet.
+                                </div>
+                            <?php else : ?>
+                                <?php foreach ( $ofp_recent_notifications as $notif ) : ?>
+                                    <div style="padding: 12px 16px; border-bottom: 1px solid var(--dropdown-border); <?php echo $notif->is_read ? 'opacity:0.7;' : 'background:rgba(59, 130, 246, 0.04);'; ?>">
+                                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                                            <strong style="font-size:13px; color:var(--text-main); line-height:1.4; padding-right:8px;"><?php echo esc_html( $notif->title ); ?></strong>
+                                            <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;"><?php echo esc_html( human_time_diff( strtotime( $notif->created_at ), time() ) ); ?></span>
+                                        </div>
+                                        <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">
+                                            <?php echo esc_html( $notif->message ); ?>
+                                        </div>
+                                        <?php if ( ! $notif->is_read ) : ?>
+                                            <form method="POST" style="margin:0; text-align:right;">
+                                                <?php wp_nonce_field( 'ofp_notifications_action', 'ofp_notif_nonce' ); ?>
+                                                <input type="hidden" name="notification_id" value="<?php echo esc_attr( $notif->id ); ?>">
+                                                <button type="submit" name="ofp_mark_read" value="1" style="background:none;border:none;color:#3b82f6;font-size:11px;font-weight:500;cursor:pointer;padding:0;">Mark as read</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                                <div style="padding:8px; text-align:center; background:var(--dropdown-bg);">
+                                    <!-- A link could go here to view all history if needed in the future -->
+                                    <span style="font-size:11px; color:var(--text-muted);">Showing recent 5</span>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- User Dropdown Menu -->
                 <div class="ofp-user-menu" id="ofp-user-menu">

@@ -214,24 +214,11 @@ if ( isset( $_GET['edit'] ) ) {
 <body class="ofp-portal-body">
     <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
-    <main class="ofp-main">
-        <header class="ofp-topbar">
-            <h1 style="font-size: 20px; font-weight: 600; color: #1e293b; margin: 0;">My Properties</h1>
-            
-            <!-- User avatar logic from nav.php could be abstracted, but keeping simple for now -->
-            <div class="ofp-user-menu">
-                <span style="font-size: 14px; font-weight: 500; color: #475569;"><?php echo esc_html( $client->owner_name ); ?></span>
-                <div class="ofp-user-avatar" id="ofp-user-avatar" style="width: 36px; height: 36px; border-radius: 50%; background: #2563eb; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; overflow: hidden;">
-                    <?php if ( ! empty( $client->logo_url ) ) : ?>
-                        <img src="<?php echo esc_url( $client->logo_url ); ?>" alt="Logo" style="width:100%;height:100%;object-fit:cover;">
-                    <?php else : ?>
-                        <?php echo esc_html( strtoupper( substr( $client->business_name, 0, 1 ) ) ); ?>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </header>
-
-        <div class="ofp-content">
+    <div class="ofp-container">
+        <div style="padding-bottom: 60px;">
+            <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 24px; letter-spacing:-0.01em;">
+                My Properties
+            </h1>
             <?php if ( $error ) : ?>
                 <div class="ofp-alert ofp-alert-error"><?php echo esc_html( $error ); ?></div>
             <?php endif; ?>
@@ -495,8 +482,7 @@ if ( isset( $_GET['edit'] ) ) {
                 </div>
             </div>
         </div>
-    </main>
-</div>
+    </div>
 <?php wp_footer(); ?>
 </body>
 </html>
