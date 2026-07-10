@@ -49,19 +49,23 @@ class OFP_Mailer {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Register OFP's SMTP fallback via phpmailer_init at priority 10.
+     * Register OFP's SMTP configuration via phpmailer_init at priority 10.
      *
      * Called once in plugins_loaded (ofast-pipeline.php).
+     *
+     * SMTP MODE (ofp_smtp_mode option):
+     *  - 'default'  → Do NOT touch PHPMailer. Let WordPress / PHP mail() /
+     *                  any other plugin handle delivery. This is the safe
+     *                  fallback for local dev or when another SMTP plugin is
+     *                  managing delivery (e.g. WP Mail SMTP, FluentSMTP).
+     *  - 'custom'   → Apply the SMTP credentials configured in OFP Settings.
+     *                  Requires ofp_smtp_host to be set.
      *
      * PRIORITY LOGIC:
      *  - OFP hooks at priority 10  (runs first)
      *  - Ofast Toolkit hooks at priority 999 (runs last, always wins when enabled)
      *  This means when Ofast Toolkit SMTP is enabled, it overwrites whatever
      *  OFP set, so OFT is always the authoritative SMTP when present.
-     *  When OFT SMTP is disabled or not installed, OFP's config stands —
-     *  but only if ofp_smtp_host has been filled in via OFP Settings.
-     *  If neither is configured, wp_mail() falls back to PHP mail() —
-     *  acceptable for local development, not suitable for production.
      *
      * @return void
      */
@@ -71,11 +75,17 @@ class OFP_Mailer {
             'phpmailer_init',
             function ( \PHPMailer\PHPMailer\PHPMailer $phpmailer ): void {
 
+                // ── Mode check ───────────────────────────────────────────
+                $mode = get_option( 'ofp_smtp_mode', 'default' );
+                if ( $mode !== 'custom' ) {
+                    // 'default' mode — hands off. Let WP / PHP / another
+                    // plugin handle delivery. Nothing to configure here.
+                    return;
+                }
+
                 $host = get_option( 'ofp_smtp_host', '' );
 
-                // Only activate OFP's own SMTP if a host has been configured.
-                // If Ofast Toolkit SMTP is enabled, it runs at priority 999
-                // and overwrites this anyway — so no conflict is possible.
+                // Custom mode selected but no host configured — skip.
                 if ( empty( $host ) ) {
                     return;
                 }
@@ -85,7 +95,7 @@ class OFP_Mailer {
                 $phpmailer->Port       = (int) get_option( 'ofp_smtp_port', 587 );
                 $phpmailer->SMTPAuth   = true;
                 $phpmailer->Username   = get_option( 'ofp_smtp_username', '' );
-                $phpmailer->Password   = get_option( 'ofp_smtp_password', '' );
+                $phpmailer->Password   = OFP_Security::decrypt( get_option( 'ofp_smtp_password', '' ) );
                 $phpmailer->SMTPSecure = get_option( 'ofp_smtp_encryption', 'tls' );
                 $phpmailer->From       = get_option(
                     'ofp_smtp_from_email',

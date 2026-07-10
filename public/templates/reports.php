@@ -93,35 +93,40 @@ $comms_this_month = (int) $wpdb->get_var(
     <?php endif; ?>
 
     <!-- This Month Summary -->
-    <div class="ofp-card">
-        <h3>This Month at a Glance</h3>
-        <div class="ofp-stats-grid">
-            <div class="ofp-stat-card">
-                <span class="ofp-stat-number accent"><?php echo esc_html( $stats['this_month'] ); ?></span>
-                <span class="ofp-stat-label">Leads This Month</span>
+    <div class="ofp-stats-grid">
+        <div class="ofp-stat-card">
+            <div class="ofp-stat-header">
+                <span class="ofp-stat-title">Leads This Month</span>
             </div>
-            <div class="ofp-stat-card">
-                <span class="ofp-stat-number"><?php echo esc_html( $stats['converted'] ); ?></span>
-                <span class="ofp-stat-label">Converted</span>
+            <div class="ofp-stat-value"><?php echo esc_html( $stats['this_month'] ); ?></div>
+        </div>
+        <div class="ofp-stat-card">
+            <div class="ofp-stat-header">
+                <span class="ofp-stat-title">Converted</span>
             </div>
-            <div class="ofp-stat-card">
-                <span class="ofp-stat-number"><?php echo esc_html( $comms_this_month ); ?></span>
-                <span class="ofp-stat-label">Messages Sent</span>
+            <div class="ofp-stat-value"><?php echo esc_html( $stats['converted'] ); ?></div>
+        </div>
+        <div class="ofp-stat-card">
+            <div class="ofp-stat-header">
+                <span class="ofp-stat-title">Messages Sent</span>
             </div>
-            <div class="ofp-stat-card">
-                <span class="ofp-stat-number">
-                    <?php echo $stats['this_month'] > 0
-                        ? esc_html( round( ( $stats['converted'] / $stats['this_month'] ) * 100 ) ) . '%'
-                        : '—'; ?>
-                </span>
-                <span class="ofp-stat-label">Conv. Rate</span>
+            <div class="ofp-stat-value"><?php echo esc_html( $comms_this_month ); ?></div>
+        </div>
+        <div class="ofp-stat-card">
+            <div class="ofp-stat-header">
+                <span class="ofp-stat-title">Conv. Rate</span>
+            </div>
+            <div class="ofp-stat-value">
+                <?php echo $stats['this_month'] > 0
+                    ? esc_html( round( ( $stats['converted'] / $stats['this_month'] ) * 100 ) ) . '%'
+                    : '—'; ?>
             </div>
         </div>
-        <p class="ofp-hint" style="margin-top:8px;">
-            Your full monthly report (CSV) is automatically generated and emailed to you
-            on the 1st of each month.
-        </p>
     </div>
+
+    <p class="ofp-hint" style="margin-bottom:24px;">
+        Your full monthly report (CSV) is automatically generated and emailed to you on the 1st of each month.
+    </p>
 
     <!-- Report Archive -->
     <div class="ofp-card">

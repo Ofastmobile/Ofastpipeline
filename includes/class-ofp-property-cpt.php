@@ -59,6 +59,7 @@ class OFP_Property_CPT {
         add_filter( 'manage_ofp_property_posts_columns',       [ $this, 'custom_columns' ] );
         add_action( 'manage_ofp_property_posts_custom_column', [ $this, 'render_columns' ], 10, 2 );
         add_filter( 'template_include',                        [ $this, 'load_templates' ] );
+        add_filter( 'post_type_link',                          [ $this, 'rewrite_permalink_to_property_subdomain' ], 10, 2 );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -514,7 +515,16 @@ class OFP_Property_CPT {
     // ─────────────────────────────────────────────────────────────────────────
 
     public function load_templates( string $template ): string {
-        if ( is_post_type_archive( 'ofp_property' ) ) {
+        // Phase 16: property.crmdomain.com's homepage IS the property
+        // archive — nicer than making visitors go to /properties/ on their
+        // own subdomain.
+        if ( is_front_page() && OFP_Host_Router::current_zone() === 'property' ) {
+            $theme_override = locate_template( 'archive-ofp_property.php' );
+            if ( $theme_override ) return $theme_override;
+            return OFP_PLUGIN_DIR . 'public/templates/property-archive.php';
+        }
+
+        if ( is_post_type_archive( 'ofp_property' ) && OFP_Host_Router::current_zone() !== 'app' ) {
             $theme_override = locate_template( 'archive-ofp_property.php' );
             if ( $theme_override ) return $theme_override;
             return OFP_PLUGIN_DIR . 'public/templates/property-archive.php';
@@ -527,6 +537,37 @@ class OFP_Property_CPT {
         }
 
         return $template;
+    }
+
+    /**
+     * Makes every property permalink (the_permalink(), get_permalink(),
+     * etc. — anywhere in the codebase) use property.{base_domain}
+     * instead of your main site address. This is what makes the property
+     * cards on the archive page link correctly to
+     * property.crmdomain.com/property/{slug}/ instead of back to your
+     * main domain, with no changes needed to property-archive.php itself.
+     *
+     * As a side effect, this also prevents WordPress's canonical-redirect
+     * feature from trying to bounce visitors away from
+     * property.crmdomain.com back to your main domain — that check
+     * compares against get_permalink(), which this filter has already
+     * corrected, so there's nothing left for it to "fix."
+     *
+     * @param string  $post_link
+     * @param WP_Post $post
+     * @return string
+     */
+    public function rewrite_permalink_to_property_subdomain( string $post_link, WP_Post $post ): string {
+        if ( $post->post_type !== 'ofp_property' ) {
+            return $post_link;
+        }
+
+        $base_domain = get_option( 'ofp_crm_base_domain' );
+        if ( ! $base_domain ) {
+            return $post_link;
+        }
+
+        return preg_replace( '#^https?://[^/]+#', 'https://property.' . $base_domain, $post_link );
     }
 
     public static function get_plan_prices(): array {

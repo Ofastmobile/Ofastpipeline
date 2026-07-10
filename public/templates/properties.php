@@ -33,6 +33,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_choose_listing_
 
         if ( ! in_array( $chosen_plan, OFP_Property_CPT::PLAN_KEYS, true ) ) {
             $error = 'Please choose a valid plan.';
+        } elseif ( $active_plan && OFP_Subscription::has_active( 'listing', $client->id ) ) {
+            // Block submitting a new plan while one is already paid and active.
+            // They can only change when the plan has expired.
+            $error = 'Your listing plan is currently active. You can choose a different plan when it expires.';
         } else {
             OFP_Subscription::create( $client->id, 'listing', $chosen_plan );
             wp_safe_redirect( add_query_arg( 'success', 'plan', home_url( '/properties' ) ) );
@@ -239,38 +243,84 @@ if ( isset( $_GET['edit'] ) ) {
 
                 <!-- Plan status / picker -->
                 <div class="ofp-card">
-                    <?php if ( $active_plan ) : ?>
-                        <h3><?php echo esc_html( $plan_labels[ $active_plan ] ); ?> Plan</h3>
+                    <?php
+                    // Determine if client has a currently paid+active listing subscription.
+                    $has_active_paid_plan = $active_plan && OFP_Subscription::has_active( 'listing', $client->id );
+                    // Get the subscription end date for display.
+                    $active_sub = OFP_Subscription::get_active( 'listing', $client->id );
+                    $plan_expires = $active_sub ? $active_sub->period_end : null;
+                    ?>
+
+                    <?php if ( $has_active_paid_plan ) : ?>
+                        <!-- Plan is currently PAID & ACTIVE: show status, no form -->
+                        <h3>
+                            <?php echo esc_html( $plan_labels[ $active_plan ] ); ?> Plan
+                            <span style="background:#dcfce7; color:#16a34a; font-size:12px; font-weight:600; padding:3px 10px; border-radius:100px; vertical-align:middle; margin-left:8px;">Active</span>
+                        </h3>
                         <p class="ofp-hint">
                             Using <?php echo esc_html( $used_count ); ?> of <?php echo esc_html( $plan_caps[ $active_plan ] ); ?> properties.
+                            <?php if ( $plan_expires ) : ?>
+                            &nbsp; Expires <strong><?php echo esc_html( date( 'd M Y', strtotime( $plan_expires ) ) ); ?></strong>.
+                            <?php endif; ?>
                         </p>
+                        <p class="ofp-hint" style="margin-top:8px;">
+                            You can choose a different plan after your current plan expires. To top up or renew, use the <a href="<?php echo esc_url( home_url('/funding') ); ?>" style="color:#3b82f6;">Funding page</a>.
+                        </p>
+
+                    <?php elseif ( $active_plan && ! $has_active_paid_plan ) : ?>
+                        <!-- Plan selected but PENDING payment (not yet paid) -->
+                        <h3>
+                            <?php echo esc_html( $plan_labels[ $active_plan ] ); ?> Plan
+                            <span style="background:#fef3c7; color:#d97706; font-size:12px; font-weight:600; padding:3px 10px; border-radius:100px; vertical-align:middle; margin-left:8px;">Pending Payment</span>
+                        </h3>
+                        <p class="ofp-hint">
+                            Your plan selection is awaiting payment. Please transfer <strong>NGN <?php echo esc_html( number_format( $plan_prices[ $active_plan ], 2 ) ); ?>/month</strong>
+                            to your virtual account or company account, then notify us via the <a href="<?php echo esc_url( home_url('/funding') ); ?>" style="color:#3b82f6;">Funding page</a>.
+                        </p>
+                        <p class="ofp-hint" style="margin-top:12px;">Want to change your plan selection? Choose a different one below:</p>
+
+                        <!-- Allow changing plan while still pending -->
+                        <form method="POST" style="margin-top:16px; display:flex; flex-direction:column; gap:16px;">
+                            <?php wp_nonce_field( 'ofp_listing_plan_action', 'ofp_listing_plan_nonce' ); ?>
+                            <div style="display:flex; flex-direction:column; gap:12px;">
+                                <?php foreach ( OFP_Property_CPT::PLAN_KEYS as $plan ) : ?>
+                                    <label style="display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--border-light); border-radius:8px; cursor:pointer;">
+                                        <input type="radio" name="listing_plan" value="<?php echo esc_attr( $plan ); ?>" <?php checked( $active_plan, $plan ); ?>>
+                                        <div style="display:flex; flex-direction:column; gap:4px;">
+                                            <strong style="color:var(--text-dark);"><?php echo esc_html( $plan_labels[ $plan ] ); ?></strong>
+                                            <span class="ofp-hint" style="margin:0;">Up to <?php echo esc_html( $plan_caps[ $plan ] ); ?> properties &mdash; NGN <?php echo esc_html( number_format( $plan_prices[ $plan ], 2 ) ); ?>/month</span>
+                                        </div>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                            <div>
+                                <button type="submit" name="ofp_choose_listing_plan" value="1" class="ofp-btn ofp-btn-primary">Change Selection</button>
+                            </div>
+                        </form>
+
                     <?php else : ?>
+                        <!-- No plan yet: full picker shown -->
                         <h3>Choose a Listing Plan</h3>
                         <p class="ofp-hint">You need an active listing plan before you can add a property.</p>
-                    <?php endif; ?>
 
-                    <form method="POST" style="margin-top:20px; display:flex; flex-direction:column; gap:16px;">
-                        <?php wp_nonce_field( 'ofp_listing_plan_action', 'ofp_listing_plan_nonce' ); ?>
-                        
-                        <div style="display:flex; flex-direction:column; gap:12px;">
-                            <?php foreach ( OFP_Property_CPT::PLAN_KEYS as $plan ) : ?>
-                                <label style="display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--border-light); border-radius:8px; cursor:pointer;">
-                                    <input type="radio" name="listing_plan" value="<?php echo esc_attr( $plan ); ?>"
-                                        <?php checked( $active_plan, $plan ); ?>>
-                                    <div style="display:flex; flex-direction:column; gap:4px;">
-                                        <strong style="color:var(--text-dark);"><?php echo esc_html( $plan_labels[ $plan ] ); ?></strong>
-                                        <span class="ofp-hint" style="margin:0;">Up to <?php echo esc_html( $plan_caps[ $plan ] ); ?> properties — NGN <?php echo esc_html( number_format( $plan_prices[ $plan ], 2 ) ); ?>/month</span>
-                                    </div>
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
-                        
-                        <div>
-                            <button type="submit" name="ofp_choose_listing_plan" value="1" class="ofp-btn ofp-btn-primary">
-                                <?php echo $active_plan ? 'Change Plan' : 'Choose Plan'; ?>
-                            </button>
-                        </div>
-                    </form>
+                        <form method="POST" style="margin-top:20px; display:flex; flex-direction:column; gap:16px;">
+                            <?php wp_nonce_field( 'ofp_listing_plan_action', 'ofp_listing_plan_nonce' ); ?>
+                            <div style="display:flex; flex-direction:column; gap:12px;">
+                                <?php foreach ( OFP_Property_CPT::PLAN_KEYS as $plan ) : ?>
+                                    <label style="display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--border-light); border-radius:8px; cursor:pointer;">
+                                        <input type="radio" name="listing_plan" value="<?php echo esc_attr( $plan ); ?>">
+                                        <div style="display:flex; flex-direction:column; gap:4px;">
+                                            <strong style="color:var(--text-dark);"><?php echo esc_html( $plan_labels[ $plan ] ); ?></strong>
+                                            <span class="ofp-hint" style="margin:0;">Up to <?php echo esc_html( $plan_caps[ $plan ] ); ?> properties &mdash; NGN <?php echo esc_html( number_format( $plan_prices[ $plan ], 2 ) ); ?>/month</span>
+                                        </div>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                            <div>
+                                <button type="submit" name="ofp_choose_listing_plan" value="1" class="ofp-btn ofp-btn-primary">Choose Plan</button>
+                            </div>
+                        </form>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Add / Edit property form -->

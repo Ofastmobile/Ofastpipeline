@@ -625,4 +625,85 @@ class OFP_Subscription {
     private static function default_followup_3_sms(): string {
         return 'Hi {{name}}, we have been trying to reach you. We would love to show you how {{business_name}} can help. Call or message us anytime. - {{business_name}}';
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PHASE 17b — MANUAL PAYMENT ACTIVATION
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Activates or extends a subscription when admin approves a manual plan payment.
+     *
+     * Different from create() which makes a new pending row — this finds the
+     * most recent pending or expired row for that client and type, sets it to
+     * 'paid', and pushes the period_end date 30 days forward from today.
+     *
+     * If no existing row is found, it creates one and immediately activates it,
+     * so admin approval always results in an active subscription regardless of
+     * what state the data was in before.
+     *
+     * @param int    $client_id
+     * @param string $type         'crm' or 'listing'
+     * @param float  $amount_paid  The amount the client actually paid (stored for reference)
+     */
+    public static function activate_from_manual_payment(
+        int $client_id,
+        string $type,
+        float $amount_paid
+    ): void {
+        global $wpdb;
+
+        $existing = $wpdb->get_row( $wpdb->prepare( "
+            SELECT * FROM {$wpdb->prefix}ofp_subscriptions
+            WHERE client_id = %d AND type = %s
+            ORDER BY created_at DESC LIMIT 1
+        ", $client_id, $type ) );
+
+        $period_end = date( 'Y-m-d', strtotime( '+30 days' ) );
+
+        if ( $existing ) {
+            $wpdb->update(
+                $wpdb->prefix . 'ofp_subscriptions',
+                [
+                    'status'         => 'paid',
+                    'payment_method' => 'manual',
+                    'amount'         => $amount_paid,
+                    'period_end'     => $period_end,
+                ],
+                [ 'id' => $existing->id ]
+            );
+        } else {
+            // No row at all — create and immediately activate.
+            $client = OFP_Client::get( $client_id );
+            $plan   = ( $type === 'crm' ) ? ( $client->plan ?? 'starter' ) : null;
+
+            $wpdb->insert( $wpdb->prefix . 'ofp_subscriptions', [
+                'client_id'      => $client_id,
+                'type'           => $type,
+                'plan'           => $plan,
+                'amount'         => $amount_paid,
+                'payment_method' => 'manual',
+                'status'         => 'paid',
+                'period_end'     => $period_end,
+                'created_at'     => current_time( 'mysql' ),
+            ] );
+        }
+
+        // Bring the client status back to 'active' if they were pending/suspended/etc.
+        $needs_activation = [ 'pending_review', 'pending', 'grace', 'suspended' ];
+        $client = OFP_Client::get( $client_id );
+        if ( $client && in_array( $client->status, $needs_activation, true ) ) {
+            OFP_Client::update_status( $client_id, 'active' );
+        }
+
+        // Also extend subscription_expires on the clients table (same as record_payment).
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE {$wpdb->prefix}ofp_clients
+             SET status               = 'active',
+                 subscription_expires = %s,
+                 updated_at           = NOW()
+             WHERE id = %d",
+            $period_end,
+            $client_id
+        ) );
+    }
 }

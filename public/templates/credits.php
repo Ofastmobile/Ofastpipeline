@@ -63,41 +63,41 @@ $transactions = $wpdb->get_results(
         <h3>Subscription Status</h3>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
             <div>
-                <div style="font-size:12px;color:#9ca3af;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Account Status</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Account Status</div>
                 <?php
                 $status_colors = [
-                    'active'         => '#22c55e',
-                    'grace'          => '#f59e0b',
-                    'pending_review' => '#eab308',
-                    'suspended'      => '#ef4444',
+                    'active'         => 'var(--accent-green)',
+                    'grace'          => 'var(--accent-orange)',
+                    'pending_review' => 'var(--accent-orange)',
+                    'suspended'      => 'var(--accent-red)',
                 ];
-                $color = $status_colors[ $client->status ] ?? '#9ca3af';
+                $color = $status_colors[ $client->status ] ?? 'var(--text-muted)';
                 ?>
                 <div style="font-size:18px;font-weight:700;color:<?php echo esc_attr( $color ); ?>;">
                     <?php echo esc_html( ucfirst( str_replace( '_', ' ', $client->status ) ) ); ?>
                 </div>
             </div>
             <div>
-                <div style="font-size:12px;color:#9ca3af;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Expires</div>
-                <div style="font-size:18px;font-weight:700;color:#0f172a;">
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Expires</div>
+                <div style="font-size:18px;font-weight:700;color:var(--text-main);">
                     <?php echo esc_html( $client->subscription_expires ?: '—' ); ?>
                 </div>
             </div>
             <div>
-                <div style="font-size:12px;color:#9ca3af;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Plan</div>
-                <div style="font-size:18px;font-weight:700;color:#0f172a;">
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Plan</div>
+                <div style="font-size:18px;font-weight:700;color:var(--text-main);">
                     <?php echo esc_html( strtoupper( $client->plan ?: '—' ) ); ?>
                 </div>
             </div>
         </div>
 
         <?php if ( $client->virtual_account_number ) : ?>
-            <div style="margin-top:20px;padding:16px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e;">
-                <div style="font-size:13px;color:#166534;margin-bottom:4px;font-weight:600;">Renewal Account (pay here to renew)</div>
-                <div style="font-size:16px;font-weight:700;color:#0f172a;">
+            <div class="ofp-alert ofp-alert-success" style="margin-top:20px; align-items:flex-start; flex-direction:column; gap:4px; margin-bottom:0;">
+                <div style="font-size:13px;font-weight:600;">Renewal Account (pay here to renew)</div>
+                <div style="font-size:16px;font-weight:700;color:var(--text-main);">
                     <?php echo esc_html( $client->virtual_bank_name ); ?> — <?php echo esc_html( $client->virtual_account_number ); ?>
                 </div>
-                <div style="font-size:12px;color:#6b7280;margin-top:4px;">
+                <div style="font-size:12px;">
                     This dedicated account is yours only. Payments are automatically applied to your subscription.
                 </div>
             </div>
@@ -119,7 +119,7 @@ $transactions = $wpdb->get_results(
                     <div class="ofp-credit-bar-fill <?php echo $sms_pct > 40 ? 'high' : ( $sms_pct > 15 ? 'medium' : 'low' ); ?>"
                          style="width:<?php echo esc_attr( $sms_pct ); ?>%"></div>
                 </div>
-                <div style="font-size:12px;color:#9ca3af;margin-top:4px;">
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">
                     ~<?php echo esc_html( $credits ? floor( $credits->sms_remaining / 6.99 ) : 0 ); ?> SMS messages remaining at NGN 6.99 each.
                 </div>
             </div>
@@ -133,15 +133,13 @@ $transactions = $wpdb->get_results(
                     <div class="ofp-credit-bar-fill <?php echo $voice_pct > 40 ? 'high' : ( $voice_pct > 15 ? 'medium' : 'low' ); ?>"
                          style="width:<?php echo esc_attr( $voice_pct ); ?>%"></div>
                 </div>
-                <div style="font-size:12px;color:#9ca3af;margin-top:4px;">
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">
                     ~<?php echo esc_html( $credits ? floor( $credits->voice_remaining / 15 ) : 0 ); ?> voice calls remaining at NGN 15.00 per minute.
                 </div>
             </div>
 
-            <div style="margin-top:20px;padding:14px;background:#eff6ff;border-radius:8px;font-size:13px;color:#1e40af;">
-                To top up your credit, make a transfer and contact us with the reference.
-                We will load it to your account within the hour.
-                Self-serve top-up is coming soon.
+            <div class="ofp-alert ofp-alert-info" style="margin-top:20px; margin-bottom:0;">
+                To top up your credit, make a transfer and contact us with the reference. We will load it to your account within the hour. Self-serve top-up is coming soon.
             </div>
         </div>
 

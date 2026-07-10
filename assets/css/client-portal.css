@@ -818,6 +818,225 @@ body.ofp-portal-body {
     opacity: 0.9;
 }
 
+
+/* ── Container & Layouts ─────────────────────────────────────────────────── */
+.ofp-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.ofp-page-header {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px 32px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.ofp-page-header h1 {
+    font-size: 24px;
+    color: var(--text-main);
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.ofp-page-header p {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+.ofp-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.ofp-badge-blue { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+.ofp-badge-green { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+.ofp-badge-yellow, .ofp-badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--accent-orange); }
+.ofp-badge-red { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+.ofp-badge-grey { background: var(--bg-body); color: var(--text-muted); border: 1px solid var(--border-color); }
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+.ofp-table-wrap {
+    overflow-x: auto;
+    width: 100%;
+}
+.ofp-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 14px;
+}
+.ofp-table th {
+    padding: 16px 20px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--border-color);
+    background: var(--bg-card);
+}
+.ofp-table td {
+    padding: 16px 20px;
+    color: var(--text-main);
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+.ofp-table tbody tr:hover td {
+    background: var(--bg-card-hover);
+}
+.ofp-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ── Alerts ──────────────────────────────────────────────────────────────── */
+.ofp-alert {
+    padding: 16px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    margin-bottom: 24px;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.ofp-alert-success {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.2);
+    color: var(--accent-green);
+}
+.ofp-alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.2);
+    color: var(--accent-red);
+}
+.ofp-alert-info {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.2);
+    color: var(--accent-blue);
+}
+.ofp-alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.2);
+    color: var(--accent-orange);
+}
+
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+.ofp-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+.ofp-form-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+.ofp-form-row > .ofp-field {
+    flex: 1;
+    min-width: 280px;
+}
+.ofp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.ofp-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+}
+.ofp-field input[type="text"],
+.ofp-field input[type="email"],
+.ofp-field input[type="number"],
+.ofp-field input[type="tel"],
+.ofp-field input[type="password"],
+.ofp-field select,
+.ofp-field textarea {
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-body);
+    color: var(--text-main);
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+.ofp-field input:focus,
+.ofp-field select:focus,
+.ofp-field textarea:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+.ofp-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.ofp-form-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-top: 8px;
+}
+
+/* ── Button Variants ─────────────────────────────────────────────────────── */
+.ofp-btn-primary {
+    background: var(--accent-blue);
+    color: #fff;
+}
+.ofp-btn-primary:hover {
+    background: #2563eb;
+    opacity: 1;
+}
+.ofp-btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+.ofp-btn-secondary:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--text-muted);
+}
+.ofp-btn-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--accent-red);
+}
+.ofp-btn-danger:hover {
+    background: var(--accent-red);
+    color: #fff;
+}
+
+/* Empty State */
+.ofp-empty {
+    text-align: center;
+    padding: 48px 24px;
+}
+.ofp-empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+.ofp-empty h3 {
+    font-size: 18px;
+    color: var(--text-main);
+    margin-bottom: 8px;
+}
+.ofp-empty p {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
     .ofp-sidebar {

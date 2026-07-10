@@ -41,6 +41,8 @@ require_once OFP_PATH . 'includes/class-ofp-credit.php';
 require_once OFP_PATH . 'includes/class-ofp-subscription.php';
 require_once OFP_PATH . 'includes/class-ofp-csv.php';
 require_once OFP_PATH . 'includes/class-ofp-property-cpt.php';   // v2.1 — property listing CPT
+require_once OFP_PATH . 'includes/class-ofp-host-router.php';    // Phase 16 — app/property subdomain routing
+require_once OFP_PATH . 'includes/class-ofp-notification.php';   // Phase 17 — notifications
 
 // Payment gateway — interface + provider adapters.
 // OFP_Payment is the only entry point; adapters are loaded here so the
@@ -87,6 +89,7 @@ add_action( 'plugins_loaded', function (): void {
     new OFP_Client_Portal();
     new OFP_Cron_Handler();
     new OFP_Property_CPT();   // v2.1
+    OFP_Host_Router::init();  // Phase 16 — app/property subdomain routing
 
 } );
 

@@ -54,6 +54,7 @@ class OFP_Admin_Menu {
         add_action( 'admin_post_ofp_mark_subscription_paid', [ $this, 'handle_mark_subscription_paid' ] );
         add_action( 'admin_init', [ $this, 'handle_save_plan_pricing' ] );
         add_action( 'admin_init', [ $this, 'handle_save_listing_plans' ] );
+        add_action( 'admin_init', [ $this, 'handle_save_company_bank' ] ); // Phase 17
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -93,6 +94,8 @@ class OFP_Admin_Menu {
         add_submenu_page( 'ofp-overview', 'Communications',  'Communications',  'read', 'ofp-communications',  [ $this, 'render_communications' ] );
         add_submenu_page( 'ofp-overview', 'Billing',         'Billing',         'read', 'ofp-billing',         [ $this, 'render_billing' ] );
         add_submenu_page( 'ofp-overview', 'Reports',         'Reports',         'read', 'ofp-reports',         [ $this, 'render_reports' ] );
+        add_submenu_page( 'ofp-overview', 'Funding Requests', 'Funding Requests', 'read', 'ofp-funding-requests', [ $this, 'render_funding_requests' ] ); // Phase 17
+        add_submenu_page( 'ofp-overview', 'Send Notification', 'Send Notification', 'manage_options', 'ofp-send-notification', [ $this, 'render_send_notification' ] ); // Phase 17b
 
         // ── Super admin only ──────────────────────────────────────────────────
         if ( $is_super ) {
@@ -123,6 +126,8 @@ class OFP_Admin_Menu {
             'ofast-pipeline_page_ofp-reports',
             'ofast-pipeline_page_ofp-settings',
             'ofast-pipeline_page_ofp-admins',
+            'ofast-pipeline_page_ofp-funding-requests',
+            'ofast-pipeline_page_ofp-send-notification',
         ];
 
         if ( ! in_array( $hook, $ofp_pages, true ) ) {
@@ -528,7 +533,15 @@ class OFP_Admin_Menu {
 
         $this->require_super_admin_post( 'ofp_save_settings' );
 
+        // ── SMTP mode toggle ─────────────────────────────────────────────
+        $smtp_mode = sanitize_text_field( wp_unslash( $_POST['ofp_smtp_mode'] ?? 'default' ) );
+        if ( ! in_array( $smtp_mode, [ 'default', 'custom' ], true ) ) {
+            $smtp_mode = 'default';
+        }
+
         $settings = [
+            // Domain routing (Phase 16)
+            'ofp_crm_base_domain' => sanitize_text_field( wp_unslash( $_POST['ofp_crm_base_domain'] ?? '' ) ),
             // Default pipeline messages
             'ofp_default_instant_sms' => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_instant_sms'] ?? '' ) ),
             'ofp_default_followup_1'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_1']  ?? '' ) ),
@@ -538,7 +551,8 @@ class OFP_Admin_Menu {
             'ofp_payment_provider'       => sanitize_text_field( wp_unslash( $_POST['ofp_payment_provider']       ?? 'monnify' ) ),
             'ofp_monnify_base_url'       => esc_url_raw(          wp_unslash( $_POST['ofp_monnify_base_url']       ?? '' ) ),
             'ofp_monnify_contract_code'  => sanitize_text_field( wp_unslash( $_POST['ofp_monnify_contract_code']  ?? '' ) ),
-            // SMTP
+            // SMTP mode + fields
+            'ofp_smtp_mode'        => $smtp_mode,
             'ofp_smtp_host'        => sanitize_text_field( wp_unslash( $_POST['ofp_smtp_host']        ?? '' ) ),
             'ofp_smtp_port'        => absint( $_POST['ofp_smtp_port'] ?? 587 ),
             'ofp_smtp_username'    => sanitize_text_field( wp_unslash( $_POST['ofp_smtp_username']    ?? '' ) ),
@@ -559,30 +573,40 @@ class OFP_Admin_Menu {
 
         // Encrypted fields — only update if a new value was submitted.
         // Leaving blank preserves the existing encrypted value.
+        // Human-readable labels used in the confirmation message.
         $encrypted_fields = [
-            'ofp_smtp_password'              => $_POST['ofp_smtp_password']              ?? '',
-            'ofp_at_api_key'                 => $_POST['ofp_at_api_key']                 ?? '',
-            'ofp_bsmsn_api_key'              => $_POST['ofp_bsmsn_api_key']              ?? '',
-            'ofp_monnify_api_key'            => $_POST['ofp_monnify_api_key']            ?? '',
-            'ofp_monnify_secret_key'         => $_POST['ofp_monnify_secret_key']         ?? '',
-            'ofp_paystack_secret_key'        => $_POST['ofp_paystack_secret_key']        ?? '',
-            'ofp_flutterwave_secret_key'     => $_POST['ofp_flutterwave_secret_key']     ?? '',
-            'ofp_flutterwave_secret_hash'    => $_POST['ofp_flutterwave_secret_hash']    ?? '',
-            'ofp_turnstile_secret'           => $_POST['ofp_turnstile_secret']           ?? '',
+            'ofp_smtp_password'           => [ 'raw' => $_POST['ofp_smtp_password']           ?? '', 'label' => 'SMTP Password' ],
+            'ofp_at_api_key'              => [ 'raw' => $_POST['ofp_at_api_key']              ?? '', 'label' => 'AT API Key' ],
+            'ofp_bsmsn_api_key'           => [ 'raw' => $_POST['ofp_bsmsn_api_key']           ?? '', 'label' => 'BulkSMS API Key' ],
+            'ofp_monnify_api_key'         => [ 'raw' => $_POST['ofp_monnify_api_key']         ?? '', 'label' => 'Monnify API Key' ],
+            'ofp_monnify_secret_key'      => [ 'raw' => $_POST['ofp_monnify_secret_key']      ?? '', 'label' => 'Monnify Secret Key' ],
+            'ofp_paystack_secret_key'     => [ 'raw' => $_POST['ofp_paystack_secret_key']     ?? '', 'label' => 'Paystack Secret Key' ],
+            'ofp_flutterwave_secret_key'  => [ 'raw' => $_POST['ofp_flutterwave_secret_key']  ?? '', 'label' => 'Flutterwave Secret Key' ],
+            'ofp_flutterwave_secret_hash' => [ 'raw' => $_POST['ofp_flutterwave_secret_hash'] ?? '', 'label' => 'Flutterwave Hash' ],
+            'ofp_turnstile_secret'        => [ 'raw' => $_POST['ofp_turnstile_secret']        ?? '', 'label' => 'Turnstile Secret' ],
         ];
 
         foreach ( $settings as $key => $value ) {
             update_option( $key, $value );
         }
 
-        foreach ( $encrypted_fields as $key => $value ) {
-            $value = sanitize_text_field( wp_unslash( $value ) );
+        $updated_keys = [];
+
+        foreach ( $encrypted_fields as $key => $field ) {
+            $value = sanitize_text_field( wp_unslash( $field['raw'] ) );
             if ( ! empty( $value ) ) {
                 update_option( $key, OFP_Security::encrypt( $value ) );
+                $updated_keys[] = $field['label'];
             }
         }
 
-        $this->set_message( '✅ Settings saved successfully.', 'success' );
+        // Build a descriptive success message.
+        $msg = '✅ Settings saved successfully.';
+        if ( ! empty( $updated_keys ) ) {
+            $msg .= ' Updated keys: ' . implode( ', ', $updated_keys ) . '.';
+        }
+
+        $this->set_message( $msg, 'success' );
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-settings' ) );
         exit;
     }
@@ -945,5 +969,300 @@ class OFP_Admin_Menu {
             [ 'text' => $message, 'type' => $type ],
             60
         );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PHASE 17 — FUNDING REQUESTS & COMPANY BANK
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function handle_save_company_bank(): void {
+        if ( empty( $_POST['ofp_save_company_bank'] ) ) return;
+        if ( OFP_Auth::current_admin_role() !== 'super_admin' ) {
+            wp_die( 'Access denied.' );
+        }
+        check_admin_referer( 'ofp_save_company_bank_action', 'ofp_company_bank_nonce' );
+        update_option( 'ofp_company_bank_name',    sanitize_text_field( $_POST['company_bank_name'] ?? '' ) );
+        update_option( 'ofp_company_account_no',   sanitize_text_field( $_POST['company_account_no'] ?? '' ) );
+        update_option( 'ofp_company_account_name', sanitize_text_field( $_POST['company_account_name'] ?? '' ) );
+        add_action( 'admin_notices', function () {
+            echo '<div class="notice notice-success is-dismissible"><p>Company bank details saved.</p></div>';
+        } );
+    }
+
+    public function render_funding_requests(): void {
+        global $wpdb;
+
+        // Handle approve action.
+        if (
+            isset( $_GET['action'], $_GET['request_id'] ) &&
+            $_GET['action'] === 'approve' &&
+            wp_verify_nonce( $_GET['_wpnonce'] ?? '', 'ofp_approve_funding' )
+        ) {
+            $request_id = (int) $_GET['request_id'];
+            $request = $wpdb->get_row( $wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}ofp_funding_requests WHERE id = %d",
+                $request_id
+            ) );
+
+            if ( $request && $request->status === 'pending' ) {
+                // Route approval based on what the payment was for (Phase 17b fix).
+                if ( in_array( $request->channel, [ 'sms', 'voice' ], true ) ) {
+                    // SMS or Voice credit top-up.
+                    OFP_Credit::topup(
+                        $request->client_id,
+                        $request->channel,
+                        $request->amount,
+                        'manual_funding_' . $request_id
+                    );
+                } elseif ( $request->channel === 'crm_plan' ) {
+                    // CRM plan payment — activate or extend the subscription.
+                    OFP_Subscription::activate_from_manual_payment(
+                        $request->client_id,
+                        'crm',
+                        $request->amount
+                    );
+                } elseif ( $request->channel === 'listing_plan' ) {
+                    // Listing plan payment — activate or extend the listing subscription.
+                    OFP_Subscription::activate_from_manual_payment(
+                        $request->client_id,
+                        'listing',
+                        $request->amount
+                    );
+                }
+
+                // Mark as approved.
+                $wpdb->update(
+                    $wpdb->prefix . 'ofp_funding_requests',
+                    [
+                        'status'      => 'approved',
+                        'reviewed_by' => get_current_user_id(),
+                        'reviewed_at' => current_time( 'mysql' ),
+                    ],
+                    [ 'id' => $request_id ]
+                );
+
+                // Notify the client.
+                OFP_Notification::create(
+                    $request->client_id,
+                    'manual_funding_approved',
+                    'Funding approved',
+                    'Your manual funding of NGN ' . number_format( $request->amount, 2 ) .
+                    ' has been approved and credited to your ' . ucfirst( $request->channel ) . ' balance.'
+                );
+
+                echo '<div class="notice notice-success"><p>Funding request approved and client credited.</p></div>';
+            }
+        }
+
+        // Handle reject action.
+        if (
+            isset( $_GET['action'], $_GET['request_id'] ) &&
+            $_GET['action'] === 'reject' &&
+            wp_verify_nonce( $_GET['_wpnonce'] ?? '', 'ofp_reject_funding' )
+        ) {
+            $request_id = (int) $_GET['request_id'];
+            $request = $wpdb->get_row( $wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}ofp_funding_requests WHERE id = %d",
+                $request_id
+            ) );
+
+            if ( $request && $request->status === 'pending' ) {
+                $wpdb->update(
+                    $wpdb->prefix . 'ofp_funding_requests',
+                    [
+                        'status'      => 'rejected',
+                        'reviewed_by' => get_current_user_id(),
+                        'reviewed_at' => current_time( 'mysql' ),
+                    ],
+                    [ 'id' => $request_id ]
+                );
+
+                OFP_Notification::create(
+                    $request->client_id,
+                    'manual_funding_rejected',
+                    'Funding request rejected',
+                    'Your manual funding request of NGN ' . number_format( $request->amount, 2 ) .
+                    ' could not be verified. Please contact us if you believe this is a mistake.'
+                );
+
+                echo '<div class="notice notice-error"><p>Funding request rejected.</p></div>';
+            }
+        }
+
+        // Fetch all pending requests first, then others.
+        $requests = $wpdb->get_results( "
+            SELECT r.*, c.business_name, c.owner_name, c.email
+            FROM {$wpdb->prefix}ofp_funding_requests r
+            JOIN {$wpdb->prefix}ofp_clients c ON c.id = r.client_id
+            ORDER BY FIELD(r.status, 'pending', 'approved', 'rejected'), r.created_at DESC
+        " );
+        ?>
+        <div class="wrap">
+            <h1>Funding Requests</h1>
+            <?php if ( empty( $requests ) ) : ?>
+                <p>No funding requests yet.</p>
+            <?php else : ?>
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>Amount</th>
+                        <th>Channel</th>
+                        <th>Bank</th>
+                        <th>Ref</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ( $requests as $req ) : ?>
+                    <tr>
+                        <td>
+                            <?php echo esc_html( $req->business_name ); ?><br>
+                            <small><?php echo esc_html( $req->owner_name ); ?></small>
+                        </td>
+                        <td>NGN <?php echo esc_html( number_format( $req->amount, 2 ) ); ?></td>
+                        <td><?php echo esc_html( ucfirst( $req->channel ) ); ?></td>
+                        <td>
+                            <?php echo esc_html( $req->bank_name ); ?><br>
+                            <small><?php echo esc_html( $req->account_name ); ?></small>
+                        </td>
+                        <td><?php echo esc_html( $req->transaction_ref ); ?></td>
+                        <td><?php echo esc_html( date( 'd M Y', strtotime( $req->created_at ) ) ); ?></td>
+                        <td>
+                            <span class="ofp-status-badge ofp-status-<?php echo esc_attr( $req->status ); ?>">
+                                <?php echo esc_html( ucfirst( $req->status ) ); ?>
+                            </span>
+                        </td>
+                        <td>
+                            <?php if ( $req->status === 'pending' ) : ?>
+                                <a href="<?php echo esc_url( wp_nonce_url(
+                                    add_query_arg( [ 'action' => 'approve', 'request_id' => $req->id ] ),
+                                    'ofp_approve_funding'
+                                ) ); ?>" class="button button-primary button-small">Approve</a>
+                                <a href="<?php echo esc_url( wp_nonce_url(
+                                    add_query_arg( [ 'action' => 'reject', 'request_id' => $req->id ] ),
+                                    'ofp_reject_funding'
+                                ) ); ?>" class="button button-small"
+                                   onclick="return confirm('Reject this request?')">Reject</a>
+                            <?php else : ?>
+                                <span class="ofp-muted">Done</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+        <?php
+    } // end render_funding_requests()
+
+    /**
+     * Admin page: Send a manual notification to one client or all clients.
+     * Phase 17b — Patch J1.
+     */
+    public function render_send_notification(): void {
+        $sent    = false;
+        $error   = '';
+        $clients = OFP_Client::all();
+
+        if (
+            $_SERVER['REQUEST_METHOD'] === 'POST' &&
+            isset( $_POST['ofp_send_notification'] ) &&
+            check_admin_referer( 'ofp_send_notification_action', 'ofp_send_notif_nonce' )
+        ) {
+            $recipient = sanitize_text_field( $_POST['recipient'] ?? '' );
+            $title     = sanitize_text_field( $_POST['notif_title'] ?? '' );
+            $message   = sanitize_textarea_field( $_POST['notif_message'] ?? '' );
+
+            if ( empty( $title ) || empty( $message ) ) {
+                $error = 'Please fill in both a title and a message.';
+            } else {
+                if ( $recipient === 'all' ) {
+                    foreach ( $clients as $client ) {
+                        OFP_Notification::create(
+                            $client->id,
+                            'admin_message',
+                            $title,
+                            $message
+                        );
+                    }
+                    $sent = true;
+                } elseif ( is_numeric( $recipient ) && (int) $recipient > 0 ) {
+                    OFP_Notification::create(
+                        (int) $recipient,
+                        'admin_message',
+                        $title,
+                        $message
+                    );
+                    $sent = true;
+                } else {
+                    $error = 'Please choose a recipient.';
+                }
+            }
+        }
+        ?>
+        <div class="wrap">
+            <h1>Send Notification</h1>
+
+            <?php if ( $sent ) : ?>
+                <div class="notice notice-success is-dismissible"><p>Notification sent successfully.</p></div>
+            <?php endif; ?>
+
+            <?php if ( $error ) : ?>
+                <div class="notice notice-error is-dismissible"><p><?php echo esc_html( $error ); ?></p></div>
+            <?php endif; ?>
+
+            <form method="POST" style="max-width:600px;">
+                <?php wp_nonce_field( 'ofp_send_notification_action', 'ofp_send_notif_nonce' ); ?>
+
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th><label for="recipient">Send To</label></th>
+                        <td>
+                            <select name="recipient" id="recipient" required style="width:300px;">
+                                <option value="">— Choose recipient —</option>
+                                <option value="all">All Clients</option>
+                                <optgroup label="One Client">
+                                    <?php foreach ( $clients as $client ) : ?>
+                                        <option value="<?php echo esc_attr( $client->id ); ?>">
+                                            <?php echo esc_html( $client->business_name . ' (' . $client->owner_name . ')' ); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label for="notif_title">Title</label></th>
+                        <td>
+                            <input type="text" name="notif_title" id="notif_title"
+                                   style="width:300px;" required
+                                   placeholder="e.g. System maintenance tonight">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label for="notif_message">Message</label></th>
+                        <td>
+                            <textarea name="notif_message" id="notif_message"
+                                      rows="5" style="width:300px;" required
+                                      placeholder="Full message the client will see in their bell and/or email"></textarea>
+                            <p class="description">
+                                Delivered via bell, email, or both — based on each client's own notification preference.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <p class="submit">
+                    <button type="submit" name="ofp_send_notification" value="1" class="button button-primary">
+                        Send Notification
+                    </button>
+                </p>
+            </form>
+        </div>
+        <?php
     }
 }

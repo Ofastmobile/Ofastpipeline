@@ -63,6 +63,9 @@ class OFP_Client_Portal {
         'account'           => 'account.php',
         'my-listing'        => 'my-listing.php',        // v2.1 — property listing management
         'properties'        => 'properties.php',        // Phase 14 — tiered property listing management
+        'notifications'         => 'notifications.php',         // Phase 17
+        'notification-settings' => 'notification-settings.php', // Phase 17
+        'funding'               => 'funding.php',               // Phase 17 — dedicated funding page
     ];
 
     /**

@@ -1,25 +1,81 @@
 <?php
 /**
  * Admin View: Settings (Super Admin Only)
+ *
+ * Displays all OFast Pipeline configuration sections with visual
+ * status indicators for encrypted/sensitive fields.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 if ( ! OFP_Auth::is_super_admin() ) wp_die( 'Access denied.' );
 
 $active_provider = get_option( 'ofp_payment_provider', 'monnify' );
+$smtp_mode       = get_option( 'ofp_smtp_mode', 'default' );
+
+// ── Helper: renders a configured / not-set badge ────────────────────────
+function ofp_key_badge( string $option_key ): void {
+    $val = get_option( $option_key, '' );
+    if ( ! empty( $val ) ) {
+        echo '<span class="ofp-badge ofp-badge-green ofp-key-badge">✓ Configured</span>';
+    } else {
+        echo '<span class="ofp-badge ofp-badge-red ofp-key-badge">✗ Not set</span>';
+    }
+}
+
+// ── Helper: section status pill ─────────────────────────────────────────
+function ofp_section_status( array $required_keys ): void {
+    $all_set = true;
+    foreach ( $required_keys as $key ) {
+        if ( empty( get_option( $key, '' ) ) ) {
+            $all_set = false;
+            break;
+        }
+    }
+    if ( $all_set ) {
+        echo '<span class="ofp-section-status ofp-section-status--ok">Ready</span>';
+    } else {
+        echo '<span class="ofp-section-status ofp-section-status--missing">Needs Setup</span>';
+    }
+}
 
 include OFP_PATH . 'admin/views/partials/header.php';
 ?>
 
-<h2>Settings</h2>
-<p>Sensitive fields (passwords, API keys) are stored encrypted. Leave a key field blank to keep the existing value.</p>
+<div class="ofp-settings-page-header">
+    <h2>Settings</h2>
+    <p>Configure integrations and credentials. Sensitive fields (passwords, API keys) are stored encrypted.<br>
+       Leave a key field blank to keep its existing value.</p>
+</div>
 
 <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ofp-form">
     <?php wp_nonce_field( 'ofp_save_settings' ); ?>
     <input type="hidden" name="action" value="ofp_save_settings">
 
+    <!-- ── DOMAIN ROUTING (Phase 16) ───────────────────────────────────── -->
+    <div class="ofp-settings-section">
+        <div class="ofp-settings-section-header">
+            <h3>🌐 Domain Routing</h3>
+        </div>
+        <p class="ofp-hint">
+            Your base CRM domain. Phase 16 uses this to route
+            <code>app.yourdomain.com</code> (login/dashboard) and
+            <code>property.yourdomain.com</code> (public marketplace) automatically.
+            Enter just the bare domain — no <code>https://</code>, no trailing slash.
+        </p>
+        <div class="ofp-form-grid">
+            <div class="ofp-field">
+                <label>CRM Base Domain</label>
+                <input type="text" name="ofp_crm_base_domain"
+                       value="<?php echo esc_attr( get_option( 'ofp_crm_base_domain', '' ) ); ?>"
+                       placeholder="e.g. ofastpipeline.com">
+            </div>
+        </div>
+    </div>
+
     <!-- ── DEFAULT PIPELINE MESSAGES ─────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3> Default Pipeline Messages</h3>
+        <div class="ofp-settings-section-header">
+            <h3>💬 Default Pipeline Messages</h3>
+        </div>
         <p class="ofp-hint">
             These are the default messages pre-filled when a new client is onboarded.
             Each client can customise their own messages from their dashboard → Pipeline Settings.<br>
@@ -49,52 +105,82 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
     <!-- ── SMTP ───────────────────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3> SMTP Configuration</h3>
-        <p class="ofp-hint">
-            Only fill this in if <strong>Ofast Toolkit SMTP</strong> is not active on this site.
-            When Ofast Toolkit SMTP is enabled (priority 999), it handles all delivery automatically
-            and these fields are not used.
-        </p>
-        <div class="ofp-form-grid">
-            <div class="ofp-field">
-                <label>SMTP Host</label>
-                <input type="text" name="ofp_smtp_host"
-                       value="<?php echo esc_attr( get_option( 'ofp_smtp_host', '' ) ); ?>"
-                       placeholder="e.g. smtp-relay.brevo.com">
-            </div>
-            <div class="ofp-field">
-                <label>SMTP Port</label>
-                <input type="number" name="ofp_smtp_port"
-                       value="<?php echo esc_attr( get_option( 'ofp_smtp_port', 587 ) ); ?>">
-            </div>
-            <div class="ofp-field">
-                <label>SMTP Username</label>
-                <input type="text" name="ofp_smtp_username"
-                       value="<?php echo esc_attr( get_option( 'ofp_smtp_username', '' ) ); ?>">
-            </div>
-            <div class="ofp-field">
-                <label>SMTP Password</label>
-                <input type="password" name="ofp_smtp_password" placeholder="Leave blank to keep existing">
-            </div>
-            <div class="ofp-field">
-                <label>Encryption</label>
-                <select name="ofp_smtp_encryption">
-                    <option value="tls" <?php selected( get_option( 'ofp_smtp_encryption', 'tls' ), 'tls' ); ?>>TLS (recommended)</option>
-                    <option value="ssl" <?php selected( get_option( 'ofp_smtp_encryption', 'tls' ), 'ssl' ); ?>>SSL</option>
-                </select>
-            </div>
-            <div class="ofp-field">
-                <label>From Email</label>
-                <input type="email" name="ofp_smtp_from_email"
-                       value="<?php echo esc_attr( get_option( 'ofp_smtp_from_email', '' ) ); ?>"
-                       placeholder="noreply@ofastpipeline.com">
-            </div>
-            <div class="ofp-field">
-                <label>From Name</label>
-                <input type="text" name="ofp_smtp_from_name"
-                       value="<?php echo esc_attr( get_option( 'ofp_smtp_from_name', 'OFast Pipeline' ) ); ?>">
+        <div class="ofp-settings-section-header">
+            <h3>📧 Email / SMTP</h3>
+            <?php
+            if ( $smtp_mode === 'custom' ) {
+                ofp_section_status( [ 'ofp_smtp_host', 'ofp_smtp_username', 'ofp_smtp_password', 'ofp_smtp_from_email' ] );
+            } else {
+                echo '<span class="ofp-section-status ofp-section-status--ok">Using WP Default</span>';
+            }
+            ?>
+        </div>
+
+        <div class="ofp-smtp-mode-toggle">
+            <label class="ofp-toggle-label">Email Delivery Mode</label>
+            <div class="ofp-toggle-buttons">
+                <label class="ofp-toggle-option <?php echo $smtp_mode !== 'custom' ? 'ofp-toggle-active' : ''; ?>">
+                    <input type="radio" name="ofp_smtp_mode" value="default"
+                           <?php checked( $smtp_mode !== 'custom', true ); ?>>
+                    <span class="ofp-toggle-btn">
+                        <strong>WordPress Default</strong>
+                        <small>Uses PHP mail() or another SMTP plugin</small>
+                    </span>
+                </label>
+                <label class="ofp-toggle-option <?php echo $smtp_mode === 'custom' ? 'ofp-toggle-active' : ''; ?>">
+                    <input type="radio" name="ofp_smtp_mode" value="custom"
+                           <?php checked( $smtp_mode, 'custom' ); ?>>
+                    <span class="ofp-toggle-btn">
+                        <strong>Custom SMTP</strong>
+                        <small>Configure your own SMTP server below</small>
+                    </span>
+                </label>
             </div>
         </div>
+
+        <div id="ofp-smtp-fields" class="ofp-conditional-fields" style="<?php echo $smtp_mode !== 'custom' ? 'display:none;' : ''; ?>">
+            <div class="ofp-form-grid">
+                <div class="ofp-field">
+                    <label>SMTP Host</label>
+                    <input type="text" name="ofp_smtp_host"
+                           value="<?php echo esc_attr( get_option( 'ofp_smtp_host', '' ) ); ?>"
+                           placeholder="e.g. smtp-relay.brevo.com">
+                </div>
+                <div class="ofp-field">
+                    <label>SMTP Port</label>
+                    <input type="number" name="ofp_smtp_port"
+                           value="<?php echo esc_attr( get_option( 'ofp_smtp_port', 587 ) ); ?>">
+                </div>
+                <div class="ofp-field">
+                    <label>SMTP Username</label>
+                    <input type="text" name="ofp_smtp_username"
+                           value="<?php echo esc_attr( get_option( 'ofp_smtp_username', '' ) ); ?>">
+                </div>
+                <div class="ofp-field">
+                    <label>SMTP Password <?php ofp_key_badge( 'ofp_smtp_password' ); ?></label>
+                    <input type="password" name="ofp_smtp_password" placeholder="Leave blank to keep existing">
+                </div>
+                <div class="ofp-field">
+                    <label>Encryption</label>
+                    <select name="ofp_smtp_encryption">
+                        <option value="tls" <?php selected( get_option( 'ofp_smtp_encryption', 'tls' ), 'tls' ); ?>>TLS (recommended)</option>
+                        <option value="ssl" <?php selected( get_option( 'ofp_smtp_encryption', 'tls' ), 'ssl' ); ?>>SSL</option>
+                    </select>
+                </div>
+                <div class="ofp-field">
+                    <label>From Email</label>
+                    <input type="email" name="ofp_smtp_from_email"
+                           value="<?php echo esc_attr( get_option( 'ofp_smtp_from_email', '' ) ); ?>"
+                           placeholder="noreply@ofastpipeline.com">
+                </div>
+                <div class="ofp-field">
+                    <label>From Name</label>
+                    <input type="text" name="ofp_smtp_from_name"
+                           value="<?php echo esc_attr( get_option( 'ofp_smtp_from_name', 'OFast Pipeline' ) ); ?>">
+                </div>
+            </div>
+        </div>
+
         <div class="ofp-form-actions" style="border:0;padding:0;margin-top:12px;">
             <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_test_email' ), 'ofp_test_email' ) ); ?>"
                class="button"
@@ -105,7 +191,17 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
     <!-- ── PAYMENT GATEWAY ────────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3> Payment Gateway</h3>
+        <div class="ofp-settings-section-header">
+            <h3>💳 Payment Gateway</h3>
+            <?php
+            $gw_keys_map = [
+                'monnify'     => [ 'ofp_monnify_api_key', 'ofp_monnify_secret_key', 'ofp_monnify_contract_code' ],
+                'paystack'    => [ 'ofp_paystack_secret_key' ],
+                'flutterwave' => [ 'ofp_flutterwave_secret_key', 'ofp_flutterwave_secret_hash' ],
+            ];
+            ofp_section_status( $gw_keys_map[ $active_provider ] ?? [] );
+            ?>
+        </div>
         <p class="ofp-hint">
             Select your active payment provider. All providers create dedicated virtual accounts
             per client. Switching provider here requires no code changes — only credentials below.
@@ -126,11 +222,11 @@ include OFP_PATH . 'admin/views/partials/header.php';
             <h4>Monnify Credentials</h4>
             <div class="ofp-form-grid">
                 <div class="ofp-field">
-                    <label>API Key</label>
+                    <label>API Key <?php ofp_key_badge( 'ofp_monnify_api_key' ); ?></label>
                     <input type="password" name="ofp_monnify_api_key" placeholder="Leave blank to keep existing">
                 </div>
                 <div class="ofp-field">
-                    <label>Secret Key</label>
+                    <label>Secret Key <?php ofp_key_badge( 'ofp_monnify_secret_key' ); ?></label>
                     <input type="password" name="ofp_monnify_secret_key" placeholder="Leave blank to keep existing">
                 </div>
                 <div class="ofp-field">
@@ -153,7 +249,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
             <h4>Paystack Credentials</h4>
             <div class="ofp-form-grid">
                 <div class="ofp-field">
-                    <label>Secret Key</label>
+                    <label>Secret Key <?php ofp_key_badge( 'ofp_paystack_secret_key' ); ?></label>
                     <input type="password" name="ofp_paystack_secret_key" placeholder="Leave blank to keep existing">
                     <p class="ofp-hint">Starts with sk_live_ (production) or sk_test_ (sandbox).</p>
                 </div>
@@ -169,11 +265,11 @@ include OFP_PATH . 'admin/views/partials/header.php';
             <h4>Flutterwave Credentials</h4>
             <div class="ofp-form-grid">
                 <div class="ofp-field">
-                    <label>Secret Key</label>
+                    <label>Secret Key <?php ofp_key_badge( 'ofp_flutterwave_secret_key' ); ?></label>
                     <input type="password" name="ofp_flutterwave_secret_key" placeholder="Leave blank to keep existing">
                 </div>
                 <div class="ofp-field">
-                    <label>Webhook Secret Hash</label>
+                    <label>Webhook Secret Hash <?php ofp_key_badge( 'ofp_flutterwave_secret_hash' ); ?></label>
                     <input type="password" name="ofp_flutterwave_secret_hash" placeholder="Leave blank to keep existing">
                     <p class="ofp-hint">Set this in your Flutterwave dashboard under Webhooks.</p>
                 </div>
@@ -186,7 +282,10 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
     <!-- ── Africa's Talking ───────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3> Africa's Talking (SMS & Voice)</h3>
+        <div class="ofp-settings-section-header">
+            <h3>📱 Africa's Talking (SMS & Voice)</h3>
+            <?php ofp_section_status( [ 'ofp_at_username', 'ofp_at_api_key' ] ); ?>
+        </div>
         <div class="ofp-form-grid">
             <div class="ofp-field">
                 <label>AT Username</label>
@@ -194,7 +293,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                        value="<?php echo esc_attr( get_option( 'ofp_at_username', '' ) ); ?>">
             </div>
             <div class="ofp-field">
-                <label>AT API Key</label>
+                <label>AT API Key <?php ofp_key_badge( 'ofp_at_api_key' ); ?></label>
                 <input type="password" name="ofp_at_api_key" placeholder="Leave blank to keep existing">
             </div>
             <div class="ofp-field">
@@ -214,10 +313,13 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
     <!-- ── BulkSMS Nigeria ────────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3> BulkSMS Nigeria (Fallback SMS)</h3>
+        <div class="ofp-settings-section-header">
+            <h3>📲 BulkSMS Nigeria (Fallback SMS)</h3>
+            <?php ofp_section_status( [ 'ofp_bsmsn_api_key' ] ); ?>
+        </div>
         <div class="ofp-form-grid">
             <div class="ofp-field">
-                <label>BulkSMS API Key</label>
+                <label>BulkSMS API Key <?php ofp_key_badge( 'ofp_bsmsn_api_key' ); ?></label>
                 <input type="password" name="ofp_bsmsn_api_key" placeholder="Leave blank to keep existing">
             </div>
             <div class="ofp-field">
@@ -231,7 +333,10 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
     <!-- ── Cloudflare Turnstile ───────────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3> Cloudflare Turnstile</h3>
+        <div class="ofp-settings-section-header">
+            <h3>🛡️ Cloudflare Turnstile</h3>
+            <?php ofp_section_status( [ 'ofp_turnstile_site_key', 'ofp_turnstile_secret' ] ); ?>
+        </div>
         <p class="ofp-hint">Bot protection on lead capture forms, /login, and /signup. Leave blank during local development — Turnstile is automatically bypassed when no secret key is set.</p>
         <div class="ofp-form-grid">
             <div class="ofp-field">
@@ -240,7 +345,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                        value="<?php echo esc_attr( get_option( 'ofp_turnstile_site_key', '' ) ); ?>">
             </div>
             <div class="ofp-field">
-                <label>Secret Key</label>
+                <label>Secret Key <?php ofp_key_badge( 'ofp_turnstile_secret' ); ?></label>
                 <input type="password" name="ofp_turnstile_secret" placeholder="Leave blank to keep existing">
             </div>
         </div>
@@ -248,7 +353,9 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
     <!-- ── Property Listing Fee ──────────────────────────────────────────── -->
     <div class="ofp-settings-section">
-        <h3> Property Listing Fee</h3>
+        <div class="ofp-settings-section-header">
+            <h3>🏠 Property Listing Fee</h3>
+        </div>
         <div class="ofp-form-grid">
             <div class="ofp-field">
                 <label>Monthly Listing Fee (NGN)</label>
@@ -264,6 +371,43 @@ include OFP_PATH . 'admin/views/partials/header.php';
     </div>
 
 </form>
+
+<div class="ofp-settings-section">
+    <h2>Company Bank Account</h2>
+    <p class="ofp-hint">
+        Shown to clients on their Account page as an alternative
+        transfer option for manual funding.
+    </p>
+
+    <form method="post" action="">
+        <?php wp_nonce_field( 'ofp_save_company_bank_action', 'ofp_company_bank_nonce' ); ?>
+        <table class="form-table" role="presentation">
+            <tr>
+                <th>Bank Name</th>
+                <td><input type="text" name="company_bank_name"
+                           value="<?php echo esc_attr( get_option( 'ofp_company_bank_name' ) ); ?>"
+                           style="width:300px;"></td>
+            </tr>
+            <tr>
+                <th>Account Number</th>
+                <td><input type="text" name="company_account_no"
+                           value="<?php echo esc_attr( get_option( 'ofp_company_account_no' ) ); ?>"
+                           style="width:300px;"></td>
+            </tr>
+            <tr>
+                <th>Account Name</th>
+                <td><input type="text" name="company_account_name"
+                           value="<?php echo esc_attr( get_option( 'ofp_company_account_name' ) ); ?>"
+                           style="width:300px;"></td>
+            </tr>
+        </table>
+        <p class="submit">
+            <button type="submit" name="ofp_save_company_bank" value="1" class="button button-primary">
+                Save Bank Details
+            </button>
+        </p>
+    </form>
+</div>
 
 <div class="ofp-settings-section">
     <h3>Plans &amp; Pricing</h3>
@@ -381,7 +525,28 @@ include OFP_PATH . 'admin/views/partials/header.php';
 </div>
 
 <script>
-// Show/hide gateway credential fields based on selected provider.
+// ── Show/hide SMTP fields based on mode toggle ───────────────────────────
+function ofpSyncSmtpToggle() {
+    var selected = document.querySelector('input[name="ofp_smtp_mode"]:checked');
+    if ( ! selected ) return;
+    var fields = document.getElementById('ofp-smtp-fields');
+    var labels = document.querySelectorAll('.ofp-toggle-option');
+    labels.forEach(function(l) { l.classList.remove('ofp-toggle-active'); });
+    if ( selected.closest('.ofp-toggle-option') ) {
+        selected.closest('.ofp-toggle-option').classList.add('ofp-toggle-active');
+    }
+    fields.style.display = selected.value === 'custom' ? '' : 'none';
+}
+
+// Run on page load to ensure correct visual state.
+document.addEventListener('DOMContentLoaded', ofpSyncSmtpToggle);
+
+// Run on each radio change.
+document.querySelectorAll('input[name="ofp_smtp_mode"]').forEach(function(radio) {
+    radio.addEventListener('change', ofpSyncSmtpToggle);
+});
+
+// ── Show/hide gateway credential fields based on selected provider ───────
 document.getElementById('ofp-payment-provider').addEventListener('change', function() {
     document.querySelectorAll('.ofp-gateway-fields').forEach(function(el) {
         el.style.display = 'none';

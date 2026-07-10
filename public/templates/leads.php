@@ -108,34 +108,42 @@ $status_badges = [
     <?php endif; ?>
 
     <!-- Stats row -->
-    <div class="ofp-stats-grid" style="margin-bottom:20px;">
+    <div class="ofp-stats-grid" style="margin-bottom:24px;">
         <div class="ofp-stat-card">
-            <span class="ofp-stat-number accent"><?php echo esc_html( $stats['today'] ); ?></span>
-            <span class="ofp-stat-label">Today</span>
+            <div class="ofp-stat-header">
+                <span class="ofp-stat-title">Today</span>
+            </div>
+            <div class="ofp-stat-value"><?php echo esc_html( $stats['today'] ); ?></div>
         </div>
         <div class="ofp-stat-card">
-            <span class="ofp-stat-number"><?php echo esc_html( $stats['this_month'] ); ?></span>
-            <span class="ofp-stat-label">This Month</span>
+            <div class="ofp-stat-header">
+                <span class="ofp-stat-title">This Month</span>
+            </div>
+            <div class="ofp-stat-value"><?php echo esc_html( $stats['this_month'] ); ?></div>
         </div>
         <div class="ofp-stat-card">
-            <span class="ofp-stat-number"><?php echo esc_html( $stats['converted'] ); ?></span>
-            <span class="ofp-stat-label">Converted</span>
+            <div class="ofp-stat-header">
+                <span class="ofp-stat-title">Converted</span>
+            </div>
+            <div class="ofp-stat-value"><?php echo esc_html( $stats['converted'] ); ?></div>
         </div>
         <div class="ofp-stat-card">
-            <span class="ofp-stat-number"><?php echo esc_html( $stats['interested'] ); ?></span>
-            <span class="ofp-stat-label">Interested</span>
+            <div class="ofp-stat-header">
+                <span class="ofp-stat-title">Interested</span>
+            </div>
+            <div class="ofp-stat-value"><?php echo esc_html( $stats['interested'] ); ?></div>
         </div>
     </div>
 
     <!-- Filter tabs -->
-    <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid #e5e7eb;padding-bottom:0;">
+    <div style="display:flex;gap:4px;margin-bottom:24px;border-bottom:2px solid var(--border-color);padding-bottom:0;">
         <?php
         $filters = [ '' => 'All', 'new' => 'New', 'contacted' => 'Contacted', 'interested' => 'Interested', 'converted' => 'Converted', 'dead' => 'Dead' ];
         foreach ( $filters as $val => $label ) :
             $active = $filter_status === $val;
         ?>
             <a href="<?php echo esc_url( add_query_arg( 'status', $val, home_url( '/leads' ) ) ); ?>"
-               style="padding:8px 14px;font-size:13px;font-weight:500;text-decoration:none;border-bottom:2px solid <?php echo $active ? '#1a73e8' : 'transparent'; ?>;margin-bottom:-2px;color:<?php echo $active ? '#1a73e8' : '#6b7280'; ?>;">
+               style="padding:8px 14px;font-size:13px;font-weight:500;text-decoration:none;border-bottom:2px solid <?php echo $active ? 'var(--accent-blue)' : 'transparent'; ?>;margin-bottom:-2px;color:<?php echo $active ? 'var(--accent-blue)' : 'var(--text-muted)'; ?>;">
                 <?php echo esc_html( $label ); ?>
             </a>
         <?php endforeach; ?>

@@ -99,6 +99,15 @@ class OFP_Activator {
         if ( empty( $logo_column_exists ) ) {
             $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN logo_url VARCHAR(255) DEFAULT NULL AFTER business_category" );
         }
+
+        // ofp_notification_pref column on ofp_clients (added for Phase 17 notifications).
+        $notif_pref_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'ofp_notification_pref'"
+        );
+        if ( empty( $notif_pref_exists ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN ofp_notification_pref VARCHAR(10) NOT NULL DEFAULT 'both'" );
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN ofp_notification_pref_added TINYINT(1) DEFAULT 0" );
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -416,6 +425,39 @@ class OFP_Activator {
             KEY lead_id     (lead_id),
             KEY property_id (property_id),
             KEY client_id   (client_id)
+        ) {$charset_collate};" );
+
+        // ── 16. ofp_notifications (Phase 17) ──────────────────────────────────
+        dbDelta( "CREATE TABLE {$p}ofp_notifications (
+            id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            client_id   BIGINT UNSIGNED NOT NULL,
+            type        VARCHAR(80)     NOT NULL,
+            title       VARCHAR(255)    NOT NULL,
+            message     TEXT            NOT NULL,
+            is_read     TINYINT(1)      NOT NULL DEFAULT 0,
+            created_at  DATETIME        NOT NULL,
+            PRIMARY KEY (id),
+            KEY idx_client_unread (client_id, is_read),
+            KEY idx_client_created (client_id, created_at)
+        ) {$charset_collate};" );
+
+        // ── 17. ofp_funding_requests (Phase 17) ───────────────────────────────
+        dbDelta( "CREATE TABLE {$p}ofp_funding_requests (
+            id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            client_id        BIGINT UNSIGNED NOT NULL,
+            amount           DECIMAL(12,2)   NOT NULL,
+            channel          VARCHAR(20)     NOT NULL,
+            bank_name        VARCHAR(100)    NOT NULL,
+            account_name     VARCHAR(150)    NOT NULL,
+            transaction_ref  VARCHAR(255)    NOT NULL,
+            note             TEXT,
+            status           VARCHAR(20)     NOT NULL DEFAULT 'pending',
+            reviewed_by      BIGINT UNSIGNED NULL,
+            reviewed_at      DATETIME        NULL,
+            created_at       DATETIME        NOT NULL,
+            PRIMARY KEY (id),
+            KEY idx_client_id (client_id),
+            KEY idx_status (status)
         ) {$charset_collate};" );
 
         // Store the schema version so future upgrades can run targeted migrations.

@@ -223,6 +223,23 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <div><strong>Virtual Account:</strong> <?php echo esc_html( $client->virtual_bank_name ); ?> — <?php echo esc_html( $client->virtual_account_number ?: 'Not set' ); ?></div>
         <div><strong>Created:</strong> <?php echo esc_html( $client->created_at ); ?></div>
         <div><strong>Source:</strong> <?php echo esc_html( $client->onboarding_source ); ?></div>
+        <?php
+        $base_domain      = get_option( 'ofp_crm_base_domain', '' );
+        $client_subdomain = ! empty( $client->subdomain ) ? trim( $client->subdomain ) : '';
+        if ( $client_subdomain && $base_domain ) :
+            $full_domain_url = 'https://' . $client_subdomain . '.' . $base_domain;
+        ?>
+        <div style="grid-column:1/-1;">
+            <strong>Domain:</strong>
+            <a href="<?php echo esc_url( $full_domain_url ); ?>" target="_blank" style="color:#1a73e8;">
+                <?php echo esc_html( $client_subdomain . '.' . $base_domain ); ?>
+            </a>
+        </div>
+        <?php elseif ( $client_subdomain ) : ?>
+        <div><strong>Subdomain Slug:</strong> <?php echo esc_html( $client_subdomain ); ?> <span style="color:#9ca3af;">(base domain not set in Settings)</span></div>
+        <?php else : ?>
+        <div><strong>Domain:</strong> <span style="color:#9ca3af;">Not set</span></div>
+        <?php endif; ?>
     </div>
 
     <?php $stats = OFP_Client::get_stats( $client->id ); ?>
