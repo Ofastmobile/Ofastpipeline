@@ -65,62 +65,106 @@ $notifications = $wpdb->get_results( $wpdb->prepare(
 $total_pages = ceil( $total / $per_page );
 ?>
 <!DOCTYPE html>
-<html <?php language_attributes(); ?>>
+<html lang="en">
 <head>
-	<meta charset="<?php bloginfo( 'charset' ); ?>">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Notifications — OFast Pipeline</title>
-	<?php wp_head(); ?>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications — OFast Pipeline</title>
+    <?php wp_head(); ?>
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
 </head>
-<body>
-<div class="ofp-dashboard-wrapper">
-	<h1>Notifications</h1>
+<body class="ofp-portal-body">
 
-	<?php if ( empty( $notifications ) ) : ?>
-		<p class="ofp-muted">No notifications yet.</p>
-	<?php else : ?>
-		<form method="POST" style="margin-bottom:16px;">
-			<?php wp_nonce_field( 'ofp_notifications_action', 'ofp_notif_nonce' ); ?>
-			<button type="submit" name="ofp_mark_all_read" value="1" class="ofp-btn ofp-btn-secondary">
-				Mark all as read
-			</button>
-		</form>
+<?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
-		<div class="ofp-notifications-list">
-			<?php foreach ( $notifications as $notif ) : ?>
-				<div class="ofp-notification-item <?php echo $notif->is_read ? 'ofp-read' : 'ofp-unread'; ?>">
-					<div class="ofp-notification-content">
-						<strong><?php echo esc_html( $notif->title ); ?></strong>
-						<p><?php echo esc_html( $notif->message ); ?></p>
-						<span class="ofp-notification-time ofp-muted">
-							<?php echo esc_html( human_time_diff( strtotime( $notif->created_at ), time() ) . ' ago' ); ?>
-						</span>
-					</div>
-					<?php if ( ! $notif->is_read ) : ?>
-						<form method="POST" style="display:inline;">
-							<?php wp_nonce_field( 'ofp_notifications_action', 'ofp_notif_nonce' ); ?>
-							<input type="hidden" name="notification_id" value="<?php echo esc_attr( $notif->id ); ?>">
-							<button type="submit" name="ofp_mark_read" value="1" class="ofp-link-btn">
-								Mark read
-							</button>
-						</form>
-					<?php endif; ?>
-				</div>
-			<?php endforeach; ?>
-		</div>
+<div class="ofp-container">
 
-		<?php if ( $total_pages > 1 ) : ?>
-			<div class="ofp-pagination">
-				<?php for ( $i = 1; $i <= $total_pages; $i++ ) : ?>
-					<a href="?npage=<?php echo esc_attr( $i ); ?>"
-					   class="ofp-page-btn <?php echo $i === $page ? 'ofp-active' : ''; ?>">
-						<?php echo esc_html( $i ); ?>
-					</a>
-				<?php endfor; ?>
-			</div>
-		<?php endif; ?>
-	<?php endif; ?>
+    <div class="ofp-page-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1>Notifications</h1>
+            <p>Recent activity and alerts on your account.</p>
+        </div>
+        <?php if ( ! empty( $notifications ) ) : ?>
+            <form method="POST" style="margin: 0;">
+                <?php wp_nonce_field( 'ofp_notifications_action', 'ofp_notif_nonce' ); ?>
+                <button type="submit" name="ofp_mark_all_read" value="1" class="ofp-btn ofp-btn-secondary" style="font-size: 13px; padding: 8px 16px;">
+                    ✓ Mark all as read
+                </button>
+            </form>
+        <?php endif; ?>
+    </div>
+
+    <?php if ( empty( $notifications ) ) : ?>
+        <div class="ofp-empty-state">
+            <span style="font-size: 32px; margin-bottom: 16px; display: block;">📭</span>
+            <h3>No notifications yet</h3>
+            <p>You're all caught up! New alerts will appear here.</p>
+        </div>
+    <?php else : ?>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px;">
+            <?php foreach ( $notifications as $notif ) : 
+                $bg_color = $notif->is_read ? 'transparent' : 'var(--bg-lighter)';
+                $border_color = $notif->is_read ? 'var(--border-color)' : 'var(--accent-blue)';
+                $opacity = $notif->is_read ? '0.6' : '1';
+            ?>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border-radius: 12px; background: <?php echo $bg_color; ?>; border: 1px solid <?php echo $border_color; ?>; opacity: <?php echo $opacity; ?>; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
+                    
+                    <div style="display: flex; gap: 16px; align-items: center; flex: 1; min-width: 0;">
+                        
+                        <!-- Icon Box -->
+                        <div style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); flex-shrink: 0; position: relative;">
+                            🔔
+                            <?php if ( ! $notif->is_read ) : ?>
+                                <span style="position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; background: var(--accent-blue); border-radius: 50%; box-shadow: 0 0 8px var(--accent-blue);"></span>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <!-- Text Content -->
+                        <div style="min-width: 0;">
+                            <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">
+                                <?php echo esc_html( $notif->title ); ?>
+                            </div>
+                            <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+                                <?php echo esc_html( $notif->message ); ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action / Time -->
+                    <div style="text-align: right; flex-shrink: 0; padding-left: 24px;">
+                        <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">
+                            <?php echo esc_html( human_time_diff( strtotime( $notif->created_at ), current_time('timestamp') ) . ' ago' ); ?>
+                        </div>
+                        <?php if ( ! $notif->is_read ) : ?>
+                            <form method="POST" style="margin: 0;">
+                                <?php wp_nonce_field( 'ofp_notifications_action', 'ofp_notif_nonce' ); ?>
+                                <input type="hidden" name="notification_id" value="<?php echo esc_attr( $notif->id ); ?>">
+                                <button type="submit" name="ofp_mark_read" value="1" style="background: none; border: none; color: var(--accent-blue); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0;">
+                                    Mark as read
+                                </button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <?php if ( $total_pages > 1 ) : ?>
+            <div class="ofp-pagination">
+                <?php for ( $i = 1; $i <= $total_pages; $i++ ) : ?>
+                    <a href="?npage=<?php echo esc_attr( $i ); ?>"
+                       class="ofp-page-btn <?php echo $i === $page ? 'ofp-active' : ''; ?>">
+                        <?php echo esc_html( $i ); ?>
+                    </a>
+                <?php endfor; ?>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
+
 </div>
+</main>
+</div><!-- .ofp-shell -->
 <?php wp_footer(); ?>
 </body>
 </html>

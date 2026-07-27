@@ -178,6 +178,48 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
         /* ── Funding-page specific styles ── */
         .ofp-funding-page { max-width: 560px; margin: 0 auto; padding: 0 0 60px; }
 
+        /* Tabs */
+        .ofp-funding-tabs {
+            display: flex;
+            gap: 8px;
+            background: rgba(0,0,0,0.2);
+            padding: 6px;
+            border-radius: 14px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .ofp-funding-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .ofp-funding-tab.active {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-main);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .ofp-funding-tab:hover:not(.active) {
+            color: var(--text-main);
+            background: rgba(255,255,255,0.05);
+        }
+        .ofp-funding-pane {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .ofp-funding-pane.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .ofp-funding-card {
             background: rgba(255,255,255,0.03);
             backdrop-filter: blur(24px);
@@ -300,8 +342,8 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
         .ofp-submit-btn {
             width: 100%;
             height: 52px;
-            background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3));
-            border: 1px solid rgba(139,92,246,0.4);
+            background: var(--btn-primary);
+            border: 1px solid var(--btn-primary-hover);
             border-radius: 14px;
             color: #fff;
             font-size: 15px;
@@ -312,9 +354,9 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
             transition: all 0.2s;
         }
         .ofp-submit-btn:hover {
-            background: linear-gradient(135deg, rgba(99,102,241,0.5), rgba(139,92,246,0.5));
+            background: var(--btn-primary-hover);
             transform: translateY(-1px);
-            box-shadow: 0 4px 20px rgba(139,92,246,0.2);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
         .ofp-alert {
@@ -354,7 +396,13 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
         <div class="ofp-alert ofp-alert-error"><?php echo esc_html( $error ); ?></div>
     <?php endif; ?>
 
+    <div class="ofp-funding-tabs">
+        <div class="ofp-funding-tab active" data-target="tab-auto">Auto Funding</div>
+        <div class="ofp-funding-tab" data-target="tab-manual">Manual Transfer</div>
+    </div>
+
     <!-- ══ Section 1: Virtual Account (gateway — auto-matched) ══════════════ -->
+    <div id="tab-auto" class="ofp-funding-pane active">
     <?php if ( ! empty( $client->virtual_account_number ) ) : ?>
     <div class="ofp-funding-card">
         <div class="ofp-funding-card-label">Automatic</div>
@@ -404,8 +452,10 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
         </form>
     </div>
     <?php endif; ?>
+    </div><!-- #tab-auto -->
 
     <!-- ══ Section 2: Company Bank Account (admin-configured manual transfer) -->
+    <div id="tab-manual" class="ofp-funding-pane">
     <?php if ( $company_bank_name && $company_account_no ) : ?>
     <div class="ofp-funding-card">
         <div class="ofp-funding-card-label">Bank Transfer</div>
@@ -523,10 +573,22 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
         </form>
     </div>
 
+    </div><!-- #tab-manual -->
+
 </div>
 </div>
 
 <script>
+document.querySelectorAll('.ofp-funding-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+        document.querySelectorAll('.ofp-funding-tab').forEach(function(t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+        
+        document.querySelectorAll('.ofp-funding-pane').forEach(function(p) { p.classList.remove('active'); });
+        document.getElementById(tab.dataset.target).classList.add('active');
+    });
+});
+
 document.querySelectorAll('.ofp-copy-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         navigator.clipboard.writeText(btn.dataset.copy).then(function() {

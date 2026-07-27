@@ -69,37 +69,37 @@ $current_pref = $client->ofp_notification_pref ?? OFP_Notification::PREF_BOTH;
                     <?php wp_nonce_field( 'ofp_notif_pref_action', 'ofp_notif_pref_nonce' ); ?>
 
                     <div style="display:flex; flex-direction:column; gap:16px;">
-                        <label style="display:flex; align-items:flex-start; gap:12px; padding:16px; border:1px solid var(--border-light); border-radius:12px; cursor:pointer; background:#fff; transition:border-color 0.2s;">
-                            <input type="radio" name="notification_pref" value="both" style="margin-top:4px;"
+                        <label style="display:flex; align-items:flex-start; gap:16px; padding:20px; border:1px solid var(--border-color); border-radius:12px; cursor:pointer; background:var(--bg-lighter); transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-blue)'; this.style.background='var(--bg-card)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--bg-lighter)';">
+                            <input type="radio" name="notification_pref" value="both" style="margin-top:2px; transform: scale(1.2); accent-color: var(--accent-blue);"
                                 <?php checked( $current_pref, 'both' ); ?>>
                             <div style="display:flex; flex-direction:column; gap:4px;">
-                                <strong style="color:var(--text-dark); font-size:15px;">Bell + Email</strong>
-                                <span class="ofp-hint" style="margin:0;">Get notified inside the app AND by email.</span>
+                                <strong style="color:var(--text-main); font-size:15px;">Bell + Email</strong>
+                                <span class="ofp-hint" style="margin:0; font-size:13px;">Get notified inside the app AND by email.</span>
                             </div>
                         </label>
 
-                        <label style="display:flex; align-items:flex-start; gap:12px; padding:16px; border:1px solid var(--border-light); border-radius:12px; cursor:pointer; background:#fff; transition:border-color 0.2s;">
-                            <input type="radio" name="notification_pref" value="bell" style="margin-top:4px;"
+                        <label style="display:flex; align-items:flex-start; gap:16px; padding:20px; border:1px solid var(--border-color); border-radius:12px; cursor:pointer; background:var(--bg-lighter); transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-blue)'; this.style.background='var(--bg-card)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--bg-lighter)';">
+                            <input type="radio" name="notification_pref" value="bell" style="margin-top:2px; transform: scale(1.2); accent-color: var(--accent-blue);"
                                 <?php checked( $current_pref, 'bell' ); ?>>
                             <div style="display:flex; flex-direction:column; gap:4px;">
-                                <strong style="color:var(--text-dark); font-size:15px;">Bell only</strong>
-                                <span class="ofp-hint" style="margin:0;">Only see notifications inside the app. No emails.</span>
+                                <strong style="color:var(--text-main); font-size:15px;">Bell only</strong>
+                                <span class="ofp-hint" style="margin:0; font-size:13px;">Only see notifications inside the app. No emails.</span>
                             </div>
                         </label>
 
-                        <label style="display:flex; align-items:flex-start; gap:12px; padding:16px; border:1px solid var(--border-light); border-radius:12px; cursor:pointer; background:#fff; transition:border-color 0.2s;">
-                            <input type="radio" name="notification_pref" value="email" style="margin-top:4px;"
+                        <label style="display:flex; align-items:flex-start; gap:16px; padding:20px; border:1px solid var(--border-color); border-radius:12px; cursor:pointer; background:var(--bg-lighter); transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-blue)'; this.style.background='var(--bg-card)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--bg-lighter)';">
+                            <input type="radio" name="notification_pref" value="email" style="margin-top:2px; transform: scale(1.2); accent-color: var(--accent-blue);"
                                 <?php checked( $current_pref, 'email' ); ?>>
                             <div style="display:flex; flex-direction:column; gap:4px;">
-                                <strong style="color:var(--text-dark); font-size:15px;">Email only</strong>
-                                <span class="ofp-hint" style="margin:0;">Only receive notifications by email. Nothing shows in the bell.</span>
+                                <strong style="color:var(--text-main); font-size:15px;">Email only</strong>
+                                <span class="ofp-hint" style="margin:0; font-size:13px;">Only receive notifications by email. Nothing shows in the bell.</span>
                             </div>
                         </label>
                     </div>
 
-                    <div style="margin-top: 24px;">
-                        <button type="submit" name="ofp_save_notif_pref" value="1" class="ofp-btn ofp-btn-primary">
-                            Save Preference
+                    <div style="margin-top: 32px;">
+                        <button type="submit" name="ofp_save_notif_pref" value="1" class="ofp-btn ofp-btn-primary" style="padding: 14px 32px; font-size: 14px;">
+                            Save Preferences
                         </button>
                     </div>
                 </form>

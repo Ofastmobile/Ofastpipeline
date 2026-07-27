@@ -65,6 +65,16 @@ $comms_this_month = (int) $wpdb->get_var(
         $client->id
     )
 );
+
+$comms_last_month = (int) $wpdb->get_var(
+    $wpdb->prepare(
+        "SELECT COUNT(*) FROM {$p}ofp_communications_log
+         WHERE client_id = %d
+           AND MONTH(sent_at) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH))
+           AND YEAR(sent_at)  = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))",
+        $client->id
+    )
+);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -74,6 +84,7 @@ $comms_this_month = (int) $wpdb->get_var(
     <title>Reports — OFast Pipeline</title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="ofp-portal-body">
 
@@ -92,35 +103,77 @@ $comms_this_month = (int) $wpdb->get_var(
         </div>
     <?php endif; ?>
 
-    <!-- This Month Summary -->
-    <div class="ofp-stats-grid">
-        <div class="ofp-stat-card">
-            <div class="ofp-stat-header">
-                <span class="ofp-stat-title">Leads This Month</span>
+    <!-- Micro-Stats with Sparklines -->
+    <div class="ofp-micro-stats">
+        
+        <div class="ofp-card" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
+            <div>
+                <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px;">Leads This Month</div>
+                <div style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;"><?php echo esc_html( $stats['this_month'] ?: 0 ); ?></div>
+                <?php echo OFP_Lead::get_growth_html( $stats['this_month'], $stats['last_month'] ); ?>
             </div>
-            <div class="ofp-stat-value"><?php echo esc_html( $stats['this_month'] ); ?></div>
+            <svg width="60" height="30" viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 25 C 10 25, 20 5, 30 15 C 40 25, 50 10, 60 5" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M55 5 L60 5 L60 10" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
         </div>
-        <div class="ofp-stat-card">
-            <div class="ofp-stat-header">
-                <span class="ofp-stat-title">Converted</span>
+
+        <div class="ofp-card" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
+            <div>
+                <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px;">Converted</div>
+                <div style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;"><?php echo esc_html( $stats['converted_month'] ?: 0 ); ?></div>
+                <?php echo OFP_Lead::get_growth_html( $stats['converted_month'], $stats['converted_last'] ); ?>
             </div>
-            <div class="ofp-stat-value"><?php echo esc_html( $stats['converted'] ); ?></div>
+            <svg width="60" height="30" viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 20 C 15 20, 30 10, 45 15 C 50 15, 55 10, 60 5" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M55 5 L60 5 L60 10" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
         </div>
-        <div class="ofp-stat-card">
-            <div class="ofp-stat-header">
-                <span class="ofp-stat-title">Messages Sent</span>
+
+        <div class="ofp-card" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
+            <div>
+                <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px;">Messages Sent</div>
+                <div style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;"><?php echo esc_html( $comms_this_month ?: 0 ); ?></div>
+                <?php echo OFP_Lead::get_growth_html( $comms_this_month, $comms_last_month ); ?>
             </div>
-            <div class="ofp-stat-value"><?php echo esc_html( $comms_this_month ); ?></div>
+            <svg width="60" height="30" viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 5 C 10 5, 20 20, 30 10 C 40 0, 50 25, 60 25" stroke="var(--accent-orange)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M55 25 L60 25 L60 20" stroke="var(--accent-orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
         </div>
-        <div class="ofp-stat-card">
-            <div class="ofp-stat-header">
-                <span class="ofp-stat-title">Conv. Rate</span>
+
+        <div class="ofp-card" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
+            <div>
+                <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px;">Conv. Rate</div>
+                <div style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">
+                    <?php 
+                        $rate = $stats['this_month'] > 0 ? round( ( $stats['converted_month'] / $stats['this_month'] ) * 100 ) : 0;
+                        $last_rate = $stats['last_month'] > 0 ? round( ( $stats['converted_last'] / $stats['last_month'] ) * 100 ) : 0;
+                        echo esc_html( $rate ) . '%';
+                    ?>
+                </div>
+                <?php echo OFP_Lead::get_growth_html( $rate, $last_rate ); ?>
             </div>
-            <div class="ofp-stat-value">
-                <?php echo $stats['this_month'] > 0
-                    ? esc_html( round( ( $stats['converted'] / $stats['this_month'] ) * 100 ) ) . '%'
-                    : '—'; ?>
+            <svg width="60" height="30" viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 30 C 15 15, 30 25, 45 10 C 50 5, 55 10, 60 5" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M55 5 L60 5 L60 10" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Monthly Performance Bar Chart -->
+    <div class="ofp-card" style="margin-bottom: 32px; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <div>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Monthly Performance</h3>
+                <p style="margin: 0; font-size: 13px; color: var(--text-muted); margin-top: 4px;">Lead generation vs conversions</p>
             </div>
+            <div style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px; font-weight: 600; color: var(--text-muted);">
+                2026 ⌵
+            </div>
+        </div>
+        <div style="position: relative; height: 300px; width: 100%; margin-top: auto;">
+            <canvas id="monthlyPerformanceChart"></canvas>
         </div>
     </div>
 
@@ -138,64 +191,144 @@ $comms_this_month = (int) $wpdb->get_var(
                 <p>Your first report will be generated automatically on the 1st of next month.</p>
             </div>
         <?php else : ?>
-            <div class="ofp-table-wrap">
-                <table class="ofp-table">
-                    <thead>
-                        <tr>
-                            <th>Period</th>
-                            <th>Generated</th>
-                            <th>Download</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ( $archives as $archive ) : ?>
-                            <?php
-                            $is_valid   = $archive->token_expires && strtotime( $archive->token_expires ) > time();
-                            $period_fmt = '';
-                            if ( $archive->period ) {
-                                $parts      = explode( '_', $archive->period );
-                                $period_fmt = isset( $parts[0], $parts[1] )
-                                    ? gmdate( 'F', mktime( 0, 0, 0, (int) $parts[0], 1 ) ) . ' ' . $parts[1]
-                                    : $archive->period;
-                            }
-                            ?>
-                            <tr>
-                                <td><strong><?php echo esc_html( $period_fmt ?: $archive->period ); ?></strong></td>
-                                <td style="font-size:13px;color:#9ca3af;">
-                                    <?php echo esc_html( gmdate( 'M j, Y', strtotime( $archive->created_at ) ) ); ?>
-                                </td>
-                                <td>
-                                    <?php if ( $is_valid ) : ?>
-                                        <a href="<?php echo esc_url( add_query_arg( 'token', $archive->download_token, home_url( '/reports' ) ) ); ?>"
-                                           class="ofp-btn ofp-btn-secondary"
-                                           style="font-size:12px;padding:6px 14px;">
-                                            ⬇ Download CSV
-                                        </a>
-                                        <span style="font-size:11px;color:#9ca3af;display:block;margin-top:4px;">
-                                            Expires <?php echo esc_html( gmdate( 'M j, g:ia', strtotime( $archive->token_expires ) ) ); ?>
-                                        </span>
-                                    <?php else : ?>
-                                        <span style="font-size:13px;color:#9ca3af;">Link expired</span>
-                                        <span style="font-size:11px;color:#9ca3af;display:block;">Contact us to regenerate</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                <?php foreach ( $archives as $archive ) : ?>
+                    <?php
+                    $is_valid   = $archive->token_expires && strtotime( $archive->token_expires ) > time();
+                    $period_fmt = '';
+                    if ( $archive->period ) {
+                        $parts      = explode( '_', $archive->period );
+                        $period_fmt = isset( $parts[0], $parts[1] )
+                            ? gmdate( 'F', mktime( 0, 0, 0, (int) $parts[0], 1 ) ) . ' ' . $parts[1]
+                            : $archive->period;
+                    }
+                    ?>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-radius: 12px; background: var(--bg-lighter); border: 1px solid var(--border-color); transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-blue)';" onmouseout="this.style.borderColor='var(--border-color)';">
+                        
+                        <!-- Left: Icon & Details -->
+                        <div style="display: flex; gap: 16px; align-items: center;">
+                            <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                                📄
+                            </div>
+                            <div>
+                                <div style="font-size: 15px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">
+                                    <?php echo esc_html( $period_fmt ?: $archive->period ); ?> Report
+                                </div>
+                                <div style="font-size: 13px; color: var(--text-muted);">
+                                    Generated: <?php echo esc_html( gmdate( 'M j, Y', strtotime( $archive->created_at ) ) ); ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Actions -->
+                        <div style="text-align: right;">
+                            <?php if ( $is_valid ) : ?>
+                                <a href="<?php echo esc_url( add_query_arg( 'token', $archive->download_token, home_url( '/reports' ) ) ); ?>"
+                                   style="display: inline-block; padding: 8px 16px; background: var(--accent-blue); color: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.background='#2563eb';" onmouseout="this.style.background='var(--accent-blue)';">
+                                    Download CSV
+                                </a>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                                    Expires <?php echo esc_html( gmdate( 'M j', strtotime( $archive->token_expires ) ) ); ?>
+                                </div>
+                            <?php else : ?>
+                                <div style="padding: 8px 16px; background: rgba(255,255,255,0.05); color: var(--text-muted); border-radius: 8px; font-size: 13px; font-weight: 600;">
+                                    Link Expired
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                    </div>
+                <?php endforeach; ?>
             </div>
         <?php endif; ?>
     </div>
 
-    <div class="ofp-alert ofp-alert-info">
-        Reports are also emailed to <strong><?php echo esc_html( $client->email ); ?></strong>
-        on the 1st of each month. Download links expire after 72 hours.
-        Contact us if you need a report regenerated.
-    </div>
+    <p style="font-size: 12px; color: var(--text-muted); font-style: italic; text-align: center; margin-top: 24px;">
+        Reports are also emailed to <strong><?php echo esc_html( $client->email ); ?></strong> on the 1st of each month. Download links expire after 72 hours. Contact us if you need a report regenerated.
+    </p>
 
 </div>
 </main>
 </div><!-- .ofp-shell -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('monthlyPerformanceChart');
+    if (ctx) {
+        // Gradient for Leads
+        const ctx2d = ctx.getContext('2d');
+        const gradientLeads = ctx2d.createLinearGradient(0, 0, 0, 300);
+        gradientLeads.addColorStop(0, 'rgba(59, 130, 246, 1)');
+        gradientLeads.addColorStop(1, 'rgba(59, 130, 246, 0.4)');
+
+        // Gradient for Conversions
+        const gradientConv = ctx2d.createLinearGradient(0, 0, 0, 300);
+        gradientConv.addColorStop(0, 'rgba(16, 185, 129, 1)');
+        gradientConv.addColorStop(1, 'rgba(16, 185, 129, 0.4)');
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [
+                    {
+                        label: 'Leads Generated',
+                        data: [120, 150, 180, 220, 210, 250, 280, 290, 310, 340, 380, 420],
+                        backgroundColor: gradientLeads,
+                        borderRadius: 6,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.8
+                    },
+                    {
+                        label: 'Conversions',
+                        data: [40, 55, 60, 85, 80, 95, 110, 115, 125, 140, 160, 185],
+                        backgroundColor: gradientConv,
+                        borderRadius: 6,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.8
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            color: '#9ca3af',
+                            usePointStyle: true,
+                            boxWidth: 8
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1f2937',
+                        titleColor: '#f9fafb',
+                        bodyColor: '#d1d5db',
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false, drawBorder: false },
+                        ticks: { color: '#9ca3af', font: { size: 12 } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+                        ticks: { color: '#9ca3af', font: { size: 12 }, padding: 10 }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
+            }
+        });
+    }
+});
+</script>
 
 <?php wp_footer(); ?>
 </body>

@@ -79,27 +79,39 @@ $type_badges = [
         <p>Every message sent to your leads through the pipeline.</p>
     </div>
 
-    <!-- Summary -->
-    <div class="ofp-stats-grid">
-        <div class="ofp-stat-card">
-            <span class="ofp-stat-number accent"><?php echo esc_html( number_format( $sms_count ) ); ?></span>
-            <span class="ofp-stat-label">SMS Sent</span>
+    <!-- Hero Summary Cards -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px;">
+        <!-- SMS Sent (Bold Purple) -->
+        <div style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 16px; padding: 24px; color: #fff; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.2);">
+            <div style="position: absolute; top: -10px; right: -10px; opacity: 0.1; font-size: 100px;">💬</div>
+            <div style="font-size: 14px; font-weight: 500; opacity: 0.9; margin-bottom: 8px;">Total SMS Sent</div>
+            <div style="font-size: 32px; font-weight: 700;"><?php echo esc_html( number_format( $sms_count ) ); ?></div>
         </div>
-        <div class="ofp-stat-card">
-            <span class="ofp-stat-number"><?php echo esc_html( number_format( $voice_count ) ); ?></span>
-            <span class="ofp-stat-label">Calls Made</span>
+
+        <!-- Calls Made (Bold Green) -->
+        <div style="background: linear-gradient(135deg, #10b981, #059669); border-radius: 16px; padding: 24px; color: #fff; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);">
+            <div style="position: absolute; top: -10px; right: -10px; opacity: 0.1; font-size: 100px;">📞</div>
+            <div style="font-size: 14px; font-weight: 500; opacity: 0.9; margin-bottom: 8px;">Total Calls Made</div>
+            <div style="font-size: 32px; font-weight: 700;"><?php echo esc_html( number_format( $voice_count ) ); ?></div>
         </div>
-        <div class="ofp-stat-card">
-            <span class="ofp-stat-number">₦<?php echo esc_html( number_format( $total_cost, 0 ) ); ?></span>
-            <span class="ofp-stat-label">Total Credit Used</span>
+
+        <!-- Total Credit Used (Bold Blue) -->
+        <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 16px; padding: 24px; color: #fff; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2);">
+            <div style="position: absolute; top: -10px; right: -10px; opacity: 0.1; font-size: 100px;">₦</div>
+            <div style="font-size: 14px; font-weight: 500; opacity: 0.9; margin-bottom: 8px;">Total Credit Used</div>
+            <div style="font-size: 32px; font-weight: 700;">₦<?php echo esc_html( number_format( $total_cost, 0 ) ); ?></div>
         </div>
     </div>
 
-    <!-- Filter -->
-    <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid #e5e7eb;">
-        <?php foreach ( [ '' => 'All', 'sms' => 'SMS', 'voice' => 'Voice', 'email' => 'Email' ] as $val => $label ) : ?>
+    <!-- Filter Pills -->
+    <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+        <?php foreach ( [ '' => 'All', 'sms' => 'SMS', 'voice' => 'Voice', 'email' => 'Email' ] as $val => $label ) : 
+            $active = $filter_type === $val;
+            $bg = $active ? 'var(--accent-blue)' : 'var(--bg-lighter)';
+            $color = $active ? '#fff' : 'var(--text-muted)';
+        ?>
             <a href="<?php echo esc_url( add_query_arg( 'type', $val, home_url( '/communications' ) ) ); ?>"
-               style="padding:8px 14px;font-size:13px;font-weight:500;text-decoration:none;border-bottom:2px solid <?php echo $filter_type === $val ? '#1a73e8' : 'transparent'; ?>;margin-bottom:-2px;color:<?php echo $filter_type === $val ? '#1a73e8' : '#6b7280'; ?>;">
+               style="padding: 8px 16px; font-size: 13px; font-weight: 600; text-decoration: none; border-radius: 20px; background: <?php echo $bg; ?>; color: <?php echo $color; ?>; transition: all 0.2s;">
                 <?php echo esc_html( $label ); ?>
             </a>
         <?php endforeach; ?>
@@ -113,45 +125,54 @@ $type_badges = [
                 <p>Messages sent to your leads will appear here.</p>
             </div>
         <?php else : ?>
-            <div class="ofp-table-wrap">
-                <table class="ofp-table">
-                    <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th>Lead</th>
-                            <th>Message Preview</th>
-                            <th>Status</th>
-                            <th>Cost</th>
-                            <th>Sent</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ( $comms as $comm ) : ?>
-                            <tr>
-                                <td><?php echo $type_badges[ $comm->type ] ?? esc_html( strtoupper( $comm->type ) ); ?></td>
-                                <td>
-                                    <strong><?php echo esc_html( $comm->lead_name ?: $comm->lead_phone ); ?></strong><br>
-                                    <span style="font-size:12px;color:#9ca3af;"><?php echo esc_html( $comm->lead_phone ); ?></span>
-                                </td>
-                                <td style="max-width:240px;">
-                                    <span style="font-size:13px;color:#374151;" title="<?php echo esc_attr( $comm->message ); ?>">
-                                        <?php echo esc_html( mb_substr( $comm->message ?? '', 0, 60 ) . ( mb_strlen( $comm->message ?? '' ) > 60 ? '…' : '' ) ); ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <?php
-                                    $sc = $comm->status === 'sent' ? 'ofp-badge-green' : 'ofp-badge-red';
-                                    echo '<span class="ofp-badge ' . esc_attr( $sc ) . '">' . esc_html( ucfirst( $comm->status ) ) . '</span>';
-                                    ?>
-                                </td>
-                                <td style="font-size:13px;">₦<?php echo esc_html( number_format( (float) $comm->cost, 2 ) ); ?></td>
-                                <td style="font-size:12px;color:#9ca3af;white-space:nowrap;">
-                                    <?php echo esc_html( human_time_diff( strtotime( $comm->sent_at ), current_time( 'timestamp' ) ) . ' ago' ); ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <!-- Activity Feed List -->
+            <div style="display: flex; flex-direction: column; gap: 16px; padding: 24px;">
+                <?php foreach ( $comms as $comm ) : 
+                    $is_success = $comm->status === 'sent';
+                    
+                    // Determine Icon & Color based on type
+                    $icon = '💬'; $bg = 'rgba(139, 92, 246, 0.1)'; $color = '#8b5cf6';
+                    if ($comm->type === 'voice') {
+                        $icon = '📞'; $bg = 'rgba(16, 185, 129, 0.1)'; $color = '#10b981';
+                    } elseif ($comm->type === 'email') {
+                        $icon = '✉️'; $bg = 'rgba(245, 158, 11, 0.1)'; $color = '#f59e0b';
+                    }
+                ?>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border-radius: 12px; background: var(--bg-lighter); border: 1px solid var(--border-color); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none';">
+                        
+                        <!-- Left: Icon & Message Preview -->
+                        <div style="display: flex; gap: 16px; align-items: center; flex: 1; min-width: 0;">
+                            <!-- Icon Box -->
+                            <div style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; background: <?php echo $bg; ?>; color: <?php echo $color; ?>; flex-shrink: 0;">
+                                <?php echo $icon; ?>
+                            </div>
+                            
+                            <!-- Text Stack -->
+                            <div style="min-width: 0;">
+                                <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                                    <?php echo esc_html( $comm->lead_name ?: $comm->lead_phone ); ?>
+                                    <?php if (!$is_success): ?>
+                                        <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(239, 68, 68, 0.1); color: var(--accent-red); font-weight: 700; text-transform: uppercase;">Failed</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div style="font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px;" title="<?php echo esc_attr( $comm->message ); ?>">
+                                    <?php echo esc_html( mb_substr( $comm->message ?? '', 0, 80 ) . ( mb_strlen( $comm->message ?? '' ) > 80 ? '…' : '' ) ); ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Cost & Time -->
+                        <div style="text-align: right; flex-shrink: 0;">
+                            <div style="font-size: 14px; font-weight: 700; color: <?php echo $is_success ? 'var(--accent-red)' : 'var(--text-muted)'; ?>; margin-bottom: 4px;">
+                                - ₦<?php echo esc_html( number_format( (float) $comm->cost, 2 ) ); ?>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted);">
+                                <?php echo esc_html( human_time_diff( strtotime( $comm->sent_at ), current_time( 'timestamp' ) ) . ' ago' ); ?>
+                            </div>
+                        </div>
+
+                    </div>
+                <?php endforeach; ?>
             </div>
 
             <?php if ( $total_pages > 1 ) : ?>

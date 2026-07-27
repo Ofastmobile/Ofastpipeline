@@ -216,11 +216,56 @@ class OFP_Lead {
         $p = $wpdb->prefix;
 
         return [
-            'total'      => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d", $client_id ) ),
-            'today'      => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND DATE(created_at) = CURDATE()", $client_id ) ),
-            'this_month' => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())", $client_id ) ),
-            'converted'  => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status = 'converted'", $client_id ) ),
-            'interested' => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status = 'interested'", $client_id ) ),
+            'total'             => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d", $client_id ) ),
+            'today'             => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND DATE(created_at) = CURDATE()", $client_id ) ),
+            'yesterday'         => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND DATE(created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)", $client_id ) ),
+            'this_month'        => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())", $client_id ) ),
+            'last_month'        => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND MONTH(created_at) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND YEAR(created_at) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))", $client_id ) ),
+            'converted'         => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status = 'converted'", $client_id ) ),
+            'converted_month'   => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status = 'converted' AND MONTH(converted_at) = MONTH(NOW()) AND YEAR(converted_at) = YEAR(NOW())", $client_id ) ),
+            'converted_last'    => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status = 'converted' AND MONTH(converted_at) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND YEAR(converted_at) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))", $client_id ) ),
+            'interested'        => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status = 'interested'", $client_id ) ),
+            'interested_last'   => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status = 'interested' AND MONTH(created_at) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND YEAR(created_at) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))", $client_id ) ),
         ];
+    }
+
+    /**
+     * Calculates growth percentage and returns formatted HTML for the UI.
+     *
+     * @param int $current The current period's value
+     * @param int $previous The previous period's value
+     * @param bool $inverse If true, a lower number is better (e.g. churn rate)
+     * @return string HTML span with arrow and percentage
+     */
+    public static function get_growth_html( int $current, int $previous, bool $inverse = false ): string {
+        if ( $previous === 0 ) {
+            $growth = $current > 0 ? 100 : 0;
+        } else {
+            $growth = round( ( ( $current - $previous ) / $previous ) * 100 );
+        }
+
+        if ( $growth === 0 ) {
+            return '<div style="font-size: 12px; font-weight: 600; color: var(--text-muted);">- 0%</div>';
+        }
+
+        $is_positive_growth = $growth > 0;
+        
+        // If inverse is true, then positive growth is bad (red), negative growth is good (green)
+        if ( $inverse ) {
+            $color = $is_positive_growth ? 'var(--accent-red)' : 'var(--accent-green)';
+        } else {
+            $color = $is_positive_growth ? 'var(--accent-green)' : 'var(--accent-red)';
+        }
+
+        $arrow = $is_positive_growth ? '↑' : '↓';
+        $sign  = $is_positive_growth ? '+' : '';
+
+        return sprintf(
+            '<div style="font-size: 12px; font-weight: 600; color: %s;">%s %s%d%%</div>',
+            esc_attr( $color ),
+            $arrow,
+            $sign,
+            $growth
+        );
     }
 }
