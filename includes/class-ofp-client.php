@@ -377,42 +377,23 @@ class OFP_Client {
     }
 
     /**
-     * Reset a client's password and email them the new temporary one.
+     * Reset a client's password by sending them a secure reset link via email.
+     *
+     * Delegates to OFP_Auth::request_password_reset() which:
+     *  - Generates a cryptographically secure token
+     *  - Stores its hash + expiry in the DB
+     *  - Sends a properly-formed /reset-password?email=...&token=... link
      *
      * @param  int  $id  Client ID.
      * @return bool      True on success.
      */
     public static function reset_password( int $id ): bool {
-        global $wpdb;
-
         $client = self::get( $id );
         if ( ! $client ) {
             return false;
         }
 
-        $temp_password = self::generate_temp_password();
-
-        $updated = (bool) $wpdb->update(
-            $wpdb->prefix . 'ofp_clients',
-            [
-                'password'   => password_hash( $temp_password, PASSWORD_BCRYPT ),
-                'updated_at' => current_time( 'mysql' ),
-            ],
-            [ 'id' => $id ]
-        );
-
-        if ( $updated ) {
-            // Invalidate all active sessions for this client.
-            $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'client_id' => $id ] );
-
-            $reset_url = add_query_arg(
-                [ 'token' => OFP_Auth::generate_reset_token( $client->email ) ],
-                home_url( '/login' )
-            );
-            OFP_Mailer::send_password_reset( $client, $reset_url );
-        }
-
-        return $updated;
+        return OFP_Auth::request_password_reset( $client->email );
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -287,7 +287,7 @@ class OFP_Auth {
         $reset_url = add_query_arg(
             [
                 'token' => $raw_token,
-                'email' => rawurlencode( $client->email ),
+                'email' => $client->email,
             ],
             home_url( '/reset-password' )
         );
