@@ -97,9 +97,14 @@ include OFP_PATH . 'admin/views/partials/header.php';
                         <td>
                             <?php if ( $archive->download_token && strtotime( $archive->token_expires ) > time() ) : ?>
                                 <a href="<?php echo esc_url(
-                                    add_query_arg( 'token', $archive->download_token, home_url( '/reports' ) )
+                                    add_query_arg( [ 'token' => $archive->download_token, 'file' => 'leads' ], home_url( '/reports' ) )
                                 ); ?>" class="button button-small" target="_blank">
-                                    Download
+                                    Leads CSV
+                                </a>
+                                <a href="<?php echo esc_url(
+                                    add_query_arg( [ 'token' => $archive->download_token, 'file' => 'comms' ], home_url( '/reports' ) )
+                                ); ?>" class="button button-small" target="_blank">
+                                    Comms CSV
                                 </a>
                             <?php else : ?>
                                 <span class="ofp-muted">Expired</span>

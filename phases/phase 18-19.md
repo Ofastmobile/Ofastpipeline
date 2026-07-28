@@ -681,3 +681,220 @@ That's the four confirmed gaps closed. Two things I deliberately did not touch, 
 The two competing credit top-up systems (/credits automated vs /funding manual) — still open, still worth a real decision before you build anything else on top of either.
 Featured listing pricing — still correctly deferred per your own plan.
 Test these against your LocalWP setup — activate/reactivate the plugin first so the expected_amount column gets added 
+
+
+
+
+
+
+phase 19
+
+
+Architected credit top-up integration across payment gateways
+Locking in Option C. Here's Phase 19 — wiring the already-built hosted checkout system to an actual button, with the webhook confirmation notifying the client automatically.
+
+What this adds
+A "Quick Top-Up" card on /funding (Auto Funding tab) — client picks SMS or Voice, enters an amount, gets redirected to a real Paystack/Flutterwave/Monnify checkout page.
+When the webhook confirms payment, the client now gets a bell/email notification automatically (previously confirm_credit_topup() credited the balance silently with no confirmation to the client at all).
+A status banner on /funding when they return from checkout ("payment initiated, awaiting confirmation").
+No gateway files need touching — initiate_transaction() and the ofp_credit_{channel}_{id}_... reference-matching in all three webhook handlers were already correctly built in Phase 6/17b. This phase only had to connect a button to code that already existed.
+
+Manifest — Phase 19
+File	Action
+public/templates/funding.php	REPLACE (add Quick Top-Up card + handler)
+includes/class-ofp-payment.php	REPLACE (add client notification on confirmed top-up)
+1. Notify the client when their top-up actually confirms
+includes/class-ofp-payment.php — replace confirm_credit_topup():
+
+php
+    /**
+     * Confirm a top-up payment and credit the client balance.
+     *
+     * @param string $reference
+     * @param float  $amount_paid
+     * @param string $provider_ref
+     * @return bool
+     */
+    public static function confirm_credit_topup( string $reference, float $amount_paid, string $provider_ref = '' ): bool {
+        $parsed = self::parse_credit_topup_reference( $reference );
+        if ( ! $parsed ) {
+            return false;
+        }
+
+        $client = OFP_Client::get( $parsed['client_id'] );
+        if ( ! $client ) {
+            error_log( "OFP_Payment::confirm_credit_topup — reference {$reference} points to a missing client" );
+            return false;
+        }
+
+        global $wpdb;
+
+        $already_processed = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}ofp_credit_transactions WHERE reference = %s AND type = 'topup' LIMIT 1",
+            $reference
+        ) );
+
+        if ( $already_processed ) {
+            return true;
+        }
+
+        if ( $amount_paid <= 0 ) {
+            error_log( "OFP_Payment::confirm_credit_topup — reference {$reference} had non-positive amount {$amount_paid}" );
+            return false;
+        }
+
+        OFP_Credit::topup( $parsed['client_id'], $parsed['channel'], $amount_paid, $reference );
+
+        // Phase 19: let the client know their top-up landed. Previously this
+        // was silent — the balance updated but nothing told the client it
+        // had happened, which was confusing given the checkout redirect
+        // just sends them back to a "pending" page with no follow-up.
+        if ( class_exists( 'OFP_Notification' ) ) {
+            OFP_Notification::create(
+                $parsed['client_id'],
+                'credit_topup_confirmed',
+                ucfirst( $parsed['channel'] ) . ' credit top-up confirmed',
+                'Your top-up of NGN ' . number_format( $amount_paid, 2 ) . ' has been received and added to your '
+                . strtoupper( $parsed['channel'] ) . ' credit balance.'
+            );
+        }
+
+        return true;
+    }
+(Only change: the if ( class_exists( 'OFP_Notification' ) ) { ... } block added right before return true;.)
+
+2. Quick Top-Up card + handler on /funding
+public/templates/funding.php — three small additions.
+
+(a) Add a handler block. Insert it right after the existing "Handle virtual account generation request" block and before "Handle manual funding form submission":
+
+php
+/* -----------------------------------------------------------
+ * Handle: quick credit top-up via hosted checkout (Option C)
+ *
+ * Unlike the virtual account (which can't tell what a payment is
+ * FOR), this builds a one-time checkout link tagged with a reference
+ * like ofp_credit_sms_{client_id}_{random}. The gateway webhook
+ * recognises that prefix and credits the SMS/Voice balance directly
+ * — no ambiguity, no manual review needed.
+ * --------------------------------------------------------- */
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_initiate_credit_topup'] ) ) {
+
+    if ( ! wp_verify_nonce( $_POST['ofp_topup_nonce'] ?? '', 'ofp_topup_credit_action' ) ) {
+        $error = 'Security check failed — please try again.';
+    } elseif ( ! class_exists( 'OFP_Payment' ) ) {
+        $error = 'Payment gateway is not configured yet. Please contact support.';
+    } else {
+
+        if ( class_exists( 'OFP_Security' ) ) {
+            OFP_Security::check_rate_limit( $_SERVER['REMOTE_ADDR'] ?? '', 'credit_topup_init', 5, 600 );
+        }
+
+        $topup_channel = sanitize_text_field( $_POST['topup_channel'] ?? '' );
+        $topup_amount  = (float) ( $_POST['topup_amount'] ?? 0 );
+
+        if ( ! in_array( $topup_channel, [ 'sms', 'voice' ], true ) ) {
+            $error = 'Please choose SMS or Voice credit.';
+        } elseif ( $topup_amount < 500 ) {
+            $error = 'Minimum top-up amount is NGN 500.';
+        } else {
+            $checkout_url = OFP_Payment::initiate_credit_topup( $client->id, $topup_channel, $topup_amount );
+
+            if ( $checkout_url ) {
+                wp_redirect( $checkout_url );
+                exit;
+            }
+
+            $error = 'Could not start the top-up right now — the payment gateway may be temporarily unavailable. Please try again shortly or use manual transfer below.';
+        }
+    }
+}
+(b) Add a status banner for when they land back from checkout. Right after the existing success-message block (if ( isset($_GET['success']) ) { ... }), add:
+
+php
+if ( isset( $_GET['topup_status'] ) && $_GET['topup_status'] === 'pending' ) {
+    $success = 'Your top-up is being processed. Your credit balance will update automatically within a few minutes once payment is confirmed — you\'ll also get a notification here.';
+}
+(c) Add the card itself, inside <div id="tab-auto" class="ofp-funding-pane active">, right after the virtual account card/generate-button block and before the closing </div><!-- #tab-auto -->. Only shown to CRM clients since credit balances only exist for CRM subscribers:
+
+php
+    <?php if ( OFP_Subscription::has_active( 'crm', $client->id ) ) :
+        $topup_credits = OFP_Credit::get( $client->id );
+    ?>
+    <div class="ofp-funding-card">
+        <div class="ofp-funding-card-label">Automatic</div>
+        <div class="ofp-funding-card-title">Quick Credit Top-Up</div>
+        <div class="ofp-funding-card-desc">
+            Top up your SMS or Voice credit instantly via a secure checkout page.
+            Your balance updates automatically within minutes — no need to fill in a form.
+        </div>
+
+        <?php if ( $topup_credits ) : ?>
+        <div style="display:flex; gap:24px; margin-bottom:20px; font-size:13px;">
+            <div>
+                <span style="color:var(--text-muted);">SMS Balance:</span>
+                <strong style="color:var(--text-main); margin-left:6px;">NGN <?php echo esc_html( number_format( (float) $topup_credits->sms_remaining, 0 ) ); ?></strong>
+            </div>
+            <div>
+                <span style="color:var(--text-muted);">Voice Balance:</span>
+                <strong style="color:var(--text-main); margin-left:6px;">NGN <?php echo esc_html( number_format( (float) $topup_credits->voice_remaining, 0 ) ); ?></strong>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <form method="POST" action="">
+            <?php wp_nonce_field( 'ofp_topup_credit_action', 'ofp_topup_nonce' ); ?>
+
+            <div class="ofp-form-row">
+                <label for="ofp-topup-channel">Top Up</label>
+                <select id="ofp-topup-channel" name="topup_channel" class="ofp-form-input" required>
+                    <option value="sms">SMS Credit</option>
+                    <option value="voice">Voice Credit</option>
+                </select>
+            </div>
+
+            <div class="ofp-form-row">
+                <label for="ofp-topup-amount">Amount (NGN)</label>
+                <input type="number" id="ofp-topup-amount" name="topup_amount" class="ofp-form-input"
+                       min="500" step="100" placeholder="e.g. 5000" required>
+                <p class="ofp-hint" style="margin-top:6px;">NGN 6.99 per SMS · NGN 15.00 per voice minute</p>
+            </div>
+
+            <button type="submit" name="ofp_initiate_credit_topup" value="1" class="ofp-submit-btn">
+                Pay & Top Up Now
+            </button>
+        </form>
+    </div>
+    <?php endif; ?>
+That's the whole wire-up. To walk through what happens end to end now:
+
+Client picks SMS, enters ₦5,000, hits Pay & Top Up Now.
+OFP_Payment::initiate_credit_topup() builds reference ofp_credit_sms_{client_id}_{random} and calls the active gateway's initiate_transaction().
+Client is redirected to the real Paystack/Flutterwave/Monnify hosted page, pays.
+Gateway fires its webhook → each adapter's handle_webhook() already checks OFP_Payment::is_credit_topup_reference() first, before falling into subscription logic → routes to confirm_credit_topup().
+OFP_Credit::topup() credits the balance, and now the client gets a bell/email notification.
+Client's browser redirect lands back on /funding?topup_status=pending showing the banner while the webhook (usually near-instant) does its thing.
+One thing worth flagging while it's fresh: this only works for gateways that have initiate_transaction() implemented. Monnify's version builds a Monnify-hosted checkout page — different from its virtual account flow — so double check in Settings which gateway is actually active before testing, since the three behave slightly differently on the merchant dashboard side (Paystack/Flutterwave redirect to their own branded page; Monnify's checkout init returns a checkoutUrl too, should behave the same from the client's perspective).
+
+Test this end-to-end with sandbox credentials before going live — specifically confirm the webhook actually fires for the checkout-link flow and not just the virtual-account flow, since those can sometimes be configured as separate webhook URLs in a gateway dashboard.
+
+all the corrections you have made, i can copy all and paste it as an md or text file in vscode and claude can fix it right or
+
+
+Evaluated feasibility of bulk code corrections and structured guidance
+Evaluated feasibility of bulk code corrections and structured guidance
+Yes, that'll work — but a couple of practical notes so it goes smoothly rather than causing a mess.
+
+It'll work because:
+
+Every change I gave you is already labeled ADD/REPLACE/full-method-swap, matching your usual delivery format.
+Claude Code (or Claude in VS Code) can read your actual project files, so it'll apply each snippet against the real current state of the file rather than guessing.
+A few things to watch out for:
+
+Be explicit about scope per file. Some of my instructions said "replace this one method" (like process_payment() in the gateway files) rather than "replace the whole file." If you just paste the whole conversation in, make sure the instructions still read as targeted edits — otherwise there's a risk Claude Code tries to regenerate an entire file from scratch and drops something that wasn't shown here (like a method I didn't touch).
+Give it the actual files, not just my snippets. Rather than only pasting my replies, either:
+Open the real files in VS Code so Claude Code can see current state and diff against it, or
+Paste both "here's the current file" and "here's what changes" if you're doing it via chat-paste rather than an agentic tool with file access.
+One phase at a time. Since you asked for Phase 18 then Phase 19 as two separate turns, I'd literally split this into two files/two prompts (phase18-fixes.md, phase19-topup.md) rather than one giant dump — keeps it matching your test-between-phases habit, and makes it easier to tell if something breaks which phase caused it.
+Double-check the DB migration lands first. Phase 18 added the expected_amount column via maybe_upgrade_schema(). That only runs on plugin activation — so after Claude Code applies the file change, you still need to deactivate/reactivate the plugin yourself (or it won't fire). Worth a note-to-self in the file so you don't forget mid-session.
+Flag the one cross-file dependency. Phase 18's three gateway file changes depend on the new OFP_Subscription::process_gateway_payment() method existing — so if Claude Code applies them out of order or only applies some files, you'd get a fatal error calling an undefined method. Worth saying explicitly in your prompt: "apply all files in this phase together, don't skip any."

@@ -520,6 +520,172 @@ class OFP_Subscription {
         OFP_Mailer::send_payment_confirmed( $client, $amount, $type );
     }
 
+    /**
+     * Central payment-processing entry point for ALL gateway adapters.
+     *
+     * Phase 18: previously each gateway (Monnify, Paystack, Flutterwave)
+     * duplicated its own amount-checking logic, and all three had the same
+     * bug — an underpaid amount was either silently ignored (Paystack,
+     * Flutterwave: nothing recorded, nothing logged) or logged and dropped
+     * (Monnify: error_log() only). In every case the payment was effectively
+     * lost — the client's money moved, but nothing in the system reflected it.
+     *
+     * Now every gateway calls this ONE method after verifying its webhook
+     * signature. It decides paid vs underpaid in one place, so the fix
+     * only ever needs to happen here.
+     *
+     * @param  int    $client_id    Client ID extracted from the payment reference.
+     * @param  float  $amount       Amount actually received, in NGN.
+     * @param  string $payment_ref  Gateway's transaction reference.
+     * @param  string $method       e.g. 'monnify_virtual_account', 'paystack_virtual_account'.
+     * @return void
+     */
+    public static function process_gateway_payment(
+        int $client_id,
+        float $amount,
+        string $payment_ref,
+        string $method
+    ): void {
+        $expected = self::get_expected_monthly_total( $client_id );
+
+        if ( $amount >= $expected && $expected > 0 ) {
+            self::apply_full_payment( $client_id, $amount, $payment_ref, $method );
+            return;
+        }
+
+        if ( $expected <= 0 ) {
+            // No CRM/listing subscription currently expects a payment at all
+            // (e.g. a stray/duplicate webhook). Record as underpaid so it's
+            // visible rather than silently vanishing, but don't guess a type.
+            self::record_underpayment( $client_id, $amount, $expected, $payment_ref, $method );
+            return;
+        }
+
+        self::record_underpayment( $client_id, $amount, $expected, $payment_ref, $method );
+    }
+
+    /**
+     * Apply a payment that meets or exceeds the expected monthly total.
+     * Splits the recording between 'crm' and 'listing' subscription rows
+     * exactly as the original per-gateway logic did.
+     *
+     * @param  int    $client_id
+     * @param  float  $amount
+     * @param  string $payment_ref
+     * @param  string $method
+     * @return void
+     */
+    private static function apply_full_payment(
+        int $client_id,
+        float $amount,
+        string $payment_ref,
+        string $method
+    ): void {
+        global $wpdb;
+
+        $has_crm = (bool) $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}ofp_subscriptions
+             WHERE client_id = %d AND type = 'crm' LIMIT 1",
+            $client_id
+        ) );
+
+        $has_listing = (bool) $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}ofp_subscriptions
+             WHERE client_id = %d AND type = 'listing' LIMIT 1",
+            $client_id
+        ) );
+
+        if ( $has_crm ) {
+            self::record_payment( $client_id, 'crm', $amount, $payment_ref, $method );
+        } elseif ( $has_listing ) {
+            self::record_payment( $client_id, 'listing', $amount, $payment_ref, $method );
+        } else {
+            // Client has neither type on record yet — still record it under
+            // 'crm' as a safe default rather than dropping it, since a payment
+            // that made it this far is real money that needs to be accounted for.
+            self::record_payment( $client_id, 'crm', $amount, $payment_ref, $method );
+        }
+    }
+
+    /**
+     * Record an underpaid transaction instead of silently dropping it.
+     *
+     * Inserts a subscription row with status = 'underpaid' so it shows up
+     * in the admin Billing view with both the amount received and the
+     * amount expected, and notifies both the admin and the client so
+     * nobody is left wondering why their pipeline didn't renew.
+     *
+     * Admin resolves this manually via the existing "Mark Paid" action on
+     * the Billing page (ofp_mark_subscription_paid already accepts any
+     * non-paid row, underpaid included) — or by contacting the client for
+     * the balance first.
+     *
+     * @param  int    $client_id
+     * @param  float  $amount_paid
+     * @param  float  $expected
+     * @param  string $payment_ref
+     * @param  string $method
+     * @return void
+     */
+    public static function record_underpayment(
+        int $client_id,
+        float $amount_paid,
+        float $expected,
+        string $payment_ref,
+        string $method
+    ): void {
+        global $wpdb;
+
+        $client = OFP_Client::get( $client_id );
+        if ( ! $client ) {
+            error_log( "[OFP_Subscription] record_underpayment: client {$client_id} not found." );
+            return;
+        }
+
+        $wpdb->insert(
+            $wpdb->prefix . 'ofp_subscriptions',
+            [
+                'client_id'       => $client_id,
+                'type'            => $client->plan ? 'crm' : 'listing',
+                'plan'            => $client->plan,
+                'amount'          => $amount_paid,
+                'expected_amount' => $expected,
+                'payment_method'  => $method,
+                'payment_ref'     => sanitize_text_field( $payment_ref ),
+                'status'          => 'underpaid',
+                'created_at'      => current_time( 'mysql' ),
+            ]
+        );
+
+        $shortfall = max( 0, $expected - $amount_paid );
+
+        // Notify admin — this needs a human decision, it can't self-resolve.
+        OFP_Mailer::send(
+            get_option( 'admin_email' ),
+            'Admin',
+            'Underpayment Received — ' . $client->business_name,
+            '<h2>⚠️ Underpayment Received</h2>'
+            . '<p><strong>Client:</strong> ' . esc_html( $client->business_name ) . '</p>'
+            . '<p><strong>Amount received:</strong> NGN ' . number_format( $amount_paid, 2 ) . '</p>'
+            . '<p><strong>Amount expected:</strong> NGN ' . number_format( $expected, 2 ) . '</p>'
+            . '<p><strong>Shortfall:</strong> NGN ' . number_format( $shortfall, 2 ) . '</p>'
+            . '<p><strong>Reference:</strong> ' . esc_html( $payment_ref ) . '</p>'
+            . '<p>Review this in wp-admin → OFast Pipeline → Billing before it renews automatically.</p>'
+        );
+
+        // Let the client know too, via their own notification preference.
+        if ( class_exists( 'OFP_Notification' ) ) {
+            OFP_Notification::create(
+                $client_id,
+                'underpayment_received',
+                'Payment received — balance still due',
+                'We received NGN ' . number_format( $amount_paid, 2 ) . ', but your plan requires '
+                . 'NGN ' . number_format( $expected, 2 ) . '. Please pay the remaining '
+                . 'NGN ' . number_format( $shortfall, 2 ) . ' to activate your subscription.'
+            );
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // MANUAL ADMIN CONTROLS
     // ─────────────────────────────────────────────────────────────────────────

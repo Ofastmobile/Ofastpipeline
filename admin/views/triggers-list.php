@@ -107,6 +107,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                     <th>Status</th>
                     <th>Attempts</th>
                     <th>Message Preview</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -122,6 +123,32 @@ include OFP_PATH . 'admin/views/partials/header.php';
                             <span title="<?php echo esc_attr( $t->message ); ?>">
                                 <?php echo esc_html( wp_trim_words( $t->message ?? '', 8, '…' ) ); ?>
                             </span>
+                        </td>
+                        <td>
+                            <?php if ( in_array( $t->status, [ 'failed', 'pending' ], true ) ) : ?>
+                                <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;">
+                                    <?php wp_nonce_field( 'ofp_retry_trigger' ); ?>
+                                    <input type="hidden" name="action" value="ofp_retry_trigger">
+                                    <input type="hidden" name="trigger_id" value="<?php echo esc_attr( $t->id ); ?>">
+                                    <input type="hidden" name="return_filter" value="<?php echo esc_attr( $filter_status ); ?>">
+                                    <button type="submit" class="button button-small"
+                                            onclick="return confirm('Retry this trigger in 30 minutes?');">
+                                        Retry
+                                    </button>
+                                </form>
+                                <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;">
+                                    <?php wp_nonce_field( 'ofp_cancel_trigger' ); ?>
+                                    <input type="hidden" name="action" value="ofp_cancel_trigger">
+                                    <input type="hidden" name="trigger_id" value="<?php echo esc_attr( $t->id ); ?>">
+                                    <input type="hidden" name="return_filter" value="<?php echo esc_attr( $filter_status ); ?>">
+                                    <button type="submit" class="button button-small ofp-btn-danger"
+                                            onclick="return confirm('Cancel this trigger permanently?');">
+                                        Cancel
+                                    </button>
+                                </form>
+                            <?php else : ?>
+                                <span class="ofp-muted">—</span>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>

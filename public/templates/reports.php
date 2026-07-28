@@ -28,8 +28,13 @@ if ( $token ) {
 
     if ( $archive && $archive->file_path ) {
         $files = explode( '|', $archive->file_path );
-        // Serve the first file (leads CSV) directly.
-        $file = $files[0] ?? '';
+
+        // 'file' param picks which CSV: 'leads' (default, index 0) or 'comms' (index 1).
+        // Both live behind the same 72-hour token — no need for a second token per file.
+        $which = sanitize_text_field( $_GET['file'] ?? 'leads' );
+        $index = $which === 'comms' ? 1 : 0;
+        $file  = $files[ $index ] ?? '';
+
         if ( $file && file_exists( $file ) ) {
             header( 'Content-Type: text/csv' );
             header( 'Content-Disposition: attachment; filename="' . basename( $file ) . '"' );
@@ -223,9 +228,13 @@ $comms_last_month = (int) $wpdb->get_var(
                         <!-- Right: Actions -->
                         <div style="text-align: right;">
                             <?php if ( $is_valid ) : ?>
-                                <a href="<?php echo esc_url( add_query_arg( 'token', $archive->download_token, home_url( '/reports' ) ) ); ?>"
-                                   style="display: inline-block; padding: 8px 16px; background: var(--accent-blue); color: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.background='#2563eb';" onmouseout="this.style.background='var(--accent-blue)';">
-                                    Download CSV
+                                <a href="<?php echo esc_url( add_query_arg( [ 'token' => $archive->download_token, 'file' => 'leads' ], home_url( '/reports' ) ) ); ?>"
+                                   style="display: inline-block; padding: 8px 14px; background: var(--accent-blue); color: #fff; border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none;">
+                                    Leads CSV
+                                </a>
+                                <a href="<?php echo esc_url( add_query_arg( [ 'token' => $archive->download_token, 'file' => 'comms' ], home_url( '/reports' ) ) ); ?>"
+                                   style="display: inline-block; padding: 8px 14px; background: var(--bg-lighter); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none; margin-top:6px;">
+                                    Comms CSV
                                 </a>
                                 <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
                                     Expires <?php echo esc_html( gmdate( 'M j', strtotime( $archive->token_expires ) ) ); ?>

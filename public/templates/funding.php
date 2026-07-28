@@ -26,6 +26,10 @@ $client = OFP_Auth::current_client();
 $success = '';
 $error   = '';
 
+if ( isset( $_GET['topup_status'] ) && $_GET['topup_status'] === 'pending' ) {
+    $success = 'Your top-up is being processed. Your credit balance will update automatically within a few minutes once payment is confirmed — you\'ll also get a notification here.';
+}
+
 /* -----------------------------------------------------------
  * Handle virtual account generation request
  * --------------------------------------------------------- */
@@ -63,6 +67,47 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_generate_virtua
             $success = 'Your dedicated payment account has been generated!';
         } else {
             $error = 'Could not generate your virtual account. The payment gateway may be temporarily unavailable — please try again later or contact support.';
+        }
+    }
+}
+
+/* -----------------------------------------------------------
+ * Handle: quick credit top-up via hosted checkout (Option C)
+ *
+ * Unlike the virtual account (which can't tell what a payment is
+ * FOR), this builds a one-time checkout link tagged with a reference
+ * like ofp_credit_sms_{client_id}_{random}. The gateway webhook
+ * recognises that prefix and credits the SMS/Voice balance directly
+ * — no ambiguity, no manual review needed.
+ * --------------------------------------------------------- */
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_initiate_credit_topup'] ) ) {
+
+    if ( ! wp_verify_nonce( $_POST['ofp_topup_nonce'] ?? '', 'ofp_topup_credit_action' ) ) {
+        $error = 'Security check failed — please try again.';
+    } elseif ( ! class_exists( 'OFP_Payment' ) ) {
+        $error = 'Payment gateway is not configured yet. Please contact support.';
+    } else {
+
+        if ( class_exists( 'OFP_Security' ) ) {
+            OFP_Security::check_rate_limit( $_SERVER['REMOTE_ADDR'] ?? '', 'credit_topup_init', 5, 600 );
+        }
+
+        $topup_channel = sanitize_text_field( $_POST['topup_channel'] ?? '' );
+        $topup_amount  = (float) ( $_POST['topup_amount'] ?? 0 );
+
+        if ( ! in_array( $topup_channel, [ 'sms', 'voice' ], true ) ) {
+            $error = 'Please choose SMS or Voice credit.';
+        } elseif ( $topup_amount < 500 ) {
+            $error = 'Minimum top-up amount is NGN 500.';
+        } else {
+            $checkout_url = OFP_Payment::initiate_credit_topup( $client->id, $topup_channel, $topup_amount );
+
+            if ( $checkout_url ) {
+                wp_redirect( $checkout_url );
+                exit;
+            }
+
+            $error = 'Could not start the top-up right now — the payment gateway may be temporarily unavailable. Please try again shortly or use manual transfer below.';
         }
     }
 }
@@ -452,6 +497,56 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
         </form>
     </div>
     <?php endif; ?>
+
+    <?php if ( OFP_Subscription::has_active( 'crm', $client->id ) ) :
+        $topup_credits = OFP_Credit::get( $client->id );
+    ?>
+    <div class="ofp-funding-card">
+        <div class="ofp-funding-card-label">Automatic</div>
+        <div class="ofp-funding-card-title">Quick Credit Top-Up</div>
+        <div class="ofp-funding-card-desc">
+            Top up your SMS or Voice credit instantly via a secure checkout page.
+            Your balance updates automatically within minutes — no need to fill in a form.
+        </div>
+
+        <?php if ( $topup_credits ) : ?>
+        <div style="display:flex; gap:24px; margin-bottom:20px; font-size:13px;">
+            <div>
+                <span style="color:var(--text-muted);">SMS Balance:</span>
+                <strong style="color:var(--text-main); margin-left:6px;">NGN <?php echo esc_html( number_format( (float) $topup_credits->sms_remaining, 0 ) ); ?></strong>
+            </div>
+            <div>
+                <span style="color:var(--text-muted);">Voice Balance:</span>
+                <strong style="color:var(--text-main); margin-left:6px;">NGN <?php echo esc_html( number_format( (float) $topup_credits->voice_remaining, 0 ) ); ?></strong>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <form method="POST" action="">
+            <?php wp_nonce_field( 'ofp_topup_credit_action', 'ofp_topup_nonce' ); ?>
+
+            <div class="ofp-form-row">
+                <label for="ofp-topup-channel">Top Up</label>
+                <select id="ofp-topup-channel" name="topup_channel" class="ofp-form-input" required>
+                    <option value="sms">SMS Credit</option>
+                    <option value="voice">Voice Credit</option>
+                </select>
+            </div>
+
+            <div class="ofp-form-row">
+                <label for="ofp-topup-amount">Amount (NGN)</label>
+                <input type="number" id="ofp-topup-amount" name="topup_amount" class="ofp-form-input"
+                       min="500" step="100" placeholder="e.g. 5000" required>
+                <p class="ofp-hint" style="margin-top:6px;">NGN 6.99 per SMS · NGN 15.00 per voice minute</p>
+            </div>
+
+            <button type="submit" name="ofp_initiate_credit_topup" value="1" class="ofp-submit-btn">
+                Pay & Top Up Now
+            </button>
+        </form>
+    </div>
+    <?php endif; ?>
+
     </div><!-- #tab-auto -->
 
     <!-- ══ Section 2: Company Bank Account (admin-configured manual transfer) -->

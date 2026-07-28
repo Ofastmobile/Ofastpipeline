@@ -227,7 +227,8 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
     }
 
     /**
-     * Process a verified Paystack payment.
+     * Delegate a verified payment to the shared handler.
+     * See OFP_Subscription::process_gateway_payment() for the full-vs-underpaid logic.
      *
      * @param  int    $client_id
      * @param  float  $amount
@@ -235,12 +236,6 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
      * @return void
      */
     private function process_payment( int $client_id, float $amount, string $payment_ref ): void {
-        $expected = OFP_Subscription::get_expected_monthly_total( $client_id );
-
-        if ( $amount >= $expected ) {
-            OFP_Subscription::record_payment(
-                $client_id, 'crm', $amount, $payment_ref, 'paystack_virtual_account'
-            );
-        }
+        OFP_Subscription::process_gateway_payment( $client_id, $amount, $payment_ref, 'paystack_virtual_account' );
     }
 }

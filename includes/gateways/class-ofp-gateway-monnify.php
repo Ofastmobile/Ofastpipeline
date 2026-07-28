@@ -219,7 +219,8 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
     }
 
     /**
-     * Process a verified payment — match amount, record subscription, update client.
+     * Delegate a verified payment to the shared handler.
+     * See OFP_Subscription::process_gateway_payment() for the full-vs-underpaid logic.
      *
      * @param  int    $client_id
      * @param  float  $amount
@@ -227,44 +228,6 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
      * @return void
      */
     private function process_payment( int $client_id, float $amount, string $payment_ref ): void {
-
-        $expected = OFP_Subscription::get_expected_monthly_total( $client_id );
-
-        if ( $amount < $expected ) {
-            error_log(
-                "[OFP_Monnify] Underpayment for client {$client_id}: "
-                . "expected NGN {$expected}, got NGN {$amount}"
-            );
-            // Still record but don't activate — flag for manual review.
-            // TODO: notify admin of partial payment.
-            return;
-        }
-
-        // Determine which subscription types to renew based on what client has.
-        global $wpdb;
-        $has_crm     = OFP_Subscription::has_active( 'crm', $client_id )
-                       || $wpdb->get_var( $wpdb->prepare(
-                           "SELECT id FROM {$wpdb->prefix}ofp_subscriptions
-                            WHERE client_id = %d AND type = 'crm' LIMIT 1",
-                           $client_id
-                       ) );
-        $has_listing = OFP_Subscription::has_active( 'listing', $client_id )
-                       || $wpdb->get_var( $wpdb->prepare(
-                           "SELECT id FROM {$wpdb->prefix}ofp_subscriptions
-                            WHERE client_id = %d AND type = 'listing' LIMIT 1",
-                           $client_id
-                       ) );
-
-        if ( $has_crm ) {
-            OFP_Subscription::record_payment(
-                $client_id, 'crm', $amount, $payment_ref, 'monnify_virtual_account'
-            );
-        }
-
-        if ( $has_listing && ! $has_crm ) {
-            OFP_Subscription::record_payment(
-                $client_id, 'listing', $amount, $payment_ref, 'monnify_virtual_account'
-            );
-        }
+        OFP_Subscription::process_gateway_payment( $client_id, $amount, $payment_ref, 'monnify_virtual_account' );
     }
 }

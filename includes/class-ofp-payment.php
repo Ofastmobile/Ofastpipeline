@@ -207,6 +207,20 @@ class OFP_Payment {
 
         OFP_Credit::topup( $parsed['client_id'], $parsed['channel'], $amount_paid, $reference );
 
+        // Phase 19: let the client know their top-up landed. Previously this
+        // was silent — the balance updated but nothing told the client it
+        // had happened, which was confusing given the checkout redirect
+        // just sends them back to a "pending" page with no follow-up.
+        if ( class_exists( 'OFP_Notification' ) ) {
+            OFP_Notification::create(
+                $parsed['client_id'],
+                'credit_topup_confirmed',
+                ucfirst( $parsed['channel'] ) . ' credit top-up confirmed',
+                'Your top-up of NGN ' . number_format( $amount_paid, 2 ) . ' has been received and added to your '
+                . strtoupper( $parsed['channel'] ) . ' credit balance.'
+            );
+        }
+
         return true;
     }
 

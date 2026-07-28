@@ -429,4 +429,21 @@ class OFP_Queue {
             [ 'id' => $trigger_id ]
         );
     }
+
+    /**
+     * Cancel a single pending or failed trigger by ID.
+     * Counterpart to retry() — for admin use on the Trigger Queue page.
+     *
+     * @param  int $trigger_id  Trigger ID.
+     * @return bool             True if a row was updated.
+     */
+    public static function cancel_trigger( int $trigger_id ): bool {
+        global $wpdb;
+
+        return (bool) $wpdb->update(
+            $wpdb->prefix . 'ofp_trigger_queue',
+            [ 'status' => 'cancelled' ],
+            [ 'id' => $trigger_id ]
+        );
+    }
 }

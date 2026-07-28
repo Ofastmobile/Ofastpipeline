@@ -55,6 +55,8 @@ class OFP_Admin_Menu {
         add_action( 'admin_init', [ $this, 'handle_save_plan_pricing' ] );
         add_action( 'admin_init', [ $this, 'handle_save_listing_plans' ] );
         add_action( 'admin_init', [ $this, 'handle_save_company_bank' ] ); // Phase 17
+        add_action( 'admin_post_ofp_retry_trigger',  [ $this, 'handle_retry_trigger' ] );
+        add_action( 'admin_post_ofp_cancel_trigger',  [ $this, 'handle_cancel_trigger' ] );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -639,6 +641,52 @@ class OFP_Admin_Menu {
         }
 
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-reports' ) );
+        exit;
+    }
+
+    /**
+     * Manually retry a single failed trigger from the Trigger Queue admin view.
+     * OFP_Queue::retry() re-queues it 30 minutes out, up to 3 total attempts.
+     *
+     * @return void
+     */
+    public function handle_retry_trigger(): void {
+
+        $this->require_admin_post( 'ofp_retry_trigger' );
+
+        $trigger_id = (int) ( $_POST['trigger_id'] ?? 0 );
+
+        if ( $trigger_id ) {
+            OFP_Queue::retry( $trigger_id );
+            $this->set_message( '✅ Trigger re-queued for retry in 30 minutes.', 'success' );
+        } else {
+            $this->set_message( '❌ Invalid trigger.', 'error' );
+        }
+
+        $redirect_filter = sanitize_text_field( wp_unslash( $_POST['return_filter'] ?? '' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=ofp-triggers' . ( $redirect_filter ? '&filter=' . $redirect_filter : '' ) ) );
+        exit;
+    }
+
+    /**
+     * Manually cancel a single pending/failed trigger from the Trigger Queue admin view.
+     *
+     * @return void
+     */
+    public function handle_cancel_trigger(): void {
+
+        $this->require_admin_post( 'ofp_cancel_trigger' );
+
+        $trigger_id = (int) ( $_POST['trigger_id'] ?? 0 );
+
+        if ( $trigger_id && OFP_Queue::cancel_trigger( $trigger_id ) ) {
+            $this->set_message( '✅ Trigger cancelled.', 'success' );
+        } else {
+            $this->set_message( '❌ Invalid trigger.', 'error' );
+        }
+
+        $redirect_filter = sanitize_text_field( wp_unslash( $_POST['return_filter'] ?? '' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=ofp-triggers' . ( $redirect_filter ? '&filter=' . $redirect_filter : '' ) ) );
         exit;
     }
 

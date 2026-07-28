@@ -108,6 +108,16 @@ class OFP_Activator {
             $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN ofp_notification_pref VARCHAR(10) NOT NULL DEFAULT 'both'" );
             $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN ofp_notification_pref_added TINYINT(1) DEFAULT 0" );
         }
+
+        // expected_amount column on ofp_subscriptions (Phase 18 — underpayment tracking).
+        // Records what the client SHOULD have paid alongside what they DID pay,
+        // so admin billing can show the shortfall instead of just a mystery amount.
+        $expected_col_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM {$p}ofp_subscriptions LIKE 'expected_amount'"
+        );
+        if ( empty( $expected_col_exists ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_subscriptions ADD COLUMN expected_amount DECIMAL(10,2) DEFAULT NULL AFTER amount" );
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

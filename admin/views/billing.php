@@ -133,7 +133,11 @@ include OFP_PATH . 'admin/views/partials/header.php';
                         <td><strong>₦<?php echo esc_html( number_format( (float) $sub->amount, 0 ) ); ?></strong></td>
                         <td>
                             <?php
-                            $s_class = $sub->status === 'paid' ? 'ofp-badge-green' : 'ofp-badge-yellow';
+                            $s_class = match ( $sub->status ) {
+                                'paid'      => 'ofp-badge-green',
+                                'underpaid' => 'ofp-badge-red',
+                                default     => 'ofp-badge-yellow',
+                            };
                             // 'pending' is the initial placeholder row created on onboarding
                             // before any payment has been received. Label it clearly so
                             // it is never mistaken for a failed or overdue payment.
@@ -142,6 +146,14 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                 : ucfirst( $sub->status );
                             echo '<span class="ofp-badge ' . esc_attr( $s_class ) . '">'
                                 . esc_html( $s_label ) . '</span>';
+
+                            if ( $sub->status === 'underpaid' && ! empty( $sub->expected_amount ) ) {
+                                $shortfall = max( 0, (float) $sub->expected_amount - (float) $sub->amount );
+                                echo '<div style="font-size:11px;color:#dc2626;margin-top:4px;">'
+                                    . 'Expected ₦' . esc_html( number_format( (float) $sub->expected_amount, 0 ) )
+                                    . ' — short ₦' . esc_html( number_format( $shortfall, 0 ) )
+                                    . '</div>';
+                            }
                             ?>
                         </td>
                         <td>
