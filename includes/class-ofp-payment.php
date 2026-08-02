@@ -225,6 +225,144 @@ class OFP_Payment {
     }
 
     /**
+     * Build a unique subscription checkout reference.
+     *
+     * @param  int         $client_id
+     * @param  string      $type  'crm' or 'listing'.
+     * @param  string|null $plan  Required for 'listing' (bronze|silver|gold).
+     * @return string
+     */
+    public static function generate_subscription_checkout_reference( int $client_id, string $type, ?string $plan = null ): string {
+        if ( $type === 'listing' && $plan ) {
+            return sprintf( 'ofp_sub_listing_%d_%s_%s', $client_id, $plan, wp_generate_password( 8, false, false ) );
+        }
+        return sprintf( 'ofp_sub_crm_%d_%s', $client_id, wp_generate_password( 8, false, false ) );
+    }
+
+    /**
+     * Check whether a reference is for a subscription checkout payment.
+     *
+     * @param  string $reference
+     * @return bool
+     */
+    public static function is_subscription_checkout_reference( string $reference ): bool {
+        return (bool) preg_match( '/^ofp_sub_(crm|listing)_/', $reference );
+    }
+
+    /**
+     * Parse a subscription checkout reference.
+     *
+     * @param  string $reference
+     * @return array|null { type, client_id, plan }
+     */
+    public static function parse_subscription_checkout_reference( string $reference ): ?array {
+        if ( preg_match( '/^ofp_sub_crm_(\d+)_/', $reference, $m ) ) {
+            return [ 'type' => 'crm', 'client_id' => (int) $m[1], 'plan' => null ];
+        }
+        if ( preg_match( '/^ofp_sub_listing_(\d+)_(bronze|silver|gold)_/', $reference, $m ) ) {
+            return [ 'type' => 'listing', 'client_id' => (int) $m[1], 'plan' => $m[2] ];
+        }
+        return null;
+    }
+
+    /**
+     * Initiate a hosted checkout for a CRM or Listing subscription payment.
+     *
+     * @param  int         $client_id
+     * @param  string      $type            'crm' or 'listing'.
+     * @param  string|null $plan            Required for 'listing'.
+     * @param  float|null  $override_amount Phase 22: pay this exact amount instead
+     *                                      of the full plan price — used to let a
+     *                                      client pay off an underpayment shortfall
+     *                                      without re-charging the whole plan.
+     * @return string|null                  Checkout URL, or null on failure.
+     */
+    public static function initiate_subscription_checkout( int $client_id, string $type, ?string $plan = null, ?float $override_amount = null ): ?string {
+        $client = OFP_Client::get( $client_id );
+        if ( ! $client ) {
+            return null;
+        }
+
+        if ( $type === 'crm' ) {
+            $amount      = $override_amount ?? OFP_Subscription::get_plan_price( $client->plan );
+            $description = 'CRM Plan Payment — ' . ucfirst( (string) $client->plan );
+        } elseif ( $type === 'listing' ) {
+            if ( ! $plan || ! in_array( $plan, OFP_Property_CPT::PLAN_KEYS, true ) ) {
+                return null;
+            }
+            $amount      = $override_amount ?? OFP_Property_CPT::get_plan_price( $plan );
+            $description = 'Listing Plan Payment — ' . ucfirst( $plan );
+        } else {
+            return null;
+        }
+
+        if ( $amount <= 0 ) {
+            return null;
+        }
+
+        $reference = self::generate_subscription_checkout_reference( $client_id, $type, $plan );
+        $gateway   = self::get_gateway();
+
+        if ( ! $gateway || ! method_exists( $gateway, 'initiate_transaction' ) ) {
+            error_log( 'OFP_Payment::initiate_subscription_checkout — active gateway missing initiate_transaction().' );
+            return null;
+        }
+
+        return $gateway->initiate_transaction( [
+            'client_id'    => $client_id,
+            'amount'       => $amount,
+            'reference'    => $reference,
+            'email'        => $client->email,
+            'name'         => $client->owner_name,
+            'phone'        => $client->phone,
+            'description'  => $description,
+            'redirect_url' => home_url( '/funding?sub_status=pending' ),
+        ] );
+    }
+
+    /**
+     * Confirm a subscription checkout payment and activate/renew accordingly.
+     *
+     * @param  string $reference
+     * @param  float  $amount_paid
+     * @param  string $provider_ref
+     * @return bool
+     */
+    public static function confirm_subscription_checkout( string $reference, float $amount_paid, string $provider_ref = '' ): bool {
+        $parsed = self::parse_subscription_checkout_reference( $reference );
+        if ( ! $parsed ) {
+            return false;
+        }
+
+        global $wpdb;
+
+        $already_processed = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}ofp_subscriptions WHERE payment_ref = %s LIMIT 1",
+            $reference
+        ) );
+
+        if ( $already_processed ) {
+            return true;
+        }
+
+        if ( $amount_paid <= 0 ) {
+            error_log( "OFP_Payment::confirm_subscription_checkout — reference {$reference} had non-positive amount {$amount_paid}" );
+            return false;
+        }
+
+        OFP_Subscription::record_payment(
+            $parsed['client_id'],
+            $parsed['type'],
+            $amount_paid,
+            $reference,
+            'checkout',
+            $parsed['plan']
+        );
+
+        return true;
+    }
+
+    /**
      * Handle an incoming payment webhook from the configured gateway.
      *
      * Called by OFP_REST_API::payment_webhook().

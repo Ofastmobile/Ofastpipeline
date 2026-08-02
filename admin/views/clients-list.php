@@ -72,7 +72,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
             </div>
             <div class="ofp-field">
                 <label>Business Category</label>
-                <select name="business_category">
+                <select name="business_category" class="ofp-select">
                     <option value="">— Select Category —</option>
                     <option value="property">Property / Real Estate</option>
                     <option value="food">Food & Restaurant</option>
@@ -90,25 +90,65 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <div class="ofp-field ofp-field-full">
             <label>Subscription Type <span class="required">*</span></label>
             <div class="ofp-checkbox-group">
-                <label class="ofp-checkbox">
+                <label class="ofp-toggle-switch">
                     <input type="checkbox" name="want_crm" value="1" checked>
+                    <span class="ofp-toggle-slider"></span>
                     <span>CRM Pipeline (lead automation, SMS, voice)</span>
                 </label>
-                <label class="ofp-checkbox">
+                <label class="ofp-toggle-switch">
                     <input type="checkbox" name="want_listing" value="1">
+                    <span class="ofp-toggle-slider"></span>
                     <span>Property Listing Directory</span>
                 </label>
             </div>
         </div>
 
-        <div class="ofp-field" id="ofp-plan-field">
-            <label>CRM Plan</label>
-            <select name="plan">
-                <option value="starter">Starter — NGN 25,000/month (100 leads)</option>
-                <option value="growth">Growth — NGN 45,000/month (300 leads)</option>
-                <option value="pro">Pro — NGN 75,000/month (700 leads)</option>
-            </select>
+        <div class="ofp-form-grid">
+            <div class="ofp-field" id="ofp-plan-field">
+                <label>CRM Plan</label>
+                <select name="plan" class="ofp-select">
+                    <option value="starter">Starter — NGN 25,000/month (100 leads)</option>
+                    <option value="growth">Growth — NGN 45,000/month (300 leads)</option>
+                    <option value="pro">Pro — NGN 75,000/month (700 leads)</option>
+                </select>
+            </div>
+
+            <div class="ofp-field" id="ofp-listing-plan-field" style="display:none;">
+                <label>Property Listing Plan</label>
+                <select name="listing_plan" class="ofp-select">
+                    <option value="free">Free — NGN <?php echo number_format( OFP_Property_CPT::get_plan_price('free') ); ?>/month (<?php echo OFP_Property_CPT::get_plan_cap('free'); ?> Listing(s))</option>
+                    <option value="silver">Silver — NGN <?php echo number_format( OFP_Property_CPT::get_plan_price('silver') ); ?>/month (<?php echo OFP_Property_CPT::get_plan_cap('silver'); ?> Listing(s))</option>
+                    <option value="gold">Gold — NGN <?php echo number_format( OFP_Property_CPT::get_plan_price('gold') ); ?>/month (Unlimited Listings)</option>
+                </select>
+            </div>
         </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const wantListingCheck = document.querySelector('input[name="want_listing"]');
+                const listingPlanField = document.getElementById('ofp-listing-plan-field');
+                const bizCatSelect = document.querySelector('select[name="business_category"]');
+                
+                function toggleListingPlan() {
+                    if (wantListingCheck.checked) {
+                        listingPlanField.style.display = 'block';
+                    } else {
+                        listingPlanField.style.display = 'none';
+                    }
+                }
+                
+                wantListingCheck.addEventListener('change', toggleListingPlan);
+                
+                bizCatSelect.addEventListener('change', function() {
+                    if (this.value === 'property') {
+                        wantListingCheck.checked = true;
+                    }
+                    toggleListingPlan();
+                });
+                
+                toggleListingPlan();
+            });
+        </script>
 
         <div class="ofp-form-actions">
             <button type="submit" class="button button-primary ofp-btn-primary">
@@ -167,7 +207,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
             </div>
             <div class="ofp-field">
                 <label>Business Category</label>
-                <select name="business_category">
+                <select name="business_category" class="ofp-select">
                     <?php
                     $cats = [ 'property' => 'Property / Real Estate', 'food' => 'Food & Restaurant',
                               'fashion'  => 'Fashion & Clothing', 'beauty' => 'Beauty & Wellness',
@@ -183,10 +223,26 @@ include OFP_PATH . 'admin/views/partials/header.php';
             </div>
             <div class="ofp-field">
                 <label>CRM Plan</label>
-                <select name="plan">
+                <select name="plan" class="ofp-select">
                     <option value="starter" <?php selected( $client->plan, 'starter' ); ?>>Starter</option>
                     <option value="growth"  <?php selected( $client->plan, 'growth' ); ?>>Growth</option>
                     <option value="pro"     <?php selected( $client->plan, 'pro' ); ?>>Pro</option>
+                </select>
+            </div>
+            
+            <?php 
+            global $wpdb;
+            $current_listing_plan = $wpdb->get_var( $wpdb->prepare(
+                "SELECT plan FROM {$wpdb->prefix}ofp_subscriptions WHERE client_id = %d AND type = 'listing' ORDER BY id DESC LIMIT 1",
+                $client->id
+            ) ) ?: 'free';
+            ?>
+            <div class="ofp-field">
+                <label>Listing Plan (if applicable)</label>
+                <select name="listing_plan" class="ofp-select">
+                    <option value="free" <?php selected( $current_listing_plan, 'free' ); ?>>Free</option>
+                    <option value="silver" <?php selected( $current_listing_plan, 'silver' ); ?>>Silver</option>
+                    <option value="gold"   <?php selected( $current_listing_plan, 'gold' ); ?>>Gold</option>
                 </select>
             </div>
         </div>
@@ -214,6 +270,8 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <?php endif; ?>
 
     <div class="ofp-detail-grid">
+        <div><strong>Client ID:</strong> <code><?php echo esc_html( $client->id ); ?></code></div>
+        <div style="grid-column:1/-1;"><strong>Lead Capture Endpoint (API):</strong> <code><?php echo esc_html( home_url( '/wp-json/ofp/v1/capture-lead' ) ); ?></code></div>
         <div><strong>Owner:</strong> <?php echo esc_html( $client->owner_name ); ?></div>
         <div><strong>Email:</strong> <?php echo esc_html( $client->email ); ?></div>
         <div><strong>Phone:</strong> <?php echo esc_html( $client->phone ); ?></div>
@@ -406,6 +464,48 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <?php endif; ?>
     </div>
     <?php endif; ?>
+
+    <!-- Client Activity Logs (Phase 21) -->
+    <div class="ofp-section" style="margin-top:24px;">
+        <h3>Activity Logs</h3>
+        <?php
+        global $wpdb;
+        $client_logs = $wpdb->get_results( $wpdb->prepare(
+            "SELECT l.*, a.name AS admin_name
+             FROM {$wpdb->prefix}ofp_activity_logs l
+             LEFT JOIN {$wpdb->prefix}ofp_admins a ON l.admin_id = a.id
+             WHERE l.client_id = %d
+             ORDER BY l.created_at DESC
+             LIMIT 20",
+            $client->id
+        ) );
+        ?>
+        <table class="wp-list-table widefat fixed striped" style="margin-top:12px;">
+            <thead>
+                <tr>
+                    <th style="width:160px;">Date</th>
+                    <th>Action</th>
+                    <th>User / Admin</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if ( empty( $client_logs ) ) : ?>
+                    <tr>
+                        <td colspan="3">No activity logs found for this client.</td>
+                    </tr>
+                <?php else : ?>
+                    <?php foreach ( $client_logs as $log ) : ?>
+                        <tr>
+                            <td><?php echo esc_html( wp_date( 'M j, Y g:i a', strtotime( $log->created_at ) ) ); ?></td>
+                            <td><strong><?php echo esc_html( $log->action ); ?></strong></td>
+                            <td><?php echo esc_html( $log->admin_name ?: 'System / Unknown' ); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+        <p style="margin-top:8px;"><a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-activity-logs' ) ); ?>">View all global logs &rarr;</a></p>
+    </div>
 </div>
 
 <?php else : ?>

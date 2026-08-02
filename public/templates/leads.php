@@ -227,30 +227,52 @@ $status_badges = [
     </div>
 
     <!-- Filter tabs -->
-    <div style="display:flex;gap:4px;margin-bottom:24px;border-bottom:2px solid var(--border-color);padding-bottom:0;">
+    <div style="display:flex;gap:4px;margin-bottom:24px;padding-bottom:0;">
         <?php
         $filters = [ '' => 'All', 'new' => 'New', 'contacted' => 'Contacted', 'interested' => 'Interested', 'converted' => 'Converted', 'dead' => 'Dead' ];
         foreach ( $filters as $val => $label ) :
             $active = $filter_status === $val;
         ?>
             <a href="<?php echo esc_url( add_query_arg( 'status', $val, home_url( '/leads' ) ) ); ?>"
-               style="padding:8px 14px;font-size:13px;font-weight:500;text-decoration:none;border-bottom:2px solid <?php echo $active ? 'var(--accent-blue)' : 'transparent'; ?>;margin-bottom:-2px;color:<?php echo $active ? 'var(--accent-blue)' : 'var(--text-muted)'; ?>;">
+               class="ofp-ajax-tab" data-status="<?php echo esc_attr( $val ); ?>"
+               style="padding:8px 14px;font-size:13px;font-weight:500;text-decoration:none;border-bottom:2px solid <?php echo $active ? 'var(--accent-blue)' : 'transparent'; ?>;margin-bottom:-2px;color:<?php echo $active ? 'var(--accent-blue)' : 'var(--text-muted)'; ?>;transition:all 0.2s;">
                 <?php echo esc_html( $label ); ?>
             </a>
         <?php endforeach; ?>
     </div>
 
     <div class="ofp-card" style="padding: 0; overflow: hidden;">
-        <div style="padding: 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <div style="padding: 24px; display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Recent Leads</h3>
             <a href="#" style="font-size: 13px; color: var(--accent-blue); text-decoration: none; font-weight: 500;">See all</a>
         </div>
         
         <?php if ( empty( $leads ) ) : ?>
-            <div class="ofp-empty" style="padding:48px;">
-                <div class="ofp-empty-icon">📭</div>
-                <h3>No leads found</h3>
-                <p>Leads matching this filter will appear here.</p>
+            <div class="ofp-table-wrap" style="margin-top: 0;">
+                <table class="ofp-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>IVR</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ofp-leads-tbody">
+                        <tr>
+                            <td colspan="7" style="text-align:center; padding: 48px;">
+                                <div class="ofp-empty" style="padding:0;">
+                                    <div class="ofp-empty-icon" style="font-size:24px;margin-bottom:12px;">📭</div>
+                                    <h3 style="font-size:16px;font-weight:600;margin:0 0 4px;color:var(--text-main);">No leads found</h3>
+                                    <p style="margin:0;color:var(--text-muted);font-size:13px;">Leads matching this filter will appear here.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         <?php else : ?>
             <div class="ofp-table-wrap" style="margin-top: 0;">
@@ -266,7 +288,7 @@ $status_badges = [
                             <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="ofp-leads-tbody">
                         <?php foreach ( $leads as $lead ) : ?>
                             <tr>
                                 <td><?php echo esc_html( $lead->name ?: '—' ); ?></td>

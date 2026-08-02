@@ -56,8 +56,6 @@ class OFP_Subscription {
         'pro'     => 40000.00,
     ];
 
-    const DEFAULT_LISTING_FEE = 7500.00;
-
     /**
      * Returns all CRM monthly plan prices.
      *
@@ -115,23 +113,13 @@ class OFP_Subscription {
     }
 
     /**
-     * Get the listing fee.
-     *
-     * @return float
-     */
-    public static function get_listing_fee(): float {
-        return (float) get_option( 'ofp_listing_fee_monthly', self::DEFAULT_LISTING_FEE );
-    }
-
-    /**
      * Persist pricing values.
      *
      * @param array $plan_prices
      * @param array $setup_fees
-     * @param float $listing_fee
      * @return bool
      */
-    public static function save_pricing( array $plan_prices, array $setup_fees, float $listing_fee ): bool {
+    public static function save_pricing( array $plan_prices, array $setup_fees ): bool {
         foreach ( self::PLAN_KEYS as $plan ) {
             $price = isset( $plan_prices[ $plan ] )
                 ? max( 0.0, (float) $plan_prices[ $plan ] )
@@ -144,8 +132,6 @@ class OFP_Subscription {
             update_option( "ofp_plan_price_{$plan}", $price );
             update_option( "ofp_plan_setup_fee_{$plan}", $fee );
         }
-
-        update_option( 'ofp_listing_fee_monthly', max( 0.0, $listing_fee ) );
 
         return true;
     }
@@ -369,7 +355,7 @@ class OFP_Subscription {
         global $wpdb;
         $row = $wpdb->get_row( $wpdb->prepare( "
             SELECT plan FROM {$wpdb->prefix}ofp_subscriptions
-            WHERE client_id = %d AND type = 'listing' AND status = 'paid'
+            WHERE client_id = %d AND type = 'listing' AND status IN ('paid', 'pending')
             AND (period_end IS NULL OR period_end >= CURDATE())
             ORDER BY period_end DESC LIMIT 1
         ", $client_id ) );
@@ -454,13 +440,17 @@ class OFP_Subscription {
     /**
      * Record a confirmed payment and activate / renew the subscription.
      *
-     * Called by OFP_Monnify::handle_webhook() after a payment is verified.
+     * Called by OFP_Monnify::handle_webhook() after a payment is verified,
+     * and by OFP_Payment::confirm_subscription_checkout() (Phase 20).
      *
-     * @param  int    $client_id    Client ID.
-     * @param  string $type         'crm' or 'listing'.
-     * @param  float  $amount       Amount paid in NGN.
-     * @param  string $payment_ref  Monnify transaction reference.
-     * @param  string $method       Payment method (e.g. 'virtual_account').
+     * @param  int         $client_id     Client ID.
+     * @param  string      $type          'crm' or 'listing'.
+     * @param  float       $amount        Amount paid in NGN.
+     * @param  string      $payment_ref   Gateway transaction reference.
+     * @param  string      $method        Payment method (e.g. 'virtual_account', 'checkout').
+     * @param  string|null $plan_override Explicit plan tier — pass this when the caller
+     *                                    already knows it (e.g. checkout flow encodes the
+     *                                    tier in the reference). Only relevant for 'listing'.
      * @return void
      */
     public static function record_payment(
@@ -468,7 +458,8 @@ class OFP_Subscription {
         string $type,
         float $amount,
         string $payment_ref,
-        string $method = 'virtual_account'
+        string $method = 'virtual_account',
+        ?string $plan_override = null
     ): void {
         global $wpdb;
 
@@ -479,7 +470,21 @@ class OFP_Subscription {
 
         $period_start = gmdate( 'Y-m-d' );
         $period_end   = gmdate( 'Y-m-d', strtotime( '+30 days' ) );
-        $plan         = $type === 'crm' ? $client->plan : null;
+
+        if ( $type === 'crm' ) {
+            $plan = $client->plan;
+        } elseif ( $type === 'listing' ) {
+            // Phase 20 fix: this used to always record plan = null for listing
+            // payments, silently losing which tier (bronze/silver/gold) the
+            // client was paying for — breaking get_active_listing_plan() and
+            // the property cap check right after an auto-matched payment.
+            // Use the explicit override when known (checkout flow), otherwise
+            // fall back to the client's most recent listing subscription row
+            // so tier continuity is preserved for virtual-account auto-matches.
+            $plan = $plan_override ?: self::get_latest_listing_plan( $client_id );
+        } else {
+            $plan = null;
+        }
 
         // Insert a new paid subscription record for this payment cycle.
         $wpdb->insert(
@@ -518,6 +523,49 @@ class OFP_Subscription {
 
         // Send payment confirmation email.
         OFP_Mailer::send_payment_confirmed( $client, $amount, $type );
+
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( 'Payment successful', $client_id, [
+                'amount'    => $amount,
+                'type'      => $type,
+                'plan'      => $plan,
+                'method'    => $method,
+                'reference' => $payment_ref
+            ] );
+        }
+    }
+
+    /**
+     * Most recent listing subscription's plan tier for a client, regardless
+     * of payment status — used to preserve tier continuity when a payment
+     * is recorded without an explicit plan (e.g. virtual account auto-match).
+     *
+     * @param  int $client_id
+     * @return string|null
+     */
+    private static function get_latest_listing_plan( int $client_id ): ?string {
+        global $wpdb;
+
+        return $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT plan FROM {$wpdb->prefix}ofp_subscriptions
+                 WHERE client_id = %d AND type = 'listing' AND plan IS NOT NULL
+                 ORDER BY created_at DESC LIMIT 1",
+                $client_id
+            )
+        );
+    }
+
+    /**
+     * Public accessor for the client's most recent listing plan tier,
+     * regardless of payment status. Used by the /funding UI (Phase 20)
+     * to know which tier to build a checkout payment for.
+     *
+     * @param  int $client_id
+     * @return string|null
+     */
+    public static function get_latest_listing_plan_for_client( int $client_id ): ?string {
+        return self::get_latest_listing_plan( $client_id );
     }
 
     /**
@@ -684,6 +732,15 @@ class OFP_Subscription {
                 . 'NGN ' . number_format( $shortfall, 2 ) . ' to activate your subscription.'
             );
         }
+
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( 'Underpayment received', $client_id, [
+                'amount_paid' => $amount_paid,
+                'expected'    => $expected,
+                'method'      => $method,
+                'reference'   => $payment_ref
+            ] );
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -734,7 +791,7 @@ class OFP_Subscription {
         }
 
         if ( $type === 'listing' ) {
-            return self::get_listing_fee();
+            return OFP_Property_CPT::get_plan_price( $plan );
         }
 
         return 0.0;
@@ -870,6 +927,94 @@ class OFP_Subscription {
              WHERE id = %d",
             $period_end,
             $client_id
+        ) );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PHASE 22 — UNDERPAID HELPERS + FREE-TIER ACTIVATION
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * All subscription rows currently sitting at 'underpaid' for a client.
+     * Used by the client dashboard banner (Phase 22) to show exactly what's
+     * still owed, rather than a generic "you have something unpaid" message.
+     *
+     * @param  int $client_id
+     * @return array
+     */
+    public static function get_underpaid_for_client( int $client_id ): array {
+        global $wpdb;
+
+        return $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}ofp_subscriptions
+                 WHERE client_id = %d AND status = 'underpaid'
+                 ORDER BY created_at DESC",
+                $client_id
+            )
+        );
+    }
+
+    /**
+     * Whether a client has any subscription row still needing payment
+     * (pending, or underpaid). Distinct from has_active(), which only
+     * checks for a currently paid+valid subscription.
+     *
+     * @param  int $client_id
+     * @return bool
+     */
+    public static function has_unpaid( int $client_id ): bool {
+        global $wpdb;
+
+        return (bool) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}ofp_subscriptions
+                 WHERE client_id = %d AND status IN ('pending','underpaid')
+                 LIMIT 1",
+                $client_id
+            )
+        );
+    }
+
+    /**
+     * Activate a listing (or CRM) subscription immediately at zero cost —
+     * for free tiers like Bronze. Skips checkout entirely since there's
+     * nothing to pay. Mirrors activate_from_manual_payment() but tagged
+     * as 'free_tier' in payment_method for clear billing-log attribution.
+     *
+     * @param  int    $client_id
+     * @param  string $type  'crm' or 'listing'.
+     * @param  string|null $plan
+     * @return void
+     */
+    public static function activate_free_tier( int $client_id, string $type, ?string $plan = null ): void {
+        global $wpdb;
+
+        $period_end = gmdate( 'Y-m-d', strtotime( '+30 days' ) );
+
+        $wpdb->insert(
+            $wpdb->prefix . 'ofp_subscriptions',
+            [
+                'client_id'      => $client_id,
+                'type'           => $type,
+                'plan'           => $plan,
+                'amount'         => 0,
+                'payment_method' => 'free_tier',
+                'status'         => 'paid',
+                'period_start'   => gmdate( 'Y-m-d' ),
+                'period_end'     => $period_end,
+                'paid_at'        => current_time( 'mysql' ),
+                'created_at'     => current_time( 'mysql' ),
+            ]
+        );
+
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE {$wpdb->prefix}ofp_clients
+             SET status = 'active',
+                 subscription_expires = GREATEST( subscription_expires, %s ),
+                 updated_at = NOW()
+             WHERE id = %d",
+            $period_end, $client_id
         ) );
     }
 }

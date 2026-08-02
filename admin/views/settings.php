@@ -53,7 +53,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <!-- ── DOMAIN ROUTING (Phase 16) ───────────────────────────────────── -->
     <div class="ofp-settings-section">
         <div class="ofp-settings-section-header">
-            <h3>🌐 Domain Routing</h3>
+            <h3>Domain Routing</h3>
         </div>
         <p class="ofp-hint">
             Your base CRM domain. Phase 16 uses this to route
@@ -74,7 +74,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <!-- ── DEFAULT PIPELINE MESSAGES ─────────────────────────────────────── -->
     <div class="ofp-settings-section">
         <div class="ofp-settings-section-header">
-            <h3>💬 Default Pipeline Messages</h3>
+            <h3>Default Pipeline Messages</h3>
         </div>
         <p class="ofp-hint">
             These are the default messages pre-filled when a new client is onboarded.
@@ -106,7 +106,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <!-- ── SMTP ───────────────────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
         <div class="ofp-settings-section-header">
-            <h3>📧 Email / SMTP</h3>
+            <h3>Email / SMTP</h3>
             <?php
             if ( $smtp_mode === 'custom' ) {
                 ofp_section_status( [ 'ofp_smtp_host', 'ofp_smtp_username', 'ofp_smtp_password', 'ofp_smtp_from_email' ] );
@@ -192,7 +192,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <!-- ── PAYMENT GATEWAY ────────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
         <div class="ofp-settings-section-header">
-            <h3>💳 Payment Gateway</h3>
+            <h3>Payment Gateway</h3>
             <?php
             $gw_keys_map = [
                 'monnify'     => [ 'ofp_monnify_api_key', 'ofp_monnify_secret_key', 'ofp_monnify_contract_code' ],
@@ -283,7 +283,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <!-- ── Africa's Talking ───────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
         <div class="ofp-settings-section-header">
-            <h3>📱 Africa's Talking (SMS & Voice)</h3>
+            <h3>Africa's Talking (SMS & Voice)</h3>
             <?php ofp_section_status( [ 'ofp_at_username', 'ofp_at_api_key' ] ); ?>
         </div>
         <div class="ofp-form-grid">
@@ -314,7 +314,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <!-- ── BulkSMS Nigeria ────────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
         <div class="ofp-settings-section-header">
-            <h3>📲 BulkSMS Nigeria (Fallback SMS)</h3>
+            <h3>BulkSMS Nigeria (Fallback SMS)</h3>
             <?php ofp_section_status( [ 'ofp_bsmsn_api_key' ] ); ?>
         </div>
         <div class="ofp-form-grid">
@@ -334,7 +334,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <!-- ── Cloudflare Turnstile ───────────────────────────────────────────── -->
     <div class="ofp-settings-section">
         <div class="ofp-settings-section-header">
-            <h3>🛡️ Cloudflare Turnstile</h3>
+            <h3>Cloudflare Turnstile</h3>
             <?php ofp_section_status( [ 'ofp_turnstile_site_key', 'ofp_turnstile_secret' ] ); ?>
         </div>
         <p class="ofp-hint">Bot protection on lead capture forms, /login, and /signup. Leave blank during local development — Turnstile is automatically bypassed when no secret key is set.</p>
@@ -347,21 +347,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
             <div class="ofp-field">
                 <label>Secret Key <?php ofp_key_badge( 'ofp_turnstile_secret' ); ?></label>
                 <input type="password" name="ofp_turnstile_secret" placeholder="Leave blank to keep existing">
-            </div>
-        </div>
-    </div>
-
-    <!-- ── Property Listing Fee ──────────────────────────────────────────── -->
-    <div class="ofp-settings-section">
-        <div class="ofp-settings-section-header">
-            <h3>🏠 Property Listing Fee</h3>
-        </div>
-        <div class="ofp-form-grid">
-            <div class="ofp-field">
-                <label>Monthly Listing Fee (NGN)</label>
-                <input type="number" name="ofp_listing_fee_monthly"
-                       value="<?php echo esc_attr( get_option( 'ofp_listing_fee_monthly', 7500 ) ); ?>">
-                <p class="ofp-hint">Charged per property listing per month in addition to any CRM plan.</p>
             </div>
         </div>
     </div>
@@ -419,7 +404,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <?php
     $ofp_plan_prices = OFP_Subscription::get_plan_prices();
     $ofp_setup_fees  = OFP_Subscription::get_setup_fees();
-    $ofp_listing_fee = OFP_Subscription::get_listing_fee();
     $ofp_plan_labels = [
         'starter' => 'Starter',
         'growth'  => 'Growth',
@@ -452,18 +436,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
                     </td>
                 </tr>
             <?php endforeach; ?>
-            <tr>
-                <th scope="row">Property Listing Fee</th>
-                <td>
-                    <label>
-                        Monthly fee per property (NGN)
-                        <input type="number" step="0.01" min="0"
-                               name="listing_fee"
-                               value="<?php echo esc_attr( $ofp_listing_fee ); ?>"
-                               style="width:140px;">
-                    </label>
-                </td>
-            </tr>
         </table>
 
         <p class="submit">
@@ -477,7 +449,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 <div class="ofp-settings-section">
     <h2>Listing Plans</h2>
     <p class="description">
-        Bronze/Silver/Gold property listing tiers — monthly price and
+        Free/Silver/Gold property listing tiers — monthly price and
         property cap per tier. Read live by the client dashboard's plan
         picker and by payment webhook amount-matching, same as CRM
         pricing above.
@@ -486,7 +458,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <?php
     $ofp_listing_prices = OFP_Property_CPT::get_plan_prices();
     $ofp_listing_caps   = OFP_Property_CPT::get_plan_caps();
-    $ofp_listing_labels = [ 'bronze' => 'Bronze', 'silver' => 'Silver', 'gold' => 'Gold' ];
+    $ofp_listing_labels = [ 'free' => 'Free', 'silver' => 'Silver', 'gold' => 'Gold' ];
     ?>
 
     <form method="post" action="">

@@ -49,6 +49,11 @@ class OFP_Cron_Handler {
      */
     public function check_subscriptions(): void {
         OFP_Subscription::run_daily_check();
+
+        // Purge old activity logs to prevent database bloat (30 days default).
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::purge_old_logs( 30 );
+        }
     }
 
     /**

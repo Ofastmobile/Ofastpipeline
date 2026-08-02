@@ -98,6 +98,7 @@ class OFP_Admin_Menu {
         add_submenu_page( 'ofp-overview', 'Reports',         'Reports',         'read', 'ofp-reports',         [ $this, 'render_reports' ] );
         add_submenu_page( 'ofp-overview', 'Funding Requests', 'Funding Requests', 'read', 'ofp-funding-requests', [ $this, 'render_funding_requests' ] ); // Phase 17
         add_submenu_page( 'ofp-overview', 'Send Notification', 'Send Notification', 'manage_options', 'ofp-send-notification', [ $this, 'render_send_notification' ] ); // Phase 17b
+        add_submenu_page( 'ofp-overview', 'Activity Logs',   'Activity Logs',   'read', 'ofp-activity-logs',   [ $this, 'render_activity_logs' ] ); // Phase 21
 
         // ── Super admin only ──────────────────────────────────────────────────
         if ( $is_super ) {
@@ -130,6 +131,7 @@ class OFP_Admin_Menu {
             'ofast-pipeline_page_ofp-admins',
             'ofast-pipeline_page_ofp-funding-requests',
             'ofast-pipeline_page_ofp-send-notification',
+            'ofast-pipeline_page_ofp-activity-logs',
         ];
 
         if ( ! in_array( $hook, $ofp_pages, true ) ) {
@@ -168,6 +170,7 @@ class OFP_Admin_Menu {
     public function render_communications(): void { $this->load_view( 'communications-log' ); }
     public function render_billing():        void { $this->load_view( 'billing' ); }
     public function render_reports():        void { $this->load_view( 'reports' ); }
+    public function render_activity_logs():  void { $this->load_view( 'activity-logs' ); }
 
     public function render_settings(): void {
         if ( ! OFP_Auth::is_super_admin() ) {
@@ -237,6 +240,7 @@ class OFP_Admin_Menu {
             'subdomain'         => sanitize_title(      wp_unslash( $_POST['subdomain']         ?? '' ) ),
             'business_category' => sanitize_text_field( wp_unslash( $_POST['business_category'] ?? '' ) ),
             'plan'              => sanitize_text_field( wp_unslash( $_POST['plan']              ?? 'starter' ) ),
+            'listing_plan'      => sanitize_text_field( wp_unslash( $_POST['listing_plan']      ?? 'free' ) ),
             'subscriptions'     => $subscriptions,
             'onboarding_source' => 'manual',
         ] );
@@ -478,9 +482,7 @@ class OFP_Admin_Menu {
                 : 0.0;
         }
 
-        $listing_fee = isset( $_POST['listing_fee'] ) ? (float) $_POST['listing_fee'] : 0.0;
-
-        OFP_Subscription::save_pricing( $plan_prices, $setup_fees, $listing_fee );
+        OFP_Subscription::save_pricing( $plan_prices, $setup_fees );
 
         add_action( 'admin_notices', function () {
             echo '<div class="notice notice-success is-dismissible"><p>'
@@ -569,8 +571,6 @@ class OFP_Admin_Menu {
             'ofp_bsmsn_sender_id'  => sanitize_text_field( wp_unslash( $_POST['ofp_bsmsn_sender_id']  ?? '' ) ),
             // Cloudflare Turnstile
             'ofp_turnstile_site_key' => sanitize_text_field( wp_unslash( $_POST['ofp_turnstile_site_key'] ?? '' ) ),
-            // Listing
-            'ofp_listing_fee_monthly' => absint( $_POST['ofp_listing_fee_monthly'] ?? 7500 ),
         ];
 
         // Encrypted fields — only update if a new value was submitted.
@@ -739,6 +739,15 @@ class OFP_Admin_Menu {
             'plan'              => sanitize_text_field( wp_unslash( $_POST['plan']              ?? '' ) ),
         ] );
 
+        $new_listing_plan = sanitize_text_field( wp_unslash( $_POST['listing_plan'] ?? '' ) );
+        if ( $new_listing_plan ) {
+            global $wpdb;
+            $wpdb->query( $wpdb->prepare(
+                "UPDATE {$wpdb->prefix}ofp_subscriptions SET plan = %s WHERE client_id = %d AND type = 'listing'",
+                $new_listing_plan, $client_id
+            ) );
+        }
+
         $this->set_message(
             $updated ? '✅ Client details updated.' : '❌ Update failed.',
             $updated ? 'success' : 'error'
@@ -803,6 +812,16 @@ class OFP_Admin_Menu {
     public function handle_preview_client(): void {
 
         $this->require_admin_post( 'ofp_preview_client' );
+
+        if ( class_exists( 'OFP_Security' ) ) {
+            // Rate limit: 10 previews per admin per 10 minutes.
+            OFP_Security::check_rate_limit( 
+                (string) get_current_user_id(), 
+                'admin_preview_generation', 
+                10, 
+                600 
+            );
+        }
 
         $client_id = (int) ( $_POST['client_id'] ?? 0 );
         $client    = OFP_Client::get( $client_id );

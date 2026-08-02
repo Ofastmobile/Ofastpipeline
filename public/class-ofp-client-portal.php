@@ -91,6 +91,10 @@ class OFP_Client_Portal {
         add_action( 'init',               [ $this, 'handle_logout' ] );
         add_action( 'template_redirect',  [ $this, 'redirect_authenticated_away_from_auth_pages' ] );
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+        
+        // AJAX endpoints for client portal
+        add_action( 'wp_ajax_ofp_fetch_leads',        [ $this, 'ajax_fetch_leads' ] );
+        add_action( 'wp_ajax_nopriv_ofp_fetch_leads', [ $this, 'ajax_fetch_leads' ] );
     }
 
     /**
@@ -112,6 +116,105 @@ class OFP_Client_Portal {
             OFP_VERSION,
             true
         );
+        
+        wp_localize_script( 'ofp-client-portal', 'ofpClientData', [
+            'ajaxurl' => admin_url( 'admin-ajax.php' ),
+            'nonce'   => wp_create_nonce( 'ofp_client_ajax' )
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // AJAX HANDLERS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function ajax_fetch_leads(): void {
+        check_ajax_referer( 'ofp_client_ajax', 'nonce' );
+
+        OFP_Auth::require_client_login(); // Ensure they are logged in
+        $client = OFP_Auth::current_client();
+        if ( ! $client || ! OFP_Subscription::has_active( 'crm', $client->id ) ) {
+            wp_send_json_error( 'Unauthorized' );
+        }
+
+        $filter_status = sanitize_text_field( $_POST['status'] ?? '' );
+        
+        global $wpdb;
+        $p     = $wpdb->prefix;
+        $where = 'l.client_id = %d';
+        $args  = [ $client->id ];
+
+        if ( $filter_status ) {
+            $where .= ' AND l.status = %s';
+            $args[] = $filter_status;
+        }
+
+        $leads = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT l.* FROM {$p}ofp_leads l
+                 WHERE {$where}
+                 ORDER BY l.created_at DESC
+                 LIMIT 20",
+                ...$args
+            )
+        );
+
+        $status_badges = [
+            'new'        => '<span class="ofp-badge ofp-badge-blue">New</span>',
+            'contacted'  => '<span class="ofp-badge ofp-badge-yellow">Contacted</span>',
+            'interested' => '<span class="ofp-badge ofp-badge-orange">Interested</span>',
+            'converted'  => '<span class="ofp-badge ofp-badge-green">✅ Converted</span>',
+            'dead'       => '<span class="ofp-badge ofp-badge-grey">Dead</span>',
+        ];
+
+        ob_start();
+        if ( empty( $leads ) ) {
+            ?>
+            <tr>
+                <td colspan="7" style="text-align:center; padding: 48px;">
+                    <div class="ofp-empty" style="padding:0;">
+                        <div class="ofp-empty-icon" style="font-size:24px;margin-bottom:12px;">📭</div>
+                        <h3 style="font-size:16px;font-weight:600;margin:0 0 4px;color:var(--text-main);">No leads found</h3>
+                        <p style="margin:0;color:var(--text-muted);font-size:13px;">Leads matching this filter will appear here.</p>
+                    </div>
+                </td>
+            </tr>
+            <?php
+        } else {
+            foreach ( $leads as $lead ) {
+                ?>
+                <tr>
+                    <td><?php echo esc_html( $lead->name ?: '—' ); ?></td>
+                    <td><strong><?php echo esc_html( $lead->phone ); ?></strong></td>
+                    <td><?php echo esc_html( $lead->email ?: '—' ); ?></td>
+                    <td><?php echo $status_badges[ $lead->status ] ?? esc_html( $lead->status ); ?></td>
+                    <td style="color: var(--text-muted);"><?php echo $lead->ivr_response ? esc_html( 'Pressed ' . $lead->ivr_response ) : '—'; ?></td>
+                    <td style="white-space:nowrap;font-size:12px;color:var(--text-muted);">
+                        <?php echo esc_html( gmdate( 'M j, Y', strtotime( $lead->created_at ) ) ); ?>
+                    </td>
+                    <td>
+                        <?php if ( $lead->status !== 'converted' ) : ?>
+                            <form method="POST" action="" style="display:inline;">
+                                <?php wp_nonce_field( 'ofp_leads_' . $client->id, 'ofp_leads_nonce' ); ?>
+                                <input type="hidden" name="lead_id" value="<?php echo esc_attr( $lead->id ); ?>">
+                                <select name="new_status" onchange="this.form.submit()" class="ofp-select" style="font-size:12px;padding:6px 12px;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-body);color:var(--text-main);outline:none;cursor:pointer;">
+                                    <?php foreach ( array_keys( $status_badges ) as $s ) : ?>
+                                        <option value="<?php echo esc_attr( $s ); ?>" <?php selected( $lead->status, $s ); ?>>
+                                            <?php echo esc_html( ucfirst( $s ) ); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </form>
+                        <?php else : ?>
+                            <span style="font-size:12px;color:#9ca3af;">Closed</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <?php
+            }
+        }
+        $html = ob_get_clean();
+
+        wp_send_json_success( [ 'html' => $html ] );
     }
 
     // ─────────────────────────────────────────────────────────────────────────

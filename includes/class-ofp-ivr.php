@@ -32,18 +32,25 @@ class OFP_IVR {
 
     /**
      * Build the IVR menu XML.
-     * Africa's Talking reads the <Say> text to the lead and waits for a digit.
+     * Africa's Talking reads the <Say> text (or plays the audio file, if the
+     * client has uploaded one) to the lead and waits for a digit.
      *
-     * @param  string $message   The script read to the lead.
-     * @return string            Valid AT Voice XML.
+     * @param  string      $message    The script read to the lead (TTS fallback).
+     * @param  string|null $audio_url  Optional custom audio URL — used instead
+     *                                 of TTS when present (Phase 22).
+     * @return string                  Valid AT Voice XML.
      */
-    public static function build_menu( string $message ): string {
+    public static function build_menu( string $message, ?string $audio_url = null ): string {
         $callback = home_url( '/wp-json/ofp/v1/webhook/voice-ivr' );
+
+        $prompt = $audio_url
+            ? '<Play url="' . esc_url( $audio_url ) . '"/>'
+            : '<Say>' . esc_html( $message ) . '</Say>';
 
         return '<?xml version="1.0" encoding="UTF-8"?>' .
             '<Response>' .
                 '<GetDigits timeout="30" finishOnKey="#" callbackUrl="' . esc_url( $callback ) . '">' .
-                    '<Say>' . esc_html( $message ) . '</Say>' .
+                    $prompt .
                 '</GetDigits>' .
                 '<Say>We did not receive your response. We will try again soon. Goodbye.</Say>' .
             '</Response>';
@@ -139,7 +146,7 @@ class OFP_IVR {
                 $menu_message
             );
 
-            echo self::build_menu( $menu_message );
+            echo self::build_menu( $menu_message, $config->voice_audio_url ?? null );
             exit;
         }
 

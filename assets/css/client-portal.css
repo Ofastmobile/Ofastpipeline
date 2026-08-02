@@ -629,13 +629,13 @@ body.ofp-portal-body {
     color: var(--text-muted);
     font-weight: 500;
     font-size: 13px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.05);
 }
 
 .ofp-table td {
     padding: 16px;
     color: var(--text-main);
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.05);
 }
 
 .ofp-table tr:last-child td {
@@ -785,6 +785,53 @@ body.ofp-portal-body {
     margin-bottom: 8px;
 }
 
+/* ── Toggle Switch ────────────────────────────────────────────────────────── */
+.ofp-toggle-switch {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-main);
+    gap: 10px;
+}
+
+.ofp-toggle-switch input {
+    display: none;
+}
+
+.ofp-toggle-slider {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background-color: var(--bg-card-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 22px;
+    transition: 0.3s;
+    flex-shrink: 0;
+}
+
+.ofp-toggle-slider::before {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: var(--text-muted);
+    top: 2px;
+    left: 2px;
+    transition: 0.3s;
+}
+
+.ofp-toggle-switch input:checked + .ofp-toggle-slider {
+    background-color: rgba(59, 130, 246, 0.2);
+    border-color: var(--accent-blue);
+}
+
+.ofp-toggle-switch input:checked + .ofp-toggle-slider::before {
+    transform: translateX(18px);
+    background-color: var(--accent-blue);
+}
+
 .ofp-field input,
 .ofp-field select,
 .ofp-field textarea {
@@ -915,14 +962,14 @@ body.ofp-portal-body {
     text-transform: uppercase;
     font-size: 12px;
     letter-spacing: 0.05em;
-    border-bottom: 2px solid var(--border-color);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.05);
     background: var(--bg-card);
 }
 
 .ofp-table td {
     padding: 16px 20px;
     color: var(--text-main);
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.05);
     vertical-align: middle;
 }
 
@@ -1112,12 +1159,12 @@ body.ofp-portal-body {
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    border-bottom: 1px solid var(--border-color);
-    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.05);
+    background: rgba(128, 128, 128, 0.02);
 }
 .ofp-table td {
     padding: 16px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.05);
     color: var(--text-main);
     vertical-align: middle;
 }
@@ -1550,4 +1597,132 @@ body.ofp-portal-body {
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
     }
+}
+
+/* ── Custom Select Dropdown ────────────────────────────────────────────────── */
+.ofp-custom-select-wrapper {
+    position: relative;
+    user-select: none;
+    width: 100%;
+}
+
+.ofp-custom-select-wrapper select {
+    display: none !important;
+}
+
+.ofp-custom-select-trigger {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-main, #374151);
+    background: var(--bg-body, #fff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ofp-custom-select-trigger:hover {
+    border-color: var(--accent-blue, #1a73e8);
+}
+
+.ofp-custom-select-wrapper.open .ofp-custom-select-trigger {
+    border-color: var(--accent-blue, #1a73e8);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.ofp-custom-select-trigger::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--text-muted, #9ca3af);
+    border-bottom: 2px solid var(--text-muted, #9ca3af);
+    transform: rotate(45deg) translateY(-2px);
+    transition: all 0.2s ease;
+}
+
+.ofp-custom-select-wrapper.open .ofp-custom-select-trigger::after {
+    transform: rotate(-135deg) translateY(-2px);
+}
+
+.ofp-custom-select-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 6px;
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    z-index: 99;
+    max-height: 250px;
+    overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-5px);
+    transition: all 0.2s ease;
+}
+
+.ofp-custom-select-wrapper.open .ofp-custom-select-options {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.ofp-custom-select-option {
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text-main, #374151);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.ofp-custom-select-option:hover,
+.ofp-custom-select-option.selected {
+    background: var(--bg-card-hover, #f8fafc);
+    color: var(--accent-blue, #1a73e8);
+}
+
+/* ── Plan Grid ────────────────────────────────────────────────────────── */
+.ofp-plan-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.ofp-plan-option {
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--bg-card);
+}
+.ofp-plan-option:has(input:checked) {
+    border-color: var(--accent-blue);
+    background: rgba(59, 130, 246, 0.05);
+}
+.ofp-plan-option input {
+    display: none;
+}
+.ofp-plan-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-main);
+}
+.ofp-plan-price {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+.ofp-plan-leads {
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.8;
 }

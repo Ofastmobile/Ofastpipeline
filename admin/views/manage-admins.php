@@ -30,6 +30,26 @@ include OFP_PATH . 'admin/views/partials/header.php';
     </p>
 </div>
 
+<?php
+// Phase 22 — Pre-compute orphaned admin IDs for the warning box.
+$orphaned_admin_ids = [];
+foreach ( $admins as $a ) {
+    if ( ! get_user_by( 'email', $a->email ) ) {
+        $orphaned_admin_ids[] = (int) $a->id;
+    }
+}
+?>
+
+<?php if ( ! empty( $orphaned_admin_ids ) ) : ?>
+    <div class="notice notice-warning" style="margin:12px 0 16px; padding:10px 14px; border-left:4px solid #dba617; background:#fff8e1;">
+        <p>
+            <strong>⚠️ <?php echo count( $orphaned_admin_ids ); ?> orphaned admin row<?php echo count( $orphaned_admin_ids ) > 1 ? 's' : ''; ?> detected.</strong>
+            These OFP admin entries have no matching WordPress user account — they cannot log in.
+            Either create a WP user with the same email, or delete the orphaned row below.
+        </p>
+    </div>
+<?php endif; ?>
+
 <!-- ── Current Admins ──────────────────────────────────────────────────────── -->
 <div class="ofp-section">
     <h3>Current Admins</h3>
@@ -44,18 +64,26 @@ include OFP_PATH . 'admin/views/partials/header.php';
             </tr>
         </thead>
         <tbody>
-            <?php foreach ( $admins as $admin ) : ?>
-                <tr class="<?php echo $admin->is_protected ? 'ofp-row-protected' : ''; ?>">
+            <?php foreach ( $admins as $admin ) :
+                $wp_user = get_user_by( 'email', $admin->email );
+                $is_orphaned = ! $wp_user;
+            ?>
+                <tr class="<?php echo $admin->is_protected && ! $is_orphaned ? 'ofp-row-protected' : ''; ?>">
                     <td>
                         <strong><?php echo esc_html( $admin->name ); ?></strong>
-                        <?php if ( $admin->is_protected ) : ?>
+                        <?php if ( $is_orphaned ) : ?>
+                            <span class="ofp-badge ofp-badge-red">Orphaned Row</span>
+                        <?php elseif ( $admin->is_protected ) : ?>
                             <span class="ofp-badge ofp-badge-blue">Protected</span>
                         <?php endif; ?>
                         <?php if ( $current_admin && (int) $admin->id === (int) $current_admin->id ) : ?>
                             <span class="ofp-badge ofp-badge-grey">You</span>
                         <?php endif; ?>
                     </td>
-                    <td><?php echo esc_html( $admin->email ); ?></td>
+                    <td>
+                        <?php echo esc_html( $admin->email ); ?>
+                        <?php if ( $is_orphaned ) : ?><br><small style="color:#d63638;">No matching WP User found</small><?php endif; ?>
+                    </td>
                     <td>
                         <?php if ( $admin->role === 'super_admin' ) : ?>
                             <span class="ofp-badge ofp-badge-green">Super Admin</span>
@@ -70,11 +98,8 @@ include OFP_PATH . 'admin/views/partials/header.php';
                     </td>
                     <td>
                         <?php
-                        // Layer 3: UI suppresses delete button for protected rows.
-                        // Even if someone manipulates the UI, Layer 2 (PHP handler)
-                        // and Layer 1 (is_protected DB check) still block the action.
                         $is_self      = $current_admin && (int) $admin->id === (int) $current_admin->id;
-                        $can_delete   = ! $admin->is_protected && ! $is_self && $admin->role !== 'super_admin';
+                        $can_delete   = ( ! $admin->is_protected || $is_orphaned ) && ! $is_self && ( $admin->role !== 'super_admin' || $is_orphaned );
                         ?>
                         <?php if ( $can_delete ) : ?>
                             <form method="POST"

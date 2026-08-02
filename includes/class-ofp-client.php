@@ -144,13 +144,22 @@ class OFP_Client {
         // ── 5. Create subscriptions ───────────────────────────────────────────
         // OFP_Subscription::create() also handles pipeline_config creation
         // for CRM subscriptions. Listing-only clients don't get pipeline_configs.
+        $listing_plan = isset( $data['listing_plan'] ) ? sanitize_text_field( $data['listing_plan'] ) : 'bronze';
+
         foreach ( $subscriptions as $sub_type ) {
             $sub_type = sanitize_text_field( $sub_type );
             if ( in_array( $sub_type, [ 'crm', 'listing' ], true ) ) {
+                $sub_plan = null;
+                if ( $sub_type === 'crm' ) {
+                    $sub_plan = $plan;
+                } elseif ( $sub_type === 'listing' ) {
+                    $sub_plan = $listing_plan;
+                }
+
                 OFP_Subscription::create(
                     $client_id,
                     $sub_type,
-                    $sub_type === 'crm' ? $plan : null
+                    $sub_plan
                 );
             }
         }

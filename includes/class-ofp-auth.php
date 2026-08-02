@@ -94,6 +94,12 @@ class OFP_Auth {
 
         setcookie( self::COOKIE_NAME, $token, $cookie_options );
 
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( 'Client logged in.', $client->id, [
+                'ip_address' => OFP_Security::get_client_ip(),
+            ] );
+        }
+
         return true;
     }
 

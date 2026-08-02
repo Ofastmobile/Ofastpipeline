@@ -463,7 +463,12 @@ class OFP_Mailer {
                has been reviewed and approved. You can now log in and
                activate your pipeline.</p>
 
-            <p>
+            <h3 style="margin-top:28px;">Next Step: Activate Your Subscription</h3>
+            <p>Log in and head to the <strong>Funding</strong> page to make your
+               first payment. You can pay instantly via our secure checkout — your
+               subscription activates automatically once confirmed.</p>
+
+            <p style="margin-top:16px;">
                 <a href="' . esc_url( home_url( '/login' ) ) . '"
                    style="display:inline-block;background:#1a73e8;color:#fff;
                           padding:12px 28px;border-radius:8px;text-decoration:none;

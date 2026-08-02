@@ -172,6 +172,16 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
             return new WP_REST_Response( [ 'status' => 'credit_topup_processed' ], 200 );
         }
 
+        if ( $topup_reference && OFP_Payment::is_subscription_checkout_reference( $topup_reference ) ) {
+            $amount_paid = (float) ( $data->eventData->amountPaid ?? 0 );
+            OFP_Payment::confirm_subscription_checkout(
+                $topup_reference,
+                $amount_paid,
+                (string) ( $data->eventData->transactionReference ?? '' )
+            );
+            return new WP_REST_Response( [ 'status' => 'subscription_checkout_processed' ], 200 );
+        }
+
         $account_ref = $data->eventData->product->reference ?? '';
         $amount      = (float) ( $data->eventData->amountPaid ?? 0 );
         $payment_ref = sanitize_text_field( $data->eventData->transactionReference ?? '' );

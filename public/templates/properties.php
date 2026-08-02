@@ -18,7 +18,7 @@ $success = '';
 $active_plan = OFP_Subscription::get_active_listing_plan( $client->id );
 $plan_prices = OFP_Property_CPT::get_plan_prices();
 $plan_caps   = OFP_Property_CPT::get_plan_caps();
-$plan_labels = [ 'bronze' => 'Bronze', 'silver' => 'Silver', 'gold' => 'Gold' ];
+$plan_labels = [ 'free' => 'Free', 'silver' => 'Silver', 'gold' => 'Gold' ];
 $used_count  = OFP_Property_CPT::count_for_client( $client->id );
 
 /* -----------------------------------------------------------
@@ -38,8 +38,37 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_choose_listing_
             // They can only change when the plan has expired.
             $error = 'Your listing plan is currently active. You can choose a different plan when it expires.';
         } else {
+            $plan_price = OFP_Property_CPT::get_plan_price( $chosen_plan );
+
+            if ( $plan_price <= 0 ) {
+                // Free tier (e.g. Bronze) — activate immediately, no checkout needed.
+                OFP_Subscription::activate_free_tier( $client->id, 'listing', $chosen_plan );
+
+                if ( class_exists( 'OFP_Notification' ) ) {
+                    OFP_Notification::create(
+                        $client->id,
+                        'listing_plan_activated_free',
+                        'Listing plan activated',
+                        'Your ' . ucfirst( $chosen_plan ) . ' listing plan is now active — no payment required.'
+                    );
+                }
+
+                wp_safe_redirect( add_query_arg( 'success', 'plan_free', home_url( '/properties' ) ) );
+                exit;
+            }
+
             OFP_Subscription::create( $client->id, 'listing', $chosen_plan );
-            wp_safe_redirect( add_query_arg( 'success', 'plan', home_url( '/properties' ) ) );
+
+            if ( class_exists( 'OFP_Notification' ) ) {
+                OFP_Notification::create(
+                    $client->id,
+                    'listing_plan_selected',
+                    'Listing plan selected — payment needed',
+                    'You selected the ' . ucfirst( $chosen_plan ) . ' plan. Head to Funding to complete payment and activate it.'
+                );
+            }
+
+            wp_safe_redirect( add_query_arg( 'success', 'plan', home_url( '/funding' ) ) );
             exit;
         }
     }
@@ -83,6 +112,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
             $status        = in_array( $_POST['status'] ?? '', [ 'live', 'pending_upload', 'taken', 'expired' ], true )
                 ? $_POST['status'] : 'pending_upload';
 
+            $can_feature = $active_plan && $active_plan !== 'free';
+            $is_featured = ( $can_feature && isset( $_POST['is_featured'] ) ) ? '1' : '0';
+
             $post_data = [
                 'post_title'   => $title,
                 'post_content' => $description,
@@ -109,6 +141,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                 update_post_meta( $post_id, 'ofp_bathrooms', $bathrooms );
                 update_post_meta( $post_id, 'ofp_location_text', $location_text );
                 update_post_meta( $post_id, 'ofp_status', $status );
+                update_post_meta( $post_id, 'ofp_is_featured', $is_featured );
 
                 // Photo upload
                 if ( ! empty( $_FILES['photos']['name'][0] ) ) {
@@ -191,6 +224,7 @@ if ( isset($_GET['success']) ) {
     if ( $_GET['success'] === 'saved' ) $success = 'Property saved successfully.';
     if ( $_GET['success'] === 'deleted' ) $success = 'Property deleted.';
     if ( $_GET['success'] === 'plan' ) $success = 'Listing plan selected! Please transfer the plan amount to your virtual account to activate it.';
+    if ( $_GET['success'] === 'plan_free' ) $success = 'Your free listing plan is active — you can add properties now.';
 }
 
 $my_properties  = OFP_Property_CPT::get_client_properties( $client->id );
@@ -264,26 +298,7 @@ if ( isset( $_GET['edit'] ) ) {
                             Your plan selection is awaiting payment. Please transfer <strong>NGN <?php echo esc_html( number_format( $plan_prices[ $active_plan ], 2 ) ); ?>/month</strong>
                             to your virtual account or company account, then notify us via the <a href="<?php echo esc_url( home_url('/funding') ); ?>" style="color:#3b82f6;">Funding page</a>.
                         </p>
-                        <p class="ofp-hint" style="margin-top:12px;">Want to change your plan selection? Choose a different one below:</p>
-
-                        <!-- Allow changing plan while still pending -->
-                        <form method="POST" style="margin-top:16px; display:flex; flex-direction:column; gap:16px;">
-                            <?php wp_nonce_field( 'ofp_listing_plan_action', 'ofp_listing_plan_nonce' ); ?>
-                            <div style="display:flex; flex-direction:column; gap:12px;">
-                                <?php foreach ( OFP_Property_CPT::PLAN_KEYS as $plan ) : ?>
-                                    <label style="display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--border-light); border-radius:8px; cursor:pointer;">
-                                        <input type="radio" name="listing_plan" value="<?php echo esc_attr( $plan ); ?>" <?php checked( $active_plan, $plan ); ?>>
-                                        <div style="display:flex; flex-direction:column; gap:4px;">
-                                            <strong style="color:var(--text-dark);"><?php echo esc_html( $plan_labels[ $plan ] ); ?></strong>
-                                            <span class="ofp-hint" style="margin:0;">Up to <?php echo esc_html( $plan_caps[ $plan ] ); ?> properties &mdash; NGN <?php echo esc_html( number_format( $plan_prices[ $plan ], 2 ) ); ?>/month</span>
-                                        </div>
-                                    </label>
-                                <?php endforeach; ?>
-                            </div>
-                            <div>
-                                <button type="submit" name="ofp_choose_listing_plan" value="1" class="ofp-btn ofp-btn-primary">Change Selection</button>
-                            </div>
-                        </form>
+                        <!-- Blocked changing plan while still pending (per user request) -->
 
                     <?php else : ?>
                         <!-- No plan yet: full picker shown -->
@@ -292,14 +307,13 @@ if ( isset( $_GET['edit'] ) ) {
 
                         <form method="POST" style="margin-top:20px; display:flex; flex-direction:column; gap:16px;">
                             <?php wp_nonce_field( 'ofp_listing_plan_action', 'ofp_listing_plan_nonce' ); ?>
-                            <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div class="ofp-plan-grid">
                                 <?php foreach ( OFP_Property_CPT::PLAN_KEYS as $plan ) : ?>
-                                    <label style="display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--border-light); border-radius:8px; cursor:pointer;">
-                                        <input type="radio" name="listing_plan" value="<?php echo esc_attr( $plan ); ?>">
-                                        <div style="display:flex; flex-direction:column; gap:4px;">
-                                            <strong style="color:var(--text-dark);"><?php echo esc_html( $plan_labels[ $plan ] ); ?></strong>
-                                            <span class="ofp-hint" style="margin:0;">Up to <?php echo esc_html( $plan_caps[ $plan ] ); ?> properties &mdash; NGN <?php echo esc_html( number_format( $plan_prices[ $plan ], 2 ) ); ?>/month</span>
-                                        </div>
+                                    <label class="ofp-plan-option">
+                                        <input type="radio" name="listing_plan" value="<?php echo esc_attr( $plan ); ?>" required>
+                                        <div class="ofp-plan-name"><?php echo esc_html( $plan_labels[ $plan ] ); ?></div>
+                                        <div class="ofp-plan-price">NGN <?php echo esc_html( number_format( $plan_prices[ $plan ], 0 ) ); ?>/mo</div>
+                                        <div class="ofp-plan-leads">Up to <?php echo esc_html( $plan_caps[ $plan ] ); ?> properties</div>
                                     </label>
                                 <?php endforeach; ?>
                             </div>
@@ -341,7 +355,8 @@ if ( isset( $_GET['edit'] ) ) {
                                 
                                 <div class="ofp-field">
                                     <label>Listing Type</label>
-                                    <select name="listing_type">
+                                    <select name="listing_type" class="ofp-select">
+                                        <option value="" hidden>— Select —</option>
                                         <?php $current_ltype = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_listing_type', true ) : 'sale'; ?>
                                         <option value="sale" <?php selected( $current_ltype, 'sale' ); ?>>For Sale</option>
                                         <option value="rent" <?php selected( $current_ltype, 'rent' ); ?>>For Rent</option>
@@ -350,7 +365,8 @@ if ( isset( $_GET['edit'] ) ) {
 
                                 <div class="ofp-field">
                                     <label>Property Type</label>
-                                    <select name="property_type">
+                                    <select name="property_type" class="ofp-select">
+                                        <option value="" hidden>— Select —</option>
                                         <?php 
                                         $current_ptype = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_property_type', true ) : 'apartment'; 
                                         $types = [ 'apartment' => 'Apartment', 'duplex' => 'Duplex', 'bungalow' => 'Bungalow', 'terrace' => 'Terrace', 'land' => 'Land', 'office' => 'Office', 'shop' => 'Shop', 'warehouse' => 'Warehouse', 'other' => 'Other' ];
@@ -369,7 +385,8 @@ if ( isset( $_GET['edit'] ) ) {
                                 
                                 <div class="ofp-field">
                                     <label>Price Period</label>
-                                    <select name="price_period">
+                                    <select name="price_period" class="ofp-select">
+                                        <option value="" hidden>— N/A —</option>
                                         <?php $current_period = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_price_period', true ) : 'year'; ?>
                                         <option value="year" <?php selected( $current_period, 'year' ); ?>>Per Year (Rent)</option>
                                         <option value="month" <?php selected( $current_period, 'month' ); ?>>Per Month (Rent)</option>
@@ -399,7 +416,7 @@ if ( isset( $_GET['edit'] ) ) {
                                     <div class="ofp-field" style="grid-column: 1 / -1;">
                                         <label>Status</label>
                                         <?php $current_status = get_post_meta( $editing_post->ID, 'ofp_status', true ); ?>
-                                        <select name="status">
+                                        <select name="status" class="ofp-select">
                                             <option value="pending_upload" <?php selected( $current_status, 'pending_upload' ); ?>>Pending Upload</option>
                                             <option value="live" <?php selected( $current_status, 'live' ); ?>>Live</option>
                                             <option value="taken" <?php selected( $current_status, 'taken' ); ?>>Taken / Sold / Rented</option>
@@ -407,6 +424,20 @@ if ( isset( $_GET['edit'] ) ) {
                                         </select>
                                     </div>
                                 <?php endif; ?>
+
+                                <?php
+                                $can_feature = $active_plan && $active_plan !== 'free';
+                                $is_featured = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_is_featured', true ) : '0';
+                                ?>
+                                <div class="ofp-field" style="grid-column: 1 / -1;">
+                                    <label>
+                                        <input type="checkbox" name="is_featured" value="1"
+                                            <?php checked( $is_featured, '1' ); ?>
+                                            <?php disabled( ! $can_feature, true ); ?>>
+                                        Featured Listing (Display at the top of search results)
+                                        <?php if ( ! $can_feature ) echo '<span style="color:#ef4444;font-size:12px;display:block;margin-top:4px;">(Not available on Free plan)</span>'; ?>
+                                    </label>
+                                </div>
 
                                 <div class="ofp-field" style="grid-column: 1 / -1;">
                                     <label>Photos <span class="ofp-hint" style="display:inline;margin:0;">(first photo becomes the main image)</span></label>

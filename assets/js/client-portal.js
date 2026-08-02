@@ -124,14 +124,35 @@
     function initSignupPlanToggle() {
         var crmBox      = document.querySelector('[name="want_crm"]');
         var planSection = document.getElementById('ofp-plan-section');
-        if ( ! crmBox || ! planSection ) return;
-
-        function toggle() {
-            planSection.style.display = crmBox.checked ? '' : 'none';
+        if ( crmBox && planSection ) {
+            function toggle() {
+                planSection.style.display = crmBox.checked ? '' : 'none';
+            }
+            crmBox.addEventListener('change', toggle);
+            toggle();
         }
 
-        crmBox.addEventListener('change', toggle);
-        toggle();
+        var listingBox  = document.querySelector('[name="want_listing"]');
+        var listingPlanSection = document.getElementById('ofp-listing-plan-section');
+        if ( listingBox && listingPlanSection ) {
+            function toggleListing() {
+                listingPlanSection.style.display = listingBox.checked ? '' : 'none';
+            }
+            listingBox.addEventListener('change', toggleListing);
+            toggleListing();
+        }
+        
+        var catSelect = document.querySelector('[name="business_category"]');
+        if ( catSelect && listingBox ) {
+            catSelect.addEventListener('change', function() {
+                if ( this.value === 'property' ) {
+                    listingBox.checked = true;
+                    if ( listingPlanSection ) {
+                        listingPlanSection.style.display = '';
+                    }
+                }
+            });
+        }
     }
 
     // ── IVR digit action labels ───────────────────────────────────────────────
@@ -261,6 +282,128 @@
         });
     }
 
+    // ── Custom Dropdown Component ────────────────────────────────────────────
+    function initOfpCustomSelects() {
+        var selects = document.querySelectorAll('.ofp-select');
+        selects.forEach(function(select) {
+            if (select.closest('.ofp-custom-select-wrapper')) return;
+
+            var wrapper = document.createElement('div');
+            wrapper.className = 'ofp-custom-select-wrapper';
+            select.parentNode.insertBefore(wrapper, select);
+            wrapper.appendChild(select);
+
+            var trigger = document.createElement('div');
+            trigger.className = 'ofp-custom-select-trigger';
+            var selectedOption = select.options[select.selectedIndex];
+            trigger.textContent = selectedOption ? selectedOption.text : 'Select an option';
+            wrapper.appendChild(trigger);
+
+            var optionsContainer = document.createElement('div');
+            optionsContainer.className = 'ofp-custom-select-options';
+            wrapper.appendChild(optionsContainer);
+
+            Array.from(select.options).forEach(function(option, index) {
+                if (option.hidden) return;
+                var optDiv = document.createElement('div');
+                optDiv.className = 'ofp-custom-select-option';
+                if (option.selected) optDiv.classList.add('selected');
+                optDiv.textContent = option.text;
+                optDiv.dataset.value = option.value;
+                optDiv.dataset.index = index;
+
+                optDiv.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    select.selectedIndex = this.dataset.index;
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                    
+                    trigger.textContent = this.textContent;
+                    optionsContainer.querySelectorAll('.ofp-custom-select-option').forEach(function(el) {
+                        el.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    wrapper.classList.remove('open');
+                });
+                optionsContainer.appendChild(optDiv);
+            });
+
+            trigger.addEventListener('click', function(e) {
+                e.stopPropagation();
+                document.querySelectorAll('.ofp-custom-select-wrapper.open').forEach(function(el) {
+                    if (el !== wrapper) el.classList.remove('open');
+                });
+                wrapper.classList.toggle('open');
+            });
+            
+            select.addEventListener('change', function() {
+                var newSelected = select.options[select.selectedIndex];
+                if (newSelected) {
+                    trigger.textContent = newSelected.text;
+                    optionsContainer.querySelectorAll('.ofp-custom-select-option').forEach(function(el) {
+                        el.classList.toggle('selected', el.dataset.index == select.selectedIndex);
+                    });
+                }
+            });
+        });
+
+        document.addEventListener('click', function() {
+            document.querySelectorAll('.ofp-custom-select-wrapper.open').forEach(function(el) {
+                el.classList.remove('open');
+            });
+        });
+    }
+
+    // ── AJAX Leads Filtering ─────────────────────────────────────────────────
+    function initAjaxLeads() {
+        var tabs = document.querySelectorAll('.ofp-ajax-tab');
+        if (!tabs.length || typeof ofpClientData === 'undefined') return;
+
+        var tbody = document.getElementById('ofp-leads-tbody');
+        if (!tbody) return;
+
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                // Visual updates instantly
+                tabs.forEach(function (t) {
+                    t.style.borderBottomColor = 'transparent';
+                    t.style.color = 'var(--text-muted)';
+                });
+                tab.style.borderBottomColor = 'var(--accent-blue)';
+                tab.style.color = 'var(--accent-blue)';
+                
+                // Show a brief loading state
+                tbody.style.opacity = '0.5';
+
+                var status = tab.getAttribute('data-status');
+                
+                var data = new URLSearchParams();
+                data.append('action', 'ofp_fetch_leads');
+                data.append('nonce', ofpClientData.nonce);
+                data.append('status', status);
+
+                fetch(ofpClientData.ajaxurl, {
+                    method: 'POST',
+                    body: data
+                })
+                .then(res => res.json())
+                .then(res => {
+                    tbody.style.opacity = '1';
+                    if (res.success && res.data.html) {
+                        tbody.innerHTML = res.data.html;
+                        // Re-initialize custom selects for the new DOM elements
+                        initOfpCustomSelects();
+                    }
+                })
+                .catch(err => {
+                    tbody.style.opacity = '1';
+                    console.error('AJAX leads fetch failed:', err);
+                });
+            });
+        });
+    }
+
     // ── Init all ─────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         initSidebarToggle();
@@ -273,6 +416,8 @@
         initPasswordStrength();
         initThemeToggle();
         initUserDropdown();
+        initOfpCustomSelects();
+        initAjaxLeads();
     });
 
 }());

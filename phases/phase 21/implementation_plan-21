@@ -1,0 +1,37 @@
+# Phase 21: Refinements & New Features
+
+## Answers to Your Questions (Before We Proceed)
+
+1. **How Property Listings Work**: You remembered correctly! For CRM clients, they have a landing page. But for **Listing clients**, they don't use standard landing pages. Instead, their properties show up on the main directory, and the **single property page** acts as the landing page. The inquiry form on that single property page automatically uses the client's API & ID to send leads straight into their pipeline.
+   * **Regarding Ads**: We currently have a "Featured Listing" toggle. When checked, it pushes the property to the top of the search results (acting as an "Ad"). I will restrict this "Featured" checkbox so it is completely hidden/disabled for users on the Free plan.
+2. **Featured Listings Restriction**: Confirmed. Only Silver and Gold will have access to it.
+3. **Activity Logs Location**: I completely agree. I will add it as a new submenu item called "Activity Logs" (so it's easy to see everything globally), **AND** I will add a "Logs" tab inside each specific Client's page, so when you click a client, you can see only *their* history.
+4. **Customizable Listing Caps**: We actually already built this! If you go to the **Settings** page in the backend and look for "Listing Plans", you can already change the max listings (caps) for each plan. I will simply update that settings panel to include the new "Free" plan, so you can change it from 1 to 2 or 3 whenever you want, directly from the backend.
+
+---
+
+## Proposed Changes
+
+### 1. Admin Menu Structure
+- Modify `class-ofp-property-cpt.php` to extract "Property Listings" into its own top-level menu in the WordPress sidebar (with a building icon). This will restore the "OFast Pipeline" menu to correctly start with **Overview**, **Clients**, etc.
+
+### 2. Client Activity Logs (Audit Trail)
+- **Database**: Create `wp_ofp_activity_logs` table.
+- **Logger Module**: Create `OFP_Logger::log()` to record events automatically.
+- **Admin UI (Global)**: Add an "Activity Log" submenu in the OFast Pipeline menu.
+- **Admin UI (Client-Specific)**: Add a "Logs" tab in the single Client view page (inside `admin/views/client-single.php`).
+
+### 3. Free Plan & Tiers
+- **Update Plans**: Change `OFP_Property_CPT::PLAN_KEYS` to `[ 'free', 'silver', 'gold' ]`.
+- **Default Caps & Prices**: 
+  - Free: Price 0, Cap 1
+  - Silver: Price 15,000, Cap 5
+  - Gold: Price 30,000, Cap 10
+- **Admin Settings**: Update the "Plans & Pricing" admin settings page so you can edit the Free plan's cap and price just like the others.
+- **Enforce Ads Restriction**: Block the "Featured" toggle for Free clients, both in the backend and on the client-facing forms.
+
+## Verification Plan
+- Admin menu looks correct and OFast Pipeline starts with Overview.
+- Free plan is visible in Settings and caps can be edited.
+- Creating a Free client enforces the listing cap and hides the "Featured" checkbox.
+- Performing actions (e.g., editing a client) adds a record to the Activity Logs.

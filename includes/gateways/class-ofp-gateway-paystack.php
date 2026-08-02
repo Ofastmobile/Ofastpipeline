@@ -163,6 +163,12 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
             return new WP_REST_Response( [ 'status' => 'credit_topup_processed' ], 200 );
         }
 
+        if ( $reference && OFP_Payment::is_subscription_checkout_reference( $reference ) ) {
+            $amount_paid = ( (float) ( $data->data->amount ?? 0 ) ) / 100;
+            OFP_Payment::confirm_subscription_checkout( $reference, $amount_paid, (string) ( $data->data->id ?? '' ) );
+            return new WP_REST_Response( [ 'status' => 'subscription_checkout_processed' ], 200 );
+        }
+
         // Extract client ID from metadata.
         $client_id   = (int) ( $data->data->metadata->ofp_client_id ?? 0 );
         $amount      = (float) ( $data->data->amount ?? 0 ) / 100; // Paystack sends kobo.

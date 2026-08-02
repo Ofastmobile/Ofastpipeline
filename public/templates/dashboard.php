@@ -94,6 +94,20 @@ $status_badges = [
                 </div>
             <?php endif; ?>
         </div>
+    <?php elseif ( OFP_Subscription::has_unpaid( $client->id ) ) :
+        $underpaid_count = count( OFP_Subscription::get_underpaid_for_client( $client->id ) );
+    ?>
+        <div class="ofp-alert ofp-alert-warning" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+            <span>
+                💳 <?php echo $underpaid_count > 0 
+                    ? 'You have a subscription payment that came up short — a balance is still owed.' 
+                    : 'You have a subscription awaiting payment.'; ?>
+            </span>
+            <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>"
+               style="display:inline-block;background:var(--btn-primary);color:#fff;padding:8px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;white-space:nowrap;">
+                Pay Now →
+            </a>
+        </div>
     <?php endif; ?>
 
     <?php if ( $has_crm ) : ?>

@@ -43,7 +43,8 @@ require_once OFP_PATH . 'includes/class-ofp-csv.php';
 require_once OFP_PATH . 'includes/class-ofp-property-cpt.php';   // v2.1 — property listing CPT
 require_once OFP_PATH . 'includes/class-ofp-host-router.php';    // Phase 16 — app/property subdomain routing
 require_once OFP_PATH . 'includes/class-ofp-notification.php';   // Phase 17 — notifications
-
+require_once OFP_PATH . 'includes/class-ofp-logger.php';         // Phase 21 — activity logger
+require_once OFP_PATH . 'includes/class-ofp-pipeline-audio.php'; // Phase 22 — custom voice audio
 // Payment gateway — interface + provider adapters.
 // OFP_Payment is the only entry point; adapters are loaded here so the
 // interface is available before any adapter is instantiated.

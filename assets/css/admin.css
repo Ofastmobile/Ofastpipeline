@@ -318,6 +318,50 @@
     flex-shrink: 0;
 }
 
+.ofp-toggle-switch {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #374151;
+    gap: 10px;
+}
+
+.ofp-toggle-switch input {
+    display: none;
+}
+
+.ofp-toggle-slider {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background-color: #e5e7eb;
+    border-radius: 22px;
+    transition: 0.3s;
+    flex-shrink: 0;
+}
+
+.ofp-toggle-slider::before {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: white;
+    top: 2px;
+    left: 2px;
+    transition: 0.3s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.ofp-toggle-switch input:checked + .ofp-toggle-slider {
+    background-color: #1a73e8;
+}
+
+.ofp-toggle-switch input:checked + .ofp-toggle-slider::before {
+    transform: translateX(18px);
+}
+
 .ofp-form-actions {
     display: flex;
     gap: 10px;
@@ -543,4 +587,93 @@
     margin: 0 0 12px;
     padding-bottom: 8px;
     border-bottom: 1px solid #f1f5f9;
+}
+
+/* ── Custom Select Dropdown ────────────────────────────────────────────────── */
+.ofp-custom-select-wrapper {
+    position: relative;
+    user-select: none;
+    width: 100%;
+}
+
+.ofp-custom-select-wrapper select {
+    display: none !important;
+}
+
+.ofp-custom-select-trigger {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-main, #374151);
+    background: var(--bg-body, #fff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ofp-custom-select-trigger:hover {
+    border-color: var(--accent-blue, #1a73e8);
+}
+
+.ofp-custom-select-wrapper.open .ofp-custom-select-trigger {
+    border-color: var(--accent-blue, #1a73e8);
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.ofp-custom-select-trigger::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--text-muted, #9ca3af);
+    border-bottom: 2px solid var(--text-muted, #9ca3af);
+    transform: rotate(45deg) translateY(-2px);
+    transition: all 0.2s ease;
+}
+
+.ofp-custom-select-wrapper.open .ofp-custom-select-trigger::after {
+    transform: rotate(-135deg) translateY(-2px);
+}
+
+.ofp-custom-select-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 6px;
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    z-index: 99;
+    max-height: 250px;
+    overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-5px);
+    transition: all 0.2s ease;
+}
+
+.ofp-custom-select-wrapper.open .ofp-custom-select-options {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.ofp-custom-select-option {
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text-main, #374151);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.ofp-custom-select-option:hover,
+.ofp-custom-select-option.selected {
+    background: var(--bg-card-hover, #f8fafc);
+    color: var(--accent-blue, #1a73e8);
 }

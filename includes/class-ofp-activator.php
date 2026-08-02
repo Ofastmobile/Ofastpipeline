@@ -118,6 +118,15 @@ class OFP_Activator {
         if ( empty( $expected_col_exists ) ) {
             $wpdb->query( "ALTER TABLE {$p}ofp_subscriptions ADD COLUMN expected_amount DECIMAL(10,2) DEFAULT NULL AFTER amount" );
         }
+
+        // voice_audio_url column on ofp_pipeline_configs (Phase 22 — custom IVR audio).
+        // Lets clients upload an MP3 instead of relying on text-to-speech.
+        $audio_col_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM {$p}ofp_pipeline_configs LIKE 'voice_audio_url'"
+        );
+        if ( empty( $audio_col_exists ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_pipeline_configs ADD COLUMN voice_audio_url VARCHAR(255) DEFAULT NULL AFTER followup_2_message" );
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -334,6 +343,7 @@ class OFP_Activator {
             followup_2_delay_hours INT             NOT NULL DEFAULT 24,
             followup_2_type        VARCHAR(10)     NOT NULL DEFAULT 'voice',
             followup_2_message     TEXT                     DEFAULT NULL,
+            voice_audio_url        VARCHAR(255)             DEFAULT NULL,
             followup_3_delay_hours INT             NOT NULL DEFAULT 72,
             followup_3_type        VARCHAR(10)     NOT NULL DEFAULT 'sms',
             followup_3_message     TEXT                     DEFAULT NULL,
@@ -468,6 +478,20 @@ class OFP_Activator {
             PRIMARY KEY (id),
             KEY idx_client_id (client_id),
             KEY idx_status (status)
+        ) {$charset_collate};" );
+
+        // ── 18. ofp_activity_logs (Phase 21) ──────────────────────────────────
+        dbDelta( "CREATE TABLE {$p}ofp_activity_logs (
+            id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            client_id   BIGINT UNSIGNED NULL,
+            admin_id    BIGINT UNSIGNED NULL,
+            action      VARCHAR(100)    NOT NULL,
+            details     TEXT            NULL,
+            created_at  DATETIME        NOT NULL,
+            PRIMARY KEY (id),
+            KEY idx_client_id (client_id),
+            KEY idx_admin_id (admin_id),
+            KEY idx_created_at (created_at)
         ) {$charset_collate};" );
 
         // Store the schema version so future upgrades can run targeted migrations.

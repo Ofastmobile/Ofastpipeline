@@ -26,6 +26,44 @@ $config = $wpdb->get_row(
 $saved   = false;
 $error   = '';
 
+// ── Handle audio upload (Phase 22) ────────────────────────────────────────
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_audio_upload_nonce'] ) ) {
+    if ( wp_verify_nonce(
+        sanitize_text_field( wp_unslash( $_POST['ofp_audio_upload_nonce'] ) ),
+        'ofp_upload_audio_' . $client->id
+    ) ) {
+        $result = OFP_Pipeline_Audio::upload( $client->id, $_FILES['voice_audio'] ?? [] );
+        if ( is_wp_error( $result ) ) {
+            $error = $result->get_error_message();
+        } else {
+            $saved = true;
+        }
+    } else {
+        $error = 'Security check failed — please refresh and try again.';
+    }
+}
+
+// ── Handle audio removal (Phase 22) ───────────────────────────────────────
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_audio_remove_nonce'] ) ) {
+    if ( wp_verify_nonce(
+        sanitize_text_field( wp_unslash( $_POST['ofp_audio_remove_nonce'] ) ),
+        'ofp_remove_audio_' . $client->id
+    ) ) {
+        OFP_Pipeline_Audio::remove( $client->id );
+        $saved = true;
+    }
+}
+
+// Reload config after any audio operation so template reflects the change.
+if ( $saved || $error ) {
+    $config = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}ofp_pipeline_configs WHERE client_id = %d LIMIT 1",
+            $client->id
+        )
+    );
+}
+
 // ── Handle form submission ─────────────────────────────────────────────────
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_pipeline_nonce'] ) ) {
 
@@ -160,7 +198,7 @@ $type_options = [
                                 </div>
                                 <div class="ofp-field">
                                     <label>Type</label>
-                                    <select name="followup_1_type">
+                                    <select name="followup_1_type" class="ofp-select">
                                         <?php foreach ( $type_options as $val => $label ) : ?>
                                             <option value="<?php echo esc_attr( $val ); ?>"
                                                 <?php selected( $config->followup_1_type ?? 'sms', $val ); ?>>
@@ -197,7 +235,7 @@ $type_options = [
                                 </div>
                                 <div class="ofp-field">
                                     <label>Type</label>
-                                    <select name="followup_2_type">
+                                    <select name="followup_2_type" class="ofp-select">
                                         <?php foreach ( $type_options as $val => $label ) : ?>
                                             <option value="<?php echo esc_attr( $val ); ?>"
                                                 <?php selected( $config->followup_2_type ?? 'voice', $val ); ?>>
@@ -214,6 +252,33 @@ $type_options = [
                                     echo esc_textarea( $config->followup_2_message ?? '' );
                                 ?></textarea>
                                 <p class="ofp-hint" style="margin-top:6px;">Write this as natural speech — it is read aloud by a text-to-speech engine.</p>
+                                
+                                <hr style="border:none; border-top:1px solid var(--border-color); margin:16px 0;">
+                                <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:8px;">Custom Voice Audio (Optional)</label>
+                                <?php if ( ! empty( $config->voice_audio_url ) ) : ?>
+                                    <div style="margin-bottom:12px; padding:12px; background:rgba(16,185,129,0.1); border-radius:8px; border:1px solid rgba(16,185,129,0.2);">
+                                        <p style="margin:0 0 8px; font-size:13px; color:var(--text-main); font-weight:500;">
+                                            ✅ Custom audio active. This overrides the text script.
+                                        </p>
+                                        <audio controls src="<?php echo esc_url( $config->voice_audio_url ); ?>" style="width:100%; height:32px;"></audio>
+                                    </div>
+                                <?php endif; ?>
+                                <div style="font-size:13px; padding:12px; border:1px dashed var(--border-color); border-radius:8px; background:var(--bg-body);">
+                                    <p style="margin:0 0 10px; color:var(--text-muted);">
+                                        Upload an MP3 or WAV recording to override the robotic voice. Keep it under 5 MB.
+                                    </p>
+                                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                        <input type="file" name="voice_audio" accept=".mp3,.wav,audio/mpeg,audio/wav" style="flex:1; font-size:13px; min-width:180px;" required form="ofp_audio_upload_form">
+                                        <button type="submit" class="ofp-btn ofp-btn-secondary" style="padding:6px 14px; min-width:auto; height:auto;" form="ofp_audio_upload_form">Upload Audio</button>
+                                    </div>
+                                    <?php if ( ! empty( $config->voice_audio_url ) ) : ?>
+                                        <div style="margin-top:8px;">
+                                            <button type="submit" class="ofp-btn ofp-btn-secondary" style="padding:4px 12px; min-width:auto; height:auto; font-size:12px; color:var(--accent-red);" form="ofp_audio_remove_form">
+                                                Remove Audio (revert to text-to-speech)
+                                            </button>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -235,7 +300,7 @@ $type_options = [
                                 </div>
                                 <div class="ofp-field">
                                     <label>Type</label>
-                                    <select name="followup_3_type">
+                                    <select name="followup_3_type" class="ofp-select">
                                         <?php foreach ( $type_options as $val => $label ) : ?>
                                             <option value="<?php echo esc_attr( $val ); ?>"
                                                 <?php selected( $config->followup_3_type ?? 'sms', $val ); ?>>
@@ -294,6 +359,18 @@ $type_options = [
             </div>
 
                 </form>
+
+                <!-- ── Audio Upload / Remove Forms (Phase 22) ────────────── -->
+                <form id="ofp_audio_upload_form" method="POST" action="" enctype="multipart/form-data" style="display:none;">
+                    <?php wp_nonce_field( 'ofp_upload_audio_' . $client->id, 'ofp_audio_upload_nonce' ); ?>
+                </form>
+                <?php if ( ! empty( $config->voice_audio_url ) ) : ?>
+                    <form id="ofp_audio_remove_form" method="POST" action="" style="display:none;">
+                        <?php wp_nonce_field( 'ofp_remove_audio_' . $client->id, 'ofp_audio_remove_nonce' ); ?>
+                    </form>
+                <?php endif; ?>
+
+
             </div>
             <div class="ofp-pipeline-sidebar">
                 <div class="ofp-phone-mockup">

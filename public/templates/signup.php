@@ -23,6 +23,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
     $phone         = OFP_Security::sanitize_phone( wp_unslash( $_POST['phone'] ?? '' ) );
     $category      = sanitize_text_field( wp_unslash( $_POST['business_category'] ?? '' ) );
     $plan          = sanitize_text_field( wp_unslash( $_POST['plan']           ?? 'starter' ) );
+    $listing_plan  = sanitize_text_field( wp_unslash( $_POST['listing_plan']   ?? 'free' ) );
     $want_crm      = ! empty( $_POST['want_crm'] );
     $want_listing  = ! empty( $_POST['want_listing'] );
 
@@ -48,6 +49,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             'phone'             => $phone,
             'business_category' => $category,
             'plan'              => $want_crm ? $plan : null,
+            'listing_plan'      => $want_listing ? $listing_plan : null,
             'subscriptions'     => $subscriptions,
             'onboarding_source' => 'self_serve',
         ] );
@@ -61,7 +63,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -169,8 +171,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 
                 <div class="ofp-field">
                     <label>Business Category</label>
-                    <select name="business_category">
-                        <option value="">— Select —</option>
+                    <select name="business_category" class="ofp-select">
+                        <option value="" hidden>— Select Category —</option>
                         <?php
                         $cats = [
                             'property'  => 'Property / Real Estate',
@@ -206,13 +208,41 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                         </span>
                     </label>
                     <label class="ofp-checkbox-row">
-                        <input type="checkbox" name="want_listing" value="1"
+                        <input type="checkbox" name="want_listing" value="1" id="want_listing_cb"
                             <?php checked( ! empty( $_POST['want_listing'] ) ); ?>>
                         <span>
                             <strong>Property Listing Directory</strong><br>
-                            <span style="font-size:12px;color:#6b7280;">List your property on the OFast Pipeline directory. NGN <?php echo esc_html( number_format( (float) get_option( 'ofp_listing_fee_monthly', 7500 ), 0 ) ); ?>/month.</span>
+                            <span style="font-size:12px;color:#6b7280;">List your property on the OFast Pipeline directory. Choose a plan below.</span>
                         </span>
                     </label>
+                </div>
+
+                <!-- Listing Plan selector -->
+                <div class="ofp-field" id="ofp-listing-plan-section" style="display:none;">
+                    <label>Choose Your Listing Plan</label>
+                    <div class="ofp-plan-grid">
+                        <label class="ofp-plan-option">
+                            <input type="radio" name="listing_plan" value="free"
+                                <?php checked( ( $_POST['listing_plan'] ?? 'free' ), 'free' ); ?>>
+                            <div class="ofp-plan-name">Free</div>
+                            <div class="ofp-plan-price">NGN <?php echo number_format(OFP_Property_CPT::get_plan_price('free')); ?>/mo</div>
+                            <div class="ofp-plan-leads">Up to <?php echo OFP_Property_CPT::get_plan_cap('free'); ?> properties</div>
+                        </label>
+                        <label class="ofp-plan-option">
+                            <input type="radio" name="listing_plan" value="silver"
+                                <?php checked( ( $_POST['listing_plan'] ?? '' ), 'silver' ); ?>>
+                            <div class="ofp-plan-name">Silver</div>
+                            <div class="ofp-plan-price">NGN <?php echo number_format(OFP_Property_CPT::get_plan_price('silver')); ?>/mo</div>
+                            <div class="ofp-plan-leads">Up to <?php echo OFP_Property_CPT::get_plan_cap('silver'); ?> properties</div>
+                        </label>
+                        <label class="ofp-plan-option">
+                            <input type="radio" name="listing_plan" value="gold"
+                                <?php checked( ( $_POST['listing_plan'] ?? '' ), 'gold' ); ?>>
+                            <div class="ofp-plan-name">Gold</div>
+                            <div class="ofp-plan-price">NGN <?php echo number_format(OFP_Property_CPT::get_plan_price('gold')); ?>/mo</div>
+                            <div class="ofp-plan-leads">Up to <?php echo OFP_Property_CPT::get_plan_cap('gold'); ?> properties</div>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- CRM Plan selector -->
@@ -260,16 +290,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
         </div>
 
     </div>
-
-    <script>
-    // Show/hide plan selector based on CRM checkbox
-    var crmBox     = document.querySelector('[name="want_crm"]');
-    var planSection = document.getElementById('ofp-plan-section');
-    function togglePlan() {
-        if (planSection) planSection.style.display = crmBox && crmBox.checked ? '' : 'none';
-    }
-    if (crmBox) { crmBox.addEventListener('change', togglePlan); togglePlan(); }
-    </script>
 
 <?php endif; ?>
 

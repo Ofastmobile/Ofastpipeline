@@ -2,7 +2,7 @@
 /**
  * Template: /funding
  *
- * Client Funding page — Phase 17 / 17b.
+ * Client Funding page — Phase 17 / 17b / 20.
  *
  * Sections (in order of preference):
  *  1. Virtual Account (from payment gateway — auto-matched, no form needed)
@@ -28,6 +28,10 @@ $error   = '';
 
 if ( isset( $_GET['topup_status'] ) && $_GET['topup_status'] === 'pending' ) {
     $success = 'Your top-up is being processed. Your credit balance will update automatically within a few minutes once payment is confirmed — you\'ll also get a notification here.';
+}
+
+if ( isset( $_GET['sub_status'] ) && $_GET['sub_status'] === 'pending' ) {
+    $success = 'Your payment is being processed. Your subscription will activate automatically within a few minutes once confirmed.';
 }
 
 /* -----------------------------------------------------------
@@ -108,6 +112,48 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_initiate_credit
             }
 
             $error = 'Could not start the top-up right now — the payment gateway may be temporarily unavailable. Please try again shortly or use manual transfer below.';
+        }
+    }
+}
+
+/* -----------------------------------------------------------
+ * Handle: subscription checkout via hosted payment page (Phase 20)
+ * --------------------------------------------------------- */
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_initiate_subscription_checkout'] ) ) {
+
+    if ( ! wp_verify_nonce( $_POST['ofp_sub_checkout_nonce'] ?? '', 'ofp_sub_checkout_action' ) ) {
+        $error = 'Security check failed — please try again.';
+    } elseif ( ! class_exists( 'OFP_Payment' ) ) {
+        $error = 'Payment gateway is not configured yet. Please contact support.';
+    } else {
+
+        if ( class_exists( 'OFP_Security' ) ) {
+            OFP_Security::check_rate_limit( $_SERVER['REMOTE_ADDR'] ?? '', 'sub_checkout_init', 5, 600 );
+        }
+
+        $sub_type = sanitize_text_field( $_POST['sub_type'] ?? '' );
+        $sub_plan = sanitize_text_field( $_POST['sub_plan'] ?? '' );
+
+        if ( ! in_array( $sub_type, [ 'crm', 'listing' ], true ) ) {
+            $error = 'Please choose a valid subscription to pay for.';
+        } else {
+            $override_amount = isset( $_POST['sub_override_amount'] ) && (float) $_POST['sub_override_amount'] > 0
+                ? (float) $_POST['sub_override_amount']
+                : null;
+
+            $checkout_url = OFP_Payment::initiate_subscription_checkout(
+                $client->id,
+                $sub_type,
+                $sub_type === 'listing' ? $sub_plan : null,
+                $override_amount
+            );
+
+            if ( $checkout_url ) {
+                wp_redirect( $checkout_url );
+                exit;
+            }
+
+            $error = 'Could not start payment right now — please try again shortly or use manual transfer below.';
         }
     }
 }
@@ -227,11 +273,11 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
         .ofp-funding-tabs {
             display: flex;
             gap: 8px;
-            background: rgba(0,0,0,0.2);
+            background: var(--bg-card-hover);
             padding: 6px;
             border-radius: 14px;
             margin-bottom: 24px;
-            border: 1px solid rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
         }
         .ofp-funding-tab {
             flex: 1;
@@ -242,16 +288,20 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
             color: var(--text-muted);
             border-radius: 10px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         .ofp-funding-tab.active {
-            background: rgba(255,255,255,0.1);
+            background: var(--bg-card);
             color: var(--text-main);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .ofp-funding-tab:hover:not(.active) {
             color: var(--text-main);
-            background: rgba(255,255,255,0.05);
+            background: var(--border-color);
         }
         .ofp-funding-pane {
             display: none;
@@ -266,14 +316,13 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
         }
 
         .ofp-funding-card {
-            background: rgba(255,255,255,0.03);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255,255,255,0.08);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 28px 28px 32px;
             margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            box-shadow: var(--shadow-lg);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .ofp-funding-card-label {
@@ -304,7 +353,7 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
             justify-content: space-between;
             align-items: center;
             padding: 10px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid var(--border-color);
             font-size: 14px;
         }
         .ofp-funding-detail-row:last-child { border-bottom: none; }
@@ -313,8 +362,8 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
 
         .ofp-copy-btn {
             padding: 3px 12px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.12);
+            background: var(--bg-card-hover);
+            border: 1px solid var(--border-color);
             border-radius: 100px;
             color: var(--text-main);
             font-size: 11px;
@@ -322,7 +371,7 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
             cursor: pointer;
             transition: background 0.15s;
         }
-        .ofp-copy-btn:hover { background: rgba(255,255,255,0.15); }
+        .ofp-copy-btn:hover { background: var(--border-color); }
 
         .ofp-auto-badge {
             display: inline-flex;
@@ -348,6 +397,22 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
             opacity: 0.6;
         }
 
+        .ofp-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+        .ofp-form-grid .ofp-form-row {
+            margin-bottom: 0;
+        }
+        @media (max-width: 480px) {
+            .ofp-form-grid {
+                grid-template-columns: 1fr;
+                gap: 18px;
+            }
+        }
+        
         .ofp-form-row {
             margin-bottom: 18px;
         }
@@ -362,19 +427,20 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
         .ofp-form-input {
             width: 100%;
             height: 48px;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 0 16px;
             font-size: 14px;
             color: var(--text-main);
-            background: rgba(0,0,0,0.2);
-            transition: border-color 0.2s, background 0.2s;
+            background: transparent;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
             box-sizing: border-box;
         }
         .ofp-form-input:focus {
             outline: none;
-            border-color: rgba(255,255,255,0.3);
-            background: rgba(0,0,0,0.3);
+            border-color: var(--accent-blue);
+            background: var(--bg-card);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
         }
         select.ofp-form-input { cursor: pointer; }
         textarea.ofp-form-input {
@@ -442,8 +508,14 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
     <?php endif; ?>
 
     <div class="ofp-funding-tabs">
-        <div class="ofp-funding-tab active" data-target="tab-auto">Auto Funding</div>
-        <div class="ofp-funding-tab" data-target="tab-manual">Manual Transfer</div>
+        <div class="ofp-funding-tab active" data-target="tab-auto">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Auto Funding
+        </div>
+        <div class="ofp-funding-tab" data-target="tab-manual">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-2a4 4 0 014-4h10a4 4 0 014 4v2M3 7l9-4 9 4M8 11v4m4-4v4m4-4v4"/></svg>
+            Manual Transfer
+        </div>
     </div>
 
     <!-- ══ Section 1: Virtual Account (gateway — auto-matched) ══════════════ -->
@@ -527,7 +599,7 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
 
             <div class="ofp-form-row">
                 <label for="ofp-topup-channel">Top Up</label>
-                <select id="ofp-topup-channel" name="topup_channel" class="ofp-form-input" required>
+                <select id="ofp-topup-channel" name="topup_channel" class="ofp-form-input ofp-select" required>
                     <option value="sms">SMS Credit</option>
                     <option value="voice">Voice Credit</option>
                 </select>
@@ -546,6 +618,75 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
         </form>
     </div>
     <?php endif; ?>
+
+    <?php if ( ! empty( $client->plan ) ) :
+        $crm_price = OFP_Subscription::get_plan_price( $client->plan );
+    ?>
+    <div class="ofp-funding-card">
+        <div class="ofp-funding-card-label">Automatic</div>
+        <div class="ofp-funding-card-title">Pay CRM Plan — <?php echo esc_html( ucfirst( $client->plan ) ); ?></div>
+        <div class="ofp-funding-card-desc">
+            NGN <?php echo esc_html( number_format( $crm_price, 2 ) ); ?>/month. Pay instantly via secure checkout —
+            your subscription activates automatically once confirmed.
+        </div>
+        <form method="POST" action="">
+            <?php wp_nonce_field( 'ofp_sub_checkout_action', 'ofp_sub_checkout_nonce' ); ?>
+            <input type="hidden" name="sub_type" value="crm">
+            <button type="submit" name="ofp_initiate_subscription_checkout" value="1" class="ofp-submit-btn">
+                Pay NGN <?php echo esc_html( number_format( $crm_price, 0 ) ); ?> Now
+            </button>
+        </form>
+    </div>
+    <?php endif; ?>
+
+    <?php
+    $pending_listing_plan = OFP_Subscription::get_latest_listing_plan_for_client( $client->id );
+    $listing_price        = $pending_listing_plan ? OFP_Property_CPT::get_plan_price( $pending_listing_plan ) : 0;
+    if ( $pending_listing_plan && $listing_price > 0 ) :
+    ?>
+    <div class="ofp-funding-card">
+        <div class="ofp-funding-card-label">Automatic</div>
+        <div class="ofp-funding-card-title">Pay Listing Plan — <?php echo esc_html( ucfirst( $pending_listing_plan ) ); ?></div>
+        <div class="ofp-funding-card-desc">
+            NGN <?php echo esc_html( number_format( $listing_price, 2 ) ); ?>/month. Pay instantly via secure checkout —
+            your listing plan activates automatically once confirmed.
+        </div>
+        <form method="POST" action="">
+            <?php wp_nonce_field( 'ofp_sub_checkout_action', 'ofp_sub_checkout_nonce' ); ?>
+            <input type="hidden" name="sub_type" value="listing">
+            <input type="hidden" name="sub_plan" value="<?php echo esc_attr( $pending_listing_plan ); ?>">
+            <button type="submit" name="ofp_initiate_subscription_checkout" value="1" class="ofp-submit-btn">
+                Pay NGN <?php echo esc_html( number_format( $listing_price, 0 ) ); ?> Now
+            </button>
+        </form>
+    </div>
+    <?php endif; ?>
+
+    <?php
+    $underpaid_rows = OFP_Subscription::get_underpaid_for_client( $client->id );
+    foreach ( $underpaid_rows as $underpaid ) :
+        $shortfall = max( 0, (float) $underpaid->expected_amount - (float) $underpaid->amount );
+        if ( $shortfall <= 0 ) continue;
+    ?>
+    <div class="ofp-funding-card" style="border-color: rgba(239,68,68,0.3);">
+        <div class="ofp-funding-card-label" style="color:var(--accent-red);">Balance Owed</div>
+        <div class="ofp-funding-card-title"><?php echo esc_html( ucfirst( $underpaid->type ) ); ?> Plan — Remaining Balance</div>
+        <div class="ofp-funding-card-desc">
+            You paid NGN <?php echo esc_html( number_format( (float) $underpaid->amount, 2 ) ); ?> toward this,
+            but NGN <?php echo esc_html( number_format( (float) $underpaid->expected_amount, 2 ) ); ?> was expected.
+            Pay the remaining balance below to activate.
+        </div>
+        <form method="POST" action="">
+            <?php wp_nonce_field( 'ofp_sub_checkout_action', 'ofp_sub_checkout_nonce' ); ?>
+            <input type="hidden" name="sub_type" value="<?php echo esc_attr( $underpaid->type ); ?>">
+            <input type="hidden" name="sub_plan" value="<?php echo esc_attr( $underpaid->plan ); ?>">
+            <input type="hidden" name="sub_override_amount" value="<?php echo esc_attr( $shortfall ); ?>">
+            <button type="submit" name="ofp_initiate_subscription_checkout" value="1" class="ofp-submit-btn">
+                Pay NGN <?php echo esc_html( number_format( $shortfall, 0 ) ); ?> Remaining
+            </button>
+        </form>
+    </div>
+    <?php endforeach; ?>
 
     </div><!-- #tab-auto -->
 
@@ -598,7 +739,7 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
 
             <div class="ofp-form-row">
                 <label for="ofp-payment-for">This Payment Is For</label>
-                <select id="ofp-payment-for" name="payment_for" class="ofp-form-input" required>
+                <select id="ofp-payment-for" name="payment_for" class="ofp-form-input ofp-select" required>
                     <option value="">— Choose one —</option>
 
                     <optgroup label="Credit Top-Up">
@@ -640,16 +781,18 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
                        step="0.01" min="1" placeholder="e.g. 25000" required>
             </div>
 
-            <div class="ofp-form-row">
-                <label for="ofp-bank-name">Your Bank Name</label>
-                <input type="text" id="ofp-bank-name" name="bank_name" class="ofp-form-input"
-                       placeholder="e.g. GTBank" required>
-            </div>
-
-            <div class="ofp-form-row">
-                <label for="ofp-account-name">Your Account Name</label>
-                <input type="text" id="ofp-account-name" name="account_name" class="ofp-form-input"
-                       placeholder="Name on your bank account" required>
+            <div class="ofp-form-grid">
+                <div class="ofp-form-row">
+                    <label for="ofp-bank-name">Your Bank Name</label>
+                    <input type="text" id="ofp-bank-name" name="bank_name" class="ofp-form-input"
+                           placeholder="e.g. GTBank" required>
+                </div>
+    
+                <div class="ofp-form-row">
+                    <label for="ofp-account-name">Your Account Name</label>
+                    <input type="text" id="ofp-account-name" name="account_name" class="ofp-form-input"
+                           placeholder="Name on your bank account" required>
+                </div>
             </div>
 
             <div class="ofp-form-row">

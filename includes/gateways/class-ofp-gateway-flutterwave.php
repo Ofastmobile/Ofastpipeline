@@ -164,6 +164,12 @@ class OFP_Gateway_Flutterwave implements OFP_Gateway_Interface {
             return new WP_REST_Response( [ 'status' => 'credit_topup_processed' ], 200 );
         }
 
+        if ( $tx_ref && OFP_Payment::is_subscription_checkout_reference( $tx_ref ) ) {
+            $amount_paid = (float) ( $data->data->amount ?? 0 );
+            OFP_Payment::confirm_subscription_checkout( $tx_ref, $amount_paid, (string) ( $data->data->id ?? '' ) );
+            return new WP_REST_Response( [ 'status' => 'subscription_checkout_processed' ], 200 );
+        }
+
         // Extract client ID from the tx_ref "ofp_client_{id}".
         $amount    = (float) ( $data->data->amount ?? 0 );
         $flw_ref   = sanitize_text_field( $data->data->flw_ref ?? '' );

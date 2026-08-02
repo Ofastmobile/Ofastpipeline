@@ -37,18 +37,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OFP_Property_CPT {
 
-    const PLAN_KEYS = [ 'bronze', 'silver', 'gold' ];
+    const PLAN_KEYS = [ 'free', 'silver', 'gold' ];
 
     const DEFAULT_PLAN_PRICES = [
-        'bronze' => 7500.00,
+        'free'   => 0.00,
         'silver' => 15000.00,
         'gold'   => 30000.00,
     ];
 
     const DEFAULT_PLAN_CAPS = [
-        'bronze' => 3,
-        'silver' => 10,
-        'gold'   => 25,
+        'free'   => 1,
+        'silver' => 5,
+        'gold'   => 10,
     ];
 
     public function __construct() {
@@ -89,7 +89,7 @@ class OFP_Property_CPT {
             'public'              => true,
             'publicly_queryable'  => true,
             'show_ui'             => true,
-            'show_in_menu'        => 'ofp-overview', // Appears under OFP admin menu.
+            'show_in_menu'        => true,           // Top-level menu.
             'show_in_rest'        => true,           // Required for RankMath and Gutenberg.
             'has_archive'         => true,
             'rewrite'             => [ 'slug' => 'properties', 'with_front' => false ],
@@ -274,9 +274,28 @@ class OFP_Property_CPT {
             </div>
 
             <div class="ofp-meta-field" style="justify-content:flex-end;padding-top:20px;">
+                <?php
+                $client_id = (int) $meta['ofp_client_id'];
+                $can_feature = true;
+                if ( $client_id ) {
+                    $plan = get_user_meta( $client_id, 'listing_plan', true ) ?: 'free';
+                    if ( class_exists('OFP_Subscription') ) {
+                        $sub_plan = OFP_Subscription::get_active_listing_plan( $client_id );
+                        if ( $sub_plan ) {
+                            $plan = $sub_plan;
+                        }
+                    }
+                    if ( $plan === 'free' ) {
+                        $can_feature = false;
+                    }
+                }
+                ?>
                 <label>
-                    <input type="checkbox" name="ofp_is_featured" value="1" <?php checked( $meta['ofp_is_featured'], '1' ); ?>>
+                    <input type="checkbox" name="ofp_is_featured" value="1" 
+                        <?php checked( $meta['ofp_is_featured'], '1' ); ?>
+                        <?php disabled( $can_feature, false ); ?>>
                     Featured listing (top placement)
+                    <?php if ( ! $can_feature ) echo '<span style="color:#ef4444;font-size:11px;display:block;">(Not available on Free plan)</span>'; ?>
                 </label>
             </div>
         </div>
@@ -324,7 +343,20 @@ class OFP_Property_CPT {
         }
 
         // Checkbox — absent means unchecked.
-        update_post_meta( $post_id, 'ofp_is_featured', isset( $_POST['ofp_is_featured'] ) ? '1' : '0' );
+        // If client is on free plan, force to 0.
+        $client_id = absint( $_POST['ofp_client_id'] ?? 0 );
+        $is_featured = isset( $_POST['ofp_is_featured'] ) ? '1' : '0';
+        
+        if ( $client_id ) {
+            $plan = 'free';
+            if ( class_exists('OFP_Subscription') ) {
+                $plan = OFP_Subscription::get_active_listing_plan( $client_id ) ?: 'free';
+            }
+            if ( $plan === 'free' ) {
+                $is_featured = '0'; // Enforce restriction on save.
+            }
+        }
+        update_post_meta( $post_id, 'ofp_is_featured', $is_featured );
 
         // Sync back to ofp_properties table if a client is assigned.
         $client_id = absint( $_POST['ofp_client_id'] ?? 0 );
