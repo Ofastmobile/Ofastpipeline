@@ -66,6 +66,7 @@ class OFP_Client_Portal {
         'notifications'         => 'notifications.php',         // Phase 17
         'notification-settings' => 'notification-settings.php', // Phase 17
         'funding'               => 'funding.php',               // Phase 17 — dedicated funding page
+        'pricing'               => 'pricing.php',               // Plans and Pricing
     ];
 
     /**
@@ -236,6 +237,14 @@ class OFP_Client_Portal {
      * @return void
      */
     public function register_rewrite_rules(): void {
+        // Dynamic route for Agent Profile pages (Phase 23)
+        add_rewrite_rule(
+            '^agent/([^/]+)/?$',
+            'index.php?ofp_agent_slug=$matches[1]',
+            'top'
+        );
+
+        // Static routes
         foreach ( array_keys( $this->routes ) as $slug ) {
             add_rewrite_rule(
                 '^' . preg_quote( $slug, '/' ) . '/?$',
@@ -254,6 +263,7 @@ class OFP_Client_Portal {
      */
     public function register_query_vars( array $vars ): array {
         $vars[] = 'ofp_route';
+        $vars[] = 'ofp_agent_slug'; // Phase 23: Agent Profile parameter
         return $vars;
     }
 
@@ -275,6 +285,17 @@ class OFP_Client_Portal {
      * @return void
      */
     public function handle_routes(): void {
+        // 1. Check for Agent Profile page (Phase 23)
+        $agent_slug = get_query_var( 'ofp_agent_slug', '' );
+        if ( ! empty( $agent_slug ) ) {
+            $template_file = OFP_PATH . 'public/templates/agent-profile.php';
+            if ( file_exists( $template_file ) ) {
+                include $template_file;
+                exit;
+            }
+        }
+
+        // 2. Check for standard portal routes
         $route = get_query_var( 'ofp_route', '' );
 
         // Not one of our routes — let WordPress handle it normally.

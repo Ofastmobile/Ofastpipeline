@@ -88,18 +88,14 @@ class OFP_Gateway_Flutterwave implements OFP_Gateway_Interface {
      * @return string|null
      */
     public function initiate_transaction( array $args ): ?string {
-        $secret_key = get_option( 'ofp_flutterwave_secret_key' );
 
-        if ( ! $secret_key ) {
+        if ( ! $this->secret_key ) {
             error_log( 'OFP Flutterwave initiate_transaction — missing secret key' );
             return null;
         }
 
         $response = wp_remote_post( 'https://api.flutterwave.com/v3/payments', [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $secret_key,
-                'Content-Type'  => 'application/json',
-            ],
+            'headers' => $this->get_headers(),
             'body' => wp_json_encode( [
                 'tx_ref'       => $args['reference'],
                 'amount'       => $args['amount'],

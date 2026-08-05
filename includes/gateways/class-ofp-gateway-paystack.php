@@ -89,9 +89,8 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
      * @return string|null
      */
     public function initiate_transaction( array $args ): ?string {
-        $secret_key = get_option( 'ofp_paystack_secret_key' );
 
-        if ( ! $secret_key ) {
+        if ( ! $this->secret_key ) {
             error_log( 'OFP Paystack initiate_transaction — missing secret key' );
             return null;
         }
@@ -99,10 +98,7 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         $amount_kobo = (int) round( (float) $args['amount'] * 100 );
 
         $response = wp_remote_post( 'https://api.paystack.co/transaction/initialize', [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $secret_key,
-                'Content-Type'  => 'application/json',
-            ],
+            'headers' => $this->get_headers(),
             'body' => wp_json_encode( [
                 'email'        => $args['email'],
                 'amount'       => $amount_kobo,

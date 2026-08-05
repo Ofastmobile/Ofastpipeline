@@ -68,6 +68,14 @@ include OFP_PATH . 'admin/views/partials/header.php';
                        value="<?php echo esc_attr( get_option( 'ofp_crm_base_domain', '' ) ); ?>"
                        placeholder="e.g. ofastpipeline.com">
             </div>
+            
+            <div class="ofp-field">
+                <label>Global Meta Pixel ID</label>
+                <input type="text" name="ofp_global_pixel_id"
+                       value="<?php echo esc_attr( get_option( 'ofp_global_pixel_id', '' ) ); ?>"
+                       placeholder="e.g. 1234567890">
+                <p class="ofp-hint" style="margin-top:6px;">Fires globally on your main website for your own retargeting.</p>
+            </div>
         </div>
     </div>
 

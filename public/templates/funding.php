@@ -819,11 +819,27 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
 <script>
 document.querySelectorAll('.ofp-funding-tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
+        if (tab.classList.contains('active')) return;
+        
         document.querySelectorAll('.ofp-funding-tab').forEach(function(t) { t.classList.remove('active'); });
         tab.classList.add('active');
         
         document.querySelectorAll('.ofp-funding-pane').forEach(function(p) { p.classList.remove('active'); });
-        document.getElementById(tab.dataset.target).classList.add('active');
+        
+        var targetPane = document.getElementById(tab.dataset.target);
+        targetPane.classList.add('active');
+        
+        // Tab transition skeleton effect
+        var cards = targetPane.querySelectorAll('.ofp-funding-card');
+        cards.forEach(function(card) {
+            card.classList.add('ofp-skeleton');
+        });
+        
+        setTimeout(function() {
+            cards.forEach(function(card) {
+                card.classList.remove('ofp-skeleton');
+            });
+        }, 400); // 400ms SPA feel
     });
 });
 

@@ -104,10 +104,14 @@ class OFP_Client {
         }
 
         // ── 3. Insert client row ──────────────────────────────────────────────
+        $business_name = sanitize_text_field( $data['business_name'] );
+        $profile_slug  = self::generate_unique_slug( $business_name );
+
         $inserted = $wpdb->insert(
             $wpdb->prefix . 'ofp_clients',
             [
-                'business_name'        => sanitize_text_field( $data['business_name'] ),
+                'business_name'        => $business_name,
+                'profile_slug'         => $profile_slug,
                 'owner_name'           => sanitize_text_field( $data['owner_name'] ),
                 'email'                => $email,
                 'phone'                => $phone,

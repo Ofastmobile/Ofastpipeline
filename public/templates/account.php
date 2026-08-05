@@ -15,10 +15,22 @@ global $wpdb;
 $wpdb->query( "ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN IF NOT EXISTS logo_url VARCHAR(255) DEFAULT NULL AFTER business_category" );
 // MySQL 8+ supports IF NOT EXISTS on ADD COLUMN. If MariaDB/older MySQL, it will just fail silently which is fine.
 
-// Better yet, just check manually:
+// Ensure all Phase 23 columns exist so users don't have to deactivate/reactivate
 $has_logo = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'logo_url'");
 if (empty($has_logo)) {
     $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN logo_url VARCHAR(255) DEFAULT NULL AFTER business_category");
+}
+$has_slug = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'profile_slug'");
+if (empty($has_slug)) {
+    $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN profile_slug VARCHAR(255) DEFAULT NULL");
+}
+$has_bio = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'bio'");
+if (empty($has_bio)) {
+    $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN bio TEXT DEFAULT NULL");
+}
+$has_pixel = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'meta_pixel_id'");
+if (empty($has_pixel)) {
+    $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN meta_pixel_id VARCHAR(50) DEFAULT NULL");
 }
 
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce'] ) ) {
@@ -43,6 +55,41 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
             OFP_Auth::logout();
             wp_safe_redirect( home_url( '/login?session_expired=1' ) );
             exit;
+        }
+    } elseif ( isset( $_POST['update_profile'] ) ) {
+        $slug  = sanitize_title( $_POST['profile_slug'] ?? '' );
+        $bio   = sanitize_textarea_field( $_POST['bio'] ?? '' );
+        $pixel = sanitize_text_field( $_POST['meta_pixel_id'] ?? '' );
+
+        // Check if slug is taken by someone else
+        $slug_taken = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE profile_slug = %s AND id != %d LIMIT 1",
+                $slug,
+                $client->id
+            )
+        );
+
+        if ( empty( $slug ) ) {
+            $error = 'Profile URL Slug cannot be empty.';
+        } elseif ( $slug_taken ) {
+            $error = 'That Profile URL Slug is already taken. Please choose another.';
+        } else {
+            $wpdb->update(
+                $wpdb->prefix . 'ofp_clients',
+                [
+                    'profile_slug'  => $slug,
+                    'bio'           => $bio,
+                    'meta_pixel_id' => $pixel,
+                ],
+                [ 'id' => $client->id ]
+            );
+            $success = 'Profile & Tracking updated successfully.';
+            
+            // Update client object in memory so UI updates immediately on this page load
+            $client->profile_slug = $slug;
+            $client->bio = $bio;
+            $client->meta_pixel_id = $pixel;
         }
     } elseif ( isset( $_POST['upload_logo'] ) && isset( $_FILES['logo'] ) ) {
         $file = $_FILES['logo'];
@@ -103,304 +150,372 @@ if ( isset( $_GET['success'] ) && $_GET['success'] === 'logo' ) {
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
 <style>
-    .ofp-mobile-view {
-        max-width: 420px;
+    .ofp-settings-dashboard {
+        max-width: 1200px;
         margin: 0 auto;
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 24px;
-        overflow: hidden;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        position: relative;
+        padding: 40px 20px;
     }
-    .ofp-m-header {
-        padding: 40px 20px 60px 20px;
+    .ofp-page-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 40px;
+        letter-spacing: -0.02em;
+    }
+
+    /* Grid Layout */
+    .ofp-settings-grid {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 40px;
+        align-items: start;
+    }
+
+    /* Cards */
+    .ofp-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 32px;
+        margin-bottom: 32px;
+        box-shadow: var(--shadow-md);
+    }
+    .ofp-card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    /* Avatar Section */
+    .ofp-avatar-section {
         display: flex;
         flex-direction: column;
         align-items: center;
-        color: #fff;
-        position: relative;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        background: rgba(255, 255, 255, 0.01);
-    }
-    .ofp-m-avatar {
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-        position: relative;
-        margin-bottom: 16px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    }
-    .ofp-m-avatar img {
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        object-fit: cover;
-        background: var(--bg-body);
-        border: 2px solid rgba(255,255,255,0.1);
-    }
-    .ofp-m-avatar-badge {
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        color: #fff;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        transition: transform 0.2s, background 0.2s;
-    }
-    .ofp-m-avatar-badge:hover { 
-        transform: scale(1.1); 
-        background: rgba(255,255,255,0.2); 
-    }
-    .ofp-m-avatar-badge svg { width: 14px; height: 14px; }
-    
-    .ofp-m-name {
-        font-size: 18px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        position: relative;
-        z-index: 10;
-        letter-spacing: 0.02em;
-        color: var(--text-main);
-    }
-    .ofp-m-name-edit {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--text-muted);
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-    .ofp-m-name-edit:hover {
-        background: rgba(255,255,255,0.1);
-        color: var(--text-main);
-    }
-    .ofp-m-name-edit svg { width: 12px; height: 12px; }
-
-    .ofp-m-card {
-        background: transparent;
-        border-radius: 20px 20px 0 0;
-        margin-top: -24px;
-        padding: 32px 24px;
-        position: relative;
-        z-index: 20;
-    }
-    .ofp-m-title {
         text-align: center;
-        font-size: 14px;
-        font-weight: 700;
-        letter-spacing: 0.1em;
+    }
+    .ofp-avatar-lg {
+        width: 160px;
+        height: 160px;
+        border-radius: 20px;
+        object-fit: cover;
+        margin-bottom: 20px;
+        background: var(--bg-body);
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-md);
+    }
+    .ofp-upload-btn {
+        background: var(--bg-body);
+        border: 1px solid var(--border-color);
         color: var(--text-main);
-        margin-bottom: 32px;
-        text-transform: uppercase;
-        opacity: 0.8;
+        padding: 10px 24px;
+        border-radius: 100px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-block;
+    }
+    .ofp-upload-btn:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--border-highlight);
     }
 
-    .ofp-m-field {
-        margin-bottom: 20px;
+    /* Forms */
+    .ofp-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
     }
-    .ofp-m-label {
+    .ofp-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .ofp-form-group.full-width {
+        grid-column: 1 / -1;
+    }
+    .ofp-label {
         font-size: 13px;
-        color: var(--text-muted);
-        margin-bottom: 8px;
-        display: block;
         font-weight: 500;
+        color: var(--text-muted);
     }
-    .ofp-m-input-wrap {
-        position: relative;
-        display: flex;
-        align-items: center;
-    }
-    .ofp-m-input-icon {
-        position: absolute;
-        left: 8px;
-        width: 36px;
-        height: 36px;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.05);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--text-main);
-        opacity: 0.8;
-    }
-    .ofp-m-input-icon svg { width: 16px; height: 16px; }
-    .ofp-m-input {
+    .ofp-input {
         width: 100%;
-        height: 52px;
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 100px;
-        padding: 0 20px 0 56px;
-        font-size: 14px;
+        height: 48px;
+        background: var(--bg-body);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 0 16px;
         color: var(--text-main);
-        background: rgba(0,0,0,0.2);
+        font-size: 14px;
         transition: all 0.2s;
     }
-    .ofp-m-input:focus {
+    .ofp-input:focus {
         outline: none;
-        border-color: rgba(255,255,255,0.3);
-        background: rgba(0,0,0,0.3);
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
-    .ofp-m-input[readonly] {
+    .ofp-input[readonly] {
         opacity: 0.6;
+        background: var(--bg-card);
         cursor: not-allowed;
     }
+    textarea.ofp-input {
+        height: auto;
+        padding-top: 16px;
+        resize: vertical;
+        min-height: 120px;
+    }
 
-    .ofp-m-save-btn {
-        width: 100%;
-        height: 52px;
-        background: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.15);
-        border-radius: 100px;
-        color: var(--text-main);
+    /* Buttons */
+    .ofp-btn-primary {
+        background: var(--btn-primary);
+        border: none;
+        color: #fff;
+        padding: 0 32px;
+        height: 48px;
+        border-radius: 12px;
         font-size: 14px;
         font-weight: 600;
-        letter-spacing: 0.05em;
         cursor: pointer;
-        margin-top: 16px;
         transition: all 0.2s;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
-    .ofp-m-save-btn:hover {
-        background: rgba(255,255,255,0.15);
-        border-color: rgba(255,255,255,0.3);
-        transform: translateY(-1px);
+    .ofp-btn:hover {
+        background: var(--btn-primary-hover);
+    }
+    
+    .ofp-btn-secondary {
+        background: var(--bg-body);
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+        padding: 0 32px;
+        height: 48px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        width: 100%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .ofp-btn-secondary:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--border-highlight);
+    }
+
+    .ofp-logout-link {
+        color: var(--accent-red);
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 16px;
+        text-align: center;
+        width: 100%;
+    }
+    .ofp-logout-link:hover {
+        text-decoration: underline;
+    }
+
+    /* Notices */
+    .ofp-notice {
+        padding: 16px 20px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .ofp-notice.success {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent-green);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .ofp-notice.error {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--accent-red);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    /* Mobile Fallback */
+    @media (max-width: 900px) {
+        .ofp-settings-grid {
+            grid-template-columns: 1fr;
+        }
+        .ofp-form-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
 <div class="ofp-container">
+    <div class="ofp-settings-dashboard">
+        <h1 class="ofp-page-title">Account Settings</h1>
 
-    <div class="ofp-mobile-view">
-        <div class="ofp-m-header">
-            <div class="ofp-m-avatar">
-                <img src="<?php echo !empty($client->logo_url) ? esc_url($client->logo_url) : esc_url(OFP_URL . 'assets/images/default-avatar.png'); ?>" alt="Avatar">
-                <label for="ofp-logo-input" class="ofp-m-avatar-badge">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                </label>
+        <?php if ( $success ) : ?>
+            <div class="ofp-notice success">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <?php echo esc_html( $success ); ?>
             </div>
-            <div class="ofp-m-name">
-                <?php echo esc_html( $client->owner_name ?: $client->business_name ); ?>
-                <label for="ofp-logo-input" class="ofp-m-name-edit">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                </label>
+        <?php endif; ?>
+        <?php if ( $error ) : ?>
+            <div class="ofp-notice error">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <?php echo esc_html( $error ); ?>
             </div>
-        </div>
+        <?php endif; ?>
 
-        <div class="ofp-m-card">
-            <div class="ofp-m-title">USER PROFILE</div>
-
-            <?php if ( $success ) : ?>
-                <div style="background:rgba(16,185,129,0.1);color:var(--accent-green);border-radius:100px;font-size:12px;padding:10px 16px;margin-bottom:20px;text-align:center;font-weight:500;">
-                    <?php echo esc_html( $success ); ?>
-                </div>
-            <?php endif; ?>
-            <?php if ( $error ) : ?>
-                <div style="background:rgba(239,68,68,0.1);color:var(--accent-red);border-radius:100px;font-size:12px;padding:10px 16px;margin-bottom:20px;text-align:center;font-weight:500;">
-                    <?php echo esc_html( $error ); ?>
-                </div>
-            <?php endif; ?>
-
-            <div class="ofp-m-field">
-                <span class="ofp-m-label">User Name</span>
-                <div class="ofp-m-input-wrap">
-                    <div class="ofp-m-input-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></div>
-                    <input type="text" class="ofp-m-input" value="<?php echo esc_attr($client->owner_name ?: $client->business_name); ?>" readonly>
-                </div>
-            </div>
-
-            <div class="ofp-m-field">
-                <span class="ofp-m-label">Email Id</span>
-                <div class="ofp-m-input-wrap">
-                    <div class="ofp-m-input-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></div>
-                    <input type="email" class="ofp-m-input" value="<?php echo esc_attr($client->email); ?>" readonly>
-                </div>
-            </div>
-
-            <div class="ofp-m-field">
-                <span class="ofp-m-label">Mobile Number</span>
-                <div class="ofp-m-input-wrap">
-                    <div class="ofp-m-input-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg></div>
-                    <input type="text" class="ofp-m-input" value="<?php echo esc_attr($client->phone); ?>" readonly>
-                </div>
-            </div>
-
-            <!-- Password form -->
-            <form method="POST" action="">
-                <?php wp_nonce_field( 'ofp_account_' . $client->id, 'ofp_account_nonce' ); ?>
-                <input type="hidden" name="change_password" value="1">
-                
-                <div class="ofp-m-field" style="margin-top:32px;">
-                    <span class="ofp-m-label">Update Password</span>
-                    <div class="ofp-m-input-wrap" style="margin-bottom:12px;">
-                        <div class="ofp-m-input-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg></div>
-                        <input type="password" name="current_password" class="ofp-m-input" placeholder="Current Password" required>
-                    </div>
-                    <div class="ofp-m-input-wrap">
-                        <div class="ofp-m-input-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg></div>
-                        <input type="password" name="new_password" class="ofp-m-input" placeholder="New Password" required minlength="8">
-                    </div>
-                </div>
-
-                <button type="submit" class="ofp-m-save-btn">SAVE</button>
-            </form>
+        <div class="ofp-settings-grid">
             
-            <div style="text-align:center;margin-top:24px;">
-                <a href="<?php echo esc_url( OFP_Client_Portal::logout_url() ); ?>" style="font-size:13px;color:var(--accent-red);font-weight:600;text-decoration:none;">Log Out Account</a>
-            </div>
-        </div>
-    </div><!-- /.ofp-mobile-view -->
+            <!-- LEFT COLUMN -->
+            <div class="ofp-settings-left">
+                <!-- Avatar Card -->
+                <div class="ofp-card ofp-avatar-section">
+                    <img src="<?php echo !empty($client->logo_url) ? esc_url($client->logo_url) : esc_url(OFP_URL . 'assets/images/default-avatar.png'); ?>" alt="Avatar" class="ofp-avatar-lg">
+                    <h3 style="font-size:18px; font-weight:600; margin:0 0 4px; color:var(--text-main);"><?php echo esc_html( $client->owner_name ?: $client->business_name ); ?></h3>
+                    <p style="font-size:13px; color:var(--text-muted); margin:0 0 24px;"><?php echo esc_html( $client->email ); ?></p>
+                    
+                    <label for="ofp-logo-input" class="ofp-btn">Upload New Photo</label>
+                </div>
 
-    <!-- Hidden form for logo upload -->
-    <form method="POST" action="" enctype="multipart/form-data" id="ofp-logo-form" style="display:none;">
-        <?php wp_nonce_field( 'ofp_account_' . $client->id, 'ofp_account_nonce' ); ?>
-        <input type="hidden" name="upload_logo" value="1">
-        <input type="file" name="logo" id="ofp-logo-input" accept="image/jpeg,image/png,image/gif,image/webp">
-    </form>
-    
-    <script>
-        document.querySelectorAll('.ofp-copy-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                navigator.clipboard.writeText(btn.dataset.copy).then(function() {
-                    btn.textContent = 'Copied!';
-                    setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
-                });
-            });
-        });
-        document.getElementById('ofp-logo-input').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            if (file.size > 300 * 1024) {
-                alert('File is too large! Please select an image under 300KB.');
-                e.target.value = '';
-                return;
-            }
-            // Auto submit the hidden form when file is selected
-            document.getElementById('ofp-logo-form').submit();
-        });
-    </script>
+                <!-- Password Card -->
+                <div class="ofp-card">
+                    <h2 class="ofp-card-title">Security</h2>
+                    <form method="POST" action="">
+                        <?php wp_nonce_field( 'ofp_account_' . $client->id, 'ofp_account_nonce' ); ?>
+                        <input type="hidden" name="change_password" value="1">
+                        
+                        <div class="ofp-form-group" style="margin-bottom:16px;">
+                            <label class="ofp-label">Current Password</label>
+                            <input type="password" name="current_password" class="ofp-input" required>
+                        </div>
+                        
+                        <div class="ofp-form-group" style="margin-bottom:24px;">
+                            <label class="ofp-label">New Password</label>
+                            <input type="password" name="new_password" class="ofp-input" required minlength="8">
+                        </div>
+                        
+                        <div class="ofp-form-group" style="margin-bottom:24px;">
+                            <label class="ofp-label">Confirm New Password</label>
+                            <input type="password" name="confirm_password" class="ofp-input" required minlength="8">
+                        </div>
+                        
+                        <button type="submit" class="ofp-btn" style="width:100%; justify-content:center;">Change Password</button>
+                    </form>
+                    
+                    <a href="<?php echo esc_url( OFP_Client_Portal::logout_url() ); ?>" class="ofp-btn" style="width:100%; justify-content:center; background:transparent; border:1px solid var(--accent-red); color:var(--accent-red); margin-top:16px;">Log Out Everywhere</a>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <div class="ofp-settings-right">
+                
+                <div class="ofp-card">
+                    <h2 class="ofp-card-title">Profile Information</h2>
+                    
+                    <form method="POST" action="">
+                        <?php wp_nonce_field( 'ofp_account_' . $client->id, 'ofp_account_nonce' ); ?>
+                        <input type="hidden" name="update_profile" value="1">
+
+                        <div class="ofp-form-grid">
+                            <div class="ofp-form-group">
+                                <label class="ofp-label">Business Name (Read Only)</label>
+                                <input type="text" class="ofp-input" value="<?php echo esc_attr( $client->business_name ); ?>" readonly>
+                            </div>
+                            
+                            <div class="ofp-form-group">
+                                <label class="ofp-label">Owner Name (Read Only)</label>
+                                <input type="text" class="ofp-input" value="<?php echo esc_attr( $client->owner_name ); ?>" readonly>
+                            </div>
+                            
+                            <div class="ofp-form-group">
+                                <label class="ofp-label">Email Address (Read Only)</label>
+                                <input type="email" class="ofp-input" value="<?php echo esc_attr( $client->email ); ?>" readonly>
+                            </div>
+                            
+                            <div class="ofp-form-group">
+                                <label class="ofp-label">Mobile Number (Read Only)</label>
+                                <input type="text" class="ofp-input" value="<?php echo esc_attr( $client->phone ); ?>" readonly>
+                            </div>
+
+                            <!-- Phase 23 Additions -->
+                            <div class="ofp-form-group full-width" style="margin-top:16px;">
+                                <h3 style="font-size:14px; font-weight:600; color:var(--text-main); margin:0;">Public Profile & Tracking</h3>
+                                <p style="font-size:13px; color:var(--text-muted); margin:4px 0 0;">Customize your public profile page and tracking settings.</p>
+                            </div>
+
+                            <div class="ofp-form-group">
+                                <label class="ofp-label">Profile URL Slug</label>
+                                <input type="text" name="profile_slug" class="ofp-input" value="<?php echo esc_attr( $client->profile_slug ?? '' ); ?>" placeholder="e.g. paymonthly-ng" required>
+                                <?php if ( ! empty( $client->profile_slug ) ) : ?>
+                                    <span style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                                        Your profile link: <a href="<?php echo esc_url( home_url( '/agent/' . $client->profile_slug ) ); ?>" target="_blank" style="color:var(--accent-blue); text-decoration:underline; font-weight:500;"><?php echo esc_html( home_url( '/agent/' . $client->profile_slug ) ); ?></a>
+                                    </span>
+                                <?php else : ?>
+                                    <span style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                                        Your profile link: app.domain.com/agent/<strong>slug</strong>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="ofp-form-group">
+                                <label class="ofp-label">Facebook Meta Pixel ID</label>
+                                <input type="text" name="meta_pixel_id" class="ofp-input" value="<?php echo esc_attr( $client->meta_pixel_id ?? '' ); ?>" placeholder="e.g. 1234567890">
+                            </div>
+
+                            <div class="ofp-form-group full-width">
+                                <label class="ofp-label">Biographical Info (About Us)</label>
+                                <textarea name="bio" class="ofp-input" placeholder="Tell visitors about your agency..."><?php echo esc_textarea( $client->bio ?? '' ); ?></textarea>
+                            </div>
+                            
+                            <div class="ofp-form-group full-width" style="align-items:flex-end; margin-top:16px;">
+                                <button type="submit" class="ofp-btn-primary">Save Profile Changes</button>
+                            </div>
+                        </div>
+                    </form>
+
+                </div> <!-- /.ofp-card -->
+
+            </div> <!-- /.ofp-settings-right -->
+            
+        </div> <!-- /.ofp-settings-grid -->
+    </div> <!-- /.ofp-settings-dashboard -->
+</div> <!-- /.ofp-container -->
+
+<!-- Hidden form for logo upload -->
+<form method="POST" action="" enctype="multipart/form-data" id="ofp-logo-form" style="display:none;">
+    <?php wp_nonce_field( 'ofp_account_' . $client->id, 'ofp_account_nonce' ); ?>
+    <input type="hidden" name="upload_logo" value="1">
+    <input type="file" name="logo" id="ofp-logo-input" accept="image/jpeg,image/png,image/gif,image/webp">
+</form>
+
+<script>
+    document.getElementById('ofp-logo-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 300 * 1024) {
+            alert('File is too large! Please select an image under 300KB.');
+            e.target.value = '';
+            return;
+        }
+        // Auto submit the hidden form when file is selected
+        document.getElementById('ofp-logo-form').submit();
+    });
+</script>
+
+</div> <!-- .ofp-content-area -->
 </main>
-</div><!-- .ofp-shell -->
+</div> <!-- .ofp-shell -->
 
 <?php wp_footer(); ?>
 </body>

@@ -127,6 +127,17 @@ class OFP_Activator {
         if ( empty( $audio_col_exists ) ) {
             $wpdb->query( "ALTER TABLE {$p}ofp_pipeline_configs ADD COLUMN voice_audio_url VARCHAR(255) DEFAULT NULL AFTER followup_2_message" );
         }
+
+        // profile_slug, bio, and meta_pixel_id columns on ofp_clients (Phase 23).
+        // Used for the public Agent Profile pages and Facebook Ads tracking.
+        $profile_slug_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'profile_slug'"
+        );
+        if ( empty( $profile_slug_exists ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN profile_slug VARCHAR(100) DEFAULT NULL AFTER business_name" );
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN bio TEXT DEFAULT NULL AFTER profile_slug" );
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN meta_pixel_id VARCHAR(50) DEFAULT NULL AFTER bio" );
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -163,6 +174,9 @@ class OFP_Activator {
         dbDelta( "CREATE TABLE {$p}ofp_clients (
             id                     BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             business_name          VARCHAR(150)    NOT NULL,
+            profile_slug           VARCHAR(100)             DEFAULT NULL,
+            bio                    TEXT                     DEFAULT NULL,
+            meta_pixel_id          VARCHAR(50)              DEFAULT NULL,
             owner_name             VARCHAR(100)    NOT NULL,
             email                  VARCHAR(150)    NOT NULL,
             phone                  VARCHAR(20)     NOT NULL,
@@ -190,6 +204,7 @@ class OFP_Activator {
             updated_at             DATETIME                 DEFAULT NULL,
             PRIMARY KEY (id),
             UNIQUE KEY  email (email),
+            UNIQUE KEY  profile_slug (profile_slug),
             KEY         status (status),
             KEY         business_category (business_category)
         ) {$charset_collate};" );

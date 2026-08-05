@@ -23,10 +23,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
 
-    private string $base_url;
-    private string $api_key;
-    private string $secret_key;
-    private string $contract_code;
+    private $base_url;
+    private $api_key;
+    private $secret_key;
+    private $contract_code;
 
     public function __construct() {
         $this->base_url      = get_option( 'ofp_monnify_base_url', 'https://api.monnify.com' );
@@ -105,21 +105,25 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
             return null;
         }
 
+        $payload = [
+            'amount'             => (float) $args['amount'],
+            'customerName'       => $args['name'],
+            'customerEmail'      => $args['email'],
+            'paymentReference'   => $args['reference'],
+            'paymentDescription' => $args['description'],
+            'currencyCode'       => 'NGN',
+            'contractCode'       => $this->contract_code,
+            'redirectUrl'        => $args['redirect_url'],
+        ];
+
+        error_log( 'OFP Monnify initiate_transaction payload: ' . wp_json_encode( $payload ) );
+
         $response = wp_remote_post( $this->base_url . '/api/v1/merchant/transactions/init-transaction', [
             'headers' => [
                 'Authorization' => 'Bearer ' . $token,
                 'Content-Type'  => 'application/json',
             ],
-            'body' => wp_json_encode( [
-                'amount'             => $args['amount'],
-                'customerName'       => $args['name'],
-                'customerEmail'      => $args['email'],
-                'paymentReference'   => $args['reference'],
-                'paymentDescription' => $args['description'],
-                'currencyCode'       => 'NGN',
-                'contractCode'       => $this->contract_code,
-                'redirectUrl'        => $args['redirect_url'],
-            ] ),
+            'body'    => wp_json_encode( $payload ),
             'timeout' => 20,
         ] );
 
@@ -128,10 +132,13 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
             return null;
         }
 
-        $body = json_decode( wp_remote_retrieve_body( $response ) );
+        $raw_body = wp_remote_retrieve_body( $response );
+        error_log( 'OFP Monnify initiate_transaction response: ' . $raw_body );
+
+        $body = json_decode( $raw_body );
 
         if ( empty( $body->requestSuccessful ) || empty( $body->responseBody->checkoutUrl ) ) {
-            error_log( 'OFP Monnify initiate_transaction unexpected response: ' . wp_remote_retrieve_body( $response ) );
+            error_log( 'OFP Monnify initiate_transaction unexpected response: ' . $raw_body );
             return null;
         }
 

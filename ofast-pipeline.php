@@ -108,3 +108,29 @@ add_action( 'init', function (): void {
         delete_option( 'ofp_flush_rewrite_rules' );
     }
 }, 999 );
+
+// ─── Global Meta Pixel Injection ──────────────────────────────────────────────
+add_action( 'wp_head', function (): void {
+    $global_pixel = get_option( 'ofp_global_pixel_id', '' );
+    if ( ! empty( $global_pixel ) ) {
+        ?>
+        <!-- OFast Pipeline Global Meta Pixel -->
+        <script>
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '<?php echo esc_js( $global_pixel ); ?>');
+            fbq('track', 'PageView');
+        </script>
+        <noscript><img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id=<?php echo esc_attr( $global_pixel ); ?>&ev=PageView&noscript=1"
+        /></noscript>
+        <!-- End OFast Pipeline Global Meta Pixel -->
+        <?php
+    }
+} );

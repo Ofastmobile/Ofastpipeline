@@ -545,7 +545,8 @@ class OFP_Admin_Menu {
 
         $settings = [
             // Domain routing (Phase 16)
-            'ofp_crm_base_domain' => sanitize_text_field( wp_unslash( $_POST['ofp_crm_base_domain'] ?? '' ) ),
+            'ofp_crm_base_domain'     => sanitize_text_field( wp_unslash( $_POST['ofp_crm_base_domain']     ?? '' ) ),
+            'ofp_global_pixel_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_global_pixel_id']     ?? '' ) ),
             // Default pipeline messages
             'ofp_default_instant_sms' => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_instant_sms'] ?? '' ) ),
             'ofp_default_followup_1'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_1']  ?? '' ) ),

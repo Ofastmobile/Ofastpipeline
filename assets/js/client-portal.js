@@ -94,12 +94,22 @@
 
     // ── Loading state on form buttons ────────────────────────────────────────
     function initFormLoadingState() {
-        var forms = document.querySelectorAll('.ofp-form');
+        var forms = document.querySelectorAll('.ofp-form, .ofp-funding-pane form');
         forms.forEach(function (form) {
             form.addEventListener('submit', function () {
                 var btn = form.querySelector('button[type="submit"]');
                 if ( btn ) {
-                    btn.disabled    = true;
+                    // If the button has a name, we must create a hidden input for it 
+                    // because disabling it removes its value from the POST data.
+                    if ( btn.name ) {
+                        var hidden = document.createElement('input');
+                        hidden.type  = 'hidden';
+                        hidden.name  = btn.name;
+                        hidden.value = btn.value || '1';
+                        form.appendChild(hidden);
+                    }
+                    
+                    btn.disabled = true;
                     btn.textContent = 'Saving…';
                 }
             });

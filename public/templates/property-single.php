@@ -7,6 +7,42 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+// Phase 23: Facebook Meta Pixel Injection
+add_action( 'wp_head', function() {
+    $post_id   = get_the_ID();
+    if ( ! $post_id ) return;
+    
+    $client_id = get_post_meta( $post_id, 'ofp_client_id', true );
+    if ( ! $client_id ) return;
+    
+    global $wpdb;
+    $pixel = $wpdb->get_var(
+        $wpdb->prepare(
+            "SELECT meta_pixel_id FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
+            $client_id
+        )
+    );
+    
+    if ( ! empty( $pixel ) ) {
+        ?>
+        <!-- Phase 23 Meta Pixel -->
+        <script>
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '<?php echo esc_js( $pixel ); ?>');
+        fbq('track', 'PageView');
+        </script>
+        <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=<?php echo esc_attr( $pixel ); ?>&ev=PageView&noscript=1"/></noscript>
+        <?php
+    }
+} );
+
 get_header();
 
 while ( have_posts() ) : the_post();

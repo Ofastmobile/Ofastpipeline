@@ -63,7 +63,7 @@ class OFP_Notification {
 
 		// Send email unless preference is bell-only.
 		if ( in_array( $pref, [ self::PREF_BOTH, self::PREF_EMAIL ], true ) ) {
-			OFP_Mailer::send_transactional(
+			OFP_Mailer::send(
 				$client->email,
 				$client->owner_name,
 				$title,
