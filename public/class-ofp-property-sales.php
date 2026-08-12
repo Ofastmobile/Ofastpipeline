@@ -17,19 +17,25 @@ class OFP_Property_Sales {
     }
 
     public static function register_routes(): void {
-        // Client page for creating installment offers.
         add_rewrite_rule(
             '^property-sales/?$',
             'index.php?ofp_property_sales=1',
             'top'
         );
 
-        // Public buyer offer page — no OFP login required.
         add_rewrite_rule(
             '^property-offer/?$',
             'index.php?ofp_property_offer=1',
             'top'
         );
+
+        // One-time flush for installs where the plugin was updated without
+        // being reactivated. Existing activation logic still handles normal
+        // plugin activation flushes.
+        if ( get_option( 'ofp_property_sales_routes_v1' ) !== '1' ) {
+            update_option( 'ofp_property_sales_routes_v1', '1', false );
+            flush_rewrite_rules( false );
+        }
     }
 
     public static function handle_routes(): void {
@@ -47,7 +53,6 @@ class OFP_Property_Sales {
             return;
         }
 
-        // Client portal page remains protected.
         OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
 
