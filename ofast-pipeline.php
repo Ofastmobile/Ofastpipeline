@@ -79,7 +79,7 @@ add_action( 'plugins_loaded', function (): void {
 
     new OFP_Admin_Menu();
     new OFP_Admin_Settings();
-    OFP_Property_Commerce_Admin::init();
+    new OFP_Property_Commerce_Admin();
     OFP_Property_Commerce_Actions::init();
     new OFP_REST_API();
     new OFP_Client_Portal();
