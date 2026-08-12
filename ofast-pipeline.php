@@ -52,11 +52,13 @@ require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-flutterwave.php';
 require_once OFP_PATH . 'admin/class-ofp-admin-menu.php';
 require_once OFP_PATH . 'admin/class-ofp-admin-settings.php';
 require_once OFP_PATH . 'admin/class-ofp-property-commerce-admin.php';
+require_once OFP_PATH . 'admin/class-ofp-property-commerce-actions.php';
 
 // Public / REST / Client portal
 require_once OFP_PATH . 'public/class-ofp-rest-api.php';
 require_once OFP_PATH . 'public/class-ofp-client-portal.php';
 require_once OFP_PATH . 'public/class-ofp-property-sales.php';
+require_once OFP_PATH . 'public/class-ofp-property-sales-client-ui.php';
 
 // Cron
 require_once OFP_PATH . 'cron/class-ofp-cron-handler.php';
@@ -77,7 +79,8 @@ add_action( 'plugins_loaded', function (): void {
 
     new OFP_Admin_Menu();
     new OFP_Admin_Settings();
-    new OFP_Property_Commerce_Admin();
+    OFP_Property_Commerce_Admin::init();
+    OFP_Property_Commerce_Actions::init();
     new OFP_REST_API();
     new OFP_Client_Portal();
     new OFP_Cron_Handler();
@@ -85,6 +88,7 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Host_Router::init();
     OFP_Property_Commerce::init();
     OFP_Property_Sales::init();
+    OFP_Property_Sales_Client_UI::init();
 } );
 
 add_action( 'init', function (): void {
