@@ -12,13 +12,11 @@
  * Requires PHP: 8.1
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION',     '2.1.0' );
-define( 'OFP_PATH',        plugin_dir_path( __FILE__ ) );
-define( 'OFP_URL',         plugin_dir_url( __FILE__ ) );
+define( 'OFP_VERSION', '2.1.0' );
+define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
+define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
 define( 'OFP_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -57,6 +55,7 @@ require_once OFP_PATH . 'admin/class-ofp-admin-settings.php';
 // Public / REST / Client portal
 require_once OFP_PATH . 'public/class-ofp-rest-api.php';
 require_once OFP_PATH . 'public/class-ofp-client-portal.php';
+require_once OFP_PATH . 'public/class-ofp-property-sales.php';
 
 // Cron
 require_once OFP_PATH . 'cron/class-ofp-cron-handler.php';
@@ -73,7 +72,6 @@ add_filter( 'cron_schedules', function ( array $schedules ): array {
 } );
 
 add_action( 'plugins_loaded', function (): void {
-
     OFP_Mailer::configure_smtp();
 
     new OFP_Admin_Menu();
@@ -84,7 +82,7 @@ add_action( 'plugins_loaded', function (): void {
     new OFP_Property_CPT();
     OFP_Host_Router::init();
     OFP_Property_Commerce::init();
-
+    OFP_Property_Sales::init();
 } );
 
 add_action( 'init', function (): void {
@@ -98,23 +96,15 @@ add_action( 'wp_head', function (): void {
     $global_pixel = get_option( 'ofp_global_pixel_id', '' );
     if ( ! empty( $global_pixel ) ) {
         ?>
-        <!-- OFast Pipeline Global Meta Pixel -->
         <script>
-            !function(f,b,e,v,n,t,s)
-            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+            n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '<?php echo esc_js( $global_pixel ); ?>');
-            fbq('track', 'PageView');
+            fbq('init', '<?php echo esc_js( $global_pixel ); ?>');fbq('track', 'PageView');
         </script>
-        <noscript><img height="1" width="1" style="display:none"
-            src="https://www.facebook.com/tr?id=<?php echo esc_attr( $global_pixel ); ?>&ev=PageView&noscript=1"
-        /></noscript>
-        <!-- End OFast Pipeline Global Meta Pixel -->
+        <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=<?php echo esc_attr( $global_pixel ); ?>&ev=PageView&noscript=1" /></noscript>
         <?php
     }
 } );
