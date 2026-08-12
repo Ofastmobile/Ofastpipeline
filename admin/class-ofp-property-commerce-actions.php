@@ -1,0 +1,163 @@
+<?php
+/**
+ * Property commerce creation actions.
+ *
+ * Adds an admin "Create Installment Offer" page under Properties and a
+ * client-accessible helper link target. Existing offer/purchase list screens
+ * remain in OFP_Property_Commerce_Admin.
+ */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+class OFP_Property_Commerce_Actions {
+
+    public static function init(): void {
+        add_action( 'admin_menu', [ __CLASS__, 'register_menu' ] );
+        add_action( 'admin_post_ofp_create_property_offer', [ __CLASS__, 'handle_create_offer' ] );
+    }
+
+    public static function register_menu(): void {
+        if ( ! current_user_can( 'manage_options' ) ) return;
+
+        add_submenu_page(
+            'edit.php?post_type=ofp_property',
+            'Create Installment Offer',
+            'Create Offer',
+            'manage_options',
+            'ofp-property-create-offer',
+            [ __CLASS__, 'render_create_offer' ]
+        );
+    }
+
+    public static function render_create_offer(): void {
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $properties = $wpdb->get_results(
+            "SELECT id, title, price, listing_type, client_id
+             FROM {$p}ofp_properties
+             WHERE listing_type = 'sale' AND status IN ('live','pending_upload')
+             ORDER BY title ASC"
+        );
+        $message = isset( $_GET['created'] ) ? 'Installment offer created successfully.' : '';
+        $error   = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
+        ?>
+        <div class="wrap">
+            <h1>Create Installment Offer</h1>
+            <p>Create an offer for a buyer against an existing sale property. No buyer account or payment account is created at this stage.</p>
+
+            <?php if ( $message ) : ?><div class="notice notice-success"><p><?php echo esc_html( $message ); ?></p></div><?php endif; ?>
+            <?php if ( $error ) : ?><div class="notice notice-error"><p><?php echo esc_html( $error ); ?></p></div><?php endif; ?>
+
+            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                <?php wp_nonce_field( 'ofp_create_property_offer' ); ?>
+                <input type="hidden" name="action" value="ofp_create_property_offer">
+
+                <table class="form-table" role="presentation">
+                    <tr><th><label for="property_id">Property</label></th><td>
+                        <select name="property_id" id="property_id" required style="min-width:360px;">
+                            <option value="">Select property</option>
+                            <?php foreach ( $properties as $property ) : ?>
+                                <option value="<?php echo esc_attr( $property->id ); ?>">
+                                    <?php echo esc_html( $property->title . ' — NGN ' . number_format( (float) $property->price, 0 ) ); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </td></tr>
+                    <tr><th><label for="buyer_name">Buyer name</label></th><td><input class="regular-text" id="buyer_name" name="buyer_name" required></td></tr>
+                    <tr><th><label for="buyer_phone">Buyer phone</label></th><td><input class="regular-text" id="buyer_phone" name="buyer_phone" required></td></tr>
+                    <tr><th><label for="buyer_email">Buyer email</label></th><td><input type="email" class="regular-text" id="buyer_email" name="buyer_email"></td></tr>
+                    <tr><th><label for="initial_payment">Initial payment</label></th><td><input type="number" step="0.01" min="0" id="initial_payment" name="initial_payment" required></td></tr>
+                    <tr><th><label for="installment_amount">Monthly installment</label></th><td><input type="number" step="0.01" min="0" id="installment_amount" name="installment_amount" required></td></tr>
+                    <tr><th><label for="installment_count">Number of installments</label></th><td><input type="number" min="1" id="installment_count" name="installment_count" required></td></tr>
+                    <tr><th><label for="first_due_date">First due date</label></th><td><input type="date" id="first_due_date" name="first_due_date" required></td></tr>
+                    <tr><th><label for="grace_period_days">Grace period (days)</label></th><td><input type="number" min="0" max="365" value="7" id="grace_period_days" name="grace_period_days"></td></tr>
+                    <tr><th><label for="offer_expires">Offer expires</label></th><td><input type="date" id="offer_expires" name="offer_expires"></td></tr>
+                    <tr><th><label for="terms_text">Installment terms / agreement</label></th><td><textarea class="large-text" rows="10" id="terms_text" name="terms_text"></textarea><p class="description">Use approved seller/legal wording. The accepted version is stored with the purchase.</p></td></tr>
+                </table>
+
+                <?php submit_button( 'Create Offer' ); ?>
+            </form>
+        </div>
+        <?php
+    }
+
+    public static function handle_create_offer(): void {
+        if ( ! current_user_can( 'manage_options' ) ) wp_die( esc_html__( 'Access denied.', 'ofast-pipeline' ) );
+        check_admin_referer( 'ofp_create_property_offer' );
+
+        global $wpdb;
+        $p = $wpdb->prefix;
+
+        $property_id        = absint( $_POST['property_id'] ?? 0 );
+        $buyer_name         = sanitize_text_field( wp_unslash( $_POST['buyer_name'] ?? '' ) );
+        $buyer_phone        = sanitize_text_field( wp_unslash( $_POST['buyer_phone'] ?? '' ) );
+        $buyer_email        = sanitize_email( wp_unslash( $_POST['buyer_email'] ?? '' ) );
+        $initial_payment    = max( 0.0, (float) ( $_POST['initial_payment'] ?? 0 ) );
+        $installment_amount = max( 0.0, (float) ( $_POST['installment_amount'] ?? 0 ) );
+        $installment_count  = max( 0, absint( $_POST['installment_count'] ?? 0 ) );
+        $first_due_date     = sanitize_text_field( wp_unslash( $_POST['first_due_date'] ?? '' ) );
+        $grace_days         = min( 365, max( 0, absint( $_POST['grace_period_days'] ?? 7 ) ) );
+        $expiry_date        = sanitize_text_field( wp_unslash( $_POST['offer_expires'] ?? '' ) );
+        $terms_text         = wp_kses_post( wp_unslash( $_POST['terms_text'] ?? '' ) );
+
+        $property = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM {$p}ofp_properties WHERE id = %d LIMIT 1",
+            $property_id
+        ) );
+
+        $error = '';
+        if ( ! $property ) $error = 'Property not found.';
+        elseif ( $property->listing_type !== 'sale' ) $error = 'Installment offers are only available for sale properties.';
+        elseif ( ! $buyer_name || ! $buyer_phone ) $error = 'Buyer name and phone are required.';
+        elseif ( $buyer_email !== '' && ! is_email( $buyer_email ) ) $error = 'Buyer email is invalid.';
+        elseif ( (float) $property->price <= 0 ) $error = 'Property price is invalid.';
+        elseif ( $initial_payment < 0 || $initial_payment >= (float) $property->price ) $error = 'Initial payment must be less than the property price.';
+        elseif ( $installment_amount <= 0 || $installment_count <= 0 ) $error = 'Installment amount and count are required.';
+        elseif ( abs( ( (float) $property->price - $initial_payment ) - ( $installment_amount * $installment_count ) ) > 0.01 ) $error = 'The installment schedule must exactly cover the remaining property balance.';
+        elseif ( ! $first_due_date || strtotime( $first_due_date ) === false ) $error = 'First due date is required.';
+
+        if ( $error ) {
+            wp_safe_redirect( add_query_arg( 'error', rawurlencode( $error ), admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-create-offer' ) ) );
+            exit;
+        }
+
+        [ $raw_token, $token_hash ] = OFP_Property_Commerce::create_offer_token();
+
+        $wpdb->insert(
+            "{$p}ofp_property_offers",
+            [
+                'property_id'        => $property_id,
+                'client_id'          => $property->client_id ? (int) $property->client_id : null,
+                'buyer_name'         => $buyer_name,
+                'buyer_phone'        => $buyer_phone,
+                'buyer_email'        => $buyer_email ?: null,
+                'total_price'        => (float) $property->price,
+                'initial_payment'    => $initial_payment,
+                'installment_amount' => $installment_amount,
+                'frequency'          => 'monthly',
+                'installment_count'  => $installment_count,
+                'first_due_date'     => $first_due_date,
+                'grace_period_days'  => $grace_days,
+                'reminder_days'      => '7,3,1',
+                'terms_text'         => $terms_text ?: null,
+                'terms_version'      => '1',
+                'offer_token_hash'   => $token_hash,
+                'status'             => 'pending',
+                'expires_at'         => $expiry_date ? $expiry_date . ' 23:59:59' : null,
+                'created_at'         => current_time( 'mysql' ),
+                'updated_at'         => current_time( 'mysql' ),
+            ]
+        );
+
+        if ( ! $wpdb->insert_id ) {
+            wp_die( esc_html__( 'The installment offer could not be created.', 'ofast-pipeline' ) );
+        }
+
+        $offer_url = add_query_arg( 'offer', rawurlencode( $raw_token ), home_url( '/property-offer' ) );
+
+        wp_safe_redirect( add_query_arg(
+            [ 'created' => 1, 'offer_id' => (int) $wpdb->insert_id, 'offer_url' => rawurlencode( $offer_url ) ],
+            admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-offers' )
+        ) );
+        exit;
+    }
+}
