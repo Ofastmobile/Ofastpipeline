@@ -19,12 +19,10 @@ define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
 define( 'OFP_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
-// Legacy property-template constant compatibility.
 if ( ! defined( 'OFP\\OFP_PLUGIN_DIR' ) ) {
     define( 'OFP\\OFP_PLUGIN_DIR', OFP_PATH );
 }
 
-// Core / shared
 require_once OFP_PATH . 'includes/class-ofp-activator.php';
 require_once OFP_PATH . 'includes/class-ofp-deactivator.php';
 require_once OFP_PATH . 'includes/class-ofp-security.php';
@@ -50,27 +48,23 @@ require_once OFP_PATH . 'includes/class-ofp-property-admin-rules.php';
 require_once OFP_PATH . 'includes/class-ofp-property-payment-context.php';
 require_once OFP_PATH . 'includes/class-ofp-property-contact.php';
 
-// Payment gateway — interface + provider adapters.
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-monnify.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-paystack.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-flutterwave.php';
 
-// Admin
 require_once OFP_PATH . 'admin/class-ofp-admin-menu.php';
 require_once OFP_PATH . 'admin/class-ofp-admin-settings.php';
 require_once OFP_PATH . 'admin/class-ofp-property-commerce-admin.php';
 require_once OFP_PATH . 'admin/class-ofp-property-commerce-actions.php';
 require_once OFP_PATH . 'admin/class-ofp-property-purchase-admin.php';
 
-// Public / REST / Client portal
 require_once OFP_PATH . 'public/class-ofp-rest-api.php';
 require_once OFP_PATH . 'public/class-ofp-client-portal.php';
 require_once OFP_PATH . 'public/class-ofp-property-sales.php';
 require_once OFP_PATH . 'public/class-ofp-property-sales-client-ui.php';
 require_once OFP_PATH . 'public/class-ofp-property-marketplace.php';
 
-// Cron
 require_once OFP_PATH . 'cron/class-ofp-cron-handler.php';
 
 register_activation_hook( OFP_PLUGIN_FILE, [ 'OFP_Activator', 'activate' ] );
@@ -103,6 +97,7 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Property_Sales_Client_UI::init();
     OFP_Property_Admin_Rules::init();
     OFP_Property_Marketplace::init();
+    OFP_Property_Contact::init();
 } );
 
 add_action( 'init', function (): void {
