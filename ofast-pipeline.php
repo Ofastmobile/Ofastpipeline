@@ -19,8 +19,7 @@ define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
 define( 'OFP_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
-// class-ofp-property-cpt.php is namespaced and refers to OFP_PLUGIN_DIR.
-// Keep the legacy namespaced constant mapped to the canonical plugin path.
+// Legacy property-template constant compatibility.
 if ( ! defined( 'OFP\\OFP_PLUGIN_DIR' ) ) {
     define( 'OFP\\OFP_PLUGIN_DIR', OFP_PATH );
 }
@@ -66,6 +65,7 @@ require_once OFP_PATH . 'public/class-ofp-rest-api.php';
 require_once OFP_PATH . 'public/class-ofp-client-portal.php';
 require_once OFP_PATH . 'public/class-ofp-property-sales.php';
 require_once OFP_PATH . 'public/class-ofp-property-sales-client-ui.php';
+require_once OFP_PATH . 'public/class-ofp-property-marketplace.php';
 
 // Cron
 require_once OFP_PATH . 'cron/class-ofp-cron-handler.php';
@@ -98,6 +98,7 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Property_Sales::init();
     OFP_Property_Sales_Client_UI::init();
     OFP_Property_Admin_Rules::init();
+    OFP_Property_Marketplace::init();
 } );
 
 add_action( 'init', function (): void {
