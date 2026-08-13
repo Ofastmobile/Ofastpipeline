@@ -393,8 +393,8 @@ class OFP_Property_CPT {
             'listing_type'   => get_post_meta( $post_id, 'ofp_listing_type',  true ),
             'price'          => (float) get_post_meta( $post_id, 'ofp_price',   true ),
             'price_period'   => get_post_meta( $post_id, 'ofp_price_period',   true ),
-            'bedrooms'       => (int) get_post_meta( $post_id, 'ofp_bedrooms',  true ),
-            'bathrooms'      => (int) get_post_meta( $post_id, 'ofp_bathrooms', true ),
+            'bedrooms'      => (int) get_post_meta( $post_id, 'ofp_bedrooms',  true ),
+            'bathrooms'     => (int) get_post_meta( $post_id, 'ofp_bathrooms', true ),
             'location_text'  => get_post_meta( $post_id, 'ofp_location_text',  true ),
             'status'         => get_post_meta( $post_id, 'ofp_status',          true ) ?: 'pending_upload',
             'is_featured'    => (int) get_post_meta( $post_id, 'ofp_is_featured', true ),
@@ -553,19 +553,19 @@ class OFP_Property_CPT {
         if ( is_front_page() && OFP_Host_Router::current_zone() === 'property' ) {
             $theme_override = locate_template( 'archive-ofp_property.php' );
             if ( $theme_override ) return $theme_override;
-            return OFP_PLUGIN_DIR . 'public/templates/property-archive.php';
+            return OFP_PATH . 'public/templates/property-archive.php';
         }
 
         if ( is_post_type_archive( 'ofp_property' ) && OFP_Host_Router::current_zone() !== 'app' ) {
             $theme_override = locate_template( 'archive-ofp_property.php' );
             if ( $theme_override ) return $theme_override;
-            return OFP_PLUGIN_DIR . 'public/templates/property-archive.php';
+            return OFP_PATH . 'public/templates/property-archive.php';
         }
 
         if ( is_singular( 'ofp_property' ) ) {
             $theme_override = locate_template( 'single-ofp_property.php' );
             if ( $theme_override ) return $theme_override;
-            return OFP_PLUGIN_DIR . 'public/templates/property-single.php';
+            return OFP_PATH . 'public/templates/property-single.php';
         }
 
         return $template;
