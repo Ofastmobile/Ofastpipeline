@@ -129,6 +129,7 @@ $status_message = [
                     <div class="ofp-stat"><span>Initial payment</span><strong>NGN <?php echo esc_html( number_format( (float) $offer->initial_payment, 2 ) ); ?></strong></div>
                     <div class="ofp-stat"><span>Monthly installment</span><strong>NGN <?php echo esc_html( number_format( (float) $offer->installment_amount, 2 ) ); ?></strong></div>
                     <div class="ofp-stat"><span>Number of installments</span><strong><?php echo esc_html( $offer->installment_count ); ?></strong></div>
+                    <div class="ofp-stat"><span>Payments start</span><strong><?php echo esc_html( $offer->payment_start_date ? wp_date( 'M j, Y', strtotime( $offer->payment_start_date ) ) : '—' ); ?></strong></div>
                     <div class="ofp-stat"><span>First due date</span><strong><?php echo esc_html( $offer->first_due_date ? wp_date( 'M j, Y', strtotime( $offer->first_due_date ) ) : '—' ); ?></strong></div>
                     <div class="ofp-stat"><span>Grace period</span><strong><?php echo esc_html( $offer->grace_period_days ); ?> days</strong></div>
                 </div>
