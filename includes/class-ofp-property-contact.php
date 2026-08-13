@@ -17,7 +17,7 @@ class OFP_Property_Contact {
         global $wpdb;
         $p = $wpdb->prefix;
 
-        $client_id = ! empty( $data['client_id'] ) ? absint( $data['client_id'] ) : null;
+        $client_id = array_key_exists( 'client_id', $data ) && $data['client_id'] !== null ? absint( $data['client_id'] ) : null;
         $phone     = self::normalize_phone( (string) ( $data['phone'] ?? '' ) );
         $email     = ! empty( $data['email'] ) ? sanitize_email( $data['email'] ) : null;
         $name      = sanitize_text_field( (string) ( $data['name'] ?? '' ) );
@@ -26,7 +26,7 @@ class OFP_Property_Contact {
 
         if ( ! $name || ! $phone ) return 0;
 
-        $sql = "SELECT id FROM {$p}ofp_property_contacts WHERE phone = %s AND " . ( $client_id === null ? 'client_id IS NULL' : 'client_id = %d' );
+        $sql  = "SELECT id FROM {$p}ofp_property_contacts WHERE phone = %s AND " . ( $client_id === null ? 'client_id IS NULL' : 'client_id = %d' );
         $args = $client_id === null ? [ $phone ] : [ $phone, $client_id ];
         $existing = $wpdb->get_var( $wpdb->prepare( $sql . ' ORDER BY id ASC LIMIT 1', ...$args ) );
 
@@ -60,6 +60,35 @@ class OFP_Property_Contact {
         );
 
         return $inserted ? (int) $wpdb->insert_id : 0;
+    }
+
+    public static function ensure_for_purchase( int $purchase_id ): int {
+        global $wpdb;
+        $p = $wpdb->prefix;
+
+        $purchase = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM {$p}ofp_property_purchases WHERE id = %d LIMIT 1",
+            $purchase_id
+        ) );
+        if ( ! $purchase ) return 0;
+
+        $contact_id = self::find_or_create([
+            'client_id' => $purchase->client_id !== null ? (int) $purchase->client_id : null,
+            'name'      => $purchase->buyer_name,
+            'phone'     => $purchase->buyer_phone,
+            'email'     => $purchase->buyer_email,
+            'source'    => $purchase->lead_id ? 'lead' : 'offline',
+        ]);
+
+        if ( $contact_id ) {
+            $wpdb->update(
+                "{$p}ofp_property_purchases",
+                [ 'contact_id' => $contact_id, 'updated_at' => current_time( 'mysql' ) ],
+                [ 'id' => $purchase_id ]
+            );
+        }
+
+        return $contact_id;
     }
 
     public static function get( int $id ): ?object {
