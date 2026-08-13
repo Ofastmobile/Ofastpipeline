@@ -24,16 +24,19 @@ class OFP_Property_Sales {
         );
 
         add_rewrite_rule(
+            '^property-purchases/?$',
+            'index.php?ofp_property_purchases=1',
+            'top'
+        );
+
+        add_rewrite_rule(
             '^property-offer/?$',
             'index.php?ofp_property_offer=1',
             'top'
         );
 
-        // One-time flush for installs where the plugin was updated without
-        // being reactivated. Existing activation logic still handles normal
-        // plugin activation flushes.
-        if ( get_option( 'ofp_property_sales_routes_v1' ) !== '1' ) {
-            update_option( 'ofp_property_sales_routes_v1', '1', false );
+        if ( get_option( 'ofp_property_sales_routes_v2' ) !== '1' ) {
+            update_option( 'ofp_property_sales_routes_v2', '1', false );
             flush_rewrite_rules( false );
         }
     }
@@ -45,8 +48,24 @@ class OFP_Property_Sales {
                 require $template;
                 exit;
             }
-
             wp_die( esc_html__( 'Property offer page is unavailable.', 'ofast-pipeline' ) );
+        }
+
+        if ( '1' === get_query_var( 'ofp_property_purchases' ) ) {
+            OFP_Auth::require_client_login();
+            $client = OFP_Auth::current_client();
+
+            if ( ! $client || ! OFP_Subscription::has_active( 'listing', $client->id ) ) {
+                wp_safe_redirect( home_url( '/dashboard' ) );
+                exit;
+            }
+
+            $template = OFP_PATH . 'public/templates/property-purchases.php';
+            if ( file_exists( $template ) ) {
+                require $template;
+                exit;
+            }
+            wp_die( esc_html__( 'Property purchases page is unavailable.', 'ofast-pipeline' ) );
         }
 
         if ( '1' !== get_query_var( 'ofp_property_sales' ) ) {
@@ -77,6 +96,7 @@ class OFP_Property_Sales {
 
 add_filter( 'query_vars', function ( array $vars ): array {
     $vars[] = 'ofp_property_sales';
+    $vars[] = 'ofp_property_purchases';
     $vars[] = 'ofp_property_offer';
     return $vars;
 } );
