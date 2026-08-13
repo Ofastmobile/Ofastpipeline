@@ -48,6 +48,7 @@ require_once OFP_PATH . 'includes/class-ofp-property-admin-rules.php';
 require_once OFP_PATH . 'includes/class-ofp-property-payment-context.php';
 require_once OFP_PATH . 'includes/class-ofp-property-contact.php';
 require_once OFP_PATH . 'includes/class-ofp-property-purchase-service.php';
+require_once OFP_PATH . 'includes/class-ofp-property-frequency-fix.php';
 
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-monnify.php';
