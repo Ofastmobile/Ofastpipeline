@@ -7,6 +7,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 require_once OFP_PATH . 'includes/class-ofp-property-payment-record.php';
+require_once OFP_PATH . 'includes/class-ofp-property-manual-payment.php';
 
 class OFP_Property_Payment_Context {
 
