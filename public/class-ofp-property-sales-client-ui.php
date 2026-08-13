@@ -35,6 +35,12 @@ class OFP_Property_Sales_Client_UI {
                     icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75h19.5v12H2.25zM6 6.75V4.5h12v2.25M6.75 12h.008v.008H6.75V12zm3 0h.008v.008H9.75V12zm3 0h.008v.008h-.008V12z" /></svg>'
                 },
                 {
+                    url: <?php echo wp_json_encode( home_url( '/property-payments' ) ); ?>,
+                    label: 'Payment Records',
+                    marker: 'payment-records',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 5.25h-15A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75h15a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0019.5 5.25zM2.25 9h19.5M6 13.5h3" /></svg>'
+                },
+                {
                     url: <?php echo wp_json_encode( home_url( '/listing-billing' ) ); ?>,
                     label: 'Listing Billing',
                     marker: 'listing-billing',
