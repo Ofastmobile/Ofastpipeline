@@ -2,12 +2,12 @@
 /**
  * Property admin ownership rules.
  *
- * Keeps the existing property CPT UI intact while enforcing:
- * - every property must have an explicit owner selection;
- * - admin/platform-owned properties use the explicit Platform owner;
- * - clients shown as owners must have an active paid listing subscription;
- * - an existing property owned by an expired client is not silently stripped
- *   of its owner while editing, but cannot be used for a new listing.
+ * Completes the single property-engine ownership model:
+ * - owner_type = platform|client
+ * - owner_id   = NULL for platform, client ID for client-owned properties
+ * - legacy client_id remains synchronized for backward compatibility
+ * - new client listings require an active paid listing subscription
+ * - blank ownership is never a valid saved/published property
  */
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -19,6 +19,37 @@ class OFP_Property_Admin_Rules {
         add_action( 'admin_footer-post.php', [ __CLASS__, 'admin_owner_ui' ] );
         add_action( 'admin_footer-post-new.php', [ __CLASS__, 'admin_owner_ui' ] );
         add_action( 'save_post_ofp_property', [ __CLASS__, 'validate_owner_on_save' ], 99, 3 );
+        add_action( 'save_post_ofp_property', [ __CLASS__, 'sync_formal_owner' ], 110, 3 );
+        add_action( 'init', [ __CLASS__, 'ensure_schema' ], 20 );
+    }
+
+    /**
+     * Add the formal ownership columns and migrate existing rows once.
+     */
+    public static function ensure_schema(): void {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofp_properties';
+
+        $owner_type_exists = $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'owner_type'" );
+        if ( empty( $owner_type_exists ) ) {
+            $wpdb->query( "ALTER TABLE {$table} ADD COLUMN owner_type VARCHAR(20) NOT NULL DEFAULT 'client' AFTER client_id" );
+        }
+
+        $owner_id_exists = $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'owner_id'" );
+        if ( empty( $owner_id_exists ) ) {
+            $wpdb->query( "ALTER TABLE {$table} ADD COLUMN owner_id BIGINT UNSIGNED NULL AFTER owner_type" );
+        }
+
+        // Migrate legacy ownership exactly once. client_id=0 is the existing
+        // platform/admin representation; positive client_id values are client-owned.
+        if ( ! get_option( 'ofp_property_owner_model_migrated' ) ) {
+            $wpdb->query(
+                "UPDATE {$table}
+                 SET owner_type = CASE WHEN client_id = 0 THEN 'platform' ELSE 'client' END,
+                     owner_id   = CASE WHEN client_id = 0 THEN NULL ELSE client_id END"
+            );
+            update_option( 'ofp_property_owner_model_migrated', '1', false );
+        }
     }
 
     public static function admin_owner_ui(): void {
@@ -29,9 +60,6 @@ class OFP_Property_Admin_Rules {
         global $wpdb;
         $p = $wpdb->prefix;
 
-        // New properties: only clients with a currently active paid listing
-        // subscription are eligible. Existing selected owner is preserved in
-        // the edit form so an expired subscription does not orphan old data.
         $eligible_ids = $wpdb->get_col(
             "SELECT DISTINCT c.id
              FROM {$p}ofp_clients c
@@ -43,15 +71,13 @@ class OFP_Property_Admin_Rules {
         );
 
         $eligible_ids = array_map( 'intval', $eligible_ids );
-        $eligible_json = wp_json_encode( $eligible_ids );
         ?>
         <script>
         (function () {
-            var eligibleClientIds = <?php echo $eligible_json ?: '[]'; ?>;
+            var eligibleClientIds = <?php echo wp_json_encode( $eligible_ids ?: [] ); ?>;
             var select = document.querySelector('select[name="ofp_client_id"]');
             if (!select) return;
 
-            // Explicit platform/admin owner. Empty remains an invalid/unassigned state.
             var platform = select.querySelector('option[data-ofp-platform="1"]');
             if (!platform) {
                 platform = document.createElement('option');
@@ -66,8 +92,6 @@ class OFP_Property_Admin_Rules {
                 if (!option.value || option.getAttribute('data-ofp-platform') === '1') return;
                 var id = parseInt(option.value, 10);
                 if (eligibleClientIds.indexOf(id) === -1) {
-                    // Preserve the current owner on an existing property so editing
-                    // does not silently detach ownership; prevent it on new listings.
                     if (String(option.value) === String(selectedValue)) {
                         option.textContent += ' (Listing plan expired/inactive)';
                         option.setAttribute('data-ofp-expired-owner', '1');
@@ -83,7 +107,6 @@ class OFP_Property_Admin_Rules {
                 marker.type = 'hidden';
                 marker.name = 'ofp_owner_selected';
                 marker.id = 'ofp_owner_selected_marker';
-                marker.value = '';
                 select.form.appendChild(marker);
             }
 
@@ -115,20 +138,13 @@ class OFP_Property_Admin_Rules {
     }
 
     public static function validate_owner_on_save( int $post_id, WP_Post $post, bool $update ): void {
-        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
-            return;
-        }
-        if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
-            return;
-        }
-        if ( ! current_user_can( 'edit_post', $post_id ) ) {
-            return;
-        }
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
+        if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) return;
+        if ( ! current_user_can( 'edit_post', $post_id ) ) return;
 
         $owner_selected = isset( $_POST['ofp_owner_selected'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['ofp_owner_selected'] ) );
         $client_id = isset( $_POST['ofp_client_id'] ) ? absint( $_POST['ofp_client_id'] ) : 0;
 
-        // A blank owner selection is never a valid saved/published property.
         if ( ! $owner_selected ) {
             if ( 'publish' === $post->post_status ) {
                 remove_action( 'save_post_ofp_property', [ __CLASS__, 'validate_owner_on_save' ], 99 );
@@ -139,16 +155,14 @@ class OFP_Property_Admin_Rules {
             return;
         }
 
-        // Platform/admin ownership is explicitly represented by client_id 0.
         if ( 0 === $client_id ) {
             update_post_meta( $post_id, 'ofp_client_id', 0 );
             update_post_meta( $post_id, 'ofp_owner_type', 'platform' );
-            OFP_Property_CPT::sync_to_plugin_table( $post_id, 0 );
+            update_post_meta( $post_id, 'ofp_owner_id', '' );
             update_post_meta( $post_id, 'ofp_owner_validation', 'valid' );
             return;
         }
 
-        // Client ownership requires an active, paid listing subscription.
         if ( ! OFP_Subscription::has_active( 'listing', $client_id ) ) {
             update_post_meta( $post_id, 'ofp_owner_validation', 'inactive_listing_subscription' );
             if ( 'publish' === $post->post_status ) {
@@ -160,6 +174,64 @@ class OFP_Property_Admin_Rules {
         }
 
         update_post_meta( $post_id, 'ofp_owner_type', 'client' );
+        update_post_meta( $post_id, 'ofp_owner_id', $client_id );
         update_post_meta( $post_id, 'ofp_owner_validation', 'valid' );
+    }
+
+    /**
+     * Synchronize the formal owner fields and legacy client_id into the
+     * plugin-table source of truth after the CPT's own save handler runs.
+     */
+    public static function sync_formal_owner( int $post_id, WP_Post $post, bool $update ): void {
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
+        if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) return;
+        if ( ! current_user_can( 'edit_post', $post_id ) ) return;
+
+        $owner_type = get_post_meta( $post_id, 'ofp_owner_type', true );
+        $client_id  = absint( get_post_meta( $post_id, 'ofp_client_id', true ) );
+
+        if ( $owner_type === 'platform' || 0 === $client_id ) {
+            $owner_type = 'platform';
+            $owner_id   = null;
+            $legacy_client_id = 0;
+        } else {
+            $owner_type = 'client';
+            $owner_id   = $client_id > 0 ? $client_id : null;
+            $legacy_client_id = $client_id;
+        }
+
+        update_post_meta( $post_id, 'ofp_owner_type', $owner_type );
+        update_post_meta( $post_id, 'ofp_owner_id', null === $owner_id ? '' : $owner_id );
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofp_properties';
+        $row_exists = $wpdb->get_var(
+            $wpdb->prepare( "SELECT id FROM {$table} WHERE wp_post_id = %d LIMIT 1", $post_id )
+        );
+
+        if ( $row_exists ) {
+            $wpdb->update(
+                $table,
+                [
+                    'client_id'  => $legacy_client_id,
+                    'owner_type' => $owner_type,
+                    'owner_id'   => $owner_id,
+                    'updated_at' => current_time( 'mysql' ),
+                ],
+                [ 'wp_post_id' => $post_id ],
+                [ '%d', '%s', null === $owner_id ? null : '%d', '%s' ],
+                [ '%d' ]
+            );
+        } else {
+            // The CPT's existing sync handler is responsible for creating the
+            // full row. This fallback only prevents ownership from remaining
+            // unset if the row was created by another path.
+            OFP_Property_CPT::sync_to_plugin_table( $post_id, $legacy_client_id );
+            $wpdb->update(
+                $table,
+                [ 'owner_type' => $owner_type, 'owner_id' => $owner_id ],
+                [ 'wp_post_id' => $post_id ]
+            );
+        }
     }
 }
