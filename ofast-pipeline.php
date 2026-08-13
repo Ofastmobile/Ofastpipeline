@@ -87,8 +87,8 @@ add_action( 'plugins_loaded', function (): void {
     new OFP_Cron_Handler();
     new OFP_Property_CPT();
     OFP_Host_Router::init();
-    OFP_Property_Commerce_Migration::init();
     OFP_Property_Commerce::init();
+    OFP_Property_Commerce_Migration::init();
     OFP_Property_Sales::init();
     OFP_Property_Sales_Client_UI::init();
 } );
