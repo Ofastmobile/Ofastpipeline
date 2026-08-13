@@ -19,76 +19,54 @@ class OFP_Property_Sales_Client_UI {
         $client = OFP_Auth::current_client();
         if ( ! OFP_Subscription::has_active( 'listing', $client->id ) ) return;
 
-        $properties_url = home_url( '/properties' );
-        $sales_url      = home_url( '/property-sales' );
-        $purchases_url  = home_url( '/property-purchases' );
-        $billing_url    = home_url( '/listing-billing' );
+        $items = [
+            [ 'url' => home_url( '/properties' ),        'label' => 'My Properties',        'marker' => 'properties' ],
+            [ 'url' => home_url( '/property-sales' ),   'label' => 'Sales & Installments', 'marker' => 'sales' ],
+            [ 'url' => home_url( '/property-purchases' ), 'label' => 'Purchases',          'marker' => 'purchases' ],
+            [ 'url' => home_url( '/listing-billing' ), 'label' => 'Listing Billing',      'marker' => 'listing-billing' ],
+        ];
 
-        $properties_url_js = wp_json_encode( $properties_url );
-        $sales_url_js      = wp_json_encode( $sales_url );
-        $purchases_url_js  = wp_json_encode( $purchases_url );
-        $billing_url_js    = wp_json_encode( $billing_url );
+        $items_js = wp_json_encode( $items );
         ?>
         <script>
         (function () {
-            var propertiesUrl = <?php echo $properties_url_js; ?>;
-            var salesUrl = <?php echo $sales_url_js; ?>;
-            var purchasesUrl = <?php echo $purchases_url_js; ?>;
-            var billingUrl = <?php echo $billing_url_js; ?>;
+            var items = <?php echo $items_js; ?>;
 
-            function escapeAttr(value) {
-                return value.replace(/(["\\])/g, '\\$1');
-            }
+            function addStandaloneItems() {
+                var navList = document.querySelector('.ofp-sidebar-nav .ofp-nav-group ul');
+                if (!navList) return;
 
-            function makeItem(sourceHost, targetUrl, label, marker) {
-                var item = sourceHost.cloneNode(true);
-                var target = item.querySelector('a');
-                if (!target) return null;
-                target.href = targetUrl;
-                target.setAttribute('data-ofp-nav-marker', marker);
-                target.textContent = label;
-                return item;
-            }
+                var template = navList.querySelector('li');
+                if (!template) return;
 
-            function addNav() {
-                var links = document.querySelectorAll('a[href="' + escapeAttr(propertiesUrl) + '"]');
-                if (!links.length) return;
+                items.forEach(function (item) {
+                    if (navList.querySelector('[data-ofp-nav-marker="' + item.marker + '"]')) return;
 
-                links.forEach(function (link) {
-                    var propertiesHost = link.closest('li') || link.parentElement;
-                    if (!propertiesHost || !propertiesHost.parentElement) return;
+                    var li = template.cloneNode(true);
+                    var link = li.querySelector('a');
+                    if (!link) return;
 
-                    var parent = propertiesHost.parentElement;
+                    link.href = item.url;
+                    link.setAttribute('data-ofp-nav-marker', item.marker);
+                    link.classList.remove('active', 'locked');
 
-                    if (!parent.querySelector('[data-ofp-nav-marker="sales"]')) {
-                        var salesItem = makeItem(propertiesHost, salesUrl, 'Sales & Installments', 'sales');
-                        if (salesItem) parent.insertBefore(salesItem, propertiesHost.nextSibling);
-                    }
+                    var label = link.querySelector('.ofp-nav-label');
+                    if (label) label.textContent = item.label;
 
-                    if (!parent.querySelector('[data-ofp-nav-marker="purchases"]')) {
-                        var purchasesItem = makeItem(propertiesHost, purchasesUrl, 'Purchases', 'purchases');
-                        if (purchasesItem) {
-                            var salesItem = parent.querySelector('[data-ofp-nav-marker="sales"]');
-                            if (salesItem && salesItem.nextSibling) parent.insertBefore(purchasesItem, salesItem.nextSibling);
-                            else parent.appendChild(purchasesItem);
-                        }
-                    }
+                    var badge = link.querySelector('.ofp-nav-badge');
+                    if (badge) badge.remove();
 
-                    if (!parent.querySelector('[data-ofp-nav-marker="listing-billing"]')) {
-                        var billingItem = makeItem(propertiesHost, billingUrl, 'Listing Billing', 'listing-billing');
-                        if (billingItem) {
-                            var purchasesItem = parent.querySelector('[data-ofp-nav-marker="purchases"]');
-                            if (purchasesItem && purchasesItem.nextSibling) parent.insertBefore(billingItem, purchasesItem.nextSibling);
-                            else parent.appendChild(billingItem);
-                        }
-                    }
+                    var icon = link.querySelector('.ofp-nav-icon');
+                    if (icon) icon.textContent = '';
+
+                    navList.appendChild(li);
                 });
             }
 
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', addNav);
+                document.addEventListener('DOMContentLoaded', addStandaloneItems);
             } else {
-                addNav();
+                addStandaloneItems();
             }
         })();
         </script>
