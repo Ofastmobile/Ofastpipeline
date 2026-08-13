@@ -30,34 +30,21 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         $this->secret_key = OFP_Security::decrypt( get_option( 'ofp_paystack_secret_key', '' ) );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function is_configured(): bool {
         return ! empty( $this->secret_key );
     }
 
-    /**
-     * {@inheritdoc}
-     *
-     * Paystack DVA flow:
-     *  1. Create a Paystack customer (required before creating DVA).
-     *  2. Create a dedicated virtual account for the customer.
-     */
     public function create_virtual_account( array $client_data, int $client_id ): ?object {
-
-        // Step 1: Create Paystack customer.
         $customer_code = $this->create_customer( $client_data, $client_id );
         if ( ! $customer_code ) return null;
 
-        // Step 2: Create dedicated virtual account.
         $response = wp_remote_post(
             $this->base_url . '/dedicated_account',
             [
                 'headers' => $this->get_headers(),
                 'body'    => wp_json_encode( [
-                    'customer'        => $customer_code,
-                    'preferred_bank'  => 'wema-bank',
+                    'customer'       => $customer_code,
+                    'preferred_bank' => 'wema-bank',
                 ] ),
                 'timeout' => 20,
             ]
@@ -69,27 +56,18 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         }
 
         $body = json_decode( wp_remote_retrieve_body( $response ) );
-
         if ( ! ( $body->status ?? false ) || empty( $body->data->account_number ) ) {
             error_log( '[OFP_Paystack] DVA creation failed: ' . wp_remote_retrieve_body( $response ) );
             return null;
         }
 
-        // Normalise to standard format.
         return (object) [
             'account_number' => $body->data->account_number,
             'bank_name'      => $body->data->bank->name ?? 'Paystack',
         ];
     }
 
-    /**
-     * Initiate a Paystack checkout transaction for credit top-up.
-     *
-     * @param array $args
-     * @return string|null
-     */
     public function initiate_transaction( array $args ): ?string {
-
         if ( ! $this->secret_key ) {
             error_log( 'OFP Paystack initiate_transaction — missing secret key' );
             return null;
@@ -119,7 +97,6 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         }
 
         $body = json_decode( wp_remote_retrieve_body( $response ) );
-
         if ( empty( $body->status ) || empty( $body->data->authorization_url ) ) {
             error_log( 'OFP Paystack initiate_transaction unexpected response: ' . wp_remote_retrieve_body( $response ) );
             return null;
@@ -128,15 +105,10 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         return $body->data->authorization_url;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function handle_webhook( WP_REST_Request $request ): WP_REST_Response {
-
         $payload   = $request->get_body();
         $signature = $request->get_header( 'x-paystack-signature' );
 
-        // Verify HMAC SHA512 signature.
         $expected = hash_hmac( 'sha512', $payload, $this->secret_key );
         if ( ! hash_equals( $expected, (string) $signature ) ) {
             error_log( '[OFP_Paystack] Webhook signature mismatch.' );
@@ -146,12 +118,24 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         $data  = json_decode( $payload );
         $event = $data->event ?? '';
 
-        // Only process successful charges.
         if ( $event !== 'charge.success' ) {
             return new WP_REST_Response( [ 'status' => 'ignored' ], 200 );
         }
 
         $reference = $data->data->reference ?? '';
+
+        // Property commerce gets its own handler and never falls through to
+        // the CRM/subscription payment processor.
+        if ( $reference && class_exists( 'OFP_Property_Payment_Context' ) && OFP_Property_Payment_Context::is_reference( $reference ) ) {
+            $amount_paid = ( (float) ( $data->data->amount ?? 0 ) ) / 100;
+            $processed = OFP_Property_Payment_Context::process_verified_payment(
+                $reference,
+                $amount_paid,
+                'paystack',
+                (string) ( $data->data->id ?? $reference )
+            );
+            return new WP_REST_Response( [ 'status' => $processed ? 'property_payment_processed' : 'property_payment_rejected' ], $processed ? 200 : 422 );
+        }
 
         if ( $reference && OFP_Payment::is_credit_topup_reference( $reference ) ) {
             $amount_paid = ( (float) ( $data->data->amount ?? 0 ) ) / 100;
@@ -165,9 +149,11 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
             return new WP_REST_Response( [ 'status' => 'subscription_checkout_processed' ], 200 );
         }
 
-        // Extract client ID from metadata.
+        // Legacy client virtual-account payments continue through the existing
+        // subscription handler. Unknown references are ignored rather than
+        // guessed into the subscription business.
         $client_id   = (int) ( $data->data->metadata->ofp_client_id ?? 0 );
-        $amount      = (float) ( $data->data->amount ?? 0 ) / 100; // Paystack sends kobo.
+        $amount      = (float) ( $data->data->amount ?? 0 ) / 100;
         $payment_ref = sanitize_text_field( $data->data->reference ?? '' );
 
         if ( ! $client_id || $amount <= 0 ) {
@@ -175,23 +161,10 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         }
 
         $this->process_payment( $client_id, $amount, $payment_ref );
-
         return new WP_REST_Response( [ 'status' => 'processed' ], 200 );
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // INTERNAL
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Create a Paystack customer.
-     *
-     * @param  array $client_data
-     * @param  int   $client_id
-     * @return string|null  Paystack customer code.
-     */
     private function create_customer( array $client_data, int $client_id ): ?string {
-
         $name_parts = explode( ' ', $client_data['owner_name'], 2 );
 
         $response = wp_remote_post(
@@ -216,11 +189,6 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         return $body->data->customer_code ?? null;
     }
 
-    /**
-     * Standard JSON headers for Paystack API calls.
-     *
-     * @return array
-     */
     private function get_headers(): array {
         return [
             'Authorization' => 'Bearer ' . $this->secret_key,
@@ -228,15 +196,6 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         ];
     }
 
-    /**
-     * Delegate a verified payment to the shared handler.
-     * See OFP_Subscription::process_gateway_payment() for the full-vs-underpaid logic.
-     *
-     * @param  int    $client_id
-     * @param  float  $amount
-     * @param  string $payment_ref
-     * @return void
-     */
     private function process_payment( int $client_id, float $amount, string $payment_ref ): void {
         OFP_Subscription::process_gateway_payment( $client_id, $amount, $payment_ref, 'paystack_virtual_account' );
     }
