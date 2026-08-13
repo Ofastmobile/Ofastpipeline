@@ -73,11 +73,14 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_client_p
                 if ( ! $buyer_name ) $buyer_name = $lead->name;
                 if ( ! $buyer_phone ) $buyer_phone = $lead->phone;
                 if ( ! $buyer_email ) $buyer_email = $lead->email;
+                if ( $lead->property_id && (int) $lead->property_id !== $property_id ) {
+                    $error = 'The selected lead belongs to a different property.';
+                }
             }
         }
 
         if ( ! $error ) {
-            $purchase_id = OFP_Property_Commerce::create_direct_purchase([
+            $purchase_id = OFP_Property_Purchase_Service::create([
                 'property_id' => $property_id,
                 'lead_id' => $buyer_source === 'lead' ? $lead_id : null,
                 'buyer_name' => $buyer_name,
@@ -95,10 +98,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_client_p
             if ( is_wp_error( $purchase_id ) ) {
                 $error = $purchase_id->get_error_message();
             } else {
-                if ( $buyer_source === 'lead' && class_exists( 'OFP_Lead' ) ) {
-                    OFP_Lead::update_status( $lead_id, 'converted' );
-                }
-
                 $message = 'Purchase #' . (int) $purchase_id . ' created successfully.';
             }
         }
