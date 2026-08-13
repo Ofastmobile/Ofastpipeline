@@ -20,28 +20,23 @@ class OFP_Property_Admin_Rules {
         add_action( 'admin_footer-post-new.php', [ __CLASS__, 'admin_owner_ui' ] );
         add_action( 'save_post_ofp_property', [ __CLASS__, 'validate_owner_on_save' ], 99, 3 );
         add_action( 'save_post_ofp_property', [ __CLASS__, 'sync_formal_owner' ], 110, 3 );
+        add_action( 'added_post_meta', [ __CLASS__, 'sync_after_owner_meta_change' ], 10, 4 );
+        add_action( 'updated_post_meta', [ __CLASS__, 'sync_after_owner_meta_change' ], 10, 4 );
         add_action( 'init', [ __CLASS__, 'ensure_schema' ], 20 );
     }
 
-    /**
-     * Add the formal ownership columns and migrate existing rows once.
-     */
     public static function ensure_schema(): void {
         global $wpdb;
         $table = $wpdb->prefix . 'ofp_properties';
 
-        $owner_type_exists = $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'owner_type'" );
-        if ( empty( $owner_type_exists ) ) {
+        if ( ! $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'owner_type'" ) ) {
             $wpdb->query( "ALTER TABLE {$table} ADD COLUMN owner_type VARCHAR(20) NOT NULL DEFAULT 'client' AFTER client_id" );
         }
 
-        $owner_id_exists = $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'owner_id'" );
-        if ( empty( $owner_id_exists ) ) {
+        if ( ! $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'owner_id'" ) ) {
             $wpdb->query( "ALTER TABLE {$table} ADD COLUMN owner_id BIGINT UNSIGNED NULL AFTER owner_type" );
         }
 
-        // Migrate legacy ownership exactly once. client_id=0 is the existing
-        // platform/admin representation; positive client_id values are client-owned.
         if ( ! get_option( 'ofp_property_owner_model_migrated' ) ) {
             $wpdb->query(
                 "UPDATE {$table}
@@ -59,7 +54,6 @@ class OFP_Property_Admin_Rules {
 
         global $wpdb;
         $p = $wpdb->prefix;
-
         $eligible_ids = $wpdb->get_col(
             "SELECT DISTINCT c.id
              FROM {$p}ofp_clients c
@@ -69,7 +63,6 @@ class OFP_Property_Admin_Rules {
                AND s.status = 'paid'
                AND (s.period_end IS NULL OR s.period_end >= CURDATE())"
         );
-
         $eligible_ids = array_map( 'intval', $eligible_ids );
         ?>
         <script>
@@ -178,15 +171,23 @@ class OFP_Property_Admin_Rules {
         update_post_meta( $post_id, 'ofp_owner_validation', 'valid' );
     }
 
-    /**
-     * Synchronize the formal owner fields and legacy client_id into the
-     * plugin-table source of truth after the CPT's own save handler runs.
-     */
     public static function sync_formal_owner( int $post_id, WP_Post $post, bool $update ): void {
         if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
         if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) return;
         if ( ! current_user_can( 'edit_post', $post_id ) ) return;
 
+        self::persist_formal_owner( $post_id );
+    }
+
+    public static function sync_after_owner_meta_change( int $meta_id, int $post_id, string $meta_key, mixed $meta_value ): void {
+        if ( 'ofp_client_id' !== $meta_key || 'ofp_property' !== get_post_type( $post_id ) ) {
+            return;
+        }
+
+        self::persist_formal_owner( $post_id );
+    }
+
+    private static function persist_formal_owner( int $post_id ): void {
         $owner_type = get_post_meta( $post_id, 'ofp_owner_type', true );
         $client_id  = absint( get_post_meta( $post_id, 'ofp_client_id', true ) );
 
@@ -209,29 +210,23 @@ class OFP_Property_Admin_Rules {
             $wpdb->prepare( "SELECT id FROM {$table} WHERE wp_post_id = %d LIMIT 1", $post_id )
         );
 
+        $data = [
+            'client_id'  => $legacy_client_id,
+            'owner_type' => $owner_type,
+            'owner_id'   => $owner_id,
+            'updated_at' => current_time( 'mysql' ),
+        ];
+
         if ( $row_exists ) {
-            $wpdb->update(
-                $table,
-                [
-                    'client_id'  => $legacy_client_id,
-                    'owner_type' => $owner_type,
-                    'owner_id'   => $owner_id,
-                    'updated_at' => current_time( 'mysql' ),
-                ],
-                [ 'wp_post_id' => $post_id ],
-                [ '%d', '%s', null === $owner_id ? null : '%d', '%s' ],
-                [ '%d' ]
-            );
-        } else {
-            // The CPT's existing sync handler is responsible for creating the
-            // full row. This fallback only prevents ownership from remaining
-            // unset if the row was created by another path.
-            OFP_Property_CPT::sync_to_plugin_table( $post_id, $legacy_client_id );
-            $wpdb->update(
-                $table,
-                [ 'owner_type' => $owner_type, 'owner_id' => $owner_id ],
-                [ 'wp_post_id' => $post_id ]
-            );
+            $wpdb->update( $table, $data, [ 'wp_post_id' => $post_id ] );
+            return;
         }
+
+        OFP_Property_CPT::sync_to_plugin_table( $post_id, $legacy_client_id );
+        $wpdb->update(
+            $table,
+            [ 'owner_type' => $owner_type, 'owner_id' => $owner_id ],
+            [ 'wp_post_id' => $post_id ]
+        );
     }
 }
