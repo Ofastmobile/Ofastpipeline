@@ -2,18 +2,28 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Property_Payment_Records_Admin {
+    private static bool $initialized = false;
+
     public static function init(): void {
-        add_action( 'admin_menu', [ __CLASS__, 'register_menu' ] );
+        if ( self::$initialized ) return;
+        self::$initialized = true;
+        add_action( 'admin_menu', [ __CLASS__, 'register_menu' ], 50 );
     }
 
     public static function register_menu(): void {
         if ( ! current_user_can( 'manage_options' ) ) return;
+        $parent = 'edit.php?post_type=ofp_property';
+        $slug   = 'ofp-property-payments';
+
+        // Remove any duplicate registration for this exact submenu slug, then
+        // add one canonical Payments entry.
+        remove_submenu_page( $parent, $slug );
         add_submenu_page(
-            'edit.php?post_type=ofp_property',
+            $parent,
             'Property Payments',
             'Payments',
             'manage_options',
-            'ofp-property-payments',
+            $slug,
             [ __CLASS__, 'render' ]
         );
     }
