@@ -19,6 +19,11 @@ define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
 define( 'OFP_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+// class-ofp-property-cpt.php is namespaced and refers to OFP_PLUGIN_DIR.
+// Keep the legacy namespaced constant mapped to the canonical plugin path.
+if ( ! defined( 'OFP\\OFP_PLUGIN_DIR' ) ) {
+    define( 'OFP\\OFP_PLUGIN_DIR', OFP_PATH );
+}
 
 // Core / shared
 require_once OFP_PATH . 'includes/class-ofp-activator.php';
@@ -42,6 +47,7 @@ require_once OFP_PATH . 'includes/class-ofp-logger.php';
 require_once OFP_PATH . 'includes/class-ofp-pipeline-audio.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce-migration.php';
+require_once OFP_PATH . 'includes/class-ofp-property-admin-rules.php';
 
 // Payment gateway — interface + provider adapters.
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
@@ -91,6 +97,7 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Property_Commerce_Migration::init();
     OFP_Property_Sales::init();
     OFP_Property_Sales_Client_UI::init();
+    OFP_Property_Admin_Rules::init();
 } );
 
 add_action( 'init', function (): void {
