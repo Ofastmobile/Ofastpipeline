@@ -195,7 +195,7 @@ class OFP_Property_Purchase_Admin {
             exit;
         }
 
-        $result = OFP_Property_Commerce::create_direct_purchase([
+        $result = OFP_Property_Purchase_Service::create([
             'property_id' => $property_id,
             'lead_id' => $lead_id ?: null,
             'buyer_name' => $buyer_name,
@@ -213,10 +213,6 @@ class OFP_Property_Purchase_Admin {
         if ( is_wp_error( $result ) ) {
             wp_safe_redirect( add_query_arg( 'error', rawurlencode( $result->get_error_message() ), admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-add-purchase' ) ) );
             exit;
-        }
-
-        if ( $lead_id ) {
-            OFP_Lead::update_status( $lead_id, 'converted' );
         }
 
         wp_safe_redirect( add_query_arg( 'created', (int) $result, admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-add-purchase' ) ) );
