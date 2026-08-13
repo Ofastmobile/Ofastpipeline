@@ -60,6 +60,7 @@ require_once OFP_PATH . 'admin/class-ofp-admin-menu.php';
 require_once OFP_PATH . 'admin/class-ofp-admin-settings.php';
 require_once OFP_PATH . 'admin/class-ofp-property-commerce-admin.php';
 require_once OFP_PATH . 'admin/class-ofp-property-commerce-actions.php';
+require_once OFP_PATH . 'admin/class-ofp-property-purchase-admin.php';
 
 // Public / REST / Client portal
 require_once OFP_PATH . 'public/class-ofp-rest-api.php';
@@ -89,6 +90,7 @@ add_action( 'plugins_loaded', function (): void {
     new OFP_Admin_Settings();
     new OFP_Property_Commerce_Admin();
     OFP_Property_Commerce_Actions::init();
+    OFP_Property_Purchase_Admin::init();
     new OFP_REST_API();
     new OFP_Client_Portal();
     new OFP_Cron_Handler();
