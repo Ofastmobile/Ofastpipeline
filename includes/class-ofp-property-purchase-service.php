@@ -27,12 +27,8 @@ class OFP_Property_Purchase_Service {
             $property_id
         ) );
 
-        if ( ! $property ) {
-            return new WP_Error( 'property_not_found', 'Property not found.' );
-        }
-        if ( 'sale' !== $property->listing_type ) {
-            return new WP_Error( 'property_not_for_sale', 'Only sale properties can have installment purchases.' );
-        }
+        if ( ! $property ) return new WP_Error( 'property_not_found', 'Property not found.' );
+        if ( 'sale' !== $property->listing_type ) return new WP_Error( 'property_not_for_sale', 'Only sale properties can have installment purchases.' );
 
         $buyer_name         = sanitize_text_field( $data['buyer_name'] ?? '' );
         $buyer_phone        = OFP_Security::sanitize_phone( $data['buyer_phone'] ?? '' );
@@ -46,32 +42,32 @@ class OFP_Property_Purchase_Service {
         $payment_method     = sanitize_key( $data['payment_method'] ?? 'manual' );
         $lead_id            = ! empty( $data['lead_id'] ) ? absint( $data['lead_id'] ) : null;
 
-        if ( ! $buyer_name || ! $buyer_phone ) {
-            return new WP_Error( 'buyer_required', 'Buyer name and phone are required.' );
-        }
-        if ( $buyer_email && ! is_email( $buyer_email ) ) {
-            return new WP_Error( 'invalid_buyer_email', 'Buyer email is invalid.' );
-        }
+        if ( ! $buyer_name || ! $buyer_phone ) return new WP_Error( 'buyer_required', 'Buyer name and phone are required.' );
+        if ( $buyer_email && ! is_email( $buyer_email ) ) return new WP_Error( 'invalid_buyer_email', 'Buyer email is invalid.' );
         if ( ! $payment_start_date || ! $first_due_date || strtotime( $first_due_date ) < strtotime( $payment_start_date ) ) {
             return new WP_Error( 'invalid_payment_dates', 'Payment start and first due date are required, and first due date cannot be before payment start.' );
         }
 
         $total_price = (float) $property->price;
-        if ( $total_price <= 0 ) {
-            return new WP_Error( 'invalid_property_price', 'Property price is invalid.' );
-        }
-        if ( $initial_payment >= $total_price ) {
-            return new WP_Error( 'invalid_initial_payment', 'Initial payment must be less than the property price.' );
-        }
-        if ( $installment_amount <= 0 || $installment_count <= 0 ) {
-            return new WP_Error( 'invalid_installment_plan', 'Installment amount and number of installments are required.' );
-        }
+        if ( $total_price <= 0 ) return new WP_Error( 'invalid_property_price', 'Property price is invalid.' );
+        if ( $initial_payment >= $total_price ) return new WP_Error( 'invalid_initial_payment', 'Initial payment must be less than the property price.' );
+        if ( $installment_amount <= 0 || $installment_count <= 0 ) return new WP_Error( 'invalid_installment_plan', 'Installment amount and number of installments are required.' );
         if ( abs( ( $total_price - $initial_payment ) - ( $installment_amount * $installment_count ) ) > 0.01 ) {
             return new WP_Error( 'installment_mismatch', 'The installment schedule must exactly cover the remaining property balance.' );
         }
 
         $owner_type = ! empty( $property->client_id ) ? 'client' : 'platform';
         $owner_id   = ! empty( $property->client_id ) ? (int) $property->client_id : null;
+
+        if ( $lead_id ) {
+            $lead = $wpdb->get_row( $wpdb->prepare(
+                "SELECT id, client_id, property_id FROM {$p}ofp_leads WHERE id = %d LIMIT 1",
+                $lead_id
+            ) );
+            if ( ! $lead ) return new WP_Error( 'lead_not_found', 'Selected lead could not be found.' );
+            if ( ! empty( $lead->property_id ) && (int) $lead->property_id !== $property_id ) return new WP_Error( 'lead_property_mismatch', 'Selected lead belongs to a different property.' );
+            if ( $owner_id && (int) $lead->client_id !== $owner_id ) return new WP_Error( 'lead_owner_mismatch', 'Selected lead belongs to a different client.' );
+        }
 
         $wpdb->query( 'START TRANSACTION' );
 
@@ -82,6 +78,7 @@ class OFP_Property_Purchase_Service {
                     'property_id'         => $property_id,
                     'client_id'           => $owner_id,
                     'lead_id'             => $lead_id,
+                    'contact_id'         => null,
                     'buyer_name'          => $buyer_name,
                     'buyer_phone'         => $buyer_phone,
                     'buyer_email'         => $buyer_email,
@@ -104,9 +101,7 @@ class OFP_Property_Purchase_Service {
                 ]
             );
 
-            if ( ! $ok ) {
-                throw new RuntimeException( 'Unable to create purchase record.' );
-            }
+            if ( ! $ok ) throw new RuntimeException( 'Unable to create purchase record.' );
 
             $purchase_id = (int) $wpdb->insert_id;
             $number = 1;
@@ -122,6 +117,16 @@ class OFP_Property_Purchase_Service {
             }
 
             $wpdb->query( 'COMMIT' );
+
+            // Create the standalone buyer/contact record. This never creates
+            // a login and preserves lead_id separately when a lead exists.
+            OFP_Property_Contact::ensure_for_purchase( $purchase_id );
+
+            if ( $lead_id && class_exists( 'OFP_Lead' ) ) {
+                OFP_Lead::update_status( $lead_id, 'converted' );
+            }
+
+            do_action( 'ofp_property_purchase_created', $purchase_id, $lead_id, $owner_id, $property_id );
             return $purchase_id;
         } catch ( Throwable $e ) {
             $wpdb->query( 'ROLLBACK' );
@@ -148,8 +153,6 @@ class OFP_Property_Purchase_Service {
             ]
         );
 
-        if ( $wpdb->last_error ) {
-            throw new RuntimeException( 'Unable to create installment schedule.' );
-        }
+        if ( $wpdb->last_error ) throw new RuntimeException( 'Unable to create installment schedule.' );
     }
 }
