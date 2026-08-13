@@ -66,7 +66,16 @@ class OFP_Property_Commerce_Actions {
                     <tr><th><label for="buyer_phone">Buyer phone</label></th><td><input class="regular-text" id="buyer_phone" name="buyer_phone" required></td></tr>
                     <tr><th><label for="buyer_email">Buyer email</label></th><td><input type="email" class="regular-text" id="buyer_email" name="buyer_email"></td></tr>
                     <tr><th><label for="initial_payment">Initial payment</label></th><td><input type="number" step="0.01" min="0" id="initial_payment" name="initial_payment" required></td></tr>
-                    <tr><th><label for="installment_amount">Monthly installment</label></th><td><input type="number" step="0.01" min="0" id="installment_amount" name="installment_amount" required></td></tr>
+                    <tr><th><label for="frequency">Payment frequency</label></th><td>
+                        <select id="frequency" name="frequency">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly" selected>Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                    </td></tr>
+                    <tr><th><label for="installment_amount">Installment amount</label></th><td><input type="number" step="0.01" min="0" id="installment_amount" name="installment_amount" required></td></tr>
                     <tr><th><label for="installment_count">Number of installments</label></th><td><input type="number" min="1" id="installment_count" name="installment_count" required></td></tr>
                     <tr><th><label for="payment_start_date">Payment starts</label></th><td><input type="date" id="payment_start_date" name="payment_start_date" required></td></tr>
                     <tr><th><label for="first_due_date">First due date</label></th><td><input type="date" id="first_due_date" name="first_due_date" required></td></tr>
@@ -93,6 +102,7 @@ class OFP_Property_Commerce_Actions {
         $buyer_phone        = sanitize_text_field( wp_unslash( $_POST['buyer_phone'] ?? '' ) );
         $buyer_email        = sanitize_email( wp_unslash( $_POST['buyer_email'] ?? '' ) );
         $initial_payment    = max( 0.0, (float) ( $_POST['initial_payment'] ?? 0 ) );
+        $frequency          = sanitize_key( $_POST['frequency'] ?? 'monthly' );
         $installment_amount = max( 0.0, (float) ( $_POST['installment_amount'] ?? 0 ) );
         $installment_count  = max( 0, absint( $_POST['installment_count'] ?? 0 ) );
         $payment_start_date = sanitize_text_field( wp_unslash( $_POST['payment_start_date'] ?? '' ) );
@@ -100,6 +110,11 @@ class OFP_Property_Commerce_Actions {
         $grace_days         = min( 365, max( 0, absint( $_POST['grace_period_days'] ?? 7 ) ) );
         $expiry_date        = sanitize_text_field( wp_unslash( $_POST['offer_expires'] ?? '' ) );
         $terms_text         = wp_kses_post( wp_unslash( $_POST['terms_text'] ?? '' ) );
+
+        $allowed_frequencies = [ 'daily', 'weekly', 'monthly', 'quarterly', 'yearly' ];
+        if ( ! in_array( $frequency, $allowed_frequencies, true ) ) {
+            $frequency = 'monthly';
+        }
 
         $property = $wpdb->get_row( $wpdb->prepare(
             "SELECT * FROM {$p}ofp_properties WHERE id = %d LIMIT 1",
@@ -137,7 +152,7 @@ class OFP_Property_Commerce_Actions {
                 'total_price'        => (float) $property->price,
                 'initial_payment'    => $initial_payment,
                 'installment_amount' => $installment_amount,
-                'frequency'          => 'monthly',
+                'frequency'          => $frequency,
                 'installment_count'  => $installment_count,
                 'payment_start_date' => $payment_start_date,
                 'first_due_date'     => $first_due_date,
