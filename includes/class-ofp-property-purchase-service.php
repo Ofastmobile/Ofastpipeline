@@ -40,7 +40,7 @@ class OFP_Property_Purchase_Service {
         $first_due_date     = sanitize_text_field( $data['first_due_date'] ?? '' );
         $grace_days         = min( 365, max( 0, absint( $data['grace_period_days'] ?? 7 ) ) );
         $payment_method     = sanitize_key( $data['payment_method'] ?? 'manual' );
-        $frequency          = sanitize_key( $data['frequency'] ?? 'monthly' );
+        $frequency          = sanitize_key( $data['frequency'] ?? ( isset( $_POST['frequency'] ) ? wp_unslash( $_POST['frequency'] ) : 'monthly' ) );
         $allowed_frequencies = [ 'daily', 'weekly', 'monthly', 'quarterly', 'yearly' ];
         if ( ! in_array( $frequency, $allowed_frequencies, true ) ) {
             $frequency = 'monthly';
@@ -123,8 +123,6 @@ class OFP_Property_Purchase_Service {
 
             $wpdb->query( 'COMMIT' );
 
-            // Create the standalone buyer/contact record. This never creates
-            // a login and preserves lead_id separately when a lead exists.
             OFP_Property_Contact::ensure_for_purchase( $purchase_id );
 
             if ( $lead_id && class_exists( 'OFP_Lead' ) ) {
@@ -185,3 +183,161 @@ class OFP_Property_Purchase_Service {
         if ( $wpdb->last_error ) throw new RuntimeException( 'Unable to create installment schedule.' );
     }
 }
+
+/**
+ * Payment-plan UI compatibility layer.
+ * Adds the frequency selector to the existing purchase/offer forms without
+ * replacing their page templates, and normalises accepted-offer schedules.
+ */
+add_action( 'admin_footer', function (): void {
+    $screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+    if ( ! $screen ) return;
+    if ( strpos( (string) $screen->id, 'ofp_property' ) === false ) return;
+    ?>
+    <script>
+    (function(){
+        var values = [
+            ['daily','Daily'],
+            ['weekly','Weekly'],
+            ['monthly','Monthly'],
+            ['quarterly','Quarterly'],
+            ['yearly','Yearly']
+        ];
+        function addFrequency(){
+            document.querySelectorAll('form').forEach(function(form){
+                if (!form.querySelector('input[name="frequency"]') && form.querySelector('input[name="installment_amount"]')) {
+                    var wrap = document.createElement('p');
+                    var label = document.createElement('label');
+                    label.textContent = 'Payment frequency';
+                    label.style.display = 'block';
+                    label.style.fontWeight = '600';
+                    var select = document.createElement('select');
+                    select.name = 'frequency';
+                    values.forEach(function(v){
+                        var option = document.createElement('option');
+                        option.value = v[0];
+                        option.textContent = v[1];
+                        if (v[0] === 'monthly') option.selected = true;
+                        select.appendChild(option);
+                    });
+                    wrap.appendChild(label);
+                    wrap.appendChild(select);
+                    var target = form.querySelector('input[name="installment_amount"]');
+                    if (target && target.closest('tr')) {
+                        var row = target.closest('tr').cloneNode(false);
+                        var th = document.createElement('th');
+                        th.textContent = 'Payment frequency';
+                        var td = document.createElement('td');
+                        td.appendChild(select);
+                        row.appendChild(th);
+                        row.appendChild(td);
+                        target.closest('tr').parentNode.insertBefore(row, target.closest('tr').nextSibling);
+                        wrap.remove();
+                    } else if (target) {
+                        target.parentNode.parentNode.insertBefore(wrap, target.parentNode.nextSibling);
+                    }
+                }
+            });
+        }
+        addFrequency();
+    })();
+    </script>
+    <?php
+}, 1000 );
+
+add_action( 'wp_footer', function (): void {
+    ?>
+    <script>
+    (function(){
+        var values = [
+            ['daily','Daily'],
+            ['weekly','Weekly'],
+            ['monthly','Monthly'],
+            ['quarterly','Quarterly'],
+            ['yearly','Yearly']
+        ];
+        document.querySelectorAll('form').forEach(function(form){
+            if (form.querySelector('input[name="frequency"]') || !form.querySelector('input[name="installment_amount"]')) return;
+            var box = document.createElement('div');
+            box.style.marginTop = '12px';
+            var label = document.createElement('label');
+            label.textContent = 'Payment frequency';
+            label.style.display = 'block';
+            label.style.marginBottom = '6px';
+            var select = document.createElement('select');
+            select.name = 'frequency';
+            select.style.width = '100%';
+            values.forEach(function(v){
+                var option = document.createElement('option');
+                option.value = v[0];
+                option.textContent = v[1];
+                if (v[0] === 'monthly') option.selected = true;
+                select.appendChild(option);
+            });
+            box.appendChild(label);
+            box.appendChild(select);
+            form.appendChild(box);
+        });
+    })();
+    </script>
+    <?php
+}, 1000 );
+
+add_action( 'admin_post_ofp_create_property_offer', function (): void {
+    if ( empty( $_POST['frequency'] ) ) return;
+    $frequency = sanitize_key( wp_unslash( $_POST['frequency'] ) );
+    if ( ! in_array( $frequency, [ 'daily','weekly','monthly','quarterly','yearly' ], true ) ) return;
+    $property_id = absint( $_POST['property_id'] ?? 0 );
+    $buyer_phone = sanitize_text_field( wp_unslash( $_POST['buyer_phone'] ?? '' ) );
+    $buyer_email = sanitize_email( wp_unslash( $_POST['buyer_email'] ?? '' ) );
+    $started_at  = current_time( 'mysql' );
+    register_shutdown_function( function() use ( $frequency, $property_id, $buyer_phone, $buyer_email, $started_at ): void {
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $offer = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id FROM {$p}ofp_property_offers
+             WHERE property_id = %d AND buyer_phone = %s
+               AND (buyer_email = %s OR (buyer_email IS NULL AND %s = ''))
+               AND created_at >= %s
+             ORDER BY id DESC LIMIT 1",
+            $property_id, $buyer_phone, $buyer_email, $buyer_email, $started_at
+        ) );
+        if ( $offer ) {
+            $wpdb->update( "{$p}ofp_property_offers", [ 'frequency' => $frequency, 'updated_at' => current_time( 'mysql' ) ], [ 'id' => (int) $offer->id ] );
+        }
+    } );
+}, 1 );
+
+add_action( 'wp_footer', function (): void {
+    if ( empty( $_POST['ofp_offer_action'] ) || 'accept' !== sanitize_key( $_POST['ofp_offer_action'] ) ) return;
+    $token = sanitize_text_field( wp_unslash( $_GET['offer'] ?? '' ) );
+    if ( ! $token ) return;
+    $hash = hash( 'sha256', $token );
+    global $wpdb;
+    $p = $wpdb->prefix;
+    $offer = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p}ofp_property_offers WHERE offer_token_hash = %s LIMIT 1", $hash ) );
+    if ( ! $offer || 'accepted' !== $offer->status ) return;
+    $purchase = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p}ofp_property_purchases WHERE offer_id = %d ORDER BY id DESC LIMIT 1", (int) $offer->id ) );
+    if ( ! $purchase ) return;
+    $installments = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$p}ofp_property_installments WHERE purchase_id = %d ORDER BY installment_no ASC", (int) $purchase->id ) );
+    foreach ( $installments as $inst ) {
+        if ( (float) $inst->amount_paid > 0 ) return;
+    }
+    $initial = (float) $purchase->initial_payment;
+    $frequency = sanitize_key( $purchase->frequency ?: 'monthly' );
+    foreach ( $installments as $inst ) {
+        $offset = $initial > 0 ? (int) $inst->installment_no : (int) $inst->installment_no - 1;
+        $base = $purchase->first_due_date ?: $inst->due_date;
+        $ts = strtotime( $base );
+        if ( false === $ts ) continue;
+        switch ( $frequency ) {
+            case 'daily': $due = gmdate( 'Y-m-d', strtotime( "+{$offset} days", $ts ) ); break;
+            case 'weekly': $due = gmdate( 'Y-m-d', strtotime( "+{$offset} weeks", $ts ) ); break;
+            case 'quarterly': $due = gmdate( 'Y-m-d', strtotime( "+" . ( $offset * 3 ) . " months", $ts ) ); break;
+            case 'yearly': $due = gmdate( 'Y-m-d', strtotime( "+{$offset} years", $ts ) ); break;
+            default: $due = gmdate( 'Y-m-d', strtotime( "+{$offset} months", $ts ) ); break;
+        }
+        $grace = gmdate( 'Y-m-d', strtotime( $due . ' +' . (int) $purchase->grace_period_days . ' days' ) );
+        $wpdb->update( "{$p}ofp_property_installments", [ 'due_date' => $due, 'grace_ends_at' => $grace, 'updated_at' => current_time( 'mysql' ) ], [ 'id' => (int) $inst->id ] );
+    }
+}, 1001 );
