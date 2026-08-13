@@ -72,23 +72,33 @@ class OFP_Property_Commerce_Admin {
             <?php if ( empty( $offers ) ) : ?>
                 <div class="notice notice-info"><p>No installment offers yet. Use <strong>Create Installment Offer</strong> above to start one.</p></div>
             <?php else : ?>
-                <table class="widefat striped">
-                    <thead><tr><th>ID</th><th>Buyer</th><th>Property</th><th>Owner</th><th>Total</th><th>Plan</th><th>Status</th><th>Created</th></tr></thead>
-                    <tbody>
-                    <?php foreach ( $offers as $offer ) : ?>
+                <div style="overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;border:1px solid #dcdcde;">
+                    <table class="widefat striped" style="min-width:1250px;margin:0;">
+                        <thead>
                         <tr>
-                            <td>#<?php echo esc_html( $offer->id ); ?></td>
-                            <td><strong><?php echo esc_html( $offer->buyer_name ); ?></strong><br><small><?php echo esc_html( $offer->buyer_phone ); ?></small></td>
-                            <td><?php echo esc_html( $offer->property_title ?: '—' ); ?></td>
-                            <td><?php echo esc_html( $offer->business_name ?: 'Platform' ); ?></td>
-                            <td>NGN <?php echo esc_html( number_format( (float) $offer->total_price, 2 ) ); ?></td>
-                            <td>Initial: NGN <?php echo esc_html( number_format( (float) $offer->initial_payment, 2 ) ); ?><br><?php echo esc_html( $offer->installment_count ); ?> × NGN <?php echo esc_html( number_format( (float) $offer->installment_amount, 2 ) ); ?></td>
-                            <td><?php echo esc_html( ucfirst( $offer->status ) ); ?></td>
-                            <td><?php echo esc_html( wp_date( 'M j, Y', strtotime( $offer->created_at ) ) ); ?></td>
+                            <th>ID</th><th>Buyer</th><th>Property</th><th>Owner</th><th>Total</th><th>Plan</th><th>Payment Starts</th><th>First Due Date</th><th>Grace Period</th><th>Offer Expires</th><th>Status</th><th>Created</th>
                         </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                        <?php foreach ( $offers as $offer ) : ?>
+                            <tr>
+                                <td>#<?php echo esc_html( $offer->id ); ?></td>
+                                <td><strong><?php echo esc_html( $offer->buyer_name ); ?></strong><br><small><?php echo esc_html( $offer->buyer_phone ); ?></small></td>
+                                <td><?php echo esc_html( $offer->property_title ?: '—' ); ?></td>
+                                <td><?php echo esc_html( $offer->business_name ?: 'Platform' ); ?></td>
+                                <td>NGN <?php echo esc_html( number_format( (float) $offer->total_price, 2 ) ); ?></td>
+                                <td>Initial: NGN <?php echo esc_html( number_format( (float) $offer->initial_payment, 2 ) ); ?><br><?php echo esc_html( $offer->installment_count ); ?> × NGN <?php echo esc_html( number_format( (float) $offer->installment_amount, 2 ) ); ?></td>
+                                <td><?php echo $offer->payment_start_date ? esc_html( wp_date( 'M j, Y', strtotime( $offer->payment_start_date ) ) ) : '—'; ?></td>
+                                <td><?php echo $offer->first_due_date ? esc_html( wp_date( 'M j, Y', strtotime( $offer->first_due_date ) ) ) : '—'; ?></td>
+                                <td><?php echo esc_html( (int) $offer->grace_period_days ); ?> days</td>
+                                <td><?php echo $offer->expires_at ? esc_html( wp_date( 'M j, Y', strtotime( $offer->expires_at ) ) ) : '—'; ?></td>
+                                <td><?php echo esc_html( ucfirst( $offer->status ) ); ?></td>
+                                <td><?php echo esc_html( wp_date( 'M j, Y', strtotime( $offer->created_at ) ) ); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
         </div>
         <?php
@@ -112,23 +122,28 @@ class OFP_Property_Commerce_Admin {
             <?php if ( empty( $purchases ) ) : ?>
                 <div class="notice notice-info"><p>No property purchases yet.</p></div>
             <?php else : ?>
-                <table class="widefat striped">
-                    <thead><tr><th>ID</th><th>Buyer</th><th>Property</th><th>Owner</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead>
-                    <tbody>
-                    <?php foreach ( $purchases as $purchase ) : ?>
-                        <tr>
-                            <td>#<?php echo esc_html( $purchase->id ); ?></td>
-                            <td><strong><?php echo esc_html( $purchase->buyer_name ); ?></strong><br><small><?php echo esc_html( $purchase->buyer_phone ); ?></small></td>
-                            <td><?php echo esc_html( $purchase->property_title ?: '—' ); ?></td>
-                            <td><?php echo esc_html( $purchase->business_name ?: 'Platform' ); ?></td>
-                            <td>NGN <?php echo esc_html( number_format( (float) $purchase->total_price, 2 ) ); ?></td>
-                            <td>NGN <?php echo esc_html( number_format( (float) $purchase->amount_paid, 2 ) ); ?></td>
-                            <td><strong>NGN <?php echo esc_html( number_format( (float) $purchase->balance, 2 ) ); ?></strong></td>
-                            <td><?php echo esc_html( ucfirst( $purchase->status ) ); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
+                <div style="overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;border:1px solid #dcdcde;">
+                    <table class="widefat striped" style="min-width:1200px;margin:0;">
+                        <thead><tr><th>ID</th><th>Buyer</th><th>Property</th><th>Owner</th><th>Total</th><th>Paid</th><th>Balance</th><th>Payment Starts</th><th>First Due Date</th><th>Grace Period</th><th>Status</th></tr></thead>
+                        <tbody>
+                        <?php foreach ( $purchases as $purchase ) : ?>
+                            <tr>
+                                <td>#<?php echo esc_html( $purchase->id ); ?></td>
+                                <td><strong><?php echo esc_html( $purchase->buyer_name ); ?></strong><br><small><?php echo esc_html( $purchase->buyer_phone ); ?></small></td>
+                                <td><?php echo esc_html( $purchase->property_title ?: '—' ); ?></td>
+                                <td><?php echo esc_html( $purchase->business_name ?: 'Platform' ); ?></td>
+                                <td>NGN <?php echo esc_html( number_format( (float) $purchase->total_price, 2 ) ); ?></td>
+                                <td>NGN <?php echo esc_html( number_format( (float) $purchase->amount_paid, 2 ) ); ?></td>
+                                <td><strong>NGN <?php echo esc_html( number_format( (float) $purchase->balance, 2 ) ); ?></strong></td>
+                                <td><?php echo $purchase->payment_start_date ? esc_html( wp_date( 'M j, Y', strtotime( $purchase->payment_start_date ) ) ) : '—'; ?></td>
+                                <td><?php echo $purchase->first_due_date ? esc_html( wp_date( 'M j, Y', strtotime( $purchase->first_due_date ) ) ) : '—'; ?></td>
+                                <td><?php echo esc_html( (int) $purchase->grace_period_days ); ?> days</td>
+                                <td><?php echo esc_html( ucfirst( $purchase->status ) ); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
         </div>
         <?php
