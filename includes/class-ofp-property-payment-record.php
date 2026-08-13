@@ -35,9 +35,7 @@ class OFP_Property_Payment_Record {
             'updated_at' => current_time( 'mysql' ),
         ] );
         if ( ! $ok ) return new WP_Error( 'payment_record_failed', 'Unable to create payment record.' );
-        $id = (int) $wpdb->insert_id;
-        if ( 'successful' === $status ) self::success( $id );
-        return $id;
+        return (int) $wpdb->insert_id;
     }
 
     public static function success( int $payment_id, int $verified_by = 0 ): array {
