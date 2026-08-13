@@ -25,17 +25,18 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_property
     if ( ! isset( $_POST['ofp_property_offer_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ofp_property_offer_nonce'] ) ), 'ofp_property_offer_' . $client->id ) ) {
         $error = 'Security check failed. Please refresh and try again.';
     } else {
-        $property_id       = absint( $_POST['property_id'] ?? 0 );
-        $buyer_name        = sanitize_text_field( wp_unslash( $_POST['buyer_name'] ?? '' ) );
-        $buyer_phone       = sanitize_text_field( wp_unslash( $_POST['buyer_phone'] ?? '' ) );
-        $buyer_email       = sanitize_email( wp_unslash( $_POST['buyer_email'] ?? '' ) );
-        $initial_payment   = max( 0.0, (float) ( $_POST['initial_payment'] ?? 0 ) );
+        $property_id        = absint( $_POST['property_id'] ?? 0 );
+        $buyer_name         = sanitize_text_field( wp_unslash( $_POST['buyer_name'] ?? '' ) );
+        $buyer_phone        = sanitize_text_field( wp_unslash( $_POST['buyer_phone'] ?? '' ) );
+        $buyer_email        = sanitize_email( wp_unslash( $_POST['buyer_email'] ?? '' ) );
+        $initial_payment    = max( 0.0, (float) ( $_POST['initial_payment'] ?? 0 ) );
         $installment_amount = max( 0.0, (float) ( $_POST['installment_amount'] ?? 0 ) );
-        $installment_count = max( 0, absint( $_POST['installment_count'] ?? 0 ) );
-        $first_due_date    = sanitize_text_field( wp_unslash( $_POST['first_due_date'] ?? '' ) );
-        $grace_days        = min( 365, max( 0, absint( $_POST['grace_period_days'] ?? 7 ) ) );
-        $expiry_date       = sanitize_text_field( wp_unslash( $_POST['offer_expires'] ?? '' ) );
-        $terms_text        = wp_kses_post( wp_unslash( $_POST['terms_text'] ?? '' ) );
+        $installment_count  = max( 0, absint( $_POST['installment_count'] ?? 0 ) );
+        $payment_start_date = sanitize_text_field( wp_unslash( $_POST['payment_start_date'] ?? '' ) );
+        $first_due_date     = sanitize_text_field( wp_unslash( $_POST['first_due_date'] ?? '' ) );
+        $grace_days         = min( 365, max( 0, absint( $_POST['grace_period_days'] ?? 7 ) ) );
+        $expiry_date        = sanitize_text_field( wp_unslash( $_POST['offer_expires'] ?? '' ) );
+        $terms_text         = wp_kses_post( wp_unslash( $_POST['terms_text'] ?? '' ) );
 
         $property = $wpdb->get_row( $wpdb->prepare(
             "SELECT * FROM {$p}ofp_properties WHERE id = %d AND client_id = %d LIMIT 1",
@@ -60,8 +61,12 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_property
         } elseif ( abs( ( (float) $property->price - $initial_payment ) - ( $installment_amount * $installment_count ) ) > 0.01 ) {
             $remaining = (float) $property->price - $initial_payment;
             $error = 'The installment amount × number of installments must exactly cover the remaining balance of NGN ' . number_format( $remaining, 2 ) . '. Adjust the amount or count.';
+        } elseif ( ! $payment_start_date || strtotime( $payment_start_date ) === false ) {
+            $error = 'Please choose when payments will start.';
         } elseif ( ! $first_due_date || strtotime( $first_due_date ) === false ) {
             $error = 'Please choose the first payment due date.';
+        } elseif ( strtotime( $first_due_date ) < strtotime( $payment_start_date ) ) {
+            $error = 'First due date cannot be before the payment start date.';
         } else {
             [ $raw_token, $token_hash ] = OFP_Property_Commerce::create_offer_token();
 
@@ -78,6 +83,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_property
                     'installment_amount' => $installment_amount,
                     'frequency'          => 'monthly',
                     'installment_count'  => $installment_count,
+                    'payment_start_date' => $payment_start_date,
                     'first_due_date'     => $first_due_date,
                     'grace_period_days'  => $grace_days,
                     'reminder_days'      => '7,3,1',
@@ -197,6 +203,10 @@ $existing_offers = $wpdb->get_results( $wpdb->prepare(
                     <input type="number" min="1" name="installment_count" required style="width:100%;">
                 </div>
                 <div>
+                    <label>Payment starts</label>
+                    <input type="date" name="payment_start_date" required style="width:100%;">
+                </div>
+                <div>
                     <label>First payment due date</label>
                     <input type="date" name="first_due_date" required style="width:100%;">
                 </div>
@@ -225,9 +235,9 @@ $existing_offers = $wpdb->get_results( $wpdb->prepare(
         <?php if ( empty( $existing_offers ) ) : ?>
             <p style="color:#64748b;">No installment offers created yet.</p>
         <?php else : ?>
-            <div style="overflow:auto;">
-                <table class="widefat striped">
-                    <thead><tr><th>Buyer</th><th>Property</th><th>Amount</th><th>Plan</th><th>Status</th><th>Created</th></tr></thead>
+            <div style="overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;">
+                <table class="widefat striped" style="min-width:1250px;">
+                    <thead><tr><th>Buyer</th><th>Property</th><th>Amount</th><th>Plan</th><th>Payment Starts</th><th>First Due Date</th><th>Grace Period</th><th>Offer Expires</th><th>Status</th><th>Created</th></tr></thead>
                     <tbody>
                     <?php foreach ( $existing_offers as $offer ) : ?>
                         <tr>
@@ -235,6 +245,10 @@ $existing_offers = $wpdb->get_results( $wpdb->prepare(
                             <td><?php echo esc_html( $offer->property_title ?: '—' ); ?></td>
                             <td>NGN <?php echo esc_html( number_format( (float) $offer->total_price, 2 ) ); ?></td>
                             <td>Initial NGN <?php echo esc_html( number_format( (float) $offer->initial_payment, 2 ) ); ?><br>× <?php echo esc_html( $offer->installment_count ); ?> monthly</td>
+                            <td><?php echo $offer->payment_start_date ? esc_html( wp_date( 'M j, Y', strtotime( $offer->payment_start_date ) ) ) : '—'; ?></td>
+                            <td><?php echo $offer->first_due_date ? esc_html( wp_date( 'M j, Y', strtotime( $offer->first_due_date ) ) ) : '—'; ?></td>
+                            <td><?php echo esc_html( (int) $offer->grace_period_days ); ?> days</td>
+                            <td><?php echo $offer->expires_at ? esc_html( wp_date( 'M j, Y', strtotime( $offer->expires_at ) ) ) : '—'; ?></td>
                             <td><?php echo esc_html( ucfirst( $offer->status ) ); ?></td>
                             <td><?php echo esc_html( wp_date( 'M j, Y', strtotime( $offer->created_at ) ) ); ?></td>
                         </tr>
