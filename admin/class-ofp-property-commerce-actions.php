@@ -68,6 +68,7 @@ class OFP_Property_Commerce_Actions {
                     <tr><th><label for="initial_payment">Initial payment</label></th><td><input type="number" step="0.01" min="0" id="initial_payment" name="initial_payment" required></td></tr>
                     <tr><th><label for="installment_amount">Monthly installment</label></th><td><input type="number" step="0.01" min="0" id="installment_amount" name="installment_amount" required></td></tr>
                     <tr><th><label for="installment_count">Number of installments</label></th><td><input type="number" min="1" id="installment_count" name="installment_count" required></td></tr>
+                    <tr><th><label for="payment_start_date">Payment starts</label></th><td><input type="date" id="payment_start_date" name="payment_start_date" required></td></tr>
                     <tr><th><label for="first_due_date">First due date</label></th><td><input type="date" id="first_due_date" name="first_due_date" required></td></tr>
                     <tr><th><label for="grace_period_days">Grace period (days)</label></th><td><input type="number" min="0" max="365" value="7" id="grace_period_days" name="grace_period_days"></td></tr>
                     <tr><th><label for="offer_expires">Offer expires</label></th><td><input type="date" id="offer_expires" name="offer_expires"></td></tr>
@@ -94,6 +95,7 @@ class OFP_Property_Commerce_Actions {
         $initial_payment    = max( 0.0, (float) ( $_POST['initial_payment'] ?? 0 ) );
         $installment_amount = max( 0.0, (float) ( $_POST['installment_amount'] ?? 0 ) );
         $installment_count  = max( 0, absint( $_POST['installment_count'] ?? 0 ) );
+        $payment_start_date = sanitize_text_field( wp_unslash( $_POST['payment_start_date'] ?? '' ) );
         $first_due_date     = sanitize_text_field( wp_unslash( $_POST['first_due_date'] ?? '' ) );
         $grace_days         = min( 365, max( 0, absint( $_POST['grace_period_days'] ?? 7 ) ) );
         $expiry_date        = sanitize_text_field( wp_unslash( $_POST['offer_expires'] ?? '' ) );
@@ -113,7 +115,9 @@ class OFP_Property_Commerce_Actions {
         elseif ( $initial_payment < 0 || $initial_payment >= (float) $property->price ) $error = 'Initial payment must be less than the property price.';
         elseif ( $installment_amount <= 0 || $installment_count <= 0 ) $error = 'Installment amount and count are required.';
         elseif ( abs( ( (float) $property->price - $initial_payment ) - ( $installment_amount * $installment_count ) ) > 0.01 ) $error = 'The installment schedule must exactly cover the remaining property balance.';
+        elseif ( ! $payment_start_date || strtotime( $payment_start_date ) === false ) $error = 'Payment start date is required.';
         elseif ( ! $first_due_date || strtotime( $first_due_date ) === false ) $error = 'First due date is required.';
+        elseif ( strtotime( $first_due_date ) < strtotime( $payment_start_date ) ) $error = 'First due date cannot be before the payment start date.';
 
         if ( $error ) {
             wp_safe_redirect( add_query_arg( 'error', rawurlencode( $error ), admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-create-offer' ) ) );
@@ -135,6 +139,7 @@ class OFP_Property_Commerce_Actions {
                 'installment_amount' => $installment_amount,
                 'frequency'          => 'monthly',
                 'installment_count'  => $installment_count,
+                'payment_start_date' => $payment_start_date,
                 'first_due_date'     => $first_due_date,
                 'grace_period_days'  => $grace_days,
                 'reminder_days'      => '7,3,1',
