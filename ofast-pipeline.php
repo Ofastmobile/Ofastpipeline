@@ -48,6 +48,7 @@ require_once OFP_PATH . 'includes/class-ofp-property-commerce.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce-migration.php';
 require_once OFP_PATH . 'includes/class-ofp-property-admin-rules.php';
 require_once OFP_PATH . 'includes/class-ofp-property-payment-context.php';
+require_once OFP_PATH . 'includes/class-ofp-property-contact.php';
 
 // Payment gateway — interface + provider adapters.
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
