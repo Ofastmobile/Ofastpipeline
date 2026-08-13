@@ -9,6 +9,12 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Property_Contact {
 
+    public static function init(): void {
+        // Reconcile purchases at shutdown so admin, client and public offer
+        // creation paths all receive a contact without duplicated hooks.
+        add_action( 'shutdown', [ __CLASS__, 'sync_missing_purchase_contacts' ], 999 );
+    }
+
     public static function normalize_phone( string $phone ): string {
         return OFP_Security::sanitize_phone( $phone );
     }
@@ -89,6 +95,22 @@ class OFP_Property_Contact {
         }
 
         return $contact_id;
+    }
+
+    public static function sync_missing_purchase_contacts(): void {
+        global $wpdb;
+        $p = $wpdb->prefix;
+
+        $ids = $wpdb->get_col(
+            "SELECT id FROM {$p}ofp_property_purchases
+             WHERE contact_id IS NULL
+             ORDER BY id ASC
+             LIMIT 50"
+        );
+
+        foreach ( $ids as $purchase_id ) {
+            self::ensure_for_purchase( (int) $purchase_id );
+        }
     }
 
     public static function get( int $id ): ?object {
