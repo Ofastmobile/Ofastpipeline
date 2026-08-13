@@ -40,6 +40,11 @@ class OFP_Property_Purchase_Service {
         $first_due_date     = sanitize_text_field( $data['first_due_date'] ?? '' );
         $grace_days         = min( 365, max( 0, absint( $data['grace_period_days'] ?? 7 ) ) );
         $payment_method     = sanitize_key( $data['payment_method'] ?? 'manual' );
+        $frequency          = sanitize_key( $data['frequency'] ?? 'monthly' );
+        $allowed_frequencies = [ 'daily', 'weekly', 'monthly', 'quarterly', 'yearly' ];
+        if ( ! in_array( $frequency, $allowed_frequencies, true ) ) {
+            $frequency = 'monthly';
+        }
         $lead_id            = ! empty( $data['lead_id'] ) ? absint( $data['lead_id'] ) : null;
 
         if ( ! $buyer_name || ! $buyer_phone ) return new WP_Error( 'buyer_required', 'Buyer name and phone are required.' );
@@ -78,7 +83,7 @@ class OFP_Property_Purchase_Service {
                     'property_id'         => $property_id,
                     'client_id'           => $owner_id,
                     'lead_id'             => $lead_id,
-                    'contact_id'         => null,
+                    'contact_id'          => null,
                     'buyer_name'          => $buyer_name,
                     'buyer_phone'         => $buyer_phone,
                     'buyer_email'         => $buyer_email,
@@ -87,7 +92,7 @@ class OFP_Property_Purchase_Service {
                     'balance'             => $total_price,
                     'initial_payment'     => $initial_payment,
                     'installment_amount'  => $installment_amount,
-                    'frequency'           => 'monthly',
+                    'frequency'           => $frequency,
                     'installment_count'   => $installment_count,
                     'payment_start_date'  => $payment_start_date,
                     'first_due_date'      => $first_due_date,
@@ -111,8 +116,8 @@ class OFP_Property_Purchase_Service {
             }
 
             for ( $i = 0; $i < $installment_count; $i++ ) {
-                $month_offset = $i + ( $initial_payment > 0 ? 1 : 0 );
-                $due_date = gmdate( 'Y-m-d', strtotime( $first_due_date . ' +' . $month_offset . ' month' ) );
+                $period_offset = $i + ( $initial_payment > 0 ? 1 : 0 );
+                $due_date = self::calculate_due_date( $first_due_date, $period_offset, $frequency );
                 self::insert_installment( $purchase_id, $number++, $due_date, $installment_amount, $grace_days, 'scheduled' );
             }
 
@@ -131,6 +136,30 @@ class OFP_Property_Purchase_Service {
         } catch ( Throwable $e ) {
             $wpdb->query( 'ROLLBACK' );
             return new WP_Error( 'property_purchase_create_failed', $e->getMessage() );
+        }
+    }
+
+    /**
+     * Calculate a schedule due date using calendar-safe periods.
+     */
+    private static function calculate_due_date( string $base_date, int $offset, string $frequency ): string {
+        $base_timestamp = strtotime( $base_date );
+        if ( false === $base_timestamp ) {
+            return $base_date;
+        }
+
+        switch ( $frequency ) {
+            case 'daily':
+                return gmdate( 'Y-m-d', strtotime( "+{$offset} days", $base_timestamp ) );
+            case 'weekly':
+                return gmdate( 'Y-m-d', strtotime( "+{$offset} weeks", $base_timestamp ) );
+            case 'quarterly':
+                return gmdate( 'Y-m-d', strtotime( "+" . ( $offset * 3 ) . " months", $base_timestamp ) );
+            case 'yearly':
+                return gmdate( 'Y-m-d', strtotime( "+{$offset} years", $base_timestamp ) );
+            case 'monthly':
+            default:
+                return gmdate( 'Y-m-d', strtotime( "+{$offset} months", $base_timestamp ) );
         }
     }
 
