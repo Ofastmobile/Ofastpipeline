@@ -58,6 +58,8 @@ class OFP_Property_CPT {
         add_action( 'save_post_ofp_property',  [ $this, 'save_meta' ] );
         add_filter( 'manage_ofp_property_posts_columns',       [ $this, 'custom_columns' ] );
         add_action( 'manage_ofp_property_posts_custom_column', [ $this, 'render_columns' ], 10, 2 );
+        add_action( 'quick_edit_custom_box',                   [ $this, 'quick_edit_listing_type' ], 10, 2 );
+        add_action( 'admin_footer-edit.php',                   [ $this, 'quick_edit_js' ] );
         add_filter( 'template_include',                        [ $this, 'load_templates' ] );
         add_filter( 'post_type_link',                          [ $this, 'rewrite_permalink_to_property_subdomain' ], 10, 2 );
     }
@@ -200,6 +202,7 @@ class OFP_Property_CPT {
                 <label>Client (Property Owner / Agent)</label>
                 <select name="ofp_client_id">
                     <option value="">— Select Client —</option>
+                    <option value="0" data-ofp-platform="1" <?php selected( $meta['ofp_client_id'], '0' ); ?>>Admin (Internal)</option>
                     <?php foreach ( $clients as $c ) : ?>
                         <option value="<?php echo esc_attr( $c->id ); ?>"
                             <?php selected( $meta['ofp_client_id'], $c->id ); ?>>
@@ -212,8 +215,8 @@ class OFP_Property_CPT {
             <div class="ofp-meta-field">
                 <label>Listing Type</label>
                 <select name="ofp_listing_type">
-                    <option value="rent" <?php selected( $meta['ofp_listing_type'], 'rent' ); ?>>For Rent</option>
                     <option value="sale" <?php selected( $meta['ofp_listing_type'], 'sale' ); ?>>For Sale</option>
+                    <option value="rent" <?php selected( $meta['ofp_listing_type'], 'rent' ); ?>>For Rent</option>
                 </select>
             </div>
 
@@ -317,6 +320,27 @@ class OFP_Property_CPT {
                 'ofp_property_meta'
             )
         ) {
+            // Quick Edit has no custom meta-box nonce. Keep the business
+            // status and property table aligned with its WordPress status.
+            if ( is_admin() && ( $_POST['action'] ?? '' ) === 'inline-save' && ( $_POST['post_type'] ?? '' ) === 'ofp_property' ) {
+                $wp_status = get_post_status( $post_id );
+                if ( $wp_status === 'publish' ) {
+                    update_post_meta( $post_id, 'ofp_status', 'live' );
+                } elseif ( $wp_status === 'pending' ) {
+                    update_post_meta( $post_id, 'ofp_status', 'pending_upload' );
+                }
+
+                // Save listing type from Quick Edit.
+                if ( isset( $_POST['ofp_listing_type'] ) ) {
+                    $listing_type = sanitize_text_field( wp_unslash( $_POST['ofp_listing_type'] ) );
+                    if ( in_array( $listing_type, [ 'sale', 'rent' ], true ) ) {
+                        update_post_meta( $post_id, 'ofp_listing_type', $listing_type );
+                    }
+                }
+
+                $client_id = absint( get_post_meta( $post_id, 'ofp_client_id', true ) );
+                self::sync_to_plugin_table( $post_id, $client_id );
+            }
             return;
         }
 
@@ -358,10 +382,19 @@ class OFP_Property_CPT {
         }
         update_post_meta( $post_id, 'ofp_is_featured', $is_featured );
 
-        // Sync back to ofp_properties table if a client is assigned.
-        $client_id = absint( $_POST['ofp_client_id'] ?? 0 );
-        if ( $client_id ) {
+        // Sync back to ofp_properties table if a client is assigned (or admin).
+        $client_id = isset( $_POST['ofp_client_id'] ) ? absint( $_POST['ofp_client_id'] ) : null;
+        if ( $client_id !== null ) {
             self::sync_to_plugin_table( $post_id, $client_id );
+        }
+
+        // Sync ofp_status to WP post_status
+        $ofp_status = $_POST['ofp_status'] ?? 'pending_upload';
+        $post_status = ( $ofp_status === 'live' ) ? 'publish' : 'draft';
+        if ( get_post_status( $post_id ) !== $post_status ) {
+            remove_action( 'save_post_ofp_property', [ $this, 'save_meta' ] );
+            wp_update_post( [ 'ID' => $post_id, 'post_status' => $post_status ] );
+            add_action( 'save_post_ofp_property', [ $this, 'save_meta' ] );
         }
     }
 
@@ -379,7 +412,7 @@ class OFP_Property_CPT {
      * @param  int $client_id  OFP client ID.
      * @return void
      */
-    public static function sync_to_plugin_table( int $post_id, int $client_id ): void {
+    public static function sync_to_plugin_table( int $post_id, int $client_id, bool $notify_owner = true ): void {
         global $wpdb;
         $p = $wpdb->prefix;
 
@@ -390,7 +423,7 @@ class OFP_Property_CPT {
             'title'          => $post->post_title,
             'description'    => $post->post_content,
             'property_type'  => get_post_meta( $post_id, 'ofp_property_type', true ),
-            'listing_type'   => get_post_meta( $post_id, 'ofp_listing_type',  true ),
+            'listing_type'   => get_post_meta( $post_id, 'ofp_listing_type',  true ) ?: 'sale',
             'price'          => (float) get_post_meta( $post_id, 'ofp_price',   true ),
             'price_period'   => get_post_meta( $post_id, 'ofp_price_period',   true ),
             'bedrooms'      => (int) get_post_meta( $post_id, 'ofp_bedrooms',  true ),
@@ -403,19 +436,86 @@ class OFP_Property_CPT {
         ];
 
         // Check if a row already exists for this wp_post_id.
-        $existing = $wpdb->get_var(
+        $existing = $wpdb->get_row(
             $wpdb->prepare(
-                "SELECT id FROM {$p}ofp_properties WHERE wp_post_id = %d LIMIT 1",
+                "SELECT id, status FROM {$p}ofp_properties WHERE wp_post_id = %d LIMIT 1",
                 $post_id
             )
         );
 
+        $old_status = $existing ? $existing->status : '';
+
         if ( $existing ) {
+            $data['client_id'] = $client_id;
             $wpdb->update( $p . 'ofp_properties', $data, [ 'wp_post_id' => $post_id ] );
         } else {
             $data['client_id']  = $client_id;
             $data['created_at'] = current_time( 'mysql' );
             $wpdb->insert( $p . 'ofp_properties', $data );
+        }
+        
+        $new_status = $data['status'];
+        
+        // Notify owner if status changes to pending_upload or live
+        if ( $notify_owner && $client_id && $old_status !== $new_status && in_array( $new_status, ['pending_upload', 'live'] ) ) {
+            $client = $wpdb->get_row( $wpdb->prepare( "SELECT email, owner_name FROM {$p}ofp_clients WHERE id = %d LIMIT 1", $client_id ) );
+            if ( $client && $client->email ) {
+                $subject = ( $new_status === 'live' ) ? 'Your Property is Live!' : 'Property Submitted for Review';
+                $message = ( $new_status === 'live' ) 
+                    ? "Hello {$client->owner_name},<br><br>Good news! Your property <strong>{$data['title']}</strong> has been approved and is now live on our platform."
+                    : "Hello {$client->owner_name},<br><br>Your property <strong>{$data['title']}</strong> has been successfully submitted and is currently awaiting admin approval.";
+                
+                if ( class_exists( 'OFP_Mailer' ) ) {
+                    OFP_Mailer::send( $client->email, $client->owner_name ?: 'there', $subject, $message );
+                }
+                if ( class_exists( 'OFP_Notification' ) ) {
+                    OFP_Notification::create( $client_id, 'property_status_changed', $subject, wp_strip_all_tags( $message ) );
+                }
+            }
+        }
+    }
+
+    /**
+     * Ensure every published CPT listing has a current commerce-table record
+     * with correct status and listing_type.
+     *
+     * Also fixes NULL listing_type values in the DB table (defaults to 'sale').
+     */
+    public static function reconcile_live_property_records(): void {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofp_properties';
+
+        // 1. Fix any NULL/empty listing_type in the ofp_properties table.
+        $wpdb->query( "UPDATE {$table} SET listing_type = 'sale' WHERE listing_type IS NULL OR listing_type = ''" );
+
+        // 2. Find all published CPT posts (regardless of ofp_status meta).
+        $post_ids = get_posts( [
+            'post_type'      => 'ofp_property',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+        ] );
+
+        foreach ( $post_ids as $post_id ) {
+            $post_id = (int) $post_id;
+
+            // Ensure ofp_status meta is 'live' for published posts.
+            if ( get_post_meta( $post_id, 'ofp_status', true ) !== 'live' ) {
+                update_post_meta( $post_id, 'ofp_status', 'live' );
+            }
+
+            // Ensure ofp_listing_type meta is set.
+            if ( ! get_post_meta( $post_id, 'ofp_listing_type', true ) ) {
+                update_post_meta( $post_id, 'ofp_listing_type', 'sale' );
+            }
+
+            // Resolve client_id and sync to plugin table.
+            $stored_client_id = get_post_meta( $post_id, 'ofp_client_id', true );
+            if ( $stored_client_id === '' ) {
+                $stored_client_id = $wpdb->get_var( $wpdb->prepare( "SELECT client_id FROM {$table} WHERE wp_post_id = %d LIMIT 1", $post_id ) );
+            }
+            $client_id = absint( $stored_client_id );
+            self::sync_to_plugin_table( $post_id, $client_id, false );
         }
     }
 
@@ -431,7 +531,7 @@ class OFP_Property_CPT {
         $post_id = wp_insert_post( [
             'post_title'   => sanitize_text_field( $property_data['title'] ?? 'New Property' ),
             'post_content' => wp_kses_post( $property_data['description'] ?? '' ),
-            'post_status'  => 'publish',
+            'post_status'  => ( ( $property_data['status'] ?? 'pending_upload' ) === 'live' ) ? 'publish' : 'draft',
             'post_type'    => 'ofp_property',
         ] );
 
@@ -481,11 +581,13 @@ class OFP_Property_CPT {
      */
     public function custom_columns( array $columns ): array {
         unset( $columns['date'] );
-        $columns['ofp_client']   = 'Client';
-        $columns['ofp_location'] = 'Location';
-        $columns['ofp_price']    = 'Price';
-        $columns['ofp_status']   = 'Status';
-        $columns['date']         = 'Date';
+        $columns['ofp_client']    = 'Client';
+        $columns['ofp_location']  = 'Location';
+        $columns['ofp_list_type'] = 'List Type';
+        $columns['ofp_prop_type'] = 'Property Type';
+        $columns['ofp_price']     = 'Price';
+        $columns['ofp_status']    = 'Status';
+        $columns['date']          = 'Date';
         return $columns;
     }
 
@@ -500,7 +602,10 @@ class OFP_Property_CPT {
         switch ( $column ) {
             case 'ofp_client':
                 $client_id = get_post_meta( $post_id, 'ofp_client_id', true );
-                if ( $client_id ) {
+                $owner_type = get_post_meta( $post_id, 'ofp_owner_type', true );
+                if ( 'platform' === $owner_type || (string) $client_id === '0' ) {
+                    echo esc_html__( 'Admin (Platform)', 'ofast-pipeline' );
+                } elseif ( $client_id ) {
                     global $wpdb;
                     $name = $wpdb->get_var(
                         $wpdb->prepare(
@@ -516,6 +621,19 @@ class OFP_Property_CPT {
 
             case 'ofp_location':
                 echo esc_html( get_post_meta( $post_id, 'ofp_location_text', true ) ?: '—' );
+                break;
+
+            case 'ofp_list_type':
+                $lt = get_post_meta( $post_id, 'ofp_listing_type', true );
+                $lt_colors = [ 'sale' => '#2563eb', 'rent' => '#8b5cf6' ];
+                $lt_color  = $lt_colors[ $lt ] ?? '#9ca3af';
+                echo '<span style="color:' . esc_attr( $lt_color ) . ';font-weight:600;" data-listing-type="' . esc_attr( $lt ) . '">'
+                    . esc_html( ucfirst( $lt ?: '—' ) )
+                    . '</span>';
+                break;
+
+            case 'ofp_prop_type':
+                echo esc_html( ucfirst( get_post_meta( $post_id, 'ofp_property_type', true ) ?: '—' ) );
                 break;
 
             case 'ofp_price':
@@ -540,6 +658,54 @@ class OFP_Property_CPT {
                     . '</span>';
                 break;
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // QUICK EDIT
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Add a Listing Type dropdown to the Quick Edit panel.
+     */
+    public function quick_edit_listing_type( string $column_name, string $post_type ): void {
+        if ( $column_name !== 'ofp_list_type' || $post_type !== 'ofp_property' ) return;
+        ?>
+        <fieldset class="inline-edit-col-right" style="clear:both;">
+            <div class="inline-edit-col">
+                <label class="inline-edit-group">
+                    <span class="title">Listing Type</span>
+                    <select name="ofp_listing_type">
+                        <option value="sale">For Sale</option>
+                        <option value="rent">For Rent</option>
+                    </select>
+                </label>
+            </div>
+        </fieldset>
+        <?php
+    }
+
+    /**
+     * Inline JS to populate the Quick Edit listing type dropdown
+     * with the current row's value when the user clicks "Quick Edit".
+     */
+    public function quick_edit_js(): void {
+        global $typenow;
+        if ( $typenow !== 'ofp_property' ) return;
+        ?>
+        <script>
+        (function($){
+            var origInlineEdit = inlineEditPost.edit;
+            inlineEditPost.edit = function(id){
+                origInlineEdit.apply(this, arguments);
+                if (typeof id === 'object') id = this.getId(id);
+                var row = $('#post-' + id);
+                var listingType = row.find('.column-ofp_list_type span[data-listing-type]').data('listing-type') || 'sale';
+                var editRow = $('#edit-' + id);
+                editRow.find('select[name="ofp_listing_type"]').val(listingType);
+            };
+        })(jQuery);
+        </script>
+        <?php
     }
 
     // ─────────────────────────────────────────────────────────────────────────

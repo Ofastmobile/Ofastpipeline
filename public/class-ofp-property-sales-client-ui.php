@@ -82,6 +82,12 @@ class OFP_Property_Sales_Client_UI {
                 link.href = item.url;
                 link.removeAttribute('aria-disabled');
                 link.classList.remove('locked');
+                link.classList.remove('active');
+                
+                if (window.location.href.indexOf(item.url) !== -1) {
+                    link.classList.add('active');
+                }
+
                 link.setAttribute('data-ofp-nav-marker', item.marker);
 
                 var icon = link.querySelector('.ofp-nav-icon');

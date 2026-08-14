@@ -219,7 +219,7 @@ $status_badges = [
                 <?php if ( empty( $recent_leads ) ) : ?>
                     <div class="ofp-empty">No recent leads found</div>
                 <?php else : ?>
-                    <div style="overflow-x:auto;">
+                    <div class="ofp-table-responsive">
                         <table class="ofp-table">
                             <thead>
                                 <tr>

@@ -28,13 +28,15 @@ class OFP_Property_Purchase_Admin {
     }
 
     public static function render_create(): void {
+        OFP_Property_CPT::reconcile_live_property_records();
         global $wpdb;
         $p = $wpdb->prefix;
 
         $properties = $wpdb->get_results(
-            "SELECT id, title, price, listing_type, client_id, owner_type
-             FROM {$p}ofp_properties
-             WHERE listing_type = 'sale' AND status IN ('live','pending_upload')
+            "SELECT pr.id, pr.title, pr.price, pr.listing_type, pr.client_id
+             FROM {$p}ofp_properties pr
+             LEFT JOIN {$p}postmeta pm_status ON pm_status.post_id = pr.wp_post_id AND pm_status.meta_key = 'ofp_status'
+             WHERE pr.listing_type = 'sale' AND ( pr.status = 'live' OR pm_status.meta_value = 'live' )
              ORDER BY title ASC"
         );
 

@@ -248,7 +248,7 @@ $status_badges = [
         </div>
         
         <?php if ( empty( $leads ) ) : ?>
-            <div class="ofp-table-wrap" style="margin-top: 0;">
+            <div class="ofp-table-wrap ofp-table-responsive" style="margin-top: 0;">
                 <table class="ofp-table">
                     <thead>
                         <tr>
@@ -275,7 +275,7 @@ $status_badges = [
                 </table>
             </div>
         <?php else : ?>
-            <div class="ofp-table-wrap" style="margin-top: 0;">
+            <div class="ofp-table-wrap ofp-table-responsive" style="margin-top: 0;">
                 <table class="ofp-table">
                     <thead>
                         <tr>

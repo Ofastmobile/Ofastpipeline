@@ -132,57 +132,111 @@ class OFP_Property_Payment_Records {
         <!doctype html><html lang="en"><head>
             <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
             <title>Property Payments — OFast Pipeline</title>
+            <!-- Dark theme script to avoid FOUC -->
+            <script>
+                (function() {
+                    var currentTheme = localStorage.getItem('ofp_theme') || 'dark';
+                    if (currentTheme === 'light') { document.documentElement.setAttribute('data-theme', 'light'); }
+                })();
+            </script>
             <?php wp_head(); ?>
             <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+            <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
         </head><body class="ofp-portal-body">
         <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
-        <div class="ofp-container"><div style="padding-bottom:60px;">
-            <h1 style="font-size:22px;font-weight:700;margin:0 0 24px;">Property Payments</h1>
-            <div class="ofp-card">
-                <p class="ofp-hint">All payments for purchases belonging to your properties. Pending manual payments can be verified or rejected here.</p>
-                <div style="overflow-x:auto;">
-                    <table class="widefat striped" style="min-width:1250px;">
-                        <thead><tr><th>ID</th><th>Buyer</th><th>Property</th><th>Purchase</th><th>Amount</th><th>Method</th><th>Reference</th><th>Status</th><th>Receipt</th><th>Paid</th><th>Balance</th><th>Action</th><th>Created</th></tr></thead>
-                        <tbody>
-                        <?php if ( empty( $rows ) ) : ?>
-                            <tr><td colspan="13">No property payment records yet.</td></tr>
-                        <?php else : foreach ( $rows as $row ) : ?>
-                            <tr>
-                                <td>#<?php echo esc_html( $row->id ); ?></td>
-                                <td><?php echo esc_html( $row->buyer_name ); ?><br><small><?php echo esc_html( $row->buyer_phone ); ?></small></td>
-                                <td><?php echo esc_html( $row->property_title ?: '—' ); ?></td>
-                                <td>#<?php echo esc_html( $row->purchase_id ); ?></td>
-                                <td><strong>NGN <?php echo esc_html( number_format( (float) $row->amount, 2 ) ); ?></strong></td>
-                                <td><?php echo esc_html( ucfirst( str_replace( '_', ' ', $row->payment_method ) ) ); ?></td>
-                                <td><code><?php echo esc_html( $row->payer_reference ?: ( $row->gateway_reference ?: '—' ) ); ?></code></td>
-                                <td><?php echo esc_html( ucfirst( str_replace( '_', ' ', $row->status ) ) ); ?></td>
-                                <td><?php echo $row->receipt_path ? 'Available' : '—'; ?></td>
-                                <td>NGN <?php echo esc_html( number_format( (float) $row->purchase_paid, 2 ) ); ?></td>
-                                <td>NGN <?php echo esc_html( number_format( (float) $row->purchase_balance, 2 ) ); ?></td>
-                                <td>
-                                    <?php if ( 'pending_verification' === $row->status ) : ?>
-                                        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
-                                            <?php wp_nonce_field( 'ofp_client_payment_verify_' . $row->id ); ?>
-                                            <input type="hidden" name="action" value="ofp_client_payment_verify">
-                                            <input type="hidden" name="payment_id" value="<?php echo esc_attr( $row->id ); ?>">
-                                            <button class="button button-primary" type="submit">Verify</button>
-                                        </form>
-                                        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
-                                            <?php wp_nonce_field( 'ofp_client_payment_reject_' . $row->id ); ?>
-                                            <input type="hidden" name="action" value="ofp_client_payment_reject">
-                                            <input type="hidden" name="payment_id" value="<?php echo esc_attr( $row->id ); ?>">
-                                            <button class="button" type="submit">Reject</button>
-                                        </form>
-                                    <?php else : ?>—<?php endif; ?>
-                                </td>
-                                <td><?php echo esc_html( $row->created_at ); ?></td>
-                            </tr>
-                        <?php endforeach; endif; ?>
-                        </tbody>
-                    </table>
+        <div class="ofp-container">
+            <div style="padding-bottom: 60px;">
+                <div style="margin: 0 0 24px;">
+                    <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
+                        Property Payments
+                    </h1>
+                    <p style="color:#64748b; margin:0; font-size:14px;">All payments for purchases belonging to your properties. Pending manual payments can be verified or rejected here.</p>
+                </div>
+                
+                <div class="ofp-card">
+                    <div style="overflow-x:auto;">
+                        <table class="ofp-table" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Buyer</th>
+                                    <th>Property</th>
+                                    <th>Purchase</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Reference</th>
+                                    <th>Status</th>
+                                    <th>Receipt</th>
+                                    <th>Paid</th>
+                                    <th>Balance</th>
+                                    <th>Action</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php if ( empty( $rows ) ) : ?>
+                                <tr><td colspan="13" style="text-align:center; color:#64748b;">No property payment records yet.</td></tr>
+                            <?php else : foreach ( $rows as $row ) : ?>
+                                <tr>
+                                    <td style="color:var(--text-muted);">#<?php echo esc_html( $row->id ); ?></td>
+                                    <td>
+                                        <div style="font-weight: 500; color: var(--text-main);"><?php echo esc_html( $row->buyer_name ); ?></div>
+                                        <div style="font-size: 12px; color: var(--text-muted);"><?php echo esc_html( $row->buyer_phone ); ?></div>
+                                    </td>
+                                    <td style="color:var(--text-main);"><?php echo esc_html( $row->property_title ?: '—' ); ?></td>
+                                    <td style="color:var(--text-main);">#<?php echo esc_html( $row->purchase_id ); ?></td>
+                                    <td><strong style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $row->amount, 2 ) ); ?></strong></td>
+                                    <td style="color:var(--text-main);"><?php echo esc_html( ucfirst( str_replace( '_', ' ', $row->payment_method ) ) ); ?></td>
+                                    <td>
+                                        <code style="font-size:12px; color:var(--text-main); background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px;">
+                                            <?php echo esc_html( $row->payer_reference ?: ( $row->gateway_reference ?: '—' ) ); ?>
+                                        </code>
+                                    </td>
+                                    <td>
+                                        <?php 
+                                            $status_styles = [
+                                                'verified' => 'background:#dcfce7; color:#16a34a;',
+                                                'pending'  => 'background:#fef3c7; color:#d97706;',
+                                                'pending_verification' => 'background:#fef3c7; color:#d97706;',
+                                                'failed'   => 'background:#fee2e2; color:#ef4444;',
+                                                'refunded' => 'background:rgba(128,128,128,0.1); color:var(--text-muted);'
+                                            ];
+                                            $style = $status_styles[ strtolower( $row->status ) ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
+                                        ?>
+                                        <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr($style); ?>">
+                                            <?php echo esc_html( ucfirst( str_replace( '_', ' ', $row->status ) ) ); ?>
+                                        </span>
+                                    </td>
+                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo $row->receipt_path ? 'Available' : '—'; ?></td>
+                                    <td style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $row->purchase_paid, 2 ) ); ?></td>
+                                    <td style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $row->purchase_balance, 2 ) ); ?></td>
+                                    <td>
+                                        <?php if ( 'pending_verification' === $row->status ) : ?>
+                                            <div style="display:flex; gap:8px;">
+                                                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                                                    <?php wp_nonce_field( 'ofp_client_payment_verify_' . $row->id ); ?>
+                                                    <input type="hidden" name="action" value="ofp_client_payment_verify">
+                                                    <input type="hidden" name="payment_id" value="<?php echo esc_attr( $row->id ); ?>">
+                                                    <button class="ofp-btn ofp-btn-primary" style="padding:4px 12px; font-size:12px;" type="submit">Verify</button>
+                                                </form>
+                                                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                                                    <?php wp_nonce_field( 'ofp_client_payment_reject_' . $row->id ); ?>
+                                                    <input type="hidden" name="action" value="ofp_client_payment_reject">
+                                                    <input type="hidden" name="payment_id" value="<?php echo esc_attr( $row->id ); ?>">
+                                                    <button class="ofp-btn" style="padding:4px 12px; font-size:12px; background:rgba(128,128,128,0.1); color:var(--text-muted); border:1px solid rgba(128,128,128,0.2);" type="submit">Reject</button>
+                                                </form>
+                                            </div>
+                                        <?php else : ?><span style="color:var(--text-muted);">—</span><?php endif; ?>
+                                    </td>
+                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo esc_html( wp_date( 'M j, Y', strtotime( $row->created_at ) ) ); ?></td>
+                                </tr>
+                            <?php endforeach; endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div></div>
+        </div>
         <?php wp_footer(); ?></body></html>
         <?php
         exit;

@@ -76,8 +76,14 @@ if ( $offer && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_offer
                 if ( is_wp_error( $purchase_id ) ) {
                     $error = $purchase_id->get_error_message();
                 } else {
-                    $notice = 'Offer accepted. Your purchase record has been created. Payment setup can now continue.';
-                    $offer->status = 'accepted';
+                    $expires = time() + ( 30 * DAY_IN_SECONDS );
+                    $payload = $purchase_id . '.' . $expires;
+                    $sig = hash_hmac( 'sha256', $payload, wp_salt( 'auth' ) );
+                    $checkout_token = $payload . '.' . $sig;
+                    
+                    $checkout_url = add_query_arg( 'token', rawurlencode( $checkout_token ), home_url( '/property-checkout/' ) );
+                    wp_safe_redirect( $checkout_url );
+                    exit;
                 }
             }
         }

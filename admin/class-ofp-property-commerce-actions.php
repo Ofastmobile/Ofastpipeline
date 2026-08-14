@@ -29,12 +29,14 @@ class OFP_Property_Commerce_Actions {
     }
 
     public static function render_create_offer(): void {
+        OFP_Property_CPT::reconcile_live_property_records();
         global $wpdb;
         $p = $wpdb->prefix;
         $properties = $wpdb->get_results(
-            "SELECT id, title, price, listing_type, client_id
-             FROM {$p}ofp_properties
-             WHERE listing_type = 'sale' AND status IN ('live','pending_upload')
+            "SELECT pr.id, pr.title, pr.price, pr.listing_type, pr.client_id
+             FROM {$p}ofp_properties pr
+             LEFT JOIN {$p}postmeta pm_status ON pm_status.post_id = pr.wp_post_id AND pm_status.meta_key = 'ofp_status'
+             WHERE pr.listing_type = 'sale' AND ( pr.status = 'live' OR pm_status.meta_value = 'live' )
              ORDER BY title ASC"
         );
         $message = isset( $_GET['created'] ) ? 'Installment offer created successfully.' : '';
@@ -173,6 +175,21 @@ class OFP_Property_Commerce_Actions {
         }
 
         $offer_url = add_query_arg( 'offer', rawurlencode( $raw_token ), home_url( '/property-offer' ) );
+
+        if ( $buyer_email && class_exists( 'OFP_Mailer' ) ) {
+            $subject = 'Property Installment Offer - ' . $property->title;
+            $message = "Hello {$buyer_name},<br><br>An installment payment plan has been created for the property: <strong>{$property->title}</strong>.<br><br>";
+            $message .= "Total Price: NGN " . number_format( $property->price, 2 ) . "<br>";
+            $message .= "Initial Payment: NGN " . number_format( $initial_payment, 2 ) . "<br><br>";
+            $message .= "Please review and accept the offer here:<br>";
+            $message .= "<a href=\"" . esc_url( $offer_url ) . "\">Accept Installment Offer</a><br><br>";
+            $message .= "If you have any questions, please contact us.";
+            OFP_Mailer::send( $buyer_email, $buyer_name, $subject, $message );
+        }
+
+        if ( $property->client_id && class_exists( 'OFP_Notification' ) ) {
+            OFP_Notification::create( (int) $property->client_id, 'property_offer_created', 'Installment offer created', sprintf( 'An installment offer was created for %s.', $property->title ) );
+        }
 
         wp_safe_redirect( add_query_arg(
             [ 'created' => 1, 'offer_id' => (int) $wpdb->insert_id, 'offer_url' => rawurlencode( $offer_url ) ],

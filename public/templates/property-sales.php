@@ -32,6 +32,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_property
         $initial_payment    = max( 0.0, (float) ( $_POST['initial_payment'] ?? 0 ) );
         $installment_amount = max( 0.0, (float) ( $_POST['installment_amount'] ?? 0 ) );
         $installment_count  = max( 0, absint( $_POST['installment_count'] ?? 0 ) );
+        $frequency          = sanitize_text_field( wp_unslash( $_POST['frequency'] ?? 'monthly' ) );
         $payment_start_date = sanitize_text_field( wp_unslash( $_POST['payment_start_date'] ?? '' ) );
         $first_due_date     = sanitize_text_field( wp_unslash( $_POST['first_due_date'] ?? '' ) );
         $grace_days         = min( 365, max( 0, absint( $_POST['grace_period_days'] ?? 7 ) ) );
@@ -81,7 +82,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_property
                     'total_price'        => (float) $property->price,
                     'initial_payment'    => $initial_payment,
                     'installment_amount' => $installment_amount,
-                    'frequency'          => 'monthly',
+                    'frequency'          => $frequency,
                     'installment_count'  => $installment_count,
                     'payment_start_date' => $payment_start_date,
                     'first_due_date'     => $first_due_date,
@@ -130,133 +131,185 @@ $existing_offers = $wpdb->get_results( $wpdb->prepare(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Property Sales — OFast Pipeline</title>
+    <!-- Dark theme script to avoid FOUC -->
+    <script>
+        (function() {
+            var currentTheme = localStorage.getItem('ofp_theme') || 'dark';
+            if (currentTheme === 'light') { document.documentElement.setAttribute('data-theme', 'light'); }
+        })();
+    </script>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+    <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
 </head>
 <body class="ofp-portal-body">
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 <div class="ofp-container">
-    <div class="ofp-page-header">
-        <h1>Property Sales</h1>
-        <p>Create installment offers for buyers and track the offers you have sent.</p>
-    </div>
-
-    <?php if ( $notice ) : ?>
-        <div class="ofp-alert ofp-alert-success" style="margin-bottom:20px;">
-            <?php echo esc_html( $notice ); ?>
-            <?php if ( $share_url ) : ?>
-                <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                    <input type="text" readonly value="<?php echo esc_attr( $share_url ); ?>" style="max-width:600px;flex:1;padding:9px;border:1px solid #d1d5db;border-radius:6px;background:#fff;">
-                    <button type="button" class="button" onclick="navigator.clipboard.writeText(this.previousElementSibling.value)">Copy Link</button>
-                </div>
-            <?php endif; ?>
+    <div style="padding-bottom: 60px;">
+        <div style="margin: 0 0 24px;">
+            <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
+                Property Sales
+            </h1>
+            <p style="color:#64748b; margin:0; font-size:14px;">Create installment offers for buyers and track the offers you have sent.</p>
         </div>
-    <?php endif; ?>
 
-    <?php if ( $error ) : ?>
-        <div class="ofp-alert ofp-alert-error" style="margin-bottom:20px;"><?php echo esc_html( $error ); ?></div>
-    <?php endif; ?>
-
-    <div class="ofp-card" style="margin-bottom:24px;">
-        <h2 style="margin-top:0;">Create Installment Offer</h2>
-        <p style="color:#64748b;font-size:13px;">This creates an offer only. No payment or virtual account is created until the buyer accepts it.</p>
-
-        <form method="post">
-            <?php wp_nonce_field( 'ofp_property_offer_' . $client->id, 'ofp_property_offer_nonce' ); ?>
-            <input type="hidden" name="ofp_create_property_offer" value="1">
-
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;">
-                <div>
-                    <label>Property</label>
-                    <select name="property_id" required style="width:100%;">
-                        <option value="">Select property</option>
-                        <?php foreach ( $properties as $property ) : ?>
-                            <?php if ( $property->listing_type !== 'sale' ) continue; ?>
-                            <option value="<?php echo esc_attr( $property->id ); ?>">
-                                <?php echo esc_html( $property->title . ' — NGN ' . number_format( (float) $property->price, 0 ) ); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div>
-                    <label>Buyer name</label>
-                    <input type="text" name="buyer_name" required style="width:100%;">
-                </div>
-                <div>
-                    <label>Buyer phone</label>
-                    <input type="text" name="buyer_phone" required style="width:100%;">
-                </div>
-                <div>
-                    <label>Buyer email</label>
-                    <input type="email" name="buyer_email" style="width:100%;">
-                </div>
-                <div>
-                    <label>Initial payment</label>
-                    <input type="number" step="0.01" min="0" name="initial_payment" value="0" required style="width:100%;">
-                </div>
-                <div>
-                    <label>Monthly installment</label>
-                    <input type="number" step="0.01" min="0" name="installment_amount" required style="width:100%;">
-                </div>
-                <div>
-                    <label>Number of installments</label>
-                    <input type="number" min="1" name="installment_count" required style="width:100%;">
-                </div>
-                <div>
-                    <label>Payment starts</label>
-                    <input type="date" name="payment_start_date" required style="width:100%;">
-                </div>
-                <div>
-                    <label>First payment due date</label>
-                    <input type="date" name="first_due_date" required style="width:100%;">
-                </div>
-                <div>
-                    <label>Grace period (days)</label>
-                    <input type="number" min="0" max="365" name="grace_period_days" value="7" required style="width:100%;">
-                </div>
-                <div>
-                    <label>Offer expires</label>
-                    <input type="date" name="offer_expires" style="width:100%;">
-                </div>
-            </div>
-
-            <div style="margin-top:18px;">
-                <label>Installment Terms / Agreement</label>
-                <textarea name="terms_text" rows="8" style="width:100%;" placeholder="Enter the seller's payment, cancellation, default, refund and property-specific terms.&#10;&#10;The buyer will see these terms before accepting the offer."></textarea>
-                <p style="font-size:12px;color:#64748b;">Use your approved business/legal wording. The accepted version will be stored with the purchase.</p>
-            </div>
-
-            <button type="submit" class="button button-primary" style="margin-top:16px;">Create Installment Offer</button>
-        </form>
-    </div>
-
-    <div class="ofp-card">
-        <h2 style="margin-top:0;">Recent Offers</h2>
-        <?php if ( empty( $existing_offers ) ) : ?>
-            <p style="color:#64748b;">No installment offers created yet.</p>
-        <?php else : ?>
-            <div style="overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;">
-                <table class="widefat striped" style="min-width:1250px;">
-                    <thead><tr><th>Buyer</th><th>Property</th><th>Amount</th><th>Plan</th><th>Payment Starts</th><th>First Due Date</th><th>Grace Period</th><th>Offer Expires</th><th>Status</th><th>Created</th></tr></thead>
-                    <tbody>
-                    <?php foreach ( $existing_offers as $offer ) : ?>
-                        <tr>
-                            <td><?php echo esc_html( $offer->buyer_name ); ?><br><small><?php echo esc_html( $offer->buyer_phone ); ?></small></td>
-                            <td><?php echo esc_html( $offer->property_title ?: '—' ); ?></td>
-                            <td>NGN <?php echo esc_html( number_format( (float) $offer->total_price, 2 ) ); ?></td>
-                            <td>Initial NGN <?php echo esc_html( number_format( (float) $offer->initial_payment, 2 ) ); ?><br>× <?php echo esc_html( $offer->installment_count ); ?> monthly</td>
-                            <td><?php echo $offer->payment_start_date ? esc_html( wp_date( 'M j, Y', strtotime( $offer->payment_start_date ) ) ) : '—'; ?></td>
-                            <td><?php echo $offer->first_due_date ? esc_html( wp_date( 'M j, Y', strtotime( $offer->first_due_date ) ) ) : '—'; ?></td>
-                            <td><?php echo esc_html( (int) $offer->grace_period_days ); ?> days</td>
-                            <td><?php echo $offer->expires_at ? esc_html( wp_date( 'M j, Y', strtotime( $offer->expires_at ) ) ) : '—'; ?></td>
-                            <td><?php echo esc_html( ucfirst( $offer->status ) ); ?></td>
-                            <td><?php echo esc_html( wp_date( 'M j, Y', strtotime( $offer->created_at ) ) ); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
+        <?php if ( $notice ) : ?>
+            <div class="ofp-alert ofp-alert-success" style="margin-bottom:24px;">
+                <?php echo esc_html( $notice ); ?>
+                <?php if ( $share_url ) : ?>
+                    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <input type="text" readonly value="<?php echo esc_attr( $share_url ); ?>" style="max-width:600px;flex:1;padding:10px 12px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;font-size:14px;">
+                        <button type="button" class="ofp-btn ofp-btn-primary" onclick="navigator.clipboard.writeText(this.previousElementSibling.value)">Copy Link</button>
+                    </div>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
+
+        <?php if ( $error ) : ?>
+            <div class="ofp-alert ofp-alert-error" style="margin-bottom:24px;"><?php echo esc_html( $error ); ?></div>
+        <?php endif; ?>
+
+        <div style="display:grid; grid-template-columns: 1fr; gap:24px;">
+            <div class="ofp-card">
+                <h3 style="margin-bottom:4px;">Create Installment Offer</h3>
+                <p class="ofp-hint">This creates an offer only. No payment or virtual account is created until the buyer accepts it.</p>
+
+                <form method="post" style="margin-top:24px;">
+                    <?php wp_nonce_field( 'ofp_property_offer_' . $client->id, 'ofp_property_offer_nonce' ); ?>
+                    <input type="hidden" name="ofp_create_property_offer" value="1">
+
+                    <div class="ofp-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                        <div class="ofp-field">
+                            <label>Property</label>
+                            <select name="property_id" required class="ofp-select" style="width:100%;">
+                                <option value="" hidden>— Select property —</option>
+                                <?php foreach ( $properties as $property ) : ?>
+                                    <?php if ( $property->listing_type !== 'sale' ) continue; ?>
+                                    <option value="<?php echo esc_attr( $property->id ); ?>">
+                                        <?php echo esc_html( $property->title . ' — NGN ' . number_format( (float) $property->price, 0 ) ); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="ofp-field">
+                            <label>Buyer Name</label>
+                            <input type="text" name="buyer_name" required style="width:100%;">
+                        </div>
+                        <div class="ofp-field">
+                            <label>Buyer Phone</label>
+                            <input type="text" name="buyer_phone" required style="width:100%;">
+                        </div>
+                        <div class="ofp-field">
+                            <label>Buyer Email <span class="ofp-hint" style="display:inline;margin:0;">(Optional)</span></label>
+                            <input type="email" name="buyer_email" style="width:100%;">
+                        </div>
+                        <div class="ofp-field">
+                            <label>Initial Payment (NGN)</label>
+                            <input type="number" step="0.01" min="0" name="initial_payment" value="0" required style="width:100%;">
+                        </div>
+                        <div class="ofp-field">
+                            <label>Monthly Installment (NGN)</label>
+                            <input type="number" step="0.01" min="0" name="installment_amount" required style="width:100%;">
+                        </div>
+                        <div class="ofp-field">
+                            <label>Number of Installments</label>
+                            <input type="number" min="1" name="installment_count" required style="width:100%;">
+                        </div>
+                        <div class="ofp-field">
+                            <label>Payment Starts</label>
+                            <input type="date" name="payment_start_date" required style="width:100%;">
+                        </div>
+                        <div class="ofp-field">
+                            <label>First Payment Due Date</label>
+                            <input type="date" name="first_due_date" required style="width:100%;">
+                        </div>
+                        <div class="ofp-field">
+                            <label>Grace Period (days)</label>
+                            <input type="number" min="0" max="365" name="grace_period_days" value="7" required style="width:100%;">
+                        </div>
+                        <div class="ofp-field">
+                            <label>Payment Frequency</label>
+                            <select name="frequency" required class="ofp-select" style="width:100%;">
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly" selected>Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                                <option value="biannually">Bi-annually</option>
+                                <option value="annually">Annually</option>
+                            </select>
+                        </div>
+                        <div class="ofp-field">
+                            <label>Offer Expires <span class="ofp-hint" style="display:inline;margin:0;">(Optional)</span></label>
+                            <input type="date" name="offer_expires" style="width:100%;">
+                        </div>
+                    </div>
+
+                    <div class="ofp-field" style="margin-top:20px;">
+                        <label>Installment Terms / Agreement</label>
+                        <textarea name="terms_text" rows="6" style="width:100%;" placeholder="Enter the seller's payment, cancellation, default, refund and property-specific terms.&#10;&#10;The buyer will see these terms before accepting the offer."></textarea>
+                        <p class="ofp-hint">Use your approved business/legal wording. The accepted version will be stored with the purchase.</p>
+                    </div>
+
+                    <div style="margin-top:24px;">
+                        <button type="submit" class="ofp-btn ofp-btn-primary">Create Installment Offer</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="ofp-card">
+                <h3>Recent Offers</h3>
+                <?php if ( empty( $existing_offers ) ) : ?>
+                    <p class="ofp-hint">No installment offers created yet.</p>
+                <?php else : ?>
+                    <div class="ofp-table-responsive">
+                        <table class="ofp-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Buyer</th>
+                                    <th>Property</th>
+                                    <th>Amount</th>
+                                    <th>Plan</th>
+                                    <th>Status</th>
+                                    <th style="text-align:right;">Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php foreach ( $existing_offers as $offer ) : ?>
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: 500; color: var(--text-main);"><?php echo esc_html( $offer->buyer_name ); ?></div>
+                                        <div style="font-size: 12px; color: var(--text-muted);"><?php echo esc_html( $offer->buyer_phone ); ?></div>
+                                    </td>
+                                    <td style="color: var(--text-main);"><?php echo esc_html( $offer->property_title ?: '—' ); ?></td>
+                                    <td style="color: var(--text-main);">NGN <?php echo esc_html( number_format( (float) $offer->total_price, 2 ) ); ?></td>
+                                    <td style="color: var(--text-muted); font-size:13px;">
+                                        Initial: NGN <?php echo esc_html( number_format( (float) $offer->initial_payment, 2 ) ); ?><br>
+                                        <?php echo esc_html( $offer->installment_count ); ?> × NGN <?php echo esc_html( number_format( (float) $offer->installment_amount, 2 ) ); ?>
+                                    </td>
+                                    <td>
+                                        <?php 
+                                            $status_styles = [
+                                                'pending'  => 'background:#fef3c7; color:#d97706;',
+                                                'accepted' => 'background:#dcfce7; color:#16a34a;',
+                                                'rejected' => 'background:#fee2e2; color:#ef4444;',
+                                                'expired'  => 'background:rgba(128,128,128,0.1); color:var(--text-muted);'
+                                            ];
+                                            $style = $status_styles[ $offer->status ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
+                                        ?>
+                                        <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr($style); ?>">
+                                            <?php echo esc_html( ucfirst( $offer->status ) ); ?>
+                                        </span>
+                                    </td>
+                                    <td style="text-align:right; color:var(--text-muted); font-size:13px;">
+                                        <?php echo esc_html( wp_date( 'M j, Y', strtotime( $offer->created_at ) ) ); ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 </div>
 <?php wp_footer(); ?>

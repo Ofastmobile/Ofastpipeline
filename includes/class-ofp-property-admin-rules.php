@@ -48,7 +48,10 @@ class OFP_Property_Admin_Rules {
     }
 
     public static function admin_owner_ui(): void {
-        if ( ! current_user_can( 'edit_posts' ) || ( $_GET['post_type'] ?? '' ) !== 'ofp_property' ) {
+        $post_id = absint( $_GET['post'] ?? 0 );
+        $is_property_editor = ( $_GET['post_type'] ?? '' ) === 'ofp_property'
+            || ( $post_id && get_post_type( $post_id ) === 'ofp_property' );
+        if ( ! current_user_can( 'edit_posts' ) || ! $is_property_editor ) {
             return;
         }
 
@@ -135,10 +138,16 @@ class OFP_Property_Admin_Rules {
         if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) return;
         if ( ! current_user_can( 'edit_post', $post_id ) ) return;
 
-        $owner_selected = isset( $_POST['ofp_owner_selected'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['ofp_owner_selected'] ) );
-        $client_id = isset( $_POST['ofp_client_id'] ) ? absint( $_POST['ofp_client_id'] ) : 0;
+        // Quick Edit and bulk edit do not submit this custom property-owner
+        // field. They must retain the current ownership and post status.
+        if ( ! isset( $_POST['ofp_client_id'] ) ) {
+            return;
+        }
 
-        if ( ! $owner_selected ) {
+        $owner_value = sanitize_text_field( wp_unslash( $_POST['ofp_client_id'] ) );
+        $client_id   = absint( $owner_value );
+
+        if ( $owner_value === '' ) {
             if ( 'publish' === $post->post_status ) {
                 remove_action( 'save_post_ofp_property', [ __CLASS__, 'validate_owner_on_save' ], 99 );
                 wp_update_post( [ 'ID' => $post_id, 'post_status' => 'draft' ] );

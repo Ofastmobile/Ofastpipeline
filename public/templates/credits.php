@@ -199,7 +199,7 @@ $transactions = $wpdb->get_results(
                 <p>Your payment history will appear here.</p>
             </div>
         <?php else : ?>
-            <div class="ofp-table-wrap">
+            <div class="ofp-table-wrap ofp-table-responsive">
                 <table class="ofp-table">
                     <thead>
                         <tr><th>Type</th><th>Plan</th><th>Amount</th><th>Status</th><th>Period</th><th>Date</th></tr>
@@ -238,7 +238,7 @@ $transactions = $wpdb->get_results(
     <?php if ( ! empty( $transactions ) ) : ?>
         <div class="ofp-card">
             <h3>Credit Transaction Log</h3>
-            <div class="ofp-table-wrap">
+            <div class="ofp-table-wrap ofp-table-responsive">
                 <table class="ofp-table">
                     <thead>
                         <tr><th>Channel</th><th>Type</th><th>Amount</th><th>Balance After</th><th>Date</th></tr>

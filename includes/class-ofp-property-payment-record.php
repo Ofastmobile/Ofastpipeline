@@ -43,10 +43,14 @@ class OFP_Property_Payment_Record {
         $p = $wpdb->prefix;
         $payment = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p}ofp_property_payments WHERE id = %d LIMIT 1", $payment_id ) );
         if ( ! $payment ) return [ 'success' => false, 'error' => 'Payment not found.' ];
-        if ( 'successful' !== $payment->status ) {
+        $newly_successful = 'successful' !== $payment->status;
+        if ( $newly_successful ) {
             $wpdb->update( "{$p}ofp_property_payments", [ 'status' => 'successful', 'verified_by' => $verified_by ?: null, 'verified_at' => current_time( 'mysql' ), 'updated_at' => current_time( 'mysql' ) ], [ 'id' => $payment_id ] );
         }
         $allocation = OFP_Property_Commerce::allocate_payment( $payment_id );
+        if ( $newly_successful ) {
+            do_action( 'ofp_property_payment_processed', (int) $payment->purchase_id, 0, (float) $payment->amount, $allocation, (string) $payment->gateway, (string) ( $payment->gateway_reference ?: $payment->payer_reference ) );
+        }
         return [ 'success' => true, 'allocation' => $allocation ];
     }
 
