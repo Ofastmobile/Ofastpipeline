@@ -5,7 +5,7 @@
  * Description: Done-for-you lead pipeline and CRM automation engine for SMB clients in Nigeria.
  * Version:     2.1.0
  * Author:      Olabode / Bofast World
- * Author URI: https://bofastworld.com
+ * Author URI:  https://bofastworld.com
  * Text Domain: ofast-pipeline
  * Domain Path: /languages
  * Requires at least: 6.0
@@ -52,6 +52,7 @@ require_once OFP_PATH . 'includes/class-ofp-property-purchase-service.php';
 require_once OFP_PATH . 'includes/class-ofp-property-comms-bridge.php';
 require_once OFP_PATH . 'includes/class-ofp-property-manual-payment.php';
 require_once OFP_PATH . 'includes/class-ofp-property-payment-records.php';
+require_once OFP_PATH . 'includes/class-ofp-property-checkout.php';
 
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-monnify.php';
@@ -104,6 +105,8 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Property_Marketplace::init();
     OFP_Property_Contact::init();
     OFP_Property_Comms_Bridge::init();
+    OFP_Property_Checkout::init();
+    OFP_Property_Payment_Records::init();
 } );
 
 add_action( 'init', function (): void {
