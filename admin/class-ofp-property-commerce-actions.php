@@ -172,10 +172,13 @@ class OFP_Property_Commerce_Actions {
             wp_die( esc_html__( 'The installment offer could not be created.', 'ofast-pipeline' ) );
         }
 
+        $offer_id  = (int) $wpdb->insert_id;
         $offer_url = add_query_arg( 'offer', rawurlencode( $raw_token ), home_url( '/property-offer' ) );
 
+        do_action( 'ofp_property_offer_created', $offer_id, $raw_token, $offer_url );
+
         wp_safe_redirect( add_query_arg(
-            [ 'created' => 1, 'offer_id' => (int) $wpdb->insert_id, 'offer_url' => rawurlencode( $offer_url ) ],
+            [ 'created' => 1, 'offer_id' => $offer_id, 'offer_url' => rawurlencode( $offer_url ) ],
             admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-offers' )
         ) );
         exit;
