@@ -41,23 +41,50 @@ class OFP_Property_Payment_Context {
             if ( $existing ) return true;
         }
 
-        $result = OFP_Property_Payment_Record::create([
-            'purchase_id' => (int) $purchase->id,
-            'payment_method' => 'checkout',
-            'gateway' => $gateway,
-            'gateway_reference' => $provider_reference ?: $reference,
-            'amount' => $amount,
-            'status' => 'successful',
-            'payer_name' => $purchase->buyer_name,
-            'payer_reference' => $reference,
-        ]);
+        // Checkout creates the canonical pending record before redirecting to
+        // the gateway. Promote that exact record on verified webhook instead
+        // of inserting a second payment row.
+        $payment = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM {$p}ofp_property_payments WHERE purchase_id = %d AND payer_reference = %s AND status = 'pending_verification' ORDER BY id DESC LIMIT 1",
+            (int) $purchase->id,
+            sanitize_text_field( $reference )
+        ) );
 
-        if ( is_wp_error( $result ) ) {
-            error_log( '[OFP_Property_Payment_Context] Could not record property payment for ' . $reference );
-            return false;
+        if ( $payment ) {
+            $wpdb->update(
+                "{$p}ofp_property_payments",
+                [
+                    'payment_method'    => 'checkout',
+                    'gateway'           => sanitize_key( $gateway ),
+                    'gateway_reference' => sanitize_text_field( $provider_reference ?: $reference ),
+                    'amount'            => $amount,
+                    'status'            => 'successful',
+                    'verified_at'       => current_time( 'mysql' ),
+                    'updated_at'        => current_time( 'mysql' ),
+                ],
+                [ 'id' => (int) $payment->id ]
+            );
+            $payment_id = (int) $payment->id;
+        } else {
+            $result = OFP_Property_Payment_Record::create([
+                'purchase_id'       => (int) $purchase->id,
+                'payment_method'    => 'checkout',
+                'gateway'           => $gateway,
+                'gateway_reference' => $provider_reference ?: $reference,
+                'amount'            => $amount,
+                'status'            => 'successful',
+                'payer_name'       => $purchase->buyer_name,
+                'payer_reference'  => $reference,
+            ]);
+
+            if ( is_wp_error( $result ) ) {
+                error_log( '[OFP_Property_Payment_Context] Could not record property payment for ' . $reference );
+                return false;
+            }
+
+            $payment_id = (int) $result;
         }
 
-        $payment_id = (int) $result;
         $allocation = OFP_Property_Commerce::allocate_payment( $payment_id );
 
         do_action( 'ofp_property_payment_processed', (int) $purchase->id, (int) $installment->id, $amount, $allocation, $gateway, $reference );
