@@ -55,17 +55,27 @@ class OFP_Property_Checkout {
 
         if ( ! $installment ) wp_die( esc_html__( 'No outstanding installment is available for payment.', 'ofast-pipeline' ) );
 
-        $gateway_slug = sanitize_key( $_GET['gateway'] ?? 'paystack' );
-        if ( ! in_array( $gateway_slug, [ 'paystack', 'flutterwave' ], true ) ) $gateway_slug = 'paystack';
+        $configured = self::configured_gateways();
+        $requested_gateway = sanitize_key( $_GET['gateway'] ?? '' );
+        $gateway_slug = in_array( $requested_gateway, $configured, true ) ? $requested_gateway : ( in_array( 'paystack', $configured, true ) ? 'paystack' : ( $configured[0] ?? 'paystack' ) );
 
+        $checkout_return = sanitize_key( $_GET['checkout'] ?? '' ) === 'return';
         $error = '';
+        $notice = '';
+
+        if ( $checkout_return ) {
+            $notice = 'Your checkout has been returned to this page. Final payment confirmation comes from the gateway notification, so your payment may still be processing.';
+        }
+
         if ( 'POST' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {
             if ( ! wp_verify_nonce( $_POST['checkout_nonce'] ?? '', 'ofp_property_checkout_' . $installment->id ) ) {
                 $error = 'Security check failed. Please try again.';
+            } elseif ( empty( $configured ) ) {
+                $error = 'Online checkout is not currently available. Please use Manual Payment or contact the property owner.';
             } else {
                 $amount = max( 0.0, (float) ( $_POST['amount'] ?? 0 ) );
-                $gateway_slug = sanitize_key( $_POST['gateway'] ?? $gateway_slug );
-                if ( ! in_array( $gateway_slug, [ 'paystack', 'flutterwave' ], true ) ) $gateway_slug = 'paystack';
+                $requested = sanitize_key( $_POST['gateway'] ?? $gateway_slug );
+                $gateway_slug = in_array( $requested, $configured, true ) ? $requested : ( in_array( 'paystack', $configured, true ) ? 'paystack' : $configured[0] );
                 $outstanding = max( 0.0, (float) $installment->amount_due - (float) $installment->amount_paid );
 
                 if ( $amount <= 0 || $amount > $outstanding + 0.00001 ) {
@@ -75,14 +85,14 @@ class OFP_Property_Checkout {
                 } else {
                     $reference = OFP_Property_Payment_Context::generate_reference( (int) $installment->id );
                     $payment_id = OFP_Property_Payment_Record::create([
-                        'purchase_id'      => (int) $purchase_id,
-                        'payment_method'   => 'checkout',
-                        'gateway'          => $gateway_slug,
-                        'gateway_reference'=> $reference,
-                        'amount'           => $amount,
-                        'status'           => 'pending_verification',
-                        'payer_name'       => $purchase->buyer_name,
-                        'payer_reference'  => $reference,
+                        'purchase_id'       => (int) $purchase_id,
+                        'payment_method'    => 'checkout',
+                        'gateway'           => $gateway_slug,
+                        'gateway_reference' => $reference,
+                        'amount'            => $amount,
+                        'status'            => 'pending_verification',
+                        'payer_name'        => $purchase->buyer_name,
+                        'payer_reference'   => $reference,
                     ]);
 
                     if ( is_wp_error( $payment_id ) ) {
@@ -97,7 +107,12 @@ class OFP_Property_Checkout {
                             'name'         => $purchase->buyer_name,
                             'phone'        => $purchase->buyer_phone,
                             'description'  => 'Property installment — ' . ( $purchase->property_title ?: 'Property Purchase' ),
-                            'redirect_url' => add_query_arg([ 'token' => rawurlencode( $token ), 'installment' => (int) $installment->id, 'gateway' => $gateway_slug, 'checkout' => 'return' ], home_url( '/property-checkout/' ) ),
+                            'redirect_url' => add_query_arg([
+                                'token'       => rawurlencode( $token ),
+                                'installment' => (int) $installment->id,
+                                'gateway'     => $gateway_slug,
+                                'checkout'    => 'return',
+                            ], home_url( '/property-checkout/' ) ),
                         ]) : null;
 
                         if ( $url ) {
@@ -105,16 +120,38 @@ class OFP_Property_Checkout {
                             exit;
                         }
 
-                        $wpdb->update( "{$p}ofp_property_payments", [ 'status' => 'failed', 'note' => 'Gateway initialization failed.', 'updated_at' => current_time( 'mysql' ) ], [ 'id' => (int) $payment_id ] );
+                        $wpdb->update(
+                            "{$p}ofp_property_payments",
+                            [
+                                'status'     => 'failed',
+                                'note'       => 'Gateway initialization failed.',
+                                'updated_at' => current_time( 'mysql' ),
+                            ],
+                            [ 'id' => (int) $payment_id ]
+                        );
                         $error = 'Unable to start checkout. Please try again or use Manual Payment.';
                     }
                 }
             }
         }
 
+        $outstanding = max( 0.0, (float) $installment->amount_due - (float) $installment->amount_paid );
         ?>
-        <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Property Checkout</title><?php wp_head(); ?><style>body{font-family:system-ui;background:#f5f7fb;color:#111827}.wrap{max-width:700px;margin:40px auto;padding:20px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:28px}.field{margin-bottom:16px}.field label{display:block;font-weight:600;margin-bottom:7px}.field input,.field select{width:100%;box-sizing:border-box;padding:11px;border:1px solid #d1d5db;border-radius:8px}.btn{border:0;border-radius:8px;padding:12px 18px;font-weight:700;background:#2563eb;color:#fff;cursor:pointer}.error{padding:14px;border-radius:9px;background:#fef2f2;color:#991b1b;margin-bottom:16px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}.meta div{background:#f8fafc;border-radius:10px;padding:12px}.meta small{display:block;color:#64748b}</style></head><body><div class="wrap"><div class="card"><h1>Property Checkout</h1><p><?php echo esc_html( $purchase->property_title ?: 'Property Purchase' ); ?></p><?php if ( $error ) : ?><div class="error"><?php echo esc_html( $error ); ?></div><?php endif; ?><div class="meta"><div><small>Buyer</small><strong><?php echo esc_html( $purchase->buyer_name ); ?></strong></div><div><small>Outstanding installment</small><strong>NGN <?php echo esc_html( number_format( max( 0.0, (float) $installment->amount_due - (float) $installment->amount_paid ), 2 ) ); ?></strong></div></div><form method="post"><?php wp_nonce_field( 'ofp_property_checkout_' . $installment->id, 'checkout_nonce' ); ?><div class="field"><label>Amount to pay</label><input type="number" name="amount" min="0.01" step="0.01" max="<?php echo esc_attr( max( 0.01, (float) $installment->amount_due - (float) $installment->amount_paid ) ); ?>" value="<?php echo esc_attr( number_format( max( 0.0, (float) $installment->amount_due - (float) $installment->amount_paid ), 2, '.', '' ) ); ?>" required></div><div class="field"><label>Gateway</label><select name="gateway"><option value="paystack" <?php selected( $gateway_slug, 'paystack' ); ?>>Paystack</option><option value="flutterwave" <?php selected( $gateway_slug, 'flutterwave' ); ?>>Flutterwave</option></select></div><button class="btn" type="submit">Continue to Secure Checkout</button></form></div></div><?php wp_footer(); ?></body></html>
+        <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Property Checkout</title><?php wp_head(); ?><style>body{font-family:system-ui;background:#f5f7fb;color:#111827}.wrap{max-width:700px;margin:40px auto;padding:20px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:28px}.field{margin-bottom:16px}.field label{display:block;font-weight:600;margin-bottom:7px}.field input,.field select{width:100%;box-sizing:border-box;padding:11px;border:1px solid #d1d5db;border-radius:8px}.btn{border:0;border-radius:8px;padding:12px 18px;font-weight:700;background:#2563eb;color:#fff;cursor:pointer}.error{padding:14px;border-radius:9px;background:#fef2f2;color:#991b1b;margin-bottom:16px}.notice{padding:14px;border-radius:9px;background:#eff6ff;color:#1e40af;margin-bottom:16px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}.meta div{background:#f8fafc;border-radius:10px;padding:12px}.meta small{display:block;color:#64748b}.muted{color:#64748b;font-size:13px}</style></head><body><div class="wrap"><div class="card"><h1>Property Checkout</h1><p><?php echo esc_html( $purchase->property_title ?: 'Property Purchase' ); ?></p><?php if ( $error ) : ?><div class="error"><?php echo esc_html( $error ); ?></div><?php endif; ?><?php if ( $notice ) : ?><div class="notice"><?php echo esc_html( $notice ); ?></div><?php endif; ?><div class="meta"><div><small>Buyer</small><strong><?php echo esc_html( $purchase->buyer_name ); ?></strong></div><div><small>Outstanding installment</small><strong>NGN <?php echo esc_html( number_format( $outstanding, 2 ) ); ?></strong></div></div><?php if ( empty( $configured ) ) : ?><p class="muted">Online gateways are not currently configured. You can use the Manual Payment option from your secure payment link.</p><?php else : ?><form method="post"><?php wp_nonce_field( 'ofp_property_checkout_' . $installment->id, 'checkout_nonce' ); ?><div class="field"><label>Amount to pay</label><input type="number" name="amount" min="0.01" step="0.01" max="<?php echo esc_attr( max( 0.01, $outstanding ) ); ?>" value="<?php echo esc_attr( number_format( $outstanding, 2, '.', '' ) ); ?>" required></div><div class="field"><label>Payment gateway</label><select name="gateway"><?php foreach ( $configured as $slug ) : ?><option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $gateway_slug, $slug ); ?>><?php echo esc_html( 'paystack' === $slug ? 'Paystack' : 'Flutterwave' ); ?><?php echo 'paystack' === $slug ? ' — recommended' : ''; ?></option><?php endforeach; ?></select></div><p class="muted">You can choose either configured online gateway. The payment record will keep the actual gateway used.</p><button class="btn" type="submit">Continue to Secure Checkout</button></form><?php endif; ?></div></div><?php wp_footer(); ?></body></html>
         <?php exit;
+    }
+
+    private static function configured_gateways(): array {
+        $configured = [];
+        foreach ( [ 'paystack', 'flutterwave' ] as $slug ) {
+            $class = 'OFP_Gateway_' . ucfirst( $slug );
+            if ( ! class_exists( $class ) ) continue;
+            $gateway = new $class();
+            if ( method_exists( $gateway, 'is_configured' ) && $gateway->is_configured() && method_exists( $gateway, 'initiate_transaction' ) ) {
+                $configured[] = $slug;
+            }
+        }
+        return $configured;
     }
 
     private static function verify_purchase_token( string $token ): ?int {
