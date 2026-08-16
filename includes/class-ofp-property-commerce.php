@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OFP_Property_Commerce {
 
-    const SCHEMA_VERSION = '1.0.0';
+    const SCHEMA_VERSION = '1.0.3';
 
     /**
      * Bootstrap the property-commerce layer.
@@ -31,7 +31,8 @@ class OFP_Property_Commerce {
      * property payments can evolve without changing subscription entitlements.
      */
     private static function install_schema(): void {
-        if ( get_option( 'ofp_property_commerce_schema' ) === self::SCHEMA_VERSION ) {
+        $current_version = get_option( 'ofp_property_commerce_schema', '0.0.0' );
+        if ( $current_version === self::SCHEMA_VERSION ) {
             return;
         }
 
@@ -56,9 +57,10 @@ class OFP_Property_Commerce {
             first_due_date        DATE NULL,
             grace_period_days     INT UNSIGNED NOT NULL DEFAULT 7,
             reminder_days         VARCHAR(100) NOT NULL DEFAULT '7,3,1',
-            terms_text            LONGTEXT NULL,
-            terms_version         VARCHAR(40) NOT NULL DEFAULT '1',
-            offer_token_hash      CHAR(64) NOT NULL,
+            terms_text            TEXT NULL,
+            terms_version         VARCHAR(20) NOT NULL DEFAULT '1',
+            offer_token           VARCHAR(64) NULL,
+            offer_token_hash      VARCHAR(64) NOT NULL,
             status                VARCHAR(20) NOT NULL DEFAULT 'pending',
             expires_at            DATETIME NULL,
             accepted_at           DATETIME NULL,
@@ -168,6 +170,21 @@ class OFP_Property_Commerce {
             KEY payment_id (payment_id),
             KEY installment_id (installment_id)
         ) {$charset_collate};" );
+
+        // Migrations
+        if ( version_compare( $current_version, '1.0.3', '<' ) ) {
+            $cols = $wpdb->get_col( "DESCRIBE {$p}ofp_property_offers" );
+            $adds = [];
+            if ( ! in_array( 'initial_payment', $cols, true ) ) $adds[] = "ADD COLUMN `initial_payment` DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER `total_price`";
+            if ( ! in_array( 'installment_amount', $cols, true ) ) $adds[] = "ADD COLUMN `installment_amount` DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER `initial_payment`";
+            if ( ! in_array( 'frequency', $cols, true ) ) $adds[] = "ADD COLUMN `frequency` VARCHAR(20) NOT NULL DEFAULT 'monthly' AFTER `installment_amount`";
+            if ( ! in_array( 'installment_count', $cols, true ) ) $adds[] = "ADD COLUMN `installment_count` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `frequency`";
+            if ( ! in_array( 'offer_token', $cols, true ) ) $adds[] = "ADD COLUMN `offer_token` VARCHAR(64) NULL AFTER `terms_version`";
+            
+            if ( ! empty( $adds ) ) {
+                $wpdb->query( "ALTER TABLE {$p}ofp_property_offers " . implode( ', ', $adds ) );
+            }
+        }
 
         update_option( 'ofp_property_commerce_schema', self::SCHEMA_VERSION, false );
     }

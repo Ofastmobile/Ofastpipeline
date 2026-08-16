@@ -18,7 +18,7 @@ class OFP_Property_Purchase_Admin {
         if ( ! current_user_can( 'manage_options' ) ) return;
 
         add_submenu_page(
-            'edit.php?post_type=ofp_property',
+            null,
             'Add Property Purchase',
             'Add Purchase',
             'manage_options',
@@ -28,6 +28,14 @@ class OFP_Property_Purchase_Admin {
     }
 
     public static function render_create(): void {
+        $active_tab = 'add-purchase';
+        ?>
+        <h2 class="nav-tab-wrapper">
+            <a href="?post_type=ofp_property&page=ofp-property-purchases" class="nav-tab">Purchases Table</a>
+            <a href="?post_type=ofp_property&page=ofp-property-add-purchase" class="nav-tab nav-tab-active">Add Purchase</a>
+        </h2>
+        <?php
+
         OFP_Property_CPT::reconcile_live_property_records();
         global $wpdb;
         $p = $wpdb->prefix;
@@ -100,17 +108,18 @@ class OFP_Property_Purchase_Admin {
                     <tr><th><label for="initial_payment">Initial payment</label></th><td><input type="number" step="0.01" min="0" id="initial_payment" name="initial_payment" required></td></tr>
                     <tr><th><label for="installment_amount">Installment amount</label></th><td><input type="number" step="0.01" min="0" id="installment_amount" name="installment_amount" required></td></tr>
                     <tr><th><label for="installment_count">Number of installments</label></th><td><input type="number" min="1" id="installment_count" name="installment_count" required></td></tr>
-                    <tr><th><label for="payment_start_date">Payment starts</label></th><td><input type="date" id="payment_start_date" name="payment_start_date" required></td></tr>
-                    <tr><th><label for="first_due_date">First due date</label></th><td><input type="date" id="first_due_date" name="first_due_date" required></td></tr>
-                    <tr><th><label for="grace_period_days">Grace period (days)</label></th><td><input type="number" min="0" max="365" value="7" id="grace_period_days" name="grace_period_days"></td></tr>
+                    <tr><th><label for="amount_paid">Amount paid (NGN)</label></th><td><input type="number" step="0.01" min="0" id="amount_paid" name="amount_paid" required><p class="description">The amount already received from the buyer (e.g. initial deposit).</p></td></tr>
                     <tr><th><label for="payment_method">Payment method</label></th><td>
-                        <select id="payment_method" name="payment_method">
-                            <option value="manual">Manual</option>
-                            <option value="checkout">Checkout (setup later)</option>
-                            <option value="virtual_account">Virtual Account (setup later)</option>
+                        <select id="payment_method" name="payment_method" required>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="bank_deposit">Bank Deposit</option>
+                            <option value="cash">Cash</option>
+                            <option value="virtual_account">Virtual Account</option>
+                            <option value="checkout">Checkout</option>
+                            <option value="other">Other</option>
                         </select>
-                        <p class="description">This records the intended method. Gateway collection is handled separately.</p>
                     </td></tr>
+                    <tr><th><label for="payment_reference">Payment reference</label></th><td><input class="regular-text" id="payment_reference" name="payment_reference"><p class="description">Receipt number, transaction ID, or any reference for this payment.</p></td></tr>
                 </table>
                 <?php submit_button( 'Create Purchase' ); ?>
             </form>
@@ -168,10 +177,11 @@ class OFP_Property_Purchase_Admin {
         $initial_payment = max( 0.0, (float) ( $_POST['initial_payment'] ?? 0 ) );
         $installment_amount = max( 0.0, (float) ( $_POST['installment_amount'] ?? 0 ) );
         $installment_count = max( 0, absint( $_POST['installment_count'] ?? 0 ) );
-        $payment_start_date = sanitize_text_field( wp_unslash( $_POST['payment_start_date'] ?? '' ) );
-        $first_due_date = sanitize_text_field( wp_unslash( $_POST['first_due_date'] ?? '' ) );
-        $grace_period_days = min( 365, max( 0, absint( $_POST['grace_period_days'] ?? 7 ) ) );
-        $payment_method = sanitize_key( $_POST['payment_method'] ?? 'manual' );
+        $amount_paid = max( 0.0, (float) ( $_POST['amount_paid'] ?? 0 ) );
+        $payment_method = sanitize_key( $_POST['payment_method'] ?? 'bank_transfer' );
+        $payment_reference = sanitize_text_field( wp_unslash( $_POST['payment_reference'] ?? '' ) );
+
+        $allowed_methods = [ 'bank_transfer', 'bank_deposit', 'cash', 'virtual_account', 'checkout', 'other' ];
 
         $property = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p}ofp_properties WHERE id = %d LIMIT 1", $property_id ) );
         $lead = $lead_id ? $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p}ofp_leads WHERE id = %d LIMIT 1", $lead_id ) ) : null;
@@ -182,15 +192,13 @@ class OFP_Property_Purchase_Admin {
         elseif ( ! $buyer_name || ! $buyer_phone ) $error = 'Buyer name and phone are required.';
         elseif ( $buyer_email !== '' && ! is_email( $buyer_email ) ) $error = 'Buyer email is invalid.';
         elseif ( (float) $property->price <= 0 ) $error = 'Property price is invalid.';
-        elseif ( $initial_payment < 0 || $initial_payment >= (float) $property->price ) $error = 'Initial payment must be less than the property price.';
-        elseif ( $installment_amount <= 0 || $installment_count <= 0 ) $error = 'Installment amount and count are required.';
-        elseif ( abs( ( (float) $property->price - $initial_payment ) - ( $installment_amount * $installment_count ) ) > 0.01 ) $error = 'The installment schedule must exactly cover the remaining property balance.';
-        elseif ( ! $payment_start_date || strtotime( $payment_start_date ) === false ) $error = 'Payment start date is required.';
-        elseif ( ! $first_due_date || strtotime( $first_due_date ) === false ) $error = 'First due date is required.';
-        elseif ( strtotime( $first_due_date ) < strtotime( $payment_start_date ) ) $error = 'First due date cannot be before the payment start date.';
+        elseif ( $initial_payment < 0 || $initial_payment > (float) $property->price ) $error = 'Initial payment cannot exceed the property price.';
+        elseif ( $initial_payment < (float) $property->price && ( $installment_amount <= 0 || $installment_count <= 0 ) ) $error = 'Installment amount and count are required for partial payments.';
+        elseif ( $initial_payment < (float) $property->price && abs( ( (float) $property->price - $initial_payment ) - ( $installment_amount * $installment_count ) ) > 0.01 ) $error = 'The installment schedule must exactly cover the remaining property balance.';
+        elseif ( $amount_paid <= 0 ) $error = 'Amount paid must be greater than zero.';
         elseif ( $lead_id && ! $lead ) $error = 'Selected lead could not be found.';
         elseif ( $lead && $lead->property_id && (int) $lead->property_id !== $property_id ) $error = 'Selected lead belongs to a different property.';
-        elseif ( ! in_array( $payment_method, [ 'manual', 'checkout', 'virtual_account' ], true ) ) $error = 'Invalid payment method.';
+        elseif ( ! in_array( $payment_method, $allowed_methods, true ) ) $error = 'Invalid payment method.';
 
         if ( $error ) {
             wp_safe_redirect( add_query_arg( 'error', rawurlencode( $error ), admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-add-purchase' ) ) );
@@ -206,9 +214,6 @@ class OFP_Property_Purchase_Admin {
             'initial_payment' => $initial_payment,
             'installment_amount' => $installment_amount,
             'installment_count' => $installment_count,
-            'payment_start_date' => $payment_start_date,
-            'first_due_date' => $first_due_date,
-            'grace_period_days' => $grace_period_days,
             'payment_method' => $payment_method,
         ]);
 
@@ -217,7 +222,23 @@ class OFP_Property_Purchase_Admin {
             exit;
         }
 
-        wp_safe_redirect( add_query_arg( 'created', (int) $result, admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-add-purchase' ) ) );
+        $purchase_id = (int) $result;
+
+        // Record the initial payment if amount_paid > 0.
+        if ( $amount_paid > 0 && class_exists( 'OFP_Property_Payment_Record' ) ) {
+            $method_label = str_replace( '_', ' ', $payment_method );
+            OFP_Property_Payment_Record::create([
+                'purchase_id'    => $purchase_id,
+                'payment_method' => 'manual',
+                'amount'         => $amount_paid,
+                'status'         => 'successful',
+                'payer_name'     => $buyer_name,
+                'payer_reference' => $payment_reference,
+                'note'           => 'Initial payment via ' . $method_label . ( $payment_reference ? ' (Ref: ' . $payment_reference . ')' : '' ),
+            ]);
+        }
+
+        wp_safe_redirect( add_query_arg( 'created', $purchase_id, admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-add-purchase' ) ) );
         exit;
     }
 }

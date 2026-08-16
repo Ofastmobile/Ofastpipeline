@@ -1,1 +1,11 @@
-Fatal error: Uncaught ArgumentCountError: Too few arguments to function OFP_Mailer::send(), 3 passed in C:\Users\bodma\Local Sites\ofast-pipeline\app\public\wp-content\plugins\ofast-pipeline\admin\class-ofp-property-commerce-actions.php on line 185 and exactly 4 expected in C:\Users\bodma\Local Sites\ofast-pipeline\app\public\wp-content\plugins\ofast-pipeline\includes\class-ofp-mailer.php:133 Stack trace: #0 C:\Users\bodma\Local Sites\ofast-pipeline\app\public\wp-content\plugins\ofast-pipeline\admin\class-ofp-property-commerce-actions.php(185): OFP_Mailer::send('vafolabi01@gmai...', 'Property Instal...', 'Hello victoria,...') #1 C:\Users\bodma\Local Sites\ofast-pipeline\app\public\wp-includes\class-wp-hook.php(341): OFP_Property_Commerce_Actions::handle_create_offer('') #2 C:\Users\bodma\Local Sites\ofast-pipeline\app\public\wp-includes\class-wp-hook.php(365): WP_Hook->apply_filters('', Array) #3 C:\Users\bodma\Local Sites\ofast-pipeline\app\public\wp-includes\plugin.php(522): WP_Hook->do_action(Array) #4 C:\Users\bodma\Local Sites\ofast-pipeline\app\public\wp-admin\admin-post.php(82): do_action('admin_post_ofp_...') #5 {main} thrown in C:\Users\bodma\Local Sites\ofast-pipeline\app\public\wp-content\plugins\ofast-pipeline\includes\class-ofp-mailer.php on line 133
+Initial payment
+NGN
+Warning: Undefined property: stdClass::$initial_payment in C:\Users\bodma\Local Sites\ofast-pipeline\app\public\wp-content\plugins\ofast-pipeline\public\templates\property-offer.php on line 135
+0.00
+Monthly installment
+NGN
+Warning: Undefined property: stdClass::$installment_amount in C:\Users\bodma\Local Sites\ofast-pipeline\app\public\wp-content\plugins\ofast-pipeline\public\templates\property-offer.php on line 136
+0.00
+Number of installments
+
+Warning: Undefined property: stdClass::$installment_count in C:\Users\bodma\Local Sites\ofast-pipeline\app\public\wp-content\plugins\ofast-pipeline\public\templates\property-offer.php on line 137

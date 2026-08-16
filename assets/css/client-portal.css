@@ -592,6 +592,7 @@ body.ofp-portal-body {
     border: 1px solid var(--border-color);
     border-radius: 16px;
     padding: 24px;
+    min-width: 0;
 }
 
 .ofp-card-header {

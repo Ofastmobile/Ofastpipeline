@@ -463,12 +463,25 @@ if ( isset( $_GET['edit'] ) ) {
                     <?php if ( empty( $my_properties ) ) : ?>
                         <p class="ofp-hint">You haven't added any properties yet.</p>
                     <?php else : ?>
-                        <div class="ofp-table-responsive">
-                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+                        <style>
+                            .property-title-link {
+                                color: #ffffff;
+                                text-decoration: none;
+                                transition: color 0.2s ease;
+                            }
+                            .property-title-link:hover {
+                                color: #3b82f6;
+                            }
+                        </style>
+                        <div class="ofp-table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; white-space: nowrap; min-width: 800px;">
                                 <thead>
                                     <tr style="border-bottom: 2px solid #e2e8f0; color: #64748b;">
                                         <th style="padding: 12px 16px;">Title</th>
-                                        <th style="padding: 12px 16px;">Type</th>
+                                        <th style="padding: 12px 16px;">Listing Type</th>
+                                        <th style="padding: 12px 16px;">Property Type</th>
+                                        <th style="padding: 12px 16px;">Location</th>
+                                        <th style="padding: 12px 16px;">Date</th>
                                         <th style="padding: 12px 16px;">Status</th>
                                         <th style="padding: 12px 16px;">Price</th>
                                         <th style="padding: 12px 16px; text-align:right;">Actions</th>
@@ -477,12 +490,31 @@ if ( isset( $_GET['edit'] ) ) {
                                 <tbody>
                                     <?php foreach ( $my_properties as $property ) : ?>
                                         <tr style="border-bottom: 1px solid #f1f5f9;">
-                                            <td style="padding: 12px 16px; color: #0f172a; font-weight: 500;"><?php echo esc_html( $property->post_title ); ?></td>
+                                            <td style="padding: 12px 16px; font-weight: 500;">
+                                                <a href="<?php echo esc_url( get_permalink( $property->ID ) ); ?>" target="_blank" class="property-title-link">
+                                                    <?php echo esc_html( $property->post_title ); ?>
+                                                </a>
+                                            </td>
                                             <td style="padding: 12px 16px;">
                                                 <?php 
                                                     $ltype = get_post_meta( $property->ID, 'ofp_listing_type', true ) ?: 'sale';
                                                     echo esc_html( ucfirst( $ltype ) );
                                                 ?>
+                                            </td>
+                                            <td style="padding: 12px 16px;">
+                                                <?php 
+                                                    $ptype = get_post_meta( $property->ID, 'ofp_property_type', true ) ?: '—';
+                                                    echo esc_html( ucfirst( $ptype ) );
+                                                ?>
+                                            </td>
+                                            <td style="padding: 12px 16px;">
+                                                <?php 
+                                                    $loc = get_post_meta( $property->ID, 'ofp_location_text', true ) ?: '—';
+                                                    echo esc_html( $loc );
+                                                ?>
+                                            </td>
+                                            <td style="padding: 12px 16px;">
+                                                <?php echo esc_html( wp_date( 'M j, Y', strtotime( $property->post_date ) ) ); ?>
                                             </td>
                                             <td style="padding: 12px 16px;">
                                                 <?php 

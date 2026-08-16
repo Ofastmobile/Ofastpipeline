@@ -163,6 +163,7 @@ class OFP_Property_Commerce_Admin {
         global $wpdb;
         $p = $wpdb->prefix;
         $created = isset( $_GET['created'] ) && '1' === $_GET['created'];
+        $resent = isset( $_GET['resent'] ) && '1' === $_GET['resent'];
         $offer_url = isset( $_GET['offer_url'] ) ? rawurldecode( wp_unslash( $_GET['offer_url'] ) ) : '';
 
         $offers = $wpdb->get_results(
@@ -174,6 +175,10 @@ class OFP_Property_Commerce_Admin {
              LIMIT 100"
         );
         ?>
+        <h2 class="nav-tab-wrapper">
+            <a href="?post_type=ofp_property&page=ofp-property-offers" class="nav-tab nav-tab-active">Offers Table</a>
+            <a href="?post_type=ofp_property&page=ofp-property-create-offer" class="nav-tab">Create Offer</a>
+        </h2>
         <div class="wrap">
             <h1>Installment Offers</h1>
             <p>Offers created for property buyers. Acceptance and payment setup happen from the secure buyer flow.</p>
@@ -188,6 +193,8 @@ class OFP_Property_Commerce_Admin {
                 </div>
             <?php elseif ( $created ) : ?>
                 <div class="notice notice-success is-dismissible"><p>Installment offer created successfully.</p></div>
+            <?php elseif ( $resent ) : ?>
+                <div class="notice notice-success is-dismissible"><p>Installment offer email resent successfully.</p></div>
             <?php endif; ?>
 
             <p><a class="button button-primary" href="<?php echo esc_url( admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-create-offer' ) ); ?>">Create Installment Offer</a></p>
@@ -196,8 +203,8 @@ class OFP_Property_Commerce_Admin {
                 <div class="notice notice-info"><p>No installment offers yet. Use <strong>Create Installment Offer</strong> above to start one.</p></div>
             <?php else : ?>
                 <div style="overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;border:1px solid #dcdcde;">
-                    <table class="widefat striped" style="min-width:1250px;margin:0;">
-                        <thead><tr><th>ID</th><th>Buyer</th><th>Property</th><th>Owner</th><th>Total</th><th>Plan</th><th>Payment Starts</th><th>First Due Date</th><th>Grace Period</th><th>Offer Expires</th><th>Status</th><th>Created</th></tr></thead>
+                    <table class="widefat striped" style="min-width:1300px;margin:0;">
+                        <thead><tr><th>ID</th><th>Buyer</th><th>Property</th><th>Owner</th><th>Total</th><th>Plan</th><th>Payment Starts</th><th>First Due Date</th><th>Grace Period</th><th>Offer Expires</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
                         <tbody>
                         <?php foreach ( $offers as $offer ) : ?>
                             <tr>
@@ -213,6 +220,17 @@ class OFP_Property_Commerce_Admin {
                                 <td><?php echo $offer->expires_at ? esc_html( wp_date( 'M j, Y', strtotime( $offer->expires_at ) ) ) : '—'; ?></td>
                                 <td><?php echo esc_html( ucfirst( $offer->status ) ); ?></td>
                                 <td><?php echo esc_html( wp_date( 'M j, Y', strtotime( $offer->created_at ) ) ); ?></td>
+                                <td>
+                                    <?php if ( $offer->status === 'accepted' ) : ?>
+                                        Sent
+                                    <?php else : ?>
+                                        <?php if ( ! empty( $offer->offer_token ) ) : ?>
+                                            <input type="hidden" value="<?php echo esc_attr( add_query_arg( 'offer', rawurlencode( $offer->offer_token ), home_url( '/property-offer' ) ) ); ?>">
+                                            <button type="button" class="button button-small" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);alert('Link copied!')" style="margin-bottom:4px;">Copy Link</button>
+                                        <?php endif; ?>
+                                        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_resend_offer&offer_id=' . $offer->id ), 'ofp_resend_offer' ) ); ?>" class="button button-small">Resend Email</a>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
@@ -224,17 +242,28 @@ class OFP_Property_Commerce_Admin {
     }
 
     public function render_purchases(): void {
+        if ( ! empty( $_GET['id'] ) ) {
+            $this->render_purchase_details();
+            return;
+        }
+
         global $wpdb;
         $p = $wpdb->prefix;
         $purchases = $wpdb->get_results(
-            "SELECT pu.*, p.title AS property_title, c.business_name
+            "SELECT pu.*, p.title AS property_title, c.business_name, o.expires_at AS offer_expires,
+             (SELECT MIN(due_date) FROM {$p}ofp_property_installments WHERE purchase_id = pu.id AND status = 'scheduled') AS next_due_date
              FROM {$p}ofp_property_purchases pu
              LEFT JOIN {$p}ofp_properties p ON p.id = pu.property_id
              LEFT JOIN {$p}ofp_clients c ON c.id = pu.client_id
+             LEFT JOIN {$p}ofp_property_offers o ON o.id = pu.offer_id
              ORDER BY pu.created_at DESC
              LIMIT 100"
         );
         ?>
+        <h2 class="nav-tab-wrapper">
+            <a href="?post_type=ofp_property&page=ofp-property-purchases" class="nav-tab nav-tab-active">Purchases Table</a>
+            <a href="?post_type=ofp_property&page=ofp-property-add-purchase" class="nav-tab">Add Purchase</a>
+        </h2>
         <div class="wrap">
             <h1>Property Purchases</h1>
             <p>Accepted installment purchases with their current paid amount and balance.</p>
@@ -243,12 +272,19 @@ class OFP_Property_Commerce_Admin {
             <?php else : ?>
                 <div style="overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;border:1px solid #dcdcde;">
                     <table class="widefat striped" style="min-width:1200px;margin:0;">
-                        <thead><tr><th>ID</th><th>Buyer</th><th>Property</th><th>Owner</th><th>Total</th><th>Paid</th><th>Balance</th><th>Payment Starts</th><th>First Due Date</th><th>Grace Period</th><th>Status</th></tr></thead>
+                        <thead><tr><th>ID</th><th>Buyer</th><th>Property</th><th>Owner</th><th>Total</th><th>Paid</th><th>Balance</th><th>Payment Starts</th><th>First Due Date</th><th>Grace Period</th><th>Offer Expires</th><th>Next Due Date</th><th>Status</th></tr></thead>
                         <tbody>
                         <?php foreach ( $purchases as $purchase ) : ?>
                             <tr>
                                 <td>#<?php echo esc_html( $purchase->id ); ?></td>
-                                <td><strong><?php echo esc_html( $purchase->buyer_name ); ?></strong><br><small><?php echo esc_html( $purchase->buyer_phone ); ?></small></td>
+                                <td>
+                                    <strong>
+                                        <a href="<?php echo esc_url( admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-purchases&id=' . $purchase->id ) ); ?>">
+                                            <?php echo esc_html( $purchase->buyer_name ); ?>
+                                        </a>
+                                    </strong>
+                                    <br><small><?php echo esc_html( $purchase->buyer_phone ); ?></small>
+                                </td>
                                 <td><?php echo esc_html( $purchase->property_title ?: '—' ); ?></td>
                                 <td><?php echo esc_html( $purchase->business_name ?: 'Platform' ); ?></td>
                                 <td>NGN <?php echo esc_html( number_format( (float) $purchase->total_price, 2 ) ); ?></td>
@@ -257,9 +293,119 @@ class OFP_Property_Commerce_Admin {
                                 <td><?php echo $purchase->payment_start_date ? esc_html( wp_date( 'M j, Y', strtotime( $purchase->payment_start_date ) ) ) : '—'; ?></td>
                                 <td><?php echo $purchase->first_due_date ? esc_html( wp_date( 'M j, Y', strtotime( $purchase->first_due_date ) ) ) : '—'; ?></td>
                                 <td><?php echo esc_html( (int) $purchase->grace_period_days ); ?> days</td>
+                                <td><?php echo !empty($purchase->offer_expires) ? esc_html( wp_date( 'M j, Y', strtotime( $purchase->offer_expires ) ) ) : '—'; ?></td>
+                                <td><?php echo $purchase->next_due_date ? esc_html( wp_date( 'M j, Y', strtotime( $purchase->next_due_date ) ) ) : '—'; ?></td>
                                 <td><?php echo esc_html( ucfirst( $purchase->status ) ); ?></td>
                             </tr>
                         <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
+    public function render_purchase_details(): void {
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $purchase_id = absint( $_GET['id'] ?? 0 );
+
+        if ( ! $purchase_id ) {
+            wp_die( 'Invalid purchase ID.' );
+        }
+
+        $purchase = $wpdb->get_row( $wpdb->prepare(
+            "SELECT pu.*, p.title AS property_title, c.business_name
+             FROM {$p}ofp_property_purchases pu
+             LEFT JOIN {$p}ofp_properties p ON p.id = pu.property_id
+             LEFT JOIN {$p}ofp_clients c ON c.id = pu.client_id
+             WHERE pu.id = %d LIMIT 1",
+            $purchase_id
+        ) );
+
+        if ( ! $purchase ) {
+            wp_die( 'Purchase not found.' );
+        }
+        
+        $installments = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM {$p}ofp_property_installments WHERE purchase_id = %d ORDER BY installment_number ASC",
+            $purchase_id
+        ) );
+
+        ?>
+        <div class="wrap">
+            <h1>Purchase Details: #<?php echo esc_html( $purchase->id ); ?></h1>
+            <p><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-purchases' ) ); ?>">← Back to Purchases</a></p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+                <div class="postbox" style="padding:16px;">
+                    <h2 style="margin-top:0;">Buyer Details</h2>
+                    <p><strong>Name:</strong> <?php echo esc_html( $purchase->buyer_name ); ?></p>
+                    <p><strong>Phone:</strong> <?php echo esc_html( $purchase->buyer_phone ); ?></p>
+                    <p><strong>Email:</strong> <?php echo esc_html( $purchase->buyer_email ?: '—' ); ?></p>
+                    <p><strong>Status:</strong> <?php echo esc_html( ucfirst( $purchase->status ) ); ?></p>
+                    <p><strong>Date:</strong> <?php echo esc_html( wp_date( 'M j, Y', strtotime( $purchase->created_at ) ) ); ?></p>
+                </div>
+                
+                <div class="postbox" style="padding:16px;">
+                    <h2 style="margin-top:0;">Property & Plan</h2>
+                    <p><strong>Property:</strong> <?php echo esc_html( $purchase->property_title ?: '—' ); ?> (<?php echo esc_html( $purchase->business_name ?: 'Platform' ); ?>)</p>
+                    <p><strong>Total Price:</strong> NGN <?php echo esc_html( number_format( (float) $purchase->total_price, 2 ) ); ?></p>
+                    <p><strong>Amount Paid:</strong> NGN <?php echo esc_html( number_format( (float) $purchase->amount_paid, 2 ) ); ?></p>
+                    <p><strong>Balance:</strong> NGN <?php echo esc_html( number_format( (float) $purchase->balance, 2 ) ); ?></p>
+                    <p><strong>Initial Payment:</strong> NGN <?php echo esc_html( number_format( (float) $purchase->initial_payment, 2 ) ); ?></p>
+                    <p><strong>Plan:</strong> <?php echo esc_html( $purchase->installment_count ); ?> × NGN <?php echo esc_html( number_format( (float) $purchase->installment_amount, 2 ) ); ?> (<?php echo esc_html( ucfirst( $purchase->frequency ) ); ?>)</p>
+                </div>
+            </div>
+
+            <h2>Installment Schedule</h2>
+            <?php if ( empty( $installments ) ) : ?>
+                <div class="notice notice-info"><p>No installments found.</p></div>
+            <?php else : ?>
+                <div style="overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;border:1px solid #dcdcde;">
+                    <table class="widefat striped" style="margin:0;">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Paid At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( $installments as $ins ) : ?>
+                                <tr>
+                                    <td><?php echo $ins->installment_number == 0 ? '—' : esc_html( $ins->installment_number ); ?></td>
+                                    <td><?php echo $ins->installment_number == 0 ? 'Initial Payment' : 'Installment'; ?></td>
+                                    <td><strong>NGN <?php echo esc_html( number_format( (float) $ins->amount, 2 ) ); ?></strong></td>
+                                    <td><?php echo esc_html( wp_date( 'M j, Y', strtotime( $ins->due_date ) ) ); ?></td>
+                                    <td>
+                                        <?php if ( $ins->status === 'paid' ) : ?>
+                                            <span style="color:green;font-weight:bold;">Paid</span>
+                                        <?php elseif ( $ins->status === 'defaulted' ) : ?>
+                                            <span style="color:red;font-weight:bold;">Defaulted</span>
+                                        <?php else : ?>
+                                            <?php echo esc_html( ucfirst( $ins->status ) ); ?>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?php echo $ins->paid_at ? esc_html( wp_date( 'M j, Y', strtotime( $ins->paid_at ) ) ) : '—'; ?></td>
+                                    <td>
+                                        <?php if ( $ins->status !== 'paid' ) : ?>
+                                            <?php 
+                                            $pay_url = add_query_arg( 'pay', rawurlencode( $purchase->payment_token ?? '' ), home_url( '/property-payment' ) );
+                                            ?>
+                                            <input type="hidden" value="<?php echo esc_attr( $pay_url ); ?>">
+                                            <button type="button" class="button button-small" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);alert('Payment Link copied!')">Copy Payment Link</button>
+                                        <?php else : ?>
+                                            —
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>

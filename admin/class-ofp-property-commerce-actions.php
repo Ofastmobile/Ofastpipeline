@@ -13,13 +13,15 @@ class OFP_Property_Commerce_Actions {
     public static function init(): void {
         add_action( 'admin_menu', [ __CLASS__, 'register_menu' ] );
         add_action( 'admin_post_ofp_create_property_offer', [ __CLASS__, 'handle_create_offer' ] );
+        add_action( 'admin_post_ofp_resend_offer', [ __CLASS__, 'handle_resend_offer' ] );
+        add_action( 'admin_post_ofp_client_resend_offer', [ __CLASS__, 'handle_client_resend_offer' ] );
     }
 
     public static function register_menu(): void {
         if ( ! current_user_can( 'manage_options' ) ) return;
 
         add_submenu_page(
-            'edit.php?post_type=ofp_property',
+            null,
             'Create Installment Offer',
             'Create Offer',
             'manage_options',
@@ -29,6 +31,12 @@ class OFP_Property_Commerce_Actions {
     }
 
     public static function render_create_offer(): void {
+        ?>
+        <h2 class="nav-tab-wrapper">
+            <a href="?post_type=ofp_property&page=ofp-property-offers" class="nav-tab">Offers Table</a>
+            <a href="?post_type=ofp_property&page=ofp-property-create-offer" class="nav-tab nav-tab-active">Create Offer</a>
+        </h2>
+        <?php
         OFP_Property_CPT::reconcile_live_property_records();
         global $wpdb;
         $p = $wpdb->prefix;
@@ -36,8 +44,13 @@ class OFP_Property_Commerce_Actions {
             "SELECT pr.id, pr.title, pr.price, pr.listing_type, pr.client_id
              FROM {$p}ofp_properties pr
              LEFT JOIN {$p}postmeta pm_status ON pm_status.post_id = pr.wp_post_id AND pm_status.meta_key = 'ofp_status'
-             WHERE pr.listing_type = 'sale' AND ( pr.status = 'live' OR pm_status.meta_value = 'live' )
-             ORDER BY title ASC"
+             WHERE pr.listing_type = 'sale' 
+               AND ( pr.status = 'live' OR pm_status.meta_value = 'live' )
+               AND NOT EXISTS (
+                   SELECT 1 FROM {$p}ofp_property_purchases pu 
+                   WHERE pu.property_id = pr.id AND pu.status IN ('active', 'completed')
+               )
+             ORDER BY pr.title ASC"
         );
         $message = isset( $_GET['created'] ) ? 'Installment offer created successfully.' : '';
         $error   = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
@@ -125,7 +138,7 @@ class OFP_Property_Commerce_Actions {
 
         $error = '';
         if ( ! $property ) $error = 'Property not found.';
-        elseif ( $property->listing_type !== 'sale' ) $error = 'Installment offers are only available for sale properties.';
+        elseif ( $property->listing_type !== 'sale' ) $error = 'Offers are only available for sale properties.';
         elseif ( ! $buyer_name || ! $buyer_phone ) $error = 'Buyer name and phone are required.';
         elseif ( $buyer_email !== '' && ! is_email( $buyer_email ) ) $error = 'Buyer email is invalid.';
         elseif ( (float) $property->price <= 0 ) $error = 'Property price is invalid.';
@@ -162,6 +175,7 @@ class OFP_Property_Commerce_Actions {
                 'reminder_days'      => '7,3,1',
                 'terms_text'         => $terms_text ?: null,
                 'terms_version'      => '1',
+                'offer_token'        => $raw_token,
                 'offer_token_hash'   => $token_hash,
                 'status'             => 'pending',
                 'expires_at'         => $expiry_date ? $expiry_date . ' 23:59:59' : null,
@@ -177,20 +191,9 @@ class OFP_Property_Commerce_Actions {
         $offer_id  = (int) $wpdb->insert_id;
         $offer_url = add_query_arg( 'offer', rawurlencode( $raw_token ), home_url( '/property-offer' ) );
 
-        if ( $buyer_email && class_exists( 'OFP_Mailer' ) ) {
-            $subject = 'Property Installment Offer - ' . $property->title;
-            $message = "Hello {$buyer_name},<br><br>An installment payment plan has been created for the property: <strong>{$property->title}</strong>.<br><br>";
-            $message .= "Total Price: NGN " . number_format( $property->price, 2 ) . "<br>";
-            $message .= "Initial Payment: NGN " . number_format( $initial_payment, 2 ) . "<br><br>";
-            $message .= "Please review and accept the offer here:<br>";
-            $message .= "<a href=\"" . esc_url( $offer_url ) . "\">Accept Installment Offer</a><br><br>";
-            $message .= "If you have any questions, please contact us.";
-            OFP_Mailer::send( $buyer_email, $buyer_name, $subject, $message );
-        }
+        // Note: Email to buyer and notification to client are handled by the
+        // 'ofp_property_offer_created' action hook in OFP_Property_Commerce_Repair.
 
-        if ( $property->client_id && class_exists( 'OFP_Notification' ) ) {
-            OFP_Notification::create( (int) $property->client_id, 'property_offer_created', 'Installment offer created', sprintf( 'An installment offer was created for %s.', $property->title ) );
-        }
 
         do_action( 'ofp_property_offer_created', $offer_id, $raw_token, $offer_url );
 
@@ -198,6 +201,119 @@ class OFP_Property_Commerce_Actions {
             [ 'created' => 1, 'offer_id' => $offer_id, 'offer_url' => rawurlencode( $offer_url ) ],
             admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-offers' )
         ) );
+        exit;
+    }
+    
+    public static function handle_resend_offer(): void {
+        if ( ! current_user_can( 'manage_options' ) ) wp_die( esc_html__( 'Access denied.', 'ofast-pipeline' ) );
+        check_admin_referer( 'ofp_resend_offer' );
+
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $offer_id = absint( $_GET['offer_id'] ?? 0 );
+
+        $offer = $wpdb->get_row( $wpdb->prepare( 
+            "SELECT o.*, p.title as property_title 
+             FROM {$p}ofp_property_offers o 
+             LEFT JOIN {$p}ofp_properties p ON p.id = o.property_id 
+             WHERE o.id = %d LIMIT 1", 
+            $offer_id 
+        ) );
+
+        if ( ! $offer ) {
+            wp_safe_redirect( add_query_arg( 'error', rawurlencode( 'Offer not found.' ), admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-offers' ) ) );
+            exit;
+        }
+
+        if ( $offer->status === 'accepted' ) {
+            wp_safe_redirect( add_query_arg( 'error', rawurlencode( 'Accepted offers cannot be resent.' ), admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-offers' ) ) );
+            exit;
+        }
+
+        $raw_token = $offer->offer_token;
+        if ( empty( $raw_token ) || $offer->status !== 'pending' ) {
+            [ $raw_token, $token_hash ] = OFP_Property_Commerce::create_offer_token();
+            $wpdb->update(
+                "{$p}ofp_property_offers",
+                [ 'offer_token' => $raw_token, 'offer_token_hash' => $token_hash, 'status' => 'pending' ],
+                [ 'id' => $offer_id ]
+            );
+        }
+
+        $offer_url = add_query_arg( 'offer', rawurlencode( $raw_token ), home_url( '/property-offer' ) );
+        
+        if ( $offer->buyer_email && class_exists( 'OFP_Mailer' ) ) {
+            $subject = 'Property Installment Offer - ' . $offer->property_title;
+            $message = "Hello {$offer->buyer_name},<br><br>Here is a reminder for your installment payment plan for the property: <strong>{$offer->property_title}</strong>.<br><br>";
+            $message .= "Total Price: NGN " . number_format( (float) $offer->total_price, 2 ) . "<br>";
+            $message .= "Initial Payment: NGN " . number_format( (float) $offer->initial_payment, 2 ) . "<br><br>";
+            $message .= "Please review and accept the offer here:<br>";
+            $message .= "<a href=\"" . esc_url( $offer_url ) . "\">Accept Installment Offer</a><br><br>";
+            $message .= "If you have any questions, please contact us.";
+            OFP_Mailer::send( $offer->buyer_email, $offer->buyer_name, $subject, $message );
+        }
+
+        do_action( 'ofp_property_offer_created', $offer_id, $raw_token, $offer_url );
+
+        wp_safe_redirect( add_query_arg( 'resent', 1, admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-offers' ) ) );
+        exit;
+    }
+
+    public static function handle_client_resend_offer(): void {
+        if ( ! is_user_logged_in() ) wp_die( esc_html__( 'Access denied.', 'ofast-pipeline' ) );
+        check_admin_referer( 'ofp_client_resend_offer' );
+
+        $client_id = (int) get_user_meta( get_current_user_id(), 'ofp_client_id', true );
+        if ( ! $client_id ) wp_die( esc_html__( 'Access denied.', 'ofast-pipeline' ) );
+
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $offer_id = absint( $_GET['offer_id'] ?? 0 );
+
+        $offer = $wpdb->get_row( $wpdb->prepare( 
+            "SELECT o.*, p.title as property_title 
+             FROM {$p}ofp_property_offers o 
+             LEFT JOIN {$p}ofp_properties p ON p.id = o.property_id 
+             WHERE o.id = %d AND o.client_id = %d LIMIT 1", 
+            $offer_id, $client_id 
+        ) );
+
+        if ( ! $offer ) {
+            wp_safe_redirect( add_query_arg( 'error', rawurlencode( 'Offer not found or access denied.' ), home_url( '/property-sales' ) ) );
+            exit;
+        }
+
+        if ( $offer->status === 'accepted' ) {
+            wp_safe_redirect( add_query_arg( 'error', rawurlencode( 'Accepted offers cannot be resent.' ), home_url( '/property-sales' ) ) );
+            exit;
+        }
+
+        $raw_token = $offer->offer_token;
+        if ( empty( $raw_token ) || $offer->status !== 'pending' ) {
+            [ $raw_token, $token_hash ] = OFP_Property_Commerce::create_offer_token();
+            $wpdb->update(
+                "{$p}ofp_property_offers",
+                [ 'offer_token' => $raw_token, 'offer_token_hash' => $token_hash, 'status' => 'pending' ],
+                [ 'id' => $offer_id ]
+            );
+        }
+
+        $offer_url = add_query_arg( 'offer', rawurlencode( $raw_token ), home_url( '/property-offer' ) );
+        
+        if ( $offer->buyer_email && class_exists( 'OFP_Mailer' ) ) {
+            $subject = 'Property Installment Offer - ' . $offer->property_title;
+            $message = "Hello {$offer->buyer_name},<br><br>Here is a reminder for your installment payment plan for the property: <strong>{$offer->property_title}</strong>.<br><br>";
+            $message .= "Total Price: NGN " . number_format( (float) $offer->total_price, 2 ) . "<br>";
+            $message .= "Initial Payment: NGN " . number_format( (float) $offer->initial_payment, 2 ) . "<br><br>";
+            $message .= "Please review and accept the offer here:<br>";
+            $message .= "<a href=\"" . esc_url( $offer_url ) . "\">Accept Installment Offer</a><br><br>";
+            $message .= "If you have any questions, please contact us.";
+            OFP_Mailer::send( $offer->buyer_email, $offer->buyer_name, $subject, $message );
+        }
+
+        do_action( 'ofp_property_offer_created', $offer_id, $raw_token, $offer_url );
+
+        wp_safe_redirect( add_query_arg( 'resent', 1, home_url( '/property-sales' ) ) );
         exit;
     }
 }

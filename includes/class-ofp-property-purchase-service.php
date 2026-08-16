@@ -49,15 +49,23 @@ class OFP_Property_Purchase_Service {
 
         if ( ! $buyer_name || ! $buyer_phone ) return new WP_Error( 'buyer_required', 'Buyer name and phone are required.' );
         if ( $buyer_email && ! is_email( $buyer_email ) ) return new WP_Error( 'invalid_buyer_email', 'Buyer email is invalid.' );
-        if ( ! $payment_start_date || ! $first_due_date || strtotime( $first_due_date ) < strtotime( $payment_start_date ) ) {
-            return new WP_Error( 'invalid_payment_dates', 'Payment start and first due date are required, and first due date cannot be before payment start.' );
+
+        // Default payment dates if not provided.
+        if ( ! $payment_start_date ) {
+            $payment_start_date = current_time( 'Y-m-d' );
+        }
+        if ( ! $first_due_date ) {
+            $first_due_date = wp_date( 'Y-m-d', strtotime( $payment_start_date . ' +30 days' ) );
+        }
+        if ( strtotime( $first_due_date ) < strtotime( $payment_start_date ) ) {
+            return new WP_Error( 'invalid_payment_dates', 'First due date cannot be before payment start.' );
         }
 
         $total_price = (float) $property->price;
         if ( $total_price <= 0 ) return new WP_Error( 'invalid_property_price', 'Property price is invalid.' );
-        if ( $initial_payment >= $total_price ) return new WP_Error( 'invalid_initial_payment', 'Initial payment must be less than the property price.' );
-        if ( $installment_amount <= 0 || $installment_count <= 0 ) return new WP_Error( 'invalid_installment_plan', 'Installment amount and number of installments are required.' );
-        if ( abs( ( $total_price - $initial_payment ) - ( $installment_amount * $installment_count ) ) > 0.01 ) {
+        if ( $initial_payment > $total_price ) return new WP_Error( 'invalid_initial_payment', 'Initial payment cannot exceed the property price.' );
+        if ( $initial_payment < $total_price && ( $installment_amount <= 0 || $installment_count <= 0 ) ) return new WP_Error( 'invalid_installment_plan', 'Installment amount and number of installments are required for partial payments.' );
+        if ( $initial_payment < $total_price && abs( ( $total_price - $initial_payment ) - ( $installment_amount * $installment_count ) ) > 0.01 ) {
             return new WP_Error( 'installment_mismatch', 'The installment schedule must exactly cover the remaining property balance.' );
         }
 

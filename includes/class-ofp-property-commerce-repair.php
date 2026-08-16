@@ -100,12 +100,7 @@ class OFP_Property_Commerce_Repair {
     public static function replace_admin_pages(): void {
         if ( ! current_user_can( 'manage_options' ) ) return;
         $parent = 'edit.php?post_type=ofp_property';
-        remove_submenu_page( $parent, 'ofp-property-create-offer' );
-        add_submenu_page( $parent, 'Create Installment Offer', 'Create Offer', 'manage_options', 'ofp-property-create-offer', [ __CLASS__, 'render_create_offer' ] );
-        remove_submenu_page( $parent, 'ofp-property-purchases' );
-        add_submenu_page( $parent, 'Property Purchases', 'Purchases', 'manage_options', 'ofp-property-purchases', [ __CLASS__, 'render_completed_purchases' ] );
-        remove_submenu_page( $parent, 'ofp-property-add-purchase' );
-        add_submenu_page( $parent, 'Add Outright Purchase', 'Add Purchase', 'manage_options', 'ofp-property-add-purchase', [ __CLASS__, 'render_add_purchase' ] );
+        // Removed double table hooks for purchases
     }
 
     private static function sale_properties( bool $exclude_committed = true ): array {
@@ -126,11 +121,7 @@ class OFP_Property_Commerce_Repair {
         <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php wp_nonce_field( 'ofp_create_property_offer' ); ?><input type="hidden" name="action" value="ofp_create_property_offer"><table class="form-table"><tr><th>Property</th><td><select name="property_id" required style="min-width:520px"><option value="">Select property</option><?php foreach ( $properties as $property ) : ?><option value="<?php echo esc_attr( $property->id ); ?>"><?php echo esc_html( $property->title . ' — ₦' . number_format( (float) $property->price, 0 ) . ' — ' . ( $property->business_name ?: 'OFast Pipeline / Admin' ) ); ?></option><?php endforeach; ?></select><?php if ( empty( $properties ) ) : ?><p class="description">No eligible live sale properties are currently available.</p><?php endif; ?></td></tr><tr><th>Buyer name</th><td><input class="regular-text" name="buyer_name" required></td></tr><tr><th>Buyer phone</th><td><input class="regular-text" name="buyer_phone" required></td></tr><tr><th>Buyer email</th><td><input type="email" class="regular-text" name="buyer_email"></td></tr><tr><th>Initial payment</th><td><input type="number" step="0.01" min="0" name="initial_payment" required></td></tr><tr><th>Payment frequency</th><td><select name="frequency"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select></td></tr><tr><th>Installment amount</th><td><input type="number" step="0.01" min="0" name="installment_amount" required></td></tr><tr><th>Number of installments</th><td><input type="number" min="1" name="installment_count" required></td></tr><tr><th>Payment starts</th><td><input type="date" name="payment_start_date" required></td></tr><tr><th>First due date</th><td><input type="date" name="first_due_date" required></td></tr><tr><th>Grace period</th><td><input type="number" min="0" max="365" value="7" name="grace_period_days"> days</td></tr><tr><th>Offer expires</th><td><input type="date" name="offer_expires"></td></tr><tr><th>Terms / agreement</th><td><textarea class="large-text" rows="10" name="terms_text"></textarea></td></tr></table><?php submit_button( 'Create Offer', 'primary', 'submit', true, empty( $properties ) ? [ 'disabled' => 'disabled' ] : [] ); ?></form></div><?php
     }
 
-    public static function render_completed_purchases(): void {
-        global $wpdb; $p = $wpdb->prefix;
-        $purchases = $wpdb->get_results( "SELECT pu.*, pr.title AS property_title, c.business_name FROM {$p}ofp_property_purchases pu LEFT JOIN {$p}ofp_properties pr ON pr.id=pu.property_id LEFT JOIN {$p}ofp_clients c ON c.id=pu.client_id WHERE pu.status='completed' AND pu.balance<=0.01 ORDER BY pu.created_at DESC, pu.id DESC LIMIT 250" );
-        ?><div class="wrap"><h1>Property Purchases</h1><p>Completed property purchases only. Installment buyers remain in the active payment plan until their balance reaches zero.</p><div style="overflow-x:auto"><table class="widefat striped" style="min-width:1200px"><thead><tr><th>ID</th><th>Buyer</th><th>Property</th><th>Owner</th><th>Total</th><th>Paid</th><th>Balance</th><th>Payment Method</th><th>Status</th><th>Completed</th></tr></thead><tbody><?php if(empty($purchases)): ?><tr><td colspan="10">No completed property purchases yet.</td></tr><?php else: foreach($purchases as $purchase): ?><tr><td>#<?php echo esc_html($purchase->id); ?></td><td><strong><?php echo esc_html($purchase->buyer_name); ?></strong><br><small><?php echo esc_html($purchase->buyer_phone); ?></small></td><td><?php echo esc_html($purchase->property_title ?: '—'); ?></td><td><?php echo esc_html($purchase->business_name ?: 'OFast Pipeline / Admin'); ?></td><td>₦<?php echo esc_html(number_format((float)$purchase->total_price,2)); ?></td><td>₦<?php echo esc_html(number_format((float)$purchase->amount_paid,2)); ?></td><td>₦<?php echo esc_html(number_format((float)$purchase->balance,2)); ?></td><td><?php echo esc_html(ucfirst(str_replace('_',' ',$purchase->payment_method ?: '—'))); ?></td><td><?php echo esc_html(ucfirst($purchase->status)); ?></td><td><?php echo esc_html($purchase->updated_at ?: $purchase->created_at); ?></td></tr><?php endforeach; endif; ?></tbody></table></div></div><?php
-    }
+    // Removed render_completed_purchases() to avoid duplicate tables
 
     public static function render_add_purchase(): void {
         $properties = self::sale_properties( true );
@@ -161,7 +152,13 @@ class OFP_Property_Commerce_Repair {
     public static function offer_created_notification(int $offer_id,string $raw_token,string $offer_url):void{
         global $wpdb; $p=$wpdb->prefix; $offer=$wpdb->get_row($wpdb->prepare("SELECT o.*,p.title AS property_title,c.sms_provider FROM {$p}ofp_property_offers o LEFT JOIN {$p}ofp_properties p ON p.id=o.property_id LEFT JOIN {$p}ofp_clients c ON c.id=o.client_id WHERE o.id=%d LIMIT 1",$offer_id)); if(!$offer)return;
         $message=sprintf('Your installment offer for %s is ready. Review and accept or decline it here: %s',$offer->property_title?:'the property',$offer_url);
-        if(!empty($offer->buyer_email))OFP_Mailer::send($offer->buyer_email,$offer->buyer_name?:'there','Your property installment offer',sprintf('<p>Hello %s,</p><p>Your installment offer for <strong>%s</strong> is ready.</p><p><a href="%s">Review the offer</a></p>',esc_html($offer->buyer_name?:'there'),esc_html($offer->property_title?:'the property'),esc_url($offer_url)));
+        if(!empty($offer->buyer_email)){
+            $message_html = sprintf('<p>Hello %s,</p><p>An installment payment plan has been created for the property: <strong>%s</strong>.</p>', esc_html($offer->buyer_name?:'there'), esc_html($offer->property_title?:'the property'));
+            $message_html .= sprintf('<p>Total Price: NGN %s<br>Initial Payment: NGN %s</p>', number_format((float)$offer->total_price, 2), number_format((float)$offer->initial_payment, 2));
+            $message_html .= sprintf('<p>Please review and accept the offer here:<br><a href="%s">Accept Installment Offer</a></p>', esc_url($offer_url));
+            $message_html .= '<p>If you have any questions, please contact us.</p>';
+            OFP_Mailer::send($offer->buyer_email, $offer->buyer_name?:'there', 'Property Installment Offer - ' . ($offer->property_title?:''), $message_html);
+        }
         if(!empty($offer->sms_provider)&&!empty($offer->buyer_phone)&&!empty($offer->client_id)&&class_exists('OFP_Credit')&&OFP_Credit::has_balance((int)$offer->client_id,'sms',6.99)){ $sms=new OFP_SMS($offer->sms_provider,(int)$offer->client_id); $sent=$sms->send($offer->buyer_phone,$message); if(!empty($sent['success']))OFP_Credit::deduct((int)$offer->client_id,'sms',6.99); }
         if(!empty($offer->client_id)&&class_exists('OFP_Notification'))OFP_Notification::create((int)$offer->client_id,'property_offer_created','Installment offer created',sprintf('An installment offer has been created for %s and sent to %s.', $offer->property_title?:'a property',$offer->buyer_name));
     }
