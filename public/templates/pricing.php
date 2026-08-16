@@ -27,7 +27,7 @@ $has_listing = OFP_Subscription::has_active( 'listing', $client->id );
         })();
     </script>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
     <style>
         .ofp-pricing-grid {
             display: grid;

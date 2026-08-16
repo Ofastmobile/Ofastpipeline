@@ -38,7 +38,7 @@ $transactions = $wpdb->get_results(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Credits & Billing — OFast Pipeline</title>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
 <body class="ofp-portal-body">
 

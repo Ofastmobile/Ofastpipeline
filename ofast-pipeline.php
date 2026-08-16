@@ -54,6 +54,7 @@ require_once OFP_PATH . 'includes/class-ofp-property-manual-payment.php';
 require_once OFP_PATH . 'includes/class-ofp-property-payment-records.php';
 require_once OFP_PATH . 'includes/class-ofp-property-checkout.php';
 require_once OFP_PATH . 'includes/class-ofp-property-payment-entry-ui.php';
+require_once OFP_PATH . 'includes/class-ofp-property-commerce-repair.php';
 
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-monnify.php';
@@ -109,6 +110,7 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Property_Checkout::init();
     OFP_Property_Payment_Records::init();
     OFP_Property_Payment_Entry_UI::init();
+    OFP_Property_Commerce_Repair::init();
 } );
 
 add_action( 'init', function (): void {
