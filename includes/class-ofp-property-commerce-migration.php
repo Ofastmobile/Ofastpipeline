@@ -13,7 +13,6 @@ class OFP_Property_Commerce_Migration {
             "ALTER TABLE {$p}ofp_property_offers ADD COLUMN payment_start_date DATE NULL AFTER installment_count",
             "ALTER TABLE {$p}ofp_property_purchases ADD COLUMN payment_start_date DATE NULL AFTER installment_count",
             "ALTER TABLE {$p}ofp_property_purchases ADD COLUMN contact_id BIGINT UNSIGNED NULL AFTER lead_id",
-            "ALTER TABLE {$p}ofp_property_purchases ADD COLUMN purchase_type VARCHAR(20) NOT NULL DEFAULT 'installment' AFTER contact_id",
         ];
 
         foreach ( $columns as $sql ) {

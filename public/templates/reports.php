@@ -88,7 +88,7 @@ $comms_last_month = (int) $wpdb->get_var(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reports — OFast Pipeline</title>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="ofp-portal-body">

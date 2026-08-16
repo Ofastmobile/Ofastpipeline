@@ -243,7 +243,7 @@ if ( isset( $_GET['edit'] ) ) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Properties — OFast Pipeline</title>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
 <body class="ofp-portal-body">
     <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
@@ -463,11 +463,12 @@ if ( isset( $_GET['edit'] ) ) {
                     <?php if ( empty( $my_properties ) ) : ?>
                         <p class="ofp-hint">You haven't added any properties yet.</p>
                     <?php else : ?>
-                        <div style="overflow-x:auto;">
+                        <div class="ofp-table-responsive">
                             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
                                 <thead>
                                     <tr style="border-bottom: 2px solid #e2e8f0; color: #64748b;">
                                         <th style="padding: 12px 16px;">Title</th>
+                                        <th style="padding: 12px 16px;">Type</th>
                                         <th style="padding: 12px 16px;">Status</th>
                                         <th style="padding: 12px 16px;">Price</th>
                                         <th style="padding: 12px 16px; text-align:right;">Actions</th>
@@ -477,6 +478,12 @@ if ( isset( $_GET['edit'] ) ) {
                                     <?php foreach ( $my_properties as $property ) : ?>
                                         <tr style="border-bottom: 1px solid #f1f5f9;">
                                             <td style="padding: 12px 16px; color: #0f172a; font-weight: 500;"><?php echo esc_html( $property->post_title ); ?></td>
+                                            <td style="padding: 12px 16px;">
+                                                <?php 
+                                                    $ltype = get_post_meta( $property->ID, 'ofp_listing_type', true ) ?: 'sale';
+                                                    echo esc_html( ucfirst( $ltype ) );
+                                                ?>
+                                            </td>
                                             <td style="padding: 12px 16px;">
                                                 <?php 
                                                     $db_status = get_post_meta( $property->ID, 'ofp_status', true ) ?: 'pending_upload';

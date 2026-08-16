@@ -11,175 +11,82 @@
  *  2. register_query_vars()   — whitelists 'ofp_route' so WordPress passes it through
  *  3. handle_routes()         — fires on template_redirect, checks ofp_route, loads
  *     the matching PHP template from public/templates/, then exits (skips WP theme).
- *
- * ROUTES (v2.0 + v2.1):
- *  Public  (no login required): /login, /signup
- *  Private (login required):    /dashboard, /leads, /pipeline-settings,
- *                                /communications, /credits, /reports,
- *                                /account, /my-listing
- *
- * IMPORTANT:
- *  After any change to $routes, WordPress permalinks MUST be flushed once.
- *  This happens automatically on plugin activation (OFP_Activator calls
- *  flush_rewrite_rules()). If you add a new route manually, visit
- *  wp-admin → Settings → Permalinks → Save to flush again.
- *
- * Depends on: OFP_Auth, all public/templates/*.php files.
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Client_Portal {
 
-    /**
-     * Map of URL slug → template file (relative to public/templates/).
-     *
-     * Keys are the URL slugs that will be registered as rewrite rules.
-     * Values are the PHP template files that render each page.
-     *
-     * v2.0 routes: login, dashboard, leads, pipeline-settings,
-     *              communications, credits, reports, account
-     * v2.1 routes: signup, my-listing (NEW)
-     *
-     * @var array<string, string>
-     */
     private array $routes = [
-        // ── Public routes (no login required) ────────────────────────────────
-        'login'             => 'login.php',
-        'signup'            => 'signup.php',            // v2.1 — self-serve onboarding
-        'forgot-password'   => 'forgot-password.php',   // v2.2 — Phase 13: password reset request
-        'reset-password'    => 'reset-password.php',    // v2.2 — Phase 13: set new password
-
-        // ── Private routes (login required) ──────────────────────────────────
-        'dashboard'         => 'dashboard.php',
-        'leads'             => 'leads.php',
+        'login' => 'login.php',
+        'signup' => 'signup.php',
+        'forgot-password' => 'forgot-password.php',
+        'reset-password' => 'reset-password.php',
+        'dashboard' => 'dashboard.php',
+        'leads' => 'leads.php',
         'pipeline-settings' => 'pipeline-settings.php',
-        'api-settings'      => 'api-settings.php',
-        'communications'    => 'communications.php',
-        'credits'           => 'credits.php',
-        'reports'           => 'reports.php',
-        'account'           => 'account.php',
-        'my-listing'        => 'my-listing.php',        // v2.1 — property listing management
-        'properties'        => 'properties.php',        // Phase 14 — tiered property listing management
-        'notifications'         => 'notifications.php',         // Phase 17
-        'notification-settings' => 'notification-settings.php', // Phase 17
-        'funding'               => 'funding.php',               // Phase 17 — dedicated funding page
-        'pricing'               => 'pricing.php',               // Plans and Pricing
+        'api-settings' => 'api-settings.php',
+        'communications' => 'communications.php',
+        'credits' => 'credits.php',
+        'reports' => 'reports.php',
+        'account' => 'account.php',
+        'my-listing' => 'my-listing.php',
+        'properties' => 'properties.php',
+        'listing-billing' => 'listing-billing.php',
+        'notifications' => 'notifications.php',
+        'notification-settings' => 'notification-settings.php',
+        'funding' => 'funding.php',
+        'pricing' => 'pricing.php',
     ];
 
-    /**
-     * Routes accessible without being logged in.
-     * Everything NOT in this list redirects to /login if the client is unauthenticated.
-     *
-     * @var array<string>
-     */
-    private array $public_routes = [
-        'login',
-        'signup',
-        'forgot-password',
-        'reset-password',
-    ];
+    private array $public_routes = [ 'login', 'signup', 'forgot-password', 'reset-password' ];
 
-    /**
-     * Constructor — hook in early enough to register rewrites and intercept routing.
-     */
     public function __construct() {
-        add_action( 'init',               [ $this, 'register_rewrite_rules' ] );
-        add_filter( 'query_vars',         [ $this, 'register_query_vars' ] );
-        add_action( 'template_redirect',  [ $this, 'handle_routes' ] );
-        add_action( 'init',               [ $this, 'handle_logout' ] );
-        add_action( 'template_redirect',  [ $this, 'redirect_authenticated_away_from_auth_pages' ] );
+        add_action( 'init', [ $this, 'register_rewrite_rules' ] );
+        add_filter( 'query_vars', [ $this, 'register_query_vars' ] );
+        add_action( 'template_redirect', [ $this, 'handle_routes' ] );
+        add_action( 'init', [ $this, 'handle_logout' ] );
+        add_action( 'template_redirect', [ $this, 'redirect_authenticated_away_from_auth_pages' ] );
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
-        
-        // AJAX endpoints for client portal
-        add_action( 'wp_ajax_ofp_fetch_leads',        [ $this, 'ajax_fetch_leads' ] );
+        add_action( 'wp_ajax_ofp_fetch_leads', [ $this, 'ajax_fetch_leads' ] );
         add_action( 'wp_ajax_nopriv_ofp_fetch_leads', [ $this, 'ajax_fetch_leads' ] );
     }
 
-    /**
-     * Enqueue client portal JS on OFP portal routes only.
-     * CSS is enqueued inline in each template via <link> tag for simplicity.
-     *
-     * @return void
-     */
     public function enqueue_assets(): void {
         $route = get_query_var( 'ofp_route', '' );
-        if ( empty( $route ) || ! array_key_exists( $route, $this->routes ) ) {
-            return;
-        }
-
-        wp_enqueue_script(
-            'ofp-client-portal',
-            OFP_URL . 'assets/js/client-portal.js',
-            [],
-            OFP_VERSION,
-            true
-        );
-        
+        if ( empty( $route ) || ! array_key_exists( $route, $this->routes ) ) return;
+        wp_enqueue_script( 'ofp-client-portal', OFP_URL . 'assets/js/client-portal.js', [], OFP_VERSION, true );
         wp_localize_script( 'ofp-client-portal', 'ofpClientData', [
             'ajaxurl' => admin_url( 'admin-ajax.php' ),
-            'nonce'   => wp_create_nonce( 'ofp_client_ajax' )
-        ]);
+            'nonce' => wp_create_nonce( 'ofp_client_ajax' ),
+        ] );
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // AJAX HANDLERS
-    // ─────────────────────────────────────────────────────────────────────────
 
     public function ajax_fetch_leads(): void {
         check_ajax_referer( 'ofp_client_ajax', 'nonce' );
-
-        OFP_Auth::require_client_login(); // Ensure they are logged in
+        OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
-        if ( ! $client || ! OFP_Subscription::has_active( 'crm', $client->id ) ) {
-            wp_send_json_error( 'Unauthorized' );
-        }
+        if ( ! $client || ! OFP_Subscription::has_active( 'crm', $client->id ) ) wp_send_json_error( 'Unauthorized' );
 
         $filter_status = sanitize_text_field( $_POST['status'] ?? '' );
-        
         global $wpdb;
-        $p     = $wpdb->prefix;
+        $p = $wpdb->prefix;
         $where = 'l.client_id = %d';
-        $args  = [ $client->id ];
-
-        if ( $filter_status ) {
-            $where .= ' AND l.status = %s';
-            $args[] = $filter_status;
-        }
-
-        $leads = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT l.* FROM {$p}ofp_leads l
-                 WHERE {$where}
-                 ORDER BY l.created_at DESC
-                 LIMIT 20",
-                ...$args
-            )
-        );
+        $args = [ $client->id ];
+        if ( $filter_status ) { $where .= ' AND l.status = %s'; $args[] = $filter_status; }
+        $leads = $wpdb->get_results( $wpdb->prepare( "SELECT l.* FROM {$p}ofp_leads l WHERE {$where} ORDER BY l.created_at DESC LIMIT 20", ...$args ) );
 
         $status_badges = [
-            'new'        => '<span class="ofp-badge ofp-badge-blue">New</span>',
-            'contacted'  => '<span class="ofp-badge ofp-badge-yellow">Contacted</span>',
+            'new' => '<span class="ofp-badge ofp-badge-blue">New</span>',
+            'contacted' => '<span class="ofp-badge ofp-badge-yellow">Contacted</span>',
             'interested' => '<span class="ofp-badge ofp-badge-orange">Interested</span>',
-            'converted'  => '<span class="ofp-badge ofp-badge-green">✅ Converted</span>',
-            'dead'       => '<span class="ofp-badge ofp-badge-grey">Dead</span>',
+            'converted' => '<span class="ofp-badge ofp-badge-green">✅ Converted</span>',
+            'dead' => '<span class="ofp-badge ofp-badge-grey">Dead</span>',
         ];
 
         ob_start();
         if ( empty( $leads ) ) {
-            ?>
-            <tr>
-                <td colspan="7" style="text-align:center; padding: 48px;">
-                    <div class="ofp-empty" style="padding:0;">
-                        <div class="ofp-empty-icon" style="font-size:24px;margin-bottom:12px;">📭</div>
-                        <h3 style="font-size:16px;font-weight:600;margin:0 0 4px;color:var(--text-main);">No leads found</h3>
-                        <p style="margin:0;color:var(--text-muted);font-size:13px;">Leads matching this filter will appear here.</p>
-                    </div>
-                </td>
-            </tr>
-            <?php
+            ?><tr><td colspan="7" style="text-align:center; padding:48px;"><div class="ofp-empty" style="padding:0;"><div class="ofp-empty-icon" style="font-size:24px;margin-bottom:12px;">📭</div><h3 style="font-size:16px;font-weight:600;margin:0 0 4px;color:var(--text-main);">No leads found</h3><p style="margin:0;color:var(--text-muted);font-size:13px;">Leads matching this filter will appear here.</p></div></td></tr><?php
         } else {
             foreach ( $leads as $lead ) {
                 ?>
@@ -188,309 +95,85 @@ class OFP_Client_Portal {
                     <td><strong><?php echo esc_html( $lead->phone ); ?></strong></td>
                     <td><?php echo esc_html( $lead->email ?: '—' ); ?></td>
                     <td><?php echo $status_badges[ $lead->status ] ?? esc_html( $lead->status ); ?></td>
-                    <td style="color: var(--text-muted);"><?php echo $lead->ivr_response ? esc_html( 'Pressed ' . $lead->ivr_response ) : '—'; ?></td>
-                    <td style="white-space:nowrap;font-size:12px;color:var(--text-muted);">
-                        <?php echo esc_html( gmdate( 'M j, Y', strtotime( $lead->created_at ) ) ); ?>
-                    </td>
-                    <td>
-                        <?php if ( $lead->status !== 'converted' ) : ?>
-                            <form method="POST" action="" style="display:inline;">
-                                <?php wp_nonce_field( 'ofp_leads_' . $client->id, 'ofp_leads_nonce' ); ?>
-                                <input type="hidden" name="lead_id" value="<?php echo esc_attr( $lead->id ); ?>">
-                                <select name="new_status" onchange="this.form.submit()" class="ofp-select" style="font-size:12px;padding:6px 12px;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-body);color:var(--text-main);outline:none;cursor:pointer;">
-                                    <?php foreach ( array_keys( $status_badges ) as $s ) : ?>
-                                        <option value="<?php echo esc_attr( $s ); ?>" <?php selected( $lead->status, $s ); ?>>
-                                            <?php echo esc_html( ucfirst( $s ) ); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </form>
-                        <?php else : ?>
-                            <span style="font-size:12px;color:#9ca3af;">Closed</span>
-                        <?php endif; ?>
-                    </td>
+                    <td style="color:var(--text-muted);"> <?php echo $lead->ivr_response ? esc_html( 'Pressed ' . $lead->ivr_response ) : '—'; ?></td>
+                    <td style="white-space:nowrap;font-size:12px;color:var(--text-muted);"><?php echo esc_html( gmdate( 'M j, Y', strtotime( $lead->created_at ) ) ); ?></td>
+                    <td><?php if ( $lead->status !== 'converted' ) : ?><form method="POST" action="" style="display:inline;"><?php wp_nonce_field( 'ofp_leads_' . $client->id, 'ofp_leads_nonce' ); ?><input type="hidden" name="lead_id" value="<?php echo esc_attr( $lead->id ); ?>"><select name="new_status" onchange="this.form.submit()" class="ofp-select"><?php foreach ( array_keys( $status_badges ) as $s ) : ?><option value="<?php echo esc_attr( $s ); ?>" <?php selected( $lead->status, $s ); ?>><?php echo esc_html( ucfirst( $s ) ); ?></option><?php endforeach; ?></select></form><?php else : ?><span style="font-size:12px;color:#9ca3af;">Closed</span><?php endif; ?></td>
                 </tr>
                 <?php
             }
         }
-        $html = ob_get_clean();
-
-        wp_send_json_success( [ 'html' => $html ] );
+        wp_send_json_success( [ 'html' => ob_get_clean() ] );
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // REWRITE RULES
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Register one rewrite rule per route slug.
-     *
-     * Example: ^login/?$ → index.php?ofp_route=login
-     *          ^my-listing/?$ → index.php?ofp_route=my-listing
-     *
-     * The trailing /? makes the trailing slash optional so both
-     * /login and /login/ work correctly.
-     *
-     * Rules are added at 'top' priority so they fire before WordPress's
-     * own post/page/archive rules and don't accidentally match a real page.
-     *
-     * @return void
-     */
     public function register_rewrite_rules(): void {
-        // Dynamic route for Agent Profile pages (Phase 23)
-        add_rewrite_rule(
-            '^agent/([^/]+)/?$',
-            'index.php?ofp_agent_slug=$matches[1]',
-            'top'
-        );
-
-        // Static routes
+        add_rewrite_rule( '^agent/([^/]+)/?$', 'index.php?ofp_agent_slug=$matches[1]', 'top' );
         foreach ( array_keys( $this->routes ) as $slug ) {
-            add_rewrite_rule(
-                '^' . preg_quote( $slug, '/' ) . '/?$',
-                'index.php?ofp_route=' . $slug,
-                'top'
-            );
+            add_rewrite_rule( '^' . preg_quote( $slug, '/' ) . '/?$', 'index.php?ofp_route=' . $slug, 'top' );
         }
     }
 
-    /**
-     * Whitelist the 'ofp_route' query variable so WordPress
-     * doesn't strip it before we can read it in handle_routes().
-     *
-     * @param  array<string> $vars  Existing query vars.
-     * @return array<string>        Vars with our addition.
-     */
     public function register_query_vars( array $vars ): array {
         $vars[] = 'ofp_route';
-        $vars[] = 'ofp_agent_slug'; // Phase 23: Agent Profile parameter
+        $vars[] = 'ofp_agent_slug';
         return $vars;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // ROUTE HANDLING
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Central route dispatcher — fires on template_redirect.
-     *
-     * Flow:
-     *  1. Read ofp_route from query vars.
-     *  2. If no match, return and let WordPress handle the request normally.
-     *  3. If the route is private and the client is not logged in, redirect to /login.
-     *  4. Build the full path to the template file.
-     *  5. If the template file doesn't exist, show a 404.
-     *  6. Include the template and exit (prevents WP theme from loading).
-     *
-     * @return void
-     */
     public function handle_routes(): void {
-        // 1. Check for Agent Profile page (Phase 23)
         $agent_slug = get_query_var( 'ofp_agent_slug', '' );
         if ( ! empty( $agent_slug ) ) {
             $template_file = OFP_PATH . 'public/templates/agent-profile.php';
-            if ( file_exists( $template_file ) ) {
-                include $template_file;
+            if ( file_exists( $template_file ) ) { include $template_file; exit; }
+        }
+
+        $route = get_query_var( 'ofp_route', '' );
+        if ( empty( $route ) || ! array_key_exists( $route, $this->routes ) ) return;
+
+        if ( ! in_array( $route, $this->public_routes, true ) ) {
+            OFP_Auth::require_client_login();
+            $client = OFP_Auth::current_client();
+            if ( $client ) OFP_Auth::require_active_subscription( $client );
+        }
+
+        if ( in_array( $route, [ 'properties', 'listing-billing' ], true ) ) {
+            $client = OFP_Auth::current_client();
+            if ( ! $client || ! OFP_Subscription::has_active( 'listing', $client->id ) ) {
+                wp_safe_redirect( home_url( '/dashboard' ) );
                 exit;
             }
         }
 
-        // 2. Check for standard portal routes
-        $route = get_query_var( 'ofp_route', '' );
-
-        // Not one of our routes — let WordPress handle it normally.
-        if ( empty( $route ) || ! array_key_exists( $route, $this->routes ) ) {
-            return;
-        }
-
-        // Private route: require login.
-        if ( ! in_array( $route, $this->public_routes, true ) ) {
-            OFP_Auth::require_client_login();
-
-            // After confirming login, also check that account is not blocked.
-            $client = OFP_Auth::current_client();
-            if ( $client ) {
-                OFP_Auth::require_active_subscription( $client );
-            }
-        }
-
-        // Resolve template path.
         $template_file = OFP_PATH . 'public/templates/' . $this->routes[ $route ];
-
-        if ( ! file_exists( $template_file ) ) {
-            // Template not built yet (stub phase) — show a friendly placeholder.
-            $this->render_placeholder( $route );
-            exit;
-        }
-
-        // Load the template. The template has access to $route for any
-        // conditional logic it needs without re-reading query vars.
+        if ( ! file_exists( $template_file ) ) { $this->render_placeholder( $route ); exit; }
         include $template_file;
         exit;
     }
 
-    /**
-     * Handle logout by detecting ?ofp_logout=1 on any page.
-     * Redirects to /login after clearing the session.
-     *
-     * @return void
-     */
     public function handle_logout(): void {
-        if (
-            isset( $_GET['ofp_logout'] ) &&
-            $_GET['ofp_logout'] === '1' &&
-            isset( $_GET['_wpnonce'] ) &&
-            wp_verify_nonce(
-                sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ),
-                'ofp_logout'
-            )
-        ) {
+        if ( isset( $_GET['ofp_logout'] ) && '1' === $_GET['ofp_logout'] && isset( $_GET['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'ofp_logout' ) ) {
             OFP_Auth::logout();
             wp_safe_redirect( home_url( '/login?logged_out=1' ) );
             exit;
         }
     }
 
-    /**
-     * If a client is already logged in and tries to visit /login or /signup,
-     * redirect them straight to /dashboard — avoids confusion.
-     *
-     * @return void
-     */
     public function redirect_authenticated_away_from_auth_pages(): void {
         $route = get_query_var( 'ofp_route', '' );
-
-        if (
-            in_array( $route, [ 'login', 'signup' ], true ) &&
-            OFP_Auth::current_client()
-        ) {
+        if ( in_array( $route, [ 'login', 'signup' ], true ) && OFP_Auth::current_client() ) {
             wp_safe_redirect( home_url( '/dashboard' ) );
             exit;
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // HELPER: LOGOUT URL
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Generate a nonce-protected logout URL.
-     * Use this in nav templates: <a href="<?php echo OFP_Client_Portal::logout_url(); ?>">Logout</a>
-     *
-     * @return string  Full logout URL with nonce.
-     */
     public static function logout_url(): string {
-        return add_query_arg(
-            [
-                'ofp_logout' => '1',
-                '_wpnonce'   => wp_create_nonce( 'ofp_logout' ),
-            ],
-            home_url( '/dashboard' )
-        );
+        return add_query_arg( [ 'ofp_logout' => '1', '_wpnonce' => wp_create_nonce( 'ofp_logout' ) ], home_url( '/dashboard' ) );
     }
 
-    /**
-     * Generate a clean URL for any registered OFP route.
-     * Example: OFP_Client_Portal::route_url('my-listing') → https://site.com/my-listing
-     *
-     * @param  string $slug  Route slug (key in $routes).
-     * @return string        Full home URL for the route.
-     */
     public static function route_url( string $slug ): string {
         return home_url( '/' . ltrim( $slug, '/' ) );
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // PLACEHOLDER (shown while templates are being built phase by phase)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Render a minimal placeholder page for routes whose templates haven't
-     * been built yet. This means the plugin stays functional during phased
-     * development — no white screens or fatal errors on any route.
-     *
-     * @param  string $route  The requested route slug.
-     * @return void
-     */
     private function render_placeholder( string $route ): void {
         $title = ucwords( str_replace( '-', ' ', $route ) );
-        ?>
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title><?php echo esc_html( $title ); ?> — OFast Pipeline</title>
-            <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                    background: #f0f4f8;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    min-height: 100vh;
-                    color: #333;
-                }
-                .card {
-                    background: #fff;
-                    border-radius: 12px;
-                    padding: 48px 40px;
-                    max-width: 480px;
-                    width: 100%;
-                    text-align: center;
-                    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-                }
-                .badge {
-                    display: inline-block;
-                    background: #e8f4fd;
-                    color: #1a73e8;
-                    font-size: 12px;
-                    font-weight: 600;
-                    letter-spacing: 0.05em;
-                    text-transform: uppercase;
-                    padding: 4px 12px;
-                    border-radius: 100px;
-                    margin-bottom: 20px;
-                }
-                h1 {
-                    font-size: 24px;
-                    font-weight: 700;
-                    margin-bottom: 12px;
-                    color: #111;
-                }
-                p { font-size: 15px; color: #666; line-height: 1.6; }
-                .route {
-                    margin-top: 20px;
-                    font-size: 13px;
-                    background: #f8f9fa;
-                    border-radius: 6px;
-                    padding: 8px 16px;
-                    color: #888;
-                    font-family: monospace;
-                }
-                .back {
-                    margin-top: 28px;
-                    display: inline-block;
-                    color: #1a73e8;
-                    text-decoration: none;
-                    font-size: 14px;
-                }
-                .back:hover { text-decoration: underline; }
-            </style>
-        </head>
-        <body>
-            <div class="card">
-                <span class="badge">Coming Soon</span>
-                <h1><?php echo esc_html( $title ); ?></h1>
-                <p>This section of the OFast Pipeline client portal is being built as part of the phased rollout.</p>
-                <div class="route">/<?php echo esc_html( $route ); ?></div>
-                <a class="back" href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>">
-                    ← Back to Dashboard
-                </a>
-            </div>
-        </body>
-        </html>
-        <?php
+        ?><!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?php echo esc_html( $title ); ?> — OFast Pipeline</title><style>*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f0f4f8;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#333}.card{background:#fff;border-radius:12px;padding:48px 40px;max-width:480px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08)}.badge{display:inline-block;background:#e8f4fd;color:#1a73e8;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:4px 12px;border-radius:100px;margin-bottom:20px}h1{font-size:24px;font-weight:700;margin-bottom:12px;color:#111}p{font-size:15px;color:#666;line-height:1.6}.route{margin-top:20px;font-size:13px;background:#f8f9fa;border-radius:6px;padding:8px 16px;color:#888;font-family:monospace}.back{margin-top:28px;display:inline-block;color:#1a73e8;text-decoration:none;font-size:14px}</style></head><body><div class="card"><span class="badge">Coming Soon</span><h1><?php echo esc_html( $title ); ?></h1><p>This section of the OFast Pipeline client portal is being built as part of the phased rollout.</p><div class="route">/<?php echo esc_html( $route ); ?></div><a class="back" href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>">← Back to Dashboard</a></div></body></html><?php
     }
 }

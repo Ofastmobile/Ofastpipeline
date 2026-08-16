@@ -12,20 +12,17 @@
  * Requires PHP: 8.1
  */
 
-// ─── Hard stop if accessed directly ───────────────────────────────────────────
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
-// ─── Plugin constants ──────────────────────────────────────────────────────────
-define( 'OFP_VERSION',     '2.1.0' );
-define( 'OFP_PATH',        plugin_dir_path( __FILE__ ) );
-define( 'OFP_URL',         plugin_dir_url( __FILE__ ) );
+define( 'OFP_VERSION', '2.1.0' );
+define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
+define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
 define( 'OFP_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+if ( ! defined( 'OFP\\OFP_PLUGIN_DIR' ) ) {
+    define( 'OFP\\OFP_PLUGIN_DIR', OFP_PATH );
+}
 
-// ─── Autoload all class files ──────────────────────────────────────────────────
-// Core / shared
 require_once OFP_PATH . 'includes/class-ofp-activator.php';
 require_once OFP_PATH . 'includes/class-ofp-deactivator.php';
 require_once OFP_PATH . 'includes/class-ofp-security.php';
@@ -40,35 +37,47 @@ require_once OFP_PATH . 'includes/class-ofp-ivr.php';
 require_once OFP_PATH . 'includes/class-ofp-credit.php';
 require_once OFP_PATH . 'includes/class-ofp-subscription.php';
 require_once OFP_PATH . 'includes/class-ofp-csv.php';
-require_once OFP_PATH . 'includes/class-ofp-property-cpt.php';   // v2.1 — property listing CPT
-require_once OFP_PATH . 'includes/class-ofp-host-router.php';    // Phase 16 — app/property subdomain routing
-require_once OFP_PATH . 'includes/class-ofp-notification.php';   // Phase 17 — notifications
-require_once OFP_PATH . 'includes/class-ofp-logger.php';         // Phase 21 — activity logger
-require_once OFP_PATH . 'includes/class-ofp-pipeline-audio.php'; // Phase 22 — custom voice audio
-// Payment gateway — interface + provider adapters.
-// OFP_Payment is the only entry point; adapters are loaded here so the
-// interface is available before any adapter is instantiated.
+require_once OFP_PATH . 'includes/class-ofp-property-cpt.php';
+require_once OFP_PATH . 'includes/class-ofp-host-router.php';
+require_once OFP_PATH . 'includes/class-ofp-notification.php';
+require_once OFP_PATH . 'includes/class-ofp-logger.php';
+require_once OFP_PATH . 'includes/class-ofp-pipeline-audio.php';
+require_once OFP_PATH . 'includes/class-ofp-property-commerce.php';
+require_once OFP_PATH . 'includes/class-ofp-property-commerce-migration.php';
+require_once OFP_PATH . 'includes/class-ofp-property-admin-rules.php';
+require_once OFP_PATH . 'includes/class-ofp-property-payment-context.php';
+require_once OFP_PATH . 'includes/class-ofp-property-payment-record.php';
+require_once OFP_PATH . 'includes/class-ofp-property-contact.php';
+require_once OFP_PATH . 'includes/class-ofp-property-purchase-service.php';
+require_once OFP_PATH . 'includes/class-ofp-property-comms-bridge.php';
+require_once OFP_PATH . 'includes/class-ofp-property-manual-payment.php';
+require_once OFP_PATH . 'includes/class-ofp-property-payment-records.php';
+require_once OFP_PATH . 'includes/class-ofp-property-checkout.php';
+require_once OFP_PATH . 'includes/class-ofp-property-payment-entry-ui.php';
+require_once OFP_PATH . 'includes/class-ofp-property-commerce-repair.php';
+
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-monnify.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-paystack.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-flutterwave.php';
 
-// Admin
 require_once OFP_PATH . 'admin/class-ofp-admin-menu.php';
 require_once OFP_PATH . 'admin/class-ofp-admin-settings.php';
+require_once OFP_PATH . 'admin/class-ofp-property-commerce-admin.php';
+require_once OFP_PATH . 'admin/class-ofp-property-commerce-actions.php';
+require_once OFP_PATH . 'admin/class-ofp-property-purchase-admin.php';
 
-// Public / REST / Client portal
 require_once OFP_PATH . 'public/class-ofp-rest-api.php';
 require_once OFP_PATH . 'public/class-ofp-client-portal.php';
+require_once OFP_PATH . 'public/class-ofp-property-sales.php';
+require_once OFP_PATH . 'public/class-ofp-property-sales-client-ui.php';
+require_once OFP_PATH . 'public/class-ofp-property-marketplace.php';
 
-// Cron
 require_once OFP_PATH . 'cron/class-ofp-cron-handler.php';
 
-// ─── Activation / deactivation hooks ──────────────────────────────────────────
 register_activation_hook( OFP_PLUGIN_FILE, [ 'OFP_Activator', 'activate' ] );
 register_deactivation_hook( OFP_PLUGIN_FILE, [ 'OFP_Deactivator', 'deactivate' ] );
 
-// ─── Custom cron interval (every 5 minutes) ────────────────────────────────────
 add_filter( 'cron_schedules', function ( array $schedules ): array {
     $schedules['ofp_five_minutes'] = [
         'interval' => 300,
@@ -77,31 +86,33 @@ add_filter( 'cron_schedules', function ( array $schedules ): array {
     return $schedules;
 } );
 
-// ─── Boot all plugin components after WP + plugins are loaded ─────────────────
 add_action( 'plugins_loaded', function (): void {
-
-    // Configure Brevo SMTP globally so ALL wp_mail() calls route through it.
     OFP_Mailer::configure_smtp();
 
-    // Spin up each component.
     new OFP_Admin_Menu();
     new OFP_Admin_Settings();
+    new OFP_Property_Commerce_Admin();
+    OFP_Property_Commerce_Actions::init();
+    OFP_Property_Purchase_Admin::init();
     new OFP_REST_API();
     new OFP_Client_Portal();
     new OFP_Cron_Handler();
-    new OFP_Property_CPT();   // v2.1
-    OFP_Host_Router::init();  // Phase 16 — app/property subdomain routing
-
+    new OFP_Property_CPT();
+    OFP_Host_Router::init();
+    OFP_Property_Commerce::init();
+    OFP_Property_Commerce_Migration::init();
+    OFP_Property_Sales::init();
+    OFP_Property_Sales_Client_UI::init();
+    OFP_Property_Admin_Rules::init();
+    OFP_Property_Marketplace::init();
+    OFP_Property_Contact::init();
+    OFP_Property_Comms_Bridge::init();
+    OFP_Property_Checkout::init();
+    OFP_Property_Payment_Records::init();
+    OFP_Property_Payment_Entry_UI::init();
+    OFP_Property_Commerce_Repair::init();
 } );
 
-// ─── Deferred rewrite rule flush (fixes the activation-timing bug) ────────────
-// OFP_Activator::activate() cannot safely call flush_rewrite_rules() directly
-// (see the detailed comment in class-ofp-activator.php). Instead it sets the
-// 'ofp_flush_rewrite_rules' option, and we check for it here on 'init' at a
-// LATE priority — after OFP_Client_Portal::register_rewrite_rules() (default
-// priority 10) and OFP_Property_CPT::register_post_type() (default priority
-// 10) have both already run for this request, so the flush captures every
-// custom route correctly.
 add_action( 'init', function (): void {
     if ( get_option( 'ofp_flush_rewrite_rules' ) ) {
         flush_rewrite_rules();
@@ -109,28 +120,19 @@ add_action( 'init', function (): void {
     }
 }, 999 );
 
-// ─── Global Meta Pixel Injection ──────────────────────────────────────────────
 add_action( 'wp_head', function (): void {
     $global_pixel = get_option( 'ofp_global_pixel_id', '' );
     if ( ! empty( $global_pixel ) ) {
         ?>
-        <!-- OFast Pipeline Global Meta Pixel -->
         <script>
-            !function(f,b,e,v,n,t,s)
-            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+            n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '<?php echo esc_js( $global_pixel ); ?>');
-            fbq('track', 'PageView');
+            fbq('init', '<?php echo esc_js( $global_pixel ); ?>');fbq('track', 'PageView');
         </script>
-        <noscript><img height="1" width="1" style="display:none"
-            src="https://www.facebook.com/tr?id=<?php echo esc_attr( $global_pixel ); ?>&ev=PageView&noscript=1"
-        /></noscript>
-        <!-- End OFast Pipeline Global Meta Pixel -->
+        <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=<?php echo esc_attr( $global_pixel ); ?>&ev=PageView&noscript=1" /></noscript>
         <?php
     }
 } );

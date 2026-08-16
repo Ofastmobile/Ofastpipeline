@@ -4,17 +4,6 @@
  *
  * Monnify payment gateway adapter.
  * Implements OFP_Gateway_Interface.
- *
- * MONNIFY VIRTUAL ACCOUNTS:
- *  Each client gets one dedicated reserved account.
- *  Payments into that account trigger the SUCCESSFUL_TRANSACTION webhook.
- *  The account reference is "ofp_client_{id}" for easy lookup in the webhook.
- *
- * WEBHOOK VERIFICATION:
- *  Monnify signs webhooks with SHA512(secret_key|payload).
- *  We verify this before processing any payment.
- *
- * Docs: https://developers.monnify.com
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -35,18 +24,10 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
         $this->contract_code = get_option( 'ofp_monnify_contract_code', '' );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function is_configured(): bool {
-        return ! empty( $this->api_key )
-            && ! empty( $this->secret_key )
-            && ! empty( $this->contract_code );
+        return ! empty( $this->api_key ) && ! empty( $this->secret_key ) && ! empty( $this->contract_code );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function create_virtual_account( array $client_data, int $client_id ): ?object {
         $token = $this->get_access_token();
         if ( ! $token ) return null;
@@ -58,15 +39,15 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
                     'Authorization' => 'Bearer ' . $token,
                     'Content-Type'  => 'application/json',
                 ],
-                'body'    => wp_json_encode( [
-                    'accountReference'    => 'ofp_client_' . $client_id,
-                    'accountName'         => $client_data['business_name'] . ' — OFast Pipeline',
-                    'currencyCode'        => 'NGN',
-                    'contractCode'        => $this->contract_code,
-                    'customerEmail'       => $client_data['email'],
-                    'customerName'        => $client_data['owner_name'],
+                'body' => wp_json_encode( [
+                    'accountReference'     => 'ofp_client_' . $client_id,
+                    'accountName'          => $client_data['business_name'] . ' — OFast Pipeline',
+                    'currencyCode'         => 'NGN',
+                    'contractCode'         => $this->contract_code,
+                    'customerEmail'        => $client_data['email'],
+                    'customerName'         => $client_data['owner_name'],
                     'getAllAvailableBanks' => false,
-                    'preferredBanks'      => [ '035' ], // Wema Bank
+                    'preferredBanks'       => [ '035' ],
                 ] ),
                 'timeout' => 20,
             ]
@@ -79,25 +60,17 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
 
         $body    = json_decode( wp_remote_retrieve_body( $response ) );
         $account = $body->responseBody->accounts[0] ?? null;
-
         if ( ! $account ) {
             error_log( '[OFP_Monnify] No account in response: ' . wp_remote_retrieve_body( $response ) );
             return null;
         }
 
-        // Normalise to standard format.
         return (object) [
             'account_number' => $account->accountNumber ?? '',
             'bank_name'      => $account->bankName ?? '',
         ];
     }
 
-    /**
-     * Initiate a Monnify checkout transaction for credit top-up.
-     *
-     * @param array $args
-     * @return string|null
-     */
     public function initiate_transaction( array $args ): ?string {
         $token = $this->get_access_token();
         if ( ! $token ) {
@@ -116,8 +89,6 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
             'redirectUrl'        => $args['redirect_url'],
         ];
 
-        error_log( 'OFP Monnify initiate_transaction payload: ' . wp_json_encode( $payload ) );
-
         $response = wp_remote_post( $this->base_url . '/api/v1/merchant/transactions/init-transaction', [
             'headers' => [
                 'Authorization' => 'Bearer ' . $token,
@@ -133,10 +104,7 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
         }
 
         $raw_body = wp_remote_retrieve_body( $response );
-        error_log( 'OFP Monnify initiate_transaction response: ' . $raw_body );
-
         $body = json_decode( $raw_body );
-
         if ( empty( $body->requestSuccessful ) || empty( $body->responseBody->checkoutUrl ) ) {
             error_log( 'OFP Monnify initiate_transaction unexpected response: ' . $raw_body );
             return null;
@@ -145,15 +113,10 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
         return $body->responseBody->checkoutUrl;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function handle_webhook( WP_REST_Request $request ): WP_REST_Response {
-
         $payload   = $request->get_body();
         $signature = $request->get_header( 'monnify-signature' );
 
-        // Verify SHA512 signature.
         $expected = hash( 'sha512', $this->secret_key . '|' . $payload );
         if ( ! hash_equals( $expected, (string) $signature ) ) {
             error_log( '[OFP_Monnify] Webhook signature mismatch.' );
@@ -161,31 +124,32 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
         }
 
         $data = json_decode( $payload );
-
-        // Only process successful transactions.
         if ( ( $data->eventType ?? '' ) !== 'SUCCESSFUL_TRANSACTION' ) {
             return new WP_REST_Response( [ 'status' => 'ignored' ], 200 );
         }
 
         $topup_reference = $data->eventData->paymentReference ?? '';
 
-        if ( $topup_reference && OFP_Payment::is_credit_topup_reference( $topup_reference ) ) {
+        if ( $topup_reference && class_exists( 'OFP_Property_Payment_Context' ) && OFP_Property_Payment_Context::is_reference( $topup_reference ) ) {
             $amount_paid = (float) ( $data->eventData->amountPaid ?? 0 );
-            OFP_Payment::confirm_credit_topup(
+            $processed = OFP_Property_Payment_Context::process_verified_payment(
                 $topup_reference,
                 $amount_paid,
-                (string) ( $data->eventData->transactionReference ?? '' )
+                'monnify',
+                (string) ( $data->eventData->transactionReference ?? $topup_reference )
             );
+            return new WP_REST_Response( [ 'status' => $processed ? 'property_payment_processed' : 'property_payment_rejected' ], $processed ? 200 : 422 );
+        }
+
+        if ( $topup_reference && OFP_Payment::is_credit_topup_reference( $topup_reference ) ) {
+            $amount_paid = (float) ( $data->eventData->amountPaid ?? 0 );
+            OFP_Payment::confirm_credit_topup( $topup_reference, $amount_paid, (string) ( $data->eventData->transactionReference ?? '' ) );
             return new WP_REST_Response( [ 'status' => 'credit_topup_processed' ], 200 );
         }
 
         if ( $topup_reference && OFP_Payment::is_subscription_checkout_reference( $topup_reference ) ) {
             $amount_paid = (float) ( $data->eventData->amountPaid ?? 0 );
-            OFP_Payment::confirm_subscription_checkout(
-                $topup_reference,
-                $amount_paid,
-                (string) ( $data->eventData->transactionReference ?? '' )
-            );
+            OFP_Payment::confirm_subscription_checkout( $topup_reference, $amount_paid, (string) ( $data->eventData->transactionReference ?? '' ) );
             return new WP_REST_Response( [ 'status' => 'subscription_checkout_processed' ], 200 );
         }
 
@@ -193,7 +157,6 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
         $amount      = (float) ( $data->eventData->amountPaid ?? 0 );
         $payment_ref = sanitize_text_field( $data->eventData->transactionReference ?? '' );
 
-        // Extract client ID from the account reference "ofp_client_{id}".
         preg_match( '/ofp_client_(\d+)/', $account_ref, $matches );
         $client_id = (int) ( $matches[1] ?? 0 );
 
@@ -202,19 +165,9 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
         }
 
         $this->process_payment( $client_id, $amount, $payment_ref );
-
         return new WP_REST_Response( [ 'status' => 'processed' ], 200 );
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // INTERNAL
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Get a Monnify access token via Basic auth.
-     *
-     * @return string|null  Access token, or null on failure.
-     */
     private function get_access_token(): ?string {
         $credentials = base64_encode( $this->api_key . ':' . $this->secret_key );
 
@@ -235,15 +188,6 @@ class OFP_Gateway_Monnify implements OFP_Gateway_Interface {
         return $body->responseBody->accessToken ?? null;
     }
 
-    /**
-     * Delegate a verified payment to the shared handler.
-     * See OFP_Subscription::process_gateway_payment() for the full-vs-underpaid logic.
-     *
-     * @param  int    $client_id
-     * @param  float  $amount
-     * @param  string $payment_ref
-     * @return void
-     */
     private function process_payment( int $client_id, float $amount, string $payment_ref ): void {
         OFP_Subscription::process_gateway_payment( $client_id, $amount, $payment_ref, 'monnify_virtual_account' );
     }

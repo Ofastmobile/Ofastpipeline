@@ -46,7 +46,7 @@ $status_badges = [
         })();
     </script>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
 <body class="ofp-portal-body">
 
@@ -219,7 +219,7 @@ $status_badges = [
                 <?php if ( empty( $recent_leads ) ) : ?>
                     <div class="ofp-empty">No recent leads found</div>
                 <?php else : ?>
-                    <div style="overflow-x:auto;">
+                    <div class="ofp-table-responsive">
                         <table class="ofp-table">
                             <thead>
                                 <tr>

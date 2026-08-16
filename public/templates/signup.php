@@ -69,7 +69,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account — OFast Pipeline</title>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
     <style>
         body { display:flex; align-items:flex-start; justify-content:center; min-height:100vh; padding:40px 20px; }
         .ofp-signup-wrap { width:100%; max-width:520px; }

@@ -57,18 +57,44 @@
     padding: 0;
 }
 
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+}
+
 body.ofp-portal-body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: var(--bg-body);
     color: var(--text-main);
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* ── Shell & Layout ───────────────────────────────────────────────────────── */
 .ofp-shell {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
 }
 
 .ofp-main {
@@ -76,6 +102,8 @@ body.ofp-portal-body {
     min-width: 0;
     display: flex;
     flex-direction: column;
+    height: 100%;
+    overflow: hidden;
 }
 
 .ofp-content-area {
@@ -84,6 +112,8 @@ body.ofp-portal-body {
     max-width: 1400px;
     margin: 0 auto;
     width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
@@ -617,6 +647,13 @@ body.ofp-portal-body {
 }
 
 /* ── Tables ───────────────────────────────────────────────────────────────── */
+.ofp-table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 24px;
+}
+
 .ofp-table {
     width: 100%;
     border-collapse: collapse;

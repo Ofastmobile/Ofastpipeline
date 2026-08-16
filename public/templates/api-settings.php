@@ -24,7 +24,7 @@ OFP_Auth::require_active_subscription( $client );
         })();
     </script>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
 <body class="ofp-portal-body">
 

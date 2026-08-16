@@ -264,7 +264,7 @@ $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Funding — OFast Pipeline</title>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
     <style>
         /* ── Funding-page specific styles ── */
         .ofp-funding-page { max-width: 560px; margin: 0 auto; padding: 0 0 60px; }

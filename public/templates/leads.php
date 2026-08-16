@@ -90,7 +90,7 @@ $status_badges = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Leads — OFast Pipeline</title>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="ofp-portal-body">
@@ -248,7 +248,7 @@ $status_badges = [
         </div>
         
         <?php if ( empty( $leads ) ) : ?>
-            <div class="ofp-table-wrap" style="margin-top: 0;">
+            <div class="ofp-table-wrap ofp-table-responsive" style="margin-top: 0;">
                 <table class="ofp-table">
                     <thead>
                         <tr>
@@ -275,7 +275,7 @@ $status_badges = [
                 </table>
             </div>
         <?php else : ?>
-            <div class="ofp-table-wrap" style="margin-top: 0;">
+            <div class="ofp-table-wrap ofp-table-responsive" style="margin-top: 0;">
                 <table class="ofp-table">
                     <thead>
                         <tr>
