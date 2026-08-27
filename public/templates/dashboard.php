@@ -9,8 +9,6 @@ OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
 
-$has_crm     = OFP_Subscription::has_active( 'crm',     $client->id );
-$has_listing = OFP_Subscription::has_active( 'listing', $client->id );
 
 // Stats
 $stats   = OFP_Lead::get_stats( $client->id );
@@ -61,7 +59,7 @@ $status_badges = [
                 elseif ($hour < 18) { $greeting = 'Good afternoon'; }
             ?>
             <h1><?php echo esc_html( $greeting . ', ' . explode(' ', trim($client->owner_name))[0] ); ?>!</h1>
-            <p>Here's what's happening with your business today</p>
+            <p>Here's what's happening with your agency today</p>
         </div>
         <div class="ofp-greeting-right">
             <button class="ofp-icon-btn" title="Refresh Dashboard" onclick="window.location.reload();">
@@ -87,12 +85,6 @@ $status_badges = [
             <?php else : ?>
                 ⏳ Your account is <strong>pending review</strong>. We will notify you once approved.
             <?php endif; ?>
-            <?php if ( $client->virtual_account_number ) : ?>
-                <div style="margin-top:8px;">
-                    Pay to: <strong><?php echo esc_html( $client->virtual_bank_name ); ?></strong>
-                    — <strong><?php echo esc_html( $client->virtual_account_number ); ?></strong>
-                </div>
-            <?php endif; ?>
         </div>
     <?php elseif ( OFP_Subscription::has_unpaid( $client->id ) ) :
         $underpaid_count = count( OFP_Subscription::get_underpaid_for_client( $client->id ) );
@@ -110,13 +102,12 @@ $status_badges = [
         </div>
     <?php endif; ?>
 
-    <?php if ( $has_crm ) : ?>
 
         <!-- 4 Stats Cards matched to image -->
         <div class="ofp-stats-grid">
             <div class="ofp-stat-card">
                 <div class="ofp-stat-header">
-                    <span class="ofp-stat-title">Leads Today</span>
+                    <span class="ofp-stat-title">Prospects Today</span>
                     <div class="ofp-stat-icon blue">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
                     </div>
@@ -163,7 +154,7 @@ $status_badges = [
         <div class="ofp-grid-2">
             <div class="ofp-card">
                 <div class="ofp-card-header">
-                    <span class="ofp-card-title">Lead Volume Trend</span>
+                    <span class="ofp-card-title">Prospect Volume Trend</span>
                     <a href="#" class="ofp-card-link">Live Data (7 days)</a>
                 </div>
                 <div class="ofp-chart-placeholder">
@@ -213,11 +204,11 @@ $status_badges = [
         <div class="ofp-grid-2">
             <div class="ofp-card">
                 <div class="ofp-card-header">
-                    <span class="ofp-card-title">Recent Leads</span>
+                    <span class="ofp-card-title">Recent Prospects</span>
                     <a href="<?php echo esc_url( home_url( '/leads' ) ); ?>" class="ofp-card-link">Live Data</a>
                 </div>
                 <?php if ( empty( $recent_leads ) ) : ?>
-                    <div class="ofp-empty">No recent leads found</div>
+                    <div class="ofp-empty">No recent prospects found</div>
                 <?php else : ?>
                     <div class="ofp-table-responsive">
                         <table class="ofp-table">
@@ -282,20 +273,6 @@ $status_badges = [
             </div>
         </div>
 
-    <?php else : ?>
-
-        <!-- Upgrade CTA for non-CRM clients -->
-        <div class="ofp-card" style="text-align:center;padding:64px 32px;">
-            <div style="font-size:48px;margin-bottom:16px;">🚀</div>
-            <h2 style="font-size:24px;color:var(--text-main);margin-bottom:12px;">Activate Lead Automation</h2>
-            <p style="color:var(--text-muted);margin-bottom:32px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.6;">
-                Upgrade to a CRM plan to get automated SMS follow-ups, voice calls, and IVR — all running on autopilot so you never miss a lead.
-            </p>
-            <a href="mailto:<?php echo esc_attr( get_option( 'admin_email' ) ); ?>?subject=Upgrade Request"
-               class="ofp-btn-accent">Contact Us to Upgrade</a>
-        </div>
-
-    <?php endif; ?>
 
     <!-- Referral / Upgrade Banner matching design -->
     <div class="ofp-referral-banner">
@@ -304,8 +281,8 @@ $status_badges = [
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
             </div>
             <div class="ofp-banner-text">
-                <h3>Refer Businesses & Earn Credits</h3>
-                <p>Invite other businesses and earn a commission in SMS credits anytime they top up.</p>
+                <h3>Refer Agents & Earn Credits</h3>
+                <p>Invite other agents and earn a commission in SMS credits anytime they top up.</p>
             </div>
         </div>
         <a href="#" class="ofp-btn-accent">Get Your Referral Link</a>

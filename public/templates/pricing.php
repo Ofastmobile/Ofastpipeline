@@ -10,7 +10,6 @@ $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
 
 $has_crm     = OFP_Subscription::has_active( 'crm',     $client->id );
-$has_listing = OFP_Subscription::has_active( 'listing', $client->id );
 
 ?>
 <!DOCTYPE html>
@@ -138,82 +137,137 @@ $has_listing = OFP_Subscription::has_active( 'listing', $client->id );
         <h1 style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Plans & Pricing</h1>
         <p style="color: var(--text-muted); font-size: 15px;">Choose the right tools to grow your business.</p>
     </div>
-
     <div class="ofp-pricing-grid">
         
-        <!-- CRM Plan -->
-        <div class="ofp-pricing-card <?php echo $has_crm ? 'is-active' : ''; ?>">
-            <?php if ( $has_crm ) : ?>
-                <div class="ofp-active-badge">Active Plan</div>
-            <?php endif; ?>
-            <div class="ofp-pricing-header">
-                <div class="ofp-pricing-title">CRM & Automation</div>
-                <div class="ofp-pricing-price">Custom <span>/ month</span></div>
-                <div class="ofp-pricing-desc">Everything you need to capture, nurture, and convert leads on autopilot.</div>
-            </div>
-            <ul class="ofp-pricing-features">
-                <li>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    Automated SMS follow-ups
-                </li>
-                <li>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    Voice Calls & IVR Routing
-                </li>
-                <li>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    Lead Pipeline Management
-                </li>
-                <li>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    Comprehensive Analytics & Reporting
-                </li>
-            </ul>
-            <div class="ofp-pricing-action">
-                <?php if ( $has_crm ) : ?>
-                    <button class="ofp-btn" disabled style="width:100%; opacity:0.7; cursor:default;">Currently Active</button>
-                <?php else : ?>
-                    <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn-accent">Upgrade to CRM</a>
-                <?php endif; ?>
-            </div>
-        </div>
+        <?php
+        $prices = class_exists('OFP_Property_CPT') && method_exists('OFP_Property_CPT', 'get_plan_prices') ? OFP_Property_CPT::get_plan_prices() : ['free'=>0,'silver'=>50000,'gold'=>100000];
+        $caps   = class_exists('OFP_Property_CPT') && method_exists('OFP_Property_CPT', 'get_plan_caps') ? OFP_Property_CPT::get_plan_caps() : ['free'=>1,'silver'=>3,'gold'=>10];
 
-        <!-- Listing Plan -->
-        <div class="ofp-pricing-card <?php echo $has_listing ? 'is-active' : ''; ?>">
-            <?php if ( $has_listing ) : ?>
+        // ── Determine the client's effective plan ─────────────────────────
+        // The DB `plan` column may hold OLD keys (starter/growth/pro) or
+        // NEW unified keys (free/silver/gold). Map old → new so comparisons work.
+        $plan_map = [
+            'starter' => 'free',
+            'growth'  => 'silver',
+            'pro'     => 'gold',
+            'bronze'  => 'free',
+            // New keys map to themselves
+            'free'    => 'free',
+            'silver'  => 'silver',
+            'gold'    => 'gold',
+        ];
+
+        $raw_plan = $client->plan ?? 'free';
+        $current_plan = $plan_map[ $raw_plan ] ?? 'free';
+
+        // Also check listing_plan in case it's set to a higher tier
+        if ( isset( $client->listing_plan ) ) {
+            $mapped_listing = $plan_map[ $client->listing_plan ] ?? 'free';
+            $tier_order = ['free' => 1, 'silver' => 2, 'gold' => 3];
+            if ( ($tier_order[$mapped_listing] ?? 1) > ($tier_order[$current_plan] ?? 1) ) {
+                $current_plan = $mapped_listing;
+            }
+        }
+
+        // ── Calculate days until subscription expires ─────────────────────
+        // Use the client row's subscription_expires as the primary source
+        $days_to_expiry = 999;
+        if ( ! empty( $client->subscription_expires ) ) {
+            $expiry = strtotime( $client->subscription_expires );
+            if ( $expiry ) {
+                $days_to_expiry = ( $expiry - time() ) / DAY_IN_SECONDS;
+            }
+        }
+
+        $plans = [
+            'free' => [
+                'name' => 'Free',
+                'price' => '₦' . number_format( $prices['free'] ?? 0 ),
+                'desc' => 'Essential tools for getting started.',
+                'features' => [
+                    'CRM & Automation (Basic)',
+                    'Leads & Buyers Management',
+                    ($caps['free'] ?? 1) . ' Property Listing',
+                    'Payment records & Customer portal',
+                    '0 Team members'
+                ]
+            ],
+            'silver' => [
+                'name' => 'Silver',
+                'price' => '₦' . number_format( $prices['silver'] ?? 50000 ),
+                'desc' => 'For growing teams and standard reporting.',
+                'features' => [
+                    'CRM & Automation (Standard)',
+                    'Leads & Buyers Management',
+                    ($caps['silver'] ?? 3) . ' Property Listings',
+                    'Payment records & Customer portal',
+                    'Editable email templates',
+                    '2 Team members',
+                    'Standard Reports'
+                ]
+            ],
+            'gold' => [
+                'name' => 'Gold',
+                'price' => '₦' . number_format( $prices['gold'] ?? 100000 ),
+                'desc' => 'Advanced features, ROI and unlimited potential.',
+                'features' => [
+                    'CRM & Automation (Advanced)',
+                    'Leads & Buyers Management',
+                    ($caps['gold'] ?? 10) . ' Property Listings',
+                    'Payment records & Customer portal',
+                    'Editable email templates',
+                    '3 Team members',
+                    'Installment payments & ROI/Investment',
+                    'Advanced Reports'
+                ]
+            ]
+        ];
+
+        foreach ( $plans as $id => $p ) :
+            $is_active = ( $id === $current_plan );
+        ?>
+        <div class="ofp-pricing-card <?php echo $is_active ? 'is-active' : ''; ?>">
+            <?php if ( $is_active ) : ?>
                 <div class="ofp-active-badge">Active Plan</div>
             <?php endif; ?>
             <div class="ofp-pricing-header">
-                <div class="ofp-pricing-title">Property Listings</div>
-                <div class="ofp-pricing-price">Custom <span>/ month</span></div>
-                <div class="ofp-pricing-desc">Showcase your properties and reach thousands of potential buyers.</div>
+                <div class="ofp-pricing-title"><?php echo esc_html($p['name']); ?> Plan</div>
+                <div class="ofp-pricing-price"><?php echo esc_html($p['price']); ?> <span>/ month</span></div>
+                <div class="ofp-pricing-desc"><?php echo esc_html($p['desc']); ?></div>
             </div>
             <ul class="ofp-pricing-features">
+                <?php foreach ( $p['features'] as $feat ) : ?>
                 <li>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    Unlimited Property Listings
+                    <?php echo esc_html($feat); ?>
                 </li>
-                <li>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    High-quality Image Galleries
-                </li>
-                <li>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    Direct Buyer Inquiries
-                </li>
-                <li>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    Featured Placement Options
-                </li>
+                <?php endforeach; ?>
             </ul>
             <div class="ofp-pricing-action">
-                <?php if ( $has_listing ) : ?>
-                    <button class="ofp-btn" disabled style="width:100%; opacity:0.7; cursor:default;">Currently Active</button>
+                <?php 
+                // Rank the plans so we know what is an upgrade vs downgrade
+                $plan_ranks = ['free' => 1, 'silver' => 2, 'gold' => 3];
+                $current_rank = $plan_ranks[$current_plan] ?? 1;
+                $this_rank = $plan_ranks[$id] ?? 1;
+
+                if ( $id === 'free' ) : ?>
+                    <?php if ( $is_active ) : ?>
+                        <button class="ofp-btn" disabled style="width:100%; opacity:0.7; cursor:default;">Currently Active</button>
+                    <?php endif; // Free has no select button otherwise ?>
+                <?php elseif ( $is_active ) : ?>
+                    <?php if ( $days_to_expiry <= 7 ) : ?>
+                        <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn-accent">Renew <?php echo esc_html($p['name']); ?></a>
+                    <?php else : ?>
+                        <button class="ofp-btn" disabled style="width:100%; opacity:0.7; cursor:default;">Currently Active</button>
+                    <?php endif; ?>
+                <?php elseif ( $this_rank < $current_rank && $days_to_expiry > 7 ) : ?>
+                    <button class="ofp-btn" disabled style="width:100%; opacity:0.5; cursor:not-allowed;">Locked</button>
                 <?php else : ?>
-                    <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn-accent">Upgrade to Listing</a>
+                    <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn-accent">Select <?php echo esc_html($p['name']); ?></a>
                 <?php endif; ?>
             </div>
         </div>
+        <?php endforeach; ?>
 
     </div>
 

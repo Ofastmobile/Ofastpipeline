@@ -200,93 +200,25 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <!-- ── PAYMENT GATEWAY ────────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
         <div class="ofp-settings-section-header">
-            <h3>Payment Gateway</h3>
-            <?php
-            $gw_keys_map = [
-                'monnify'     => [ 'ofp_monnify_api_key', 'ofp_monnify_secret_key', 'ofp_monnify_contract_code' ],
-                'paystack'    => [ 'ofp_paystack_secret_key' ],
-                'flutterwave' => [ 'ofp_flutterwave_secret_key', 'ofp_flutterwave_secret_hash' ],
-            ];
-            ofp_section_status( $gw_keys_map[ $active_provider ] ?? [] );
-            ?>
+            <h3>Payment Gateway (Paystack)</h3>
+            <?php ofp_section_status( [ 'ofp_paystack_secret_key' ] ); ?>
         </div>
         <p class="ofp-hint">
-            Select your active payment provider. All providers create dedicated virtual accounts
-            per client. Switching provider here requires no code changes — only credentials below.
+            Configure your Paystack credentials for payment processing and webhook verifications.
         </p>
 
-        <div class="ofp-field" style="max-width:300px;margin-bottom:20px;">
-            <label>Active Provider</label>
-            <select name="ofp_payment_provider" id="ofp-payment-provider">
-                <option value="monnify"     <?php selected( $active_provider, 'monnify' ); ?>>Monnify</option>
-                <option value="paystack"    <?php selected( $active_provider, 'paystack' ); ?>>Paystack</option>
-                <option value="flutterwave" <?php selected( $active_provider, 'flutterwave' ); ?>>Flutterwave</option>
-            </select>
-        </div>
-
-        <!-- Monnify credentials -->
-        <div class="ofp-gateway-fields" id="ofp-fields-monnify"
-             style="<?php echo $active_provider !== 'monnify' ? 'display:none;' : ''; ?>">
-            <h4>Monnify Credentials</h4>
-            <div class="ofp-form-grid">
-                <div class="ofp-field">
-                    <label>API Key <?php ofp_key_badge( 'ofp_monnify_api_key' ); ?></label>
-                    <input type="password" name="ofp_monnify_api_key" placeholder="Leave blank to keep existing">
-                </div>
-                <div class="ofp-field">
-                    <label>Secret Key <?php ofp_key_badge( 'ofp_monnify_secret_key' ); ?></label>
-                    <input type="password" name="ofp_monnify_secret_key" placeholder="Leave blank to keep existing">
-                </div>
-                <div class="ofp-field">
-                    <label>Contract Code</label>
-                    <input type="text" name="ofp_monnify_contract_code"
-                           value="<?php echo esc_attr( get_option( 'ofp_monnify_contract_code', '' ) ); ?>">
-                </div>
-                <div class="ofp-field">
-                    <label>Base URL</label>
-                    <input type="url" name="ofp_monnify_base_url"
-                           value="<?php echo esc_attr( get_option( 'ofp_monnify_base_url', 'https://api.monnify.com' ) ); ?>">
-                    <p class="ofp-hint">Use https://sandbox.monnify.com for testing.</p>
-                </div>
+        <div class="ofp-form-grid">
+            <div class="ofp-field">
+                <label>Paystack Secret Key <?php ofp_key_badge( 'ofp_paystack_secret_key' ); ?></label>
+                <input type="password" name="ofp_paystack_secret_key" placeholder="Leave blank to keep existing">
+                <p class="ofp-hint">Starts with sk_live_ (production) or sk_test_ (sandbox).</p>
             </div>
         </div>
-
-        <!-- Paystack credentials -->
-        <div class="ofp-gateway-fields" id="ofp-fields-paystack"
-             style="<?php echo $active_provider !== 'paystack' ? 'display:none;' : ''; ?>">
-            <h4>Paystack Credentials</h4>
-            <div class="ofp-form-grid">
-                <div class="ofp-field">
-                    <label>Secret Key <?php ofp_key_badge( 'ofp_paystack_secret_key' ); ?></label>
-                    <input type="password" name="ofp_paystack_secret_key" placeholder="Leave blank to keep existing">
-                    <p class="ofp-hint">Starts with sk_live_ (production) or sk_test_ (sandbox).</p>
-                </div>
-            </div>
-            <p class="ofp-hint">Webhook URL to configure in Paystack dashboard:
-                <code><?php echo esc_url( home_url( '/wp-json/ofp/v1/webhook/payment' ) ); ?></code>
-            </p>
-        </div>
-
-        <!-- Flutterwave credentials -->
-        <div class="ofp-gateway-fields" id="ofp-fields-flutterwave"
-             style="<?php echo $active_provider !== 'flutterwave' ? 'display:none;' : ''; ?>">
-            <h4>Flutterwave Credentials</h4>
-            <div class="ofp-form-grid">
-                <div class="ofp-field">
-                    <label>Secret Key <?php ofp_key_badge( 'ofp_flutterwave_secret_key' ); ?></label>
-                    <input type="password" name="ofp_flutterwave_secret_key" placeholder="Leave blank to keep existing">
-                </div>
-                <div class="ofp-field">
-                    <label>Webhook Secret Hash <?php ofp_key_badge( 'ofp_flutterwave_secret_hash' ); ?></label>
-                    <input type="password" name="ofp_flutterwave_secret_hash" placeholder="Leave blank to keep existing">
-                    <p class="ofp-hint">Set this in your Flutterwave dashboard under Webhooks.</p>
-                </div>
-            </div>
-            <p class="ofp-hint">Webhook URL to configure in Flutterwave dashboard:
-                <code><?php echo esc_url( home_url( '/wp-json/ofp/v1/webhook/payment' ) ); ?></code>
-            </p>
-        </div>
+        <p class="ofp-hint">Webhook URL to configure in Paystack dashboard:
+            <code><?php echo esc_url( home_url( '/wp-json/ofp/v1/webhook/payment' ) ); ?></code>
+        </p>
     </div>
+
 
     <!-- ── Africa's Talking ───────────────────────────────────────────────── -->
     <div class="ofp-settings-section">
@@ -335,6 +267,34 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 <input type="text" name="ofp_bsmsn_sender_id"
                        value="<?php echo esc_attr( get_option( 'ofp_bsmsn_sender_id', '' ) ); ?>"
                        placeholder="e.g. OFastPipe">
+            </div>
+        </div>
+    </div>
+
+    <!-- ── SmartSMSSolutions ──────────────────────────────────────────────── -->
+    <div class="ofp-settings-section">
+        <div class="ofp-settings-section-header">
+            <h3>SmartSMSSolutions (Nigerian SMS)</h3>
+            <?php ofp_section_status( [ 'ofp_smartsms_api_key' ] ); ?>
+        </div>
+        <div class="ofp-form-grid">
+            <div class="ofp-field">
+                <label>API Token <?php ofp_key_badge( 'ofp_smartsms_api_key' ); ?></label>
+                <input type="password" name="ofp_smartsms_api_key" placeholder="Leave blank to keep existing">
+            </div>
+            <div class="ofp-field">
+                <label>Sender ID</label>
+                <input type="text" name="ofp_smartsms_sender_id"
+                       value="<?php echo esc_attr( get_option( 'ofp_smartsms_sender_id', '' ) ); ?>"
+                       placeholder="e.g. OFastPipe">
+            </div>
+            <div class="ofp-field">
+                <label>Routing</label>
+                <select name="ofp_smartsms_routing">
+                    <option value="3" <?php selected( get_option( 'ofp_smartsms_routing', '3' ), '3' ); ?>>Corporate (DND bypass)</option>
+                    <option value="2" <?php selected( get_option( 'ofp_smartsms_routing', '3' ), '2' ); ?>>Standard</option>
+                    <option value="6" <?php selected( get_option( 'ofp_smartsms_routing', '3' ), '6' ); ?>>Refund</option>
+                </select>
             </div>
         </div>
     </div>
@@ -402,65 +362,48 @@ include OFP_PATH . 'admin/views/partials/header.php';
     </form>
 </div>
 
-<div class="ofp-settings-section">
-    <h3>Plans &amp; Pricing</h3>
-    <p class="ofp-hint">
-        Monthly CRM plan fees, one-time setup fees, and the property listing fee.
-        These values are read live across signup, wp-admin client creation, and payment amount matching.
-    </p>
 
-    <?php
-    $ofp_plan_prices = OFP_Subscription::get_plan_prices();
-    $ofp_setup_fees  = OFP_Subscription::get_setup_fees();
-    $ofp_plan_labels = [
-        'starter' => 'Starter',
-        'growth'  => 'Growth',
-        'pro'     => 'Pro',
-    ];
-    ?>
 
-    <form method="post" action="">
-        <?php wp_nonce_field( 'ofp_save_plan_pricing_action', 'ofp_plan_pricing_nonce' ); ?>
+<script>
+// ── Show/hide SMTP fields based on mode toggle ───────────────────────────
+function ofpSyncSmtpToggle() {
+    var selected = document.querySelector('input[name="ofp_smtp_mode"]:checked');
+    if ( ! selected ) return;
+    var fields = document.getElementById('ofp-smtp-fields');
+    var labels = document.querySelectorAll('.ofp-toggle-option');
+    labels.forEach(function(l) { l.classList.remove('ofp-toggle-active'); });
+    if ( selected.closest('.ofp-toggle-option') ) {
+        selected.closest('.ofp-toggle-option').classList.add('ofp-toggle-active');
+    }
+    fields.style.display = selected.value === 'custom' ? '' : 'none';
+}
 
-        <table class="form-table" role="presentation">
-            <?php foreach ( OFP_Subscription::PLAN_KEYS as $ofp_plan ) : ?>
-                <tr>
-                    <th scope="row"><?php echo esc_html( $ofp_plan_labels[ $ofp_plan ] ); ?> Plan</th>
-                    <td>
-                        <label style="margin-right:24px;">
-                            Monthly fee (NGN)
-                            <input type="number" step="0.01" min="0"
-                                   name="price_<?php echo esc_attr( $ofp_plan ); ?>"
-                                   value="<?php echo esc_attr( $ofp_plan_prices[ $ofp_plan ] ); ?>"
-                                   style="width:140px;">
-                        </label>
-                        <label>
-                            Setup fee (NGN, one-time)
-                            <input type="number" step="0.01" min="0"
-                                   name="setup_<?php echo esc_attr( $ofp_plan ); ?>"
-                                   value="<?php echo esc_attr( $ofp_setup_fees[ $ofp_plan ] ); ?>"
-                                   style="width:140px;">
-                        </label>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        </table>
+// Run on page load to ensure correct visual state.
+document.addEventListener('DOMContentLoaded', ofpSyncSmtpToggle);
 
-        <p class="submit">
-            <button type="submit" name="ofp_save_plan_pricing" value="1" class="button button-primary">
-                Save Pricing
-            </button>
-        </p>
-    </form>
-</div>
+// Run on each radio change.
+document.querySelectorAll('input[name="ofp_smtp_mode"]').forEach(function(radio) {
+    radio.addEventListener('change', ofpSyncSmtpToggle);
+});
+
+
+
+<script>
+// ── Show/hide gateway credential fields based on selected provider ───────
+document.getElementById('ofp-payment-provider').addEventListener('change', function() {
+    document.querySelectorAll('.ofp-gateway-fields').forEach(function(el) {
+        el.style.display = 'none';
+    });
+    var target = document.getElementById('ofp-fields-' + this.value);
+    if (target) target.style.display = '';
+});
+</script>
 
 <div class="ofp-settings-section">
-    <h2>Listing Plans</h2>
+    <h2>Plans &amp; Pricing</h2>
     <p class="description">
-        Free/Silver/Gold property listing tiers — monthly price and
-        property cap per tier. Read live by the client dashboard's plan
-        picker and by payment webhook amount-matching, same as CRM
-        pricing above.
+        Unified Free/Silver/Gold tiers — monthly price and
+        property cap per tier. Read live across the system.
     </p>
 
     <?php
@@ -498,42 +441,10 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
         <p class="submit">
             <button type="submit" name="ofp_save_listing_plans" value="1" class="button button-primary">
-                Save Listing Plans
+                Save Plans &amp; Pricing
             </button>
         </p>
     </form>
 </div>
-
-<script>
-// ── Show/hide SMTP fields based on mode toggle ───────────────────────────
-function ofpSyncSmtpToggle() {
-    var selected = document.querySelector('input[name="ofp_smtp_mode"]:checked');
-    if ( ! selected ) return;
-    var fields = document.getElementById('ofp-smtp-fields');
-    var labels = document.querySelectorAll('.ofp-toggle-option');
-    labels.forEach(function(l) { l.classList.remove('ofp-toggle-active'); });
-    if ( selected.closest('.ofp-toggle-option') ) {
-        selected.closest('.ofp-toggle-option').classList.add('ofp-toggle-active');
-    }
-    fields.style.display = selected.value === 'custom' ? '' : 'none';
-}
-
-// Run on page load to ensure correct visual state.
-document.addEventListener('DOMContentLoaded', ofpSyncSmtpToggle);
-
-// Run on each radio change.
-document.querySelectorAll('input[name="ofp_smtp_mode"]').forEach(function(radio) {
-    radio.addEventListener('change', ofpSyncSmtpToggle);
-});
-
-// ── Show/hide gateway credential fields based on selected provider ───────
-document.getElementById('ofp-payment-provider').addEventListener('change', function() {
-    document.querySelectorAll('.ofp-gateway-fields').forEach(function(el) {
-        el.style.display = 'none';
-    });
-    var target = document.getElementById('ofp-fields-' + this.value);
-    if (target) target.style.display = '';
-});
-</script>
 
 <?php include OFP_PATH . 'admin/views/partials/footer.php'; ?>

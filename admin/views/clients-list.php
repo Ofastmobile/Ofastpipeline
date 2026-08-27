@@ -66,89 +66,20 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 <label>WhatsApp Number</label>
                 <input type="tel" name="whatsapp_number" placeholder="Same as primary if blank">
             </div>
-            <div class="ofp-field">
-                <label>Subdomain Slug</label>
-                <input type="text" name="subdomain" placeholder="e.g. lekki-homes">
-            </div>
-            <div class="ofp-field">
-                <label>Business Category</label>
-                <select name="business_category" class="ofp-select">
-                    <option value="">— Select Category —</option>
-                    <option value="property">Property / Real Estate</option>
-                    <option value="food">Food & Restaurant</option>
-                    <option value="fashion">Fashion & Clothing</option>
-                    <option value="beauty">Beauty & Wellness</option>
-                    <option value="education">Education & Training</option>
-                    <option value="logistics">Logistics & Delivery</option>
-                    <option value="health">Health & Pharmacy</option>
-                    <option value="tech">Technology & Services</option>
-                    <option value="other">Other</option>
-                </select>
-            </div>
-        </div>
 
-        <div class="ofp-field ofp-field-full">
-            <label>Subscription Type <span class="required">*</span></label>
-            <div class="ofp-checkbox-group">
-                <label class="ofp-toggle-switch">
-                    <input type="checkbox" name="want_crm" value="1" checked>
-                    <span class="ofp-toggle-slider"></span>
-                    <span>CRM Pipeline (lead automation, SMS, voice)</span>
-                </label>
-                <label class="ofp-toggle-switch">
-                    <input type="checkbox" name="want_listing" value="1">
-                    <span class="ofp-toggle-slider"></span>
-                    <span>Property Listing Directory</span>
-                </label>
-            </div>
-        </div>
 
         <div class="ofp-form-grid">
             <div class="ofp-field" id="ofp-plan-field">
-                <label>CRM Plan</label>
+                <label>Plan</label>
                 <select name="plan" class="ofp-select">
-                    <option value="starter">Starter — NGN 25,000/month (100 leads)</option>
-                    <option value="growth">Growth — NGN 45,000/month (300 leads)</option>
-                    <option value="pro">Pro — NGN 75,000/month (700 leads)</option>
-                </select>
-            </div>
-
-            <div class="ofp-field" id="ofp-listing-plan-field" style="display:none;">
-                <label>Property Listing Plan</label>
-                <select name="listing_plan" class="ofp-select">
-                    <option value="free">Free — NGN <?php echo number_format( OFP_Property_CPT::get_plan_price('free') ); ?>/month (<?php echo OFP_Property_CPT::get_plan_cap('free'); ?> Listing(s))</option>
-                    <option value="silver">Silver — NGN <?php echo number_format( OFP_Property_CPT::get_plan_price('silver') ); ?>/month (<?php echo OFP_Property_CPT::get_plan_cap('silver'); ?> Listing(s))</option>
-                    <option value="gold">Gold — NGN <?php echo number_format( OFP_Property_CPT::get_plan_price('gold') ); ?>/month (Unlimited Listings)</option>
+                    <option value="free">Free</option>
+                    <option value="silver">Silver</option>
+                    <option value="gold">Gold</option>
                 </select>
             </div>
         </div>
 
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const wantListingCheck = document.querySelector('input[name="want_listing"]');
-                const listingPlanField = document.getElementById('ofp-listing-plan-field');
-                const bizCatSelect = document.querySelector('select[name="business_category"]');
-                
-                function toggleListingPlan() {
-                    if (wantListingCheck.checked) {
-                        listingPlanField.style.display = 'block';
-                    } else {
-                        listingPlanField.style.display = 'none';
-                    }
-                }
-                
-                wantListingCheck.addEventListener('change', toggleListingPlan);
-                
-                bizCatSelect.addEventListener('change', function() {
-                    if (this.value === 'property') {
-                        wantListingCheck.checked = true;
-                    }
-                    toggleListingPlan();
-                });
-                
-                toggleListingPlan();
-            });
-        </script>
+
 
         <div class="ofp-form-actions">
             <button type="submit" class="button button-primary ofp-btn-primary">
@@ -202,47 +133,24 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 <input type="tel" name="whatsapp_number" value="<?php echo esc_attr( $client->whatsapp_number ); ?>">
             </div>
             <div class="ofp-field">
-                <label>Subdomain Slug</label>
-                <input type="text" name="subdomain" value="<?php echo esc_attr( $client->subdomain ); ?>">
-            </div>
-            <div class="ofp-field">
-                <label>Business Category</label>
-                <select name="business_category" class="ofp-select">
-                    <?php
-                    $cats = [ 'property' => 'Property / Real Estate', 'food' => 'Food & Restaurant',
-                              'fashion'  => 'Fashion & Clothing', 'beauty' => 'Beauty & Wellness',
-                              'education' => 'Education & Training', 'logistics' => 'Logistics & Delivery',
-                              'health'   => 'Health & Pharmacy', 'tech' => 'Technology & Services', 'other' => 'Other' ];
-                    foreach ( $cats as $val => $label ) :
-                    ?>
-                        <option value="<?php echo esc_attr( $val ); ?>" <?php selected( $client->business_category, $val ); ?>>
-                            <?php echo esc_html( $label ); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="ofp-field">
-                <label>CRM Plan</label>
+                <label>Plan</label>
+                <?php
+                // Map old CRM plan keys to unified plan keys
+                $edit_plan_map = ['starter'=>'free','growth'=>'silver','pro'=>'gold','bronze'=>'free'];
+                $edit_plan = $edit_plan_map[$client->plan] ?? $client->plan;
+                ?>
                 <select name="plan" class="ofp-select">
-                    <option value="starter" <?php selected( $client->plan, 'starter' ); ?>>Starter</option>
-                    <option value="growth"  <?php selected( $client->plan, 'growth' ); ?>>Growth</option>
-                    <option value="pro"     <?php selected( $client->plan, 'pro' ); ?>>Pro</option>
+                    <option value="free"   <?php selected( $edit_plan, 'free' ); ?>>Free</option>
+                    <option value="silver" <?php selected( $edit_plan, 'silver' ); ?>>Silver</option>
+                    <option value="gold"   <?php selected( $edit_plan, 'gold' ); ?>>Gold</option>
                 </select>
             </div>
-            
-            <?php 
-            global $wpdb;
-            $current_listing_plan = $wpdb->get_var( $wpdb->prepare(
-                "SELECT plan FROM {$wpdb->prefix}ofp_subscriptions WHERE client_id = %d AND type = 'listing' ORDER BY id DESC LIMIT 1",
-                $client->id
-            ) ) ?: 'free';
-            ?>
             <div class="ofp-field">
-                <label>Listing Plan (if applicable)</label>
-                <select name="listing_plan" class="ofp-select">
-                    <option value="free" <?php selected( $current_listing_plan, 'free' ); ?>>Free</option>
-                    <option value="silver" <?php selected( $current_listing_plan, 'silver' ); ?>>Silver</option>
-                    <option value="gold"   <?php selected( $current_listing_plan, 'gold' ); ?>>Gold</option>
+                <label>SMS Provider</label>
+                <select name="sms_provider" class="ofp-select">
+                    <option value="africastalking" <?php selected( $client->sms_provider, 'africastalking' ); ?>>Africa's Talking</option>
+                    <option value="bulksms"        <?php selected( $client->sms_provider, 'bulksms' ); ?>>BulkSMS Nigeria</option>
+                    <option value="smartsms"       <?php selected( $client->sms_provider, 'smartsms' ); ?>>SmartSMSSolutions</option>
                 </select>
             </div>
         </div>
@@ -276,9 +184,16 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <div><strong>Email:</strong> <?php echo esc_html( $client->email ); ?></div>
         <div><strong>Phone:</strong> <?php echo esc_html( $client->phone ); ?></div>
         <div><strong>Status:</strong> <?php echo $status_labels[ $client->status ] ?? esc_html( $client->status ); ?></div>
-        <div><strong>Plan:</strong> <?php echo esc_html( strtoupper( $client->plan ?: '—' ) ); ?></div>
+        $detail_plan_label = $detail_plan_map[$client->plan] ?? ucfirst($client->plan ?: '—');
+        ?>
+        <div><strong>Plan:</strong> <?php echo esc_html( $detail_plan_label ); ?></div>
+        <?php
+        $detail_sms_map = ['africastalking' => 'Africa\'s Talking', 'bulksms' => 'BulkSMS Nigeria', 'smartsms' => 'SmartSMSSolutions'];
+        $detail_sms_label = $detail_sms_map[$client->sms_provider] ?? ucfirst($client->sms_provider ?: '—');
+        ?>
+        <div><strong>SMS Provider:</strong> <?php echo esc_html( $detail_sms_label ); ?></div>
         <div><strong>Subscription Expires:</strong> <?php echo esc_html( $client->subscription_expires ?: '—' ); ?></div>
-        <div><strong>Virtual Account:</strong> <?php echo esc_html( $client->virtual_bank_name ); ?> — <?php echo esc_html( $client->virtual_account_number ?: 'Not set' ); ?></div>
+
         <div><strong>Created:</strong> <?php echo esc_html( $client->created_at ); ?></div>
         <div><strong>Source:</strong> <?php echo esc_html( $client->onboarding_source ); ?></div>
         <?php
@@ -506,6 +421,49 @@ include OFP_PATH . 'admin/views/partials/header.php';
         </table>
         <p style="margin-top:8px;"><a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-activity-logs' ) ); ?>">View all global logs &rarr;</a></p>
     </div>
+
+    <!-- Team Members -->
+    <div class="ofp-section" style="margin-top:24px;">
+        <h3>Team Members</h3>
+        <?php
+        $team_members = OFP_Team_Member::get_all_for_client( $client->id );
+        ?>
+        <table class="wp-list-table widefat fixed striped" style="margin-top:12px;">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if ( empty( $team_members ) ) : ?>
+                    <tr>
+                        <td colspan="5">No team members found for this client.</td>
+                    </tr>
+                <?php else : ?>
+                    <?php foreach ( $team_members as $member ) : ?>
+                        <tr>
+                            <td><strong><?php echo esc_html( $member->name ); ?></strong></td>
+                            <td><?php echo esc_html( $member->email ); ?></td>
+                            <td><?php echo esc_html( $member->phone ); ?></td>
+                            <td><?php echo esc_html( $member->role_name ); ?></td>
+                            <td>
+                                <?php if ( $member->status === 'pending' ) : ?>
+                                    <span class="ofp-badge ofp-badge-yellow">Pending</span>
+                                <?php else : ?>
+                                    <span class="ofp-badge ofp-badge-green">Active</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+        <p style="margin-top:8px; font-size:12px; color:#6b7280;">Full team member management (invites, edits, deletions) is currently handled via the client portal. Read-only view provided here.</p>
+    </div>
 </div>
 
 <?php else : ?>
@@ -566,7 +524,10 @@ include OFP_PATH . 'admin/views/partials/header.php';
                             <small><?php echo esc_html( $c->email ); ?></small>
                         </td>
                         <td><?php echo esc_html( $c->owner_name ); ?></td>
-                        <td><?php echo esc_html( strtoupper( $c->plan ?: '—' ) ); ?></td>
+                        <?php
+                        $table_plan_map = ['starter'=>'Free','growth'=>'Silver','pro'=>'Gold','bronze'=>'Free','free'=>'Free','silver'=>'Silver','gold'=>'Gold'];
+                        ?>
+                        <td><?php echo esc_html( $table_plan_map[$c->plan] ?? ucfirst($c->plan ?: '—') ); ?></td>
                         <td><?php echo $status_labels[ $c->status ] ?? esc_html( $c->status ); ?></td>
                         <td>
                             <?php echo $filter === 'trash'

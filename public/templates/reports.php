@@ -9,6 +9,10 @@ OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
 
+if ( ! OFP_Auth::has_permission( 'view_reports' ) ) {
+    wp_die( 'You do not have permission to view reports.', 'Access Denied', [ 'response' => 403 ] );
+}
+
 global $wpdb;
 $p = $wpdb->prefix;
 

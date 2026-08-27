@@ -111,7 +111,7 @@ class OFP_Property_Commerce_Repair {
     }
 
     public static function render_create_offer(): void {
-        $properties = self::sale_properties( true );
+        $properties = self::sale_properties( false );
         $error = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
         $created = isset( $_GET['created'] ) && '1' === $_GET['created'];
         $offer_url = isset( $_GET['offer_url'] ) ? rawurldecode( wp_unslash( $_GET['offer_url'] ) ) : '';
@@ -124,7 +124,7 @@ class OFP_Property_Commerce_Repair {
     // Removed render_completed_purchases() to avoid duplicate tables
 
     public static function render_add_purchase(): void {
-        $properties = self::sale_properties( true );
+        $properties = self::sale_properties( false );
         $error = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
         $created = absint( $_GET['created'] ?? 0 );
         ?><div class="wrap"><h1>Add Outright Purchase</h1><p>Use this screen only when the buyer has already paid the property in full. Installment buyers must use the offer and payment-plan flow.</p><?php if($created): ?><div class="notice notice-success"><p>Completed purchase <strong>#<?php echo esc_html($created); ?></strong> recorded.</p></div><?php endif; ?><?php if($error): ?><div class="notice notice-error"><p><?php echo esc_html($error); ?></p></div><?php endif; ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><?php wp_nonce_field('ofp_create_outright_purchase'); ?><input type="hidden" name="action" value="ofp_create_outright_purchase"><table class="form-table"><tr><th>Property</th><td><select name="property_id" required style="min-width:520px"><option value="">Select live sale property</option><?php foreach($properties as $property): ?><option value="<?php echo esc_attr($property->id); ?>"><?php echo esc_html($property->title.' — ₦'.number_format((float)$property->price,0).' — '.($property->business_name ?: 'OFast Pipeline / Admin')); ?></option><?php endforeach; ?></select></td></tr><tr><th>Buyer name</th><td><input class="regular-text" name="buyer_name" required></td></tr><tr><th>Buyer phone</th><td><input class="regular-text" name="buyer_phone" required></td></tr><tr><th>Buyer email</th><td><input class="regular-text" type="email" name="buyer_email"></td></tr><tr><th>Amount paid</th><td><input type="number" step="0.01" min="0.01" name="amount_paid" required></td></tr><tr><th>Payment method</th><td><select name="payment_method" required><option value="bank_transfer">Bank Transfer</option><option value="bank_deposit">Bank Deposit</option><option value="pos">POS</option><option value="cash">Cash</option><option value="other">Other</option></select></td></tr><tr><th>Payment reference</th><td><input class="regular-text" name="payment_reference"></td></tr><tr><th>Note</th><td><textarea class="large-text" rows="4" name="note"></textarea></td></tr></table><?php submit_button('Record Completed Purchase','primary'); ?></form></div><?php

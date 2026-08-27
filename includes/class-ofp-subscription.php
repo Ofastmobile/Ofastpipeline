@@ -405,28 +405,14 @@ class OFP_Subscription {
             self::send_reminder( $client, 3 );
         }
 
-        // ── active → grace (expired yesterday or earlier) ─────────────────────
+        // ── active → free (expired yesterday or earlier) ─────────────────────
+        // If a paid plan expires, we drop them down to the free tier instead of suspending.
         $wpdb->query(
             "UPDATE {$p}ofp_clients
-             SET status = 'grace'
+             SET plan = 'free', listing_plan = 'free'
              WHERE subscription_expires < CURDATE()
-               AND status = 'active'"
-        );
-
-        // ── grace → suspended (5+ days in grace) ─────────────────────────────
-        $wpdb->query(
-            "UPDATE {$p}ofp_clients
-             SET status = 'suspended'
-             WHERE status = 'grace'
-               AND subscription_expires < DATE_SUB( CURDATE(), INTERVAL 5 DAY )"
-        );
-
-        // ── suspended → cancelled (35+ days total past expiry) ────────────────
-        $wpdb->query(
-            "UPDATE {$p}ofp_clients
-             SET status = 'cancelled'
-             WHERE status = 'suspended'
-               AND subscription_expires < DATE_SUB( CURDATE(), INTERVAL 35 DAY )"
+               AND status = 'active'
+               AND (plan != 'free' OR listing_plan != 'free')"
         );
 
         // ── Clean expired session tokens ──────────────────────────────────────
@@ -472,7 +458,7 @@ class OFP_Subscription {
         $period_end   = gmdate( 'Y-m-d', strtotime( '+30 days' ) );
 
         if ( $type === 'crm' ) {
-            $plan = $client->plan;
+            $plan = $plan_override ?: $client->plan;
         } elseif ( $type === 'listing' ) {
             // Phase 20 fix: this used to always record plan = null for listing
             // payments, silently losing which tier (bronze/silver/gold) the
@@ -520,6 +506,15 @@ class OFP_Subscription {
                 $client_id
             )
         );
+
+        // If it's a CRM payment and the plan changed (an upgrade), update the client's tier immediately.
+        if ( $type === 'crm' && $plan && $plan !== $client->plan ) {
+            $wpdb->update(
+                $wpdb->prefix . 'ofp_clients',
+                [ 'plan' => $plan ],
+                [ 'id' => $client_id ]
+            );
+        }
 
         // Send payment confirmation email.
         OFP_Mailer::send_payment_confirmed( $client, $amount, $type );

@@ -44,12 +44,8 @@ class OFP_Property_Commerce_Actions {
             "SELECT pr.id, pr.title, pr.price, pr.listing_type, pr.client_id
              FROM {$p}ofp_properties pr
              LEFT JOIN {$p}postmeta pm_status ON pm_status.post_id = pr.wp_post_id AND pm_status.meta_key = 'ofp_status'
-             WHERE pr.listing_type = 'sale' 
+             WHERE pr.listing_type = 'sale'
                AND ( pr.status = 'live' OR pm_status.meta_value = 'live' )
-               AND NOT EXISTS (
-                   SELECT 1 FROM {$p}ofp_property_purchases pu 
-                   WHERE pu.property_id = pr.id AND pu.status IN ('active', 'completed')
-               )
              ORDER BY pr.title ASC"
         );
         $message = isset( $_GET['created'] ) ? 'Installment offer created successfully.' : '';

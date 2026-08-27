@@ -2,17 +2,14 @@
 /**
  * Template: /login
  *
- * The client login page. Completely custom — no WordPress login form,
- * no membership plugin. Handles both GET (show form) and POST (process login).
+ * The client login page. Custom authentication flow.
+ * Handles both GET (show form) and POST (process login).
  *
- * Security layers applied here:
- *  - Rate limiting: max 5 attempts per IP per 5 minutes
- *  - password_verify() via OFP_Auth::attempt_login()
- *  - Session token stored HttpOnly cookie (no JS access)
- *  - CSRF not needed here because the session cookie IS the CSRF protection
- *    (attacker can't read the cookie value to replay it)
- *
- * Depends on: OFP_Auth, OFP_Security
+ * OTP Flow:
+ * 1. User submits email & password.
+ * 2. System verifies credentials. If valid, generates & sends OTP (SMS/Email).
+ * 3. User submits OTP.
+ * 4. System verifies OTP and issues session cookie.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -21,10 +18,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $error   = '';
 $success = '';
+$step    = 'credentials'; // 'credentials' or 'otp'
+$user_email = '';
+$user_phone = '';
+$user_data = null; // Store basic info for session creation
 
-// ── Admin preview token (debugging — admin viewing client dashboard) ───────
-// Checked first, before anything else. If valid, logs the visitor straight
-// into the target client's session and redirects to /dashboard.
+// ── Admin preview token (debugging) ───────────────────────────────────────
 if ( isset( $_GET['admin_preview'] ) ) {
     $preview_token = sanitize_text_field( wp_unslash( $_GET['admin_preview'] ) );
 
@@ -32,11 +31,9 @@ if ( isset( $_GET['admin_preview'] ) ) {
         wp_safe_redirect( home_url( '/dashboard?preview=1' ) );
         exit;
     }
-
     $error = 'This preview link has expired or already been used.';
 }
 
-// ── Show messages from redirects ───────────────────────────────────────────
 if ( isset( $_GET['logged_out'] ) && $_GET['logged_out'] === '1' ) {
     $success = 'You have been logged out successfully.';
 }
@@ -47,33 +44,66 @@ if ( isset( $_GET['session_expired'] ) && $_GET['session_expired'] === '1' ) {
     $error = 'Your session has expired. Please log in again.';
 }
 
-// ── Process login form submission ──────────────────────────────────────────
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 
-    // Rate limit: 5 attempts per IP per 5 minutes.
     OFP_Security::check_rate_limit(
         OFP_Security::get_client_ip(),
         'client_login',
-        5,
+        10,
         300
     );
 
-    $email    = isset( $_POST['email'] )    ? sanitize_email( wp_unslash( $_POST['email'] ) )        : '';
-    $password = isset( $_POST['password'] ) ? sanitize_text_field( wp_unslash( $_POST['password'] ) ) : '';
+    if ( isset( $_POST['otp_step'] ) && $_POST['otp_step'] === '1' ) {
+        // --- STEP 2: Verify OTP ---
+        $step = 'otp';
+        $email    = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
+        $otp      = isset( $_POST['otp'] ) ? sanitize_text_field( wp_unslash( $_POST['otp'] ) ) : '';
+        $user_id  = isset( $_POST['user_id'] ) ? (int) $_POST['user_id'] : 0;
+        $user_type = isset( $_POST['user_type'] ) ? sanitize_text_field( $_POST['user_type'] ) : 'client';
+        $client_id = isset( $_POST['client_id'] ) ? (int) $_POST['client_id'] : 0;
+        $team_member_id = isset( $_POST['team_member_id'] ) && $_POST['team_member_id'] !== '' ? (int) $_POST['team_member_id'] : null;
 
-    if ( empty( $email ) || empty( $password ) ) {
-        $error = 'Please enter your email and password.';
-    } elseif ( OFP_Auth::attempt_login( $email, $password ) ) {
-        // Redirect to dashboard (or the originally requested page if we stored it).
-        $redirect_to = isset( $_GET['redirect_to'] )
-            ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) )
-            : home_url( '/dashboard' );
+        if ( empty( $otp ) ) {
+            $error = 'Please enter the verification code.';
+            $user_email = $email;
+        } else {
+            if ( OFP_Auth::verify_otp( $email, $otp, 'login' ) ) {
+                // Success! Issue session
+                OFP_Auth::issue_session( $client_id, $user_type, $team_member_id );
+                
+                $redirect_to = isset( $_GET['redirect_to'] )
+                    ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) )
+                    : home_url( '/dashboard' );
 
-        wp_safe_redirect( $redirect_to );
-        exit;
+                wp_safe_redirect( $redirect_to );
+                exit;
+            } else {
+                $error = 'Invalid or expired verification code.';
+                $user_email = $email;
+            }
+        }
     } else {
-        // Intentionally vague — don't tell attacker whether email exists.
-        $error = 'Invalid email address or password.';
+        // --- STEP 1: Verify Credentials ---
+        $email    = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
+        $password = isset( $_POST['password'] ) ? sanitize_text_field( wp_unslash( $_POST['password'] ) ) : '';
+
+        if ( empty( $email ) || empty( $password ) ) {
+            $error = 'Please enter your email and password.';
+        } else {
+            $credentials_valid = OFP_Auth::check_credentials( $email, $password );
+            
+            if ( $credentials_valid ) {
+                // Generate OTP
+                OFP_Auth::generate_and_send_otp( $email, $credentials_valid['phone'], 'login' );
+                
+                $step = 'otp';
+                $success = 'A verification code has been sent to your email and phone.';
+                $user_email = $email;
+                $user_data = $credentials_valid;
+            } else {
+                $error = 'Invalid email address or password.';
+            }
+        }
     }
 }
 ?>
@@ -233,40 +263,74 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             <div class="ofp-alert success"><?php echo esc_html( $success ); ?></div>
         <?php endif; ?>
 
-        <form method="POST" action="<?php echo esc_url( home_url( '/login' ) ); ?>" novalidate>
+        <?php if ( $step === 'otp' ) : ?>
+            
+            <form method="POST" action="<?php echo esc_url( home_url( '/login' ) ); ?>" novalidate>
+                <input type="hidden" name="otp_step" value="1">
+                <input type="hidden" name="email" value="<?php echo esc_attr( $user_email ); ?>">
+                <?php if ( $user_data ) : ?>
+                    <input type="hidden" name="user_id" value="<?php echo esc_attr( $user_data['id'] ); ?>">
+                    <input type="hidden" name="user_type" value="<?php echo esc_attr( $user_data['user_type'] ); ?>">
+                    <input type="hidden" name="client_id" value="<?php echo esc_attr( $user_data['client_id'] ); ?>">
+                    <input type="hidden" name="team_member_id" value="<?php echo esc_attr( $user_data['team_member_id'] ?? '' ); ?>">
+                <?php elseif ( isset( $_POST['user_type'] ) ) : ?>
+                    <input type="hidden" name="user_id" value="<?php echo esc_attr( $_POST['user_id'] ); ?>">
+                    <input type="hidden" name="user_type" value="<?php echo esc_attr( $_POST['user_type'] ); ?>">
+                    <input type="hidden" name="client_id" value="<?php echo esc_attr( $_POST['client_id'] ); ?>">
+                    <input type="hidden" name="team_member_id" value="<?php echo esc_attr( $_POST['team_member_id'] ); ?>">
+                <?php endif; ?>
 
-            <div class="ofp-field">
-                <label for="ofp-email">Email Address</label>
-                <input
-                    type="email"
-                    id="ofp-email"
-                    name="email"
-                    value="<?php echo isset( $_POST['email'] ) ? esc_attr( sanitize_email( wp_unslash( $_POST['email'] ) ) ) : ''; ?>"
-                    placeholder="you@example.com"
-                    required
-                    autocomplete="email"
-                >
-            </div>
+                <div class="ofp-field">
+                    <label for="ofp-otp">7-Character Verification Code (OTP)</label>
+                    <input
+                        type="text"
+                        id="ofp-otp"
+                        name="otp"
+                        placeholder="e.g. A1B2C3D"
+                        required
+                        autofocus
+                    >
+                </div>
 
-            <div class="ofp-field">
-                <label for="ofp-password">Password</label>
-                <input
-                    type="password"
-                    id="ofp-password"
-                    name="password"
-                    placeholder="••••••••••"
-                    required
-                    autocomplete="current-password"
-                >
-            </div>
+                <button type="submit" class="ofp-btn">Verify & Sign In</button>
+            </form>
 
-            <a class="ofp-forgot" href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>">
-                Forgot password?
-            </a>
+        <?php else : ?>
 
-            <button type="submit" class="ofp-btn">Sign In</button>
+            <form method="POST" action="<?php echo esc_url( home_url( '/login' ) ); ?>" novalidate>
+                <div class="ofp-field">
+                    <label for="ofp-email">Email Address</label>
+                    <input
+                        type="email"
+                        id="ofp-email"
+                        name="email"
+                        value="<?php echo isset( $_POST['email'] ) ? esc_attr( sanitize_email( wp_unslash( $_POST['email'] ) ) ) : ''; ?>"
+                        placeholder="you@example.com"
+                        required
+                        autocomplete="email"
+                    >
+                </div>
 
-        </form>
+                <div class="ofp-field">
+                    <label for="ofp-password">Password</label>
+                    <input
+                        type="password"
+                        id="ofp-password"
+                        name="password"
+                        placeholder="••••••••••"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+
+                <a class="ofp-forgot" href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>">
+                    Forgot password?
+                </a>
+
+                <button type="submit" class="ofp-btn">Sign In</button>
+            </form>
+
+        <?php endif; ?>
     </div>
 
     <div class="ofp-footer">

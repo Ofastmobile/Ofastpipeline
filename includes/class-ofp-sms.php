@@ -68,6 +68,7 @@ class OFP_SMS {
         return match ( $this->provider ) {
             'africastalking' => $this->send_via_at( $phone, $message ),
             'bulksms'        => $this->send_via_bsmsn( $phone, $message ),
+            'smartsms'       => $this->send_via_smartsms( $phone, $message ),
             default          => [
                 'success'      => false,
                 'provider_ref' => '',
@@ -165,6 +166,71 @@ class OFP_SMS {
         ];
     }
 
+    /**
+     * Send via SmartSMSSolutions using OFP's global master account.
+     * Docs: https://smartsmssolutions.com/api-doc
+     */
+    private function send_via_smartsms( string $phone, string $message ): array {
+        $routing   = get_option( 'ofp_smartsms_routing', '3' ); // 3 = Corporate DND bypass
+        $sender_id = get_option( 'ofp_smartsms_sender_id', 'OFastPipe' );
+
+        $params = [
+            'token'   => $this->api_key,
+            'sender'  => $sender_id,
+            'to'      => $phone,
+            'message' => $message,
+            'routing' => $routing,
+            'type'    => '0', // Plain text
+        ];
+
+        $url = 'https://smartsmssolutions.com/api/json.php?' . http_build_query( $params );
+
+        $response = wp_remote_get( $url, [ 'timeout' => 30 ] );
+
+        if ( is_wp_error( $response ) ) {
+            return [
+                'success'      => false,
+                'provider_ref' => '',
+                'error'        => $response->get_error_message(),
+            ];
+        }
+
+        $body = wp_remote_retrieve_body( $response );
+        $data = json_decode( $body, true );
+
+        // JSON response parsing
+        if ( is_array( $data ) ) {
+            $code = $data['code'] ?? $data['comment'] ?? '';
+            if ( $code === '1000' || ( isset( $data['successful'] ) && $data['successful'] !== '' ) ) {
+                return [
+                    'success'      => true,
+                    'provider_ref' => $data['message_id'] ?? '',
+                    'error'        => '',
+                ];
+            }
+            return [
+                'success'      => false,
+                'provider_ref' => '',
+                'error'        => $data['comment'] ?? $data['message'] ?? 'Unknown SmartSMS error',
+            ];
+        }
+
+        // Fallback: raw response parsing
+        if ( strpos( $body, '1000' ) !== false || stripos( $body, 'success' ) !== false ) {
+            return [
+                'success'      => true,
+                'provider_ref' => '',
+                'error'        => '',
+            ];
+        }
+
+        return [
+            'success'      => false,
+            'provider_ref' => '',
+            'error'        => 'SmartSMS error: ' . substr( $body, 0, 200 ),
+        ];
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // HELPERS
     // ─────────────────────────────────────────────────────────────────────────
@@ -182,6 +248,7 @@ class OFP_SMS {
         return match ( $provider ) {
             'africastalking' => OFP_Security::decrypt( get_option( 'ofp_at_api_key',    '' ) ),
             'bulksms'        => OFP_Security::decrypt( get_option( 'ofp_bsmsn_api_key', '' ) ),
+            'smartsms'       => OFP_Security::decrypt( get_option( 'ofp_smartsms_api_key', '' ) ),
             default          => '',
         };
     }
@@ -205,5 +272,31 @@ class OFP_SMS {
         }
 
         return $phone;
+    }
+
+    /**
+     * Static helper for sending a manual/broadcast SMS without a client context.
+     * Uses the default provider (smartsms) with global credentials.
+     *
+     * @param  int|null $client_id  Optional client ID (null for super-admin broadcasts).
+     * @param  string   $phone      Recipient phone.
+     * @param  string   $message    Message body.
+     * @return bool True on success.
+     */
+    public static function send_manual( ?int $client_id, string $phone, string $message ): bool {
+        // Determine provider: use client's preference or fallback to smartsms
+        $provider = 'smartsms';
+        if ( $client_id ) {
+            global $wpdb;
+            $provider = $wpdb->get_var( $wpdb->prepare(
+                "SELECT sms_provider FROM {$wpdb->prefix}ofp_clients WHERE id = %d",
+                $client_id
+            ) ) ?: 'smartsms';
+        }
+
+        $sms    = new self( $provider, $client_id ?? 0 );
+        $result = $sms->send( $phone, $message );
+
+        return $result['success'] ?? false;
     }
 }

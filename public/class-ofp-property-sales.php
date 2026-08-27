@@ -55,7 +55,7 @@ class OFP_Property_Sales {
             OFP_Auth::require_client_login();
             $client = OFP_Auth::current_client();
 
-            if ( ! $client || ! OFP_Subscription::has_active( 'listing', $client->id ) ) {
+            if ( ! $client ) {
                 wp_safe_redirect( home_url( '/dashboard' ) );
                 exit;
             }
@@ -79,10 +79,6 @@ class OFP_Property_Sales {
             return;
         }
 
-        if ( ! OFP_Subscription::has_active( 'listing', $client->id ) ) {
-            wp_safe_redirect( home_url( '/dashboard' ) );
-            exit;
-        }
 
         $template = OFP_PATH . 'public/templates/property-sales.php';
         if ( file_exists( $template ) ) {

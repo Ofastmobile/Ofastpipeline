@@ -10,10 +10,6 @@ OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
 
-if ( ! OFP_Subscription::has_active( 'listing', $client->id ) ) {
-    wp_safe_redirect( home_url( '/dashboard' ) );
-    exit;
-}
 
 global $wpdb;
 $p = $wpdb->prefix;
@@ -109,9 +105,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_property
 }
 
 $properties = $wpdb->get_results( $wpdb->prepare(
-    "SELECT id, title, price, location_text, listing_type FROM {$p}ofp_properties
-     WHERE client_id = %d AND status IN ('live','pending_upload')
-     ORDER BY created_at DESC",
+    "SELECT pr.id, pr.title, pr.price, pr.location_text, pr.listing_type FROM {$p}ofp_properties pr
+     LEFT JOIN {$p}postmeta pm_status ON pm_status.post_id = pr.wp_post_id AND pm_status.meta_key = 'ofp_status'
+     WHERE pr.client_id = %d AND pr.listing_type = 'sale' AND ( pr.status = 'live' OR pm_status.meta_value = 'live' )
+     ORDER BY pr.created_at DESC",
     $client->id
 ) );
 

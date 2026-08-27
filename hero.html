@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrimeEstate CRM - Portal</title>
+  <style>
+/* ====================================================
+   MINIMALIST REAL ESTATE & CRM HERO STYLES (Vanilla CSS)
+   ==================================================== */
+
+:root {
+  --hero-bg: #0b111e;
+  --hero-accent: #2563eb;
+  --hero-accent-light: #3b82f6;
+  --hero-text-main: #f8fafc;
+  --hero-text-muted: #94a3b8;
+  --hero-border: rgba(255, 255, 255, 0.08);
+  --hero-border-hover: rgba(255, 255, 255, 0.2);
+  --hero-overlay-dark: rgba(11, 17, 30, 0.85);
+  --hero-overlay-mid: rgba(11, 17, 30, 0.72);
+  --hero-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.minimal-hero {
+  position: relative;
+  min-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background-color: var(--hero-bg);
+  background-image: 
+    linear-gradient(135deg, var(--hero-overlay-dark) 0%, var(--hero-overlay-mid) 50%, var(--hero-overlay-dark) 100%),
+    url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=2000&q=85');
+  background-size: cover;
+  background-position: center;
+  color: var(--hero-text-main);
+  font-family: var(--hero-font);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.minimal-hero *,
+.minimal-hero *::before,
+.minimal-hero *::after {
+  box-sizing: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+.hero-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Header & Navigation */
+.hero-header {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--hero-border);
+  background: rgba(11, 17, 30, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  position: relative;
+  z-index: 30;
+}
+
+.nav-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hero-logo {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--hero-text-main);
+  text-decoration: none;
+}
+
+.hero-logo span {
+  color: var(--hero-accent-light);
+  margin-left: 2px;
+}
+
+.hero-nav {
+  display: flex;
+  gap: 32px;
+}
+
+.nav-link {
+  color: var(--hero-text-muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.nav-link:hover {
+  color: var(--hero-text-main);
+}
+
+.mobile-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.mobile-toggle span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background-color: var(--hero-text-main);
+  margin: 4px 0;
+  transition: 0.3s;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 22px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background-color: var(--hero-accent);
+  color: #ffffff;
+  border: 1px solid var(--hero-accent);
+}
+
+.btn-primary:hover {
+  background-color: var(--hero-accent-light);
+  border-color: var(--hero-accent-light);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--hero-text-main);
+  border: 1px solid var(--hero-border);
+  margin-left: 12px;
+}
+
+.btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--hero-border-hover);
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--hero-text-main);
+  border: 1px solid var(--hero-border);
+}
+
+.btn-outline:hover {
+  border-color: var(--hero-accent-light);
+  color: #ffffff;
+}
+
+/* Hero Body & Content */
+.hero-body {
+  padding: 80px 24px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.hero-content {
+  max-width: 720px;
+}
+
+.hero-title {
+  font-size: clamp(2.4rem, 5vw, 3.8rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin-bottom: 20px;
+  color: var(--hero-text-main);
+}
+
+.highlight-text {
+  color: var(--hero-accent-light);
+}
+
+.hero-subtitle {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--hero-text-muted);
+  margin-bottom: 32px;
+  max-width: 580px;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* Search Box / CRM Filters (Optional) */
+.hero-search-box {
+  margin-top: 36px;
+  background: rgba(17, 24, 39, 0.75);
+  border: 1px solid var(--hero-border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  max-width: 680px;
+}
+
+.search-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--hero-border);
+  padding-bottom: 10px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--hero-text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn.active,
+.tab-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.search-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-field label {
+  font-size: 0.75rem;
+  color: var(--hero-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form-field input,
+.form-field select {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--hero-border);
+  border-radius: 5px;
+  color: var(--hero-text-main);
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  border-color: var(--hero-accent-light);
+}
+
+.btn-search {
+  background: var(--hero-accent);
+  color: #ffffff;
+  border: none;
+  padding: 9px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-search:hover {
+  background: var(--hero-accent-light);
+}
+
+/* Bottom Stats Bar */
+.hero-stats-wrapper {
+  border-top: 1px solid var(--hero-border);
+  background: rgba(11, 17, 30, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 24px 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-number {
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--hero-text-main);
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--hero-text-muted);
+  font-weight: 400;
+}
+
+/* Responsive Rules */
+@media (max-width: 860px) {
+  .hero-nav, .hero-header-cta {
+    display: none;
+  }
+
+  .mobile-toggle {
+    display: block;
+  }
+
+  .hero-nav.open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 73px;
+    left: 0;
+    width: 100%;
+    background-color: var(--hero-bg);
+    padding: 24px;
+    border-bottom: 1px solid var(--hero-border);
+    gap: 16px;
+    z-index: 50;
+  }
+
+  .search-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-form {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .btn-secondary {
+    margin-left: 0;
+  }
+}
+
+  </style>
+</head>
+<body>
+
+<section class="minimal-hero" id="hero">
+  <!-- Top Navigation Bar -->
+  <header class="hero-header">
+    <div class="hero-container nav-container">
+      <a href="#" class="hero-logo">
+        Prime<span>Estate CRM</span>
+      </a>
+
+      <!-- Mobile Navigation Hamburger -->
+      <button class="mobile-toggle" id="mobileMenuBtn" aria-label="Toggle navigation">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <!-- Desktop Nav Links -->
+      <nav class="hero-nav" id="heroNav">
+        <a href="#overview" class="nav-link">Overview</a>
+        <a href="#properties" class="nav-link">Properties</a>
+        <a href="#crm" class="nav-link">CRM Pipeline</a>
+        <a href="#analytics" class="nav-link">Analytics</a>
+        <a href="#contact" class="nav-link">Contact</a>
+      </nav>
+
+      <!-- Header Action / Portal Login -->
+      <div class="hero-header-cta">
+        <a href="#portal" class="btn btn-outline">
+          
+            Agent Portal
+          
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Content Body -->
+  <div class="hero-container hero-body">
+    <div class="hero-content">
+      <h1 class="hero-title">
+        Building Digital Experiences That <span class="highlight-text">Inspire</span> 
+      </h1>
+      <p class="hero-subtitle">
+        Streamline property listings, automate buyer lead flows, and manage commercial deals within one high-performance business portal.
+      </p>
+      
+      <div class="hero-actions">
+        <a href="#crm" class="btn btn-primary">Launch Portal</a>
+        <a href="#properties" class="btn btn-secondary">Browse Listings</a>
+      </div>
+
+    <!-- Quick Search / CRM Filters -->
+    <div class="hero-search-box">
+      <div class="search-tabs">
+        <button type="button" class="tab-btn active" data-tab="All Properties">All Properties</button>
+        <button type="button" class="tab-btn " data-tab="Commercial">Commercial</button>
+        <button type="button" class="tab-btn " data-tab="Residential">Residential</button>
+        <button type="button" class="tab-btn " data-tab="Client Leads">Client Leads</button>
+      </div>
+      <form class="search-form" action="#" method="get">
+        <div class="form-field">
+          <label>Location / Keyword</label>
+          <input type="text" name="location" placeholder="Location or City" />
+        </div>
+        <div class="form-field">
+          <label>Category</label>
+          <select name="type">
+            <option value="">Property / Deal Type</option>
+            <option value="commercial">Commercial Space</option>
+            <option value="residential">Residential Unit</option>
+            <option value="lead-pipeline">CRM Deal Pipeline</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Budget / Range</label>
+          <input type="text" name="budget" placeholder="Price / Budget Range" />
+        </div>
+        <button type="submit" class="btn btn-search">Search Portal</button>
+      </form>
+    </div>
+    </div>
+  </div>
+
+  <!-- Bottom Metric Stats Bar -->
+  <div class="hero-stats-wrapper">
+    <div class="hero-container">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-number">120+</span>
+          <span class="stat-label">Commercial Listings</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">98%</span>
+          <span class="stat-label">Deal Closure Rate</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">5.4k</span>
+          <span class="stat-label">Active Buyer Leads</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">24/7</span>
+          <span class="stat-label">Automated CRM Sync</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+  <script>
+/**
+ * Minimalist Hero Section Controller (Vanilla JS)
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  // 1. Mobile Menu Toggle
+  const mobileBtn = document.getElementById('mobileMenuBtn');
+  const heroNav = document.getElementById('heroNav');
+
+  if (mobileBtn && heroNav) {
+    mobileBtn.addEventListener('click', () => {
+      heroNav.classList.toggle('open');
+    });
+  }
+
+  // 2. Search Tabs Switching
+  const searchTabs = document.querySelectorAll('.hero-search-box .tab-btn');
+  searchTabs.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      searchTabs.forEach((t) => t.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+});
+
+  </script>
+</body>
+</html>

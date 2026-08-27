@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION', '2.1.0' );
+define( 'OFP_VERSION', '2.1.4' );
 define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
@@ -29,6 +29,7 @@ require_once OFP_PATH . 'includes/class-ofp-security.php';
 require_once OFP_PATH . 'includes/class-ofp-auth.php';
 require_once OFP_PATH . 'includes/class-ofp-mailer.php';
 require_once OFP_PATH . 'includes/class-ofp-client.php';
+require_once OFP_PATH . 'includes/class-ofp-team-member.php';
 require_once OFP_PATH . 'includes/class-ofp-lead.php';
 require_once OFP_PATH . 'includes/class-ofp-queue.php';
 require_once OFP_PATH . 'includes/class-ofp-sms.php';
@@ -57,9 +58,7 @@ require_once OFP_PATH . 'includes/class-ofp-property-payment-entry-ui.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce-repair.php';
 
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
-require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-monnify.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-paystack.php';
-require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-flutterwave.php';
 
 require_once OFP_PATH . 'admin/class-ofp-admin-menu.php';
 require_once OFP_PATH . 'admin/class-ofp-admin-settings.php';

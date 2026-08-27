@@ -11,10 +11,6 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 
-if ( ! OFP_Subscription::has_active( 'listing', $client->id ) ) {
-    wp_safe_redirect( home_url( '/dashboard' ) );
-    exit;
-}
 
 global $wpdb;
 $p = $wpdb->prefix;

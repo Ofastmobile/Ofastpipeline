@@ -39,7 +39,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OFP_Payment {
 
-    const SUPPORTED_GATEWAYS = [ 'monnify', 'paystack', 'flutterwave' ];
+    const SUPPORTED_GATEWAYS = [ 'paystack' ];
 
     // ─────────────────────────────────────────────────────────────────────────
     // GATEWAY RESOLVER
@@ -51,7 +51,7 @@ class OFP_Payment {
      * @return OFP_Gateway_Interface|null  Null if provider not configured or unsupported.
      */
     private static function get_gateway(): ?object {
-        $provider = get_option( 'ofp_payment_provider', 'monnify' );
+        $provider = 'paystack';
 
         if ( ! in_array( $provider, self::SUPPORTED_GATEWAYS, true ) ) {
             error_log( "[OFP_Payment] Unsupported provider: {$provider}" );
@@ -71,27 +71,6 @@ class OFP_Payment {
     // ─────────────────────────────────────────────────────────────────────────
     // PUBLIC INTERFACE
     // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Create a dedicated virtual bank account for a client.
-     *
-     * Called by OFP_Client::create() during onboarding.
-     * Returns a normalised object regardless of which gateway handled it.
-     *
-     * @param  array $client_data {
-     *     @type string $business_name
-     *     @type string $owner_name
-     *     @type string $email
-     * }
-     * @param  int   $client_id  The OFP client ID (used as account reference).
-     * @return object|null       stdClass with ->account_number and ->bank_name, or null.
-     */
-    public static function create_virtual_account( array $client_data, int $client_id ): ?object {
-        $gateway = self::get_gateway();
-        if ( ! $gateway ) return null;
-
-        return $gateway->create_virtual_account( $client_data, $client_id );
-    }
 
     /**
      * Initiate a self-serve credit top-up checkout with the active gateway.
@@ -384,10 +363,10 @@ class OFP_Payment {
     /**
      * Get the name of the currently configured payment provider.
      *
-     * @return string  e.g. 'monnify', 'paystack', 'flutterwave'
+     * @return string  e.g. 'paystack'
      */
-    public static function get_provider(): string {
-        return get_option( 'ofp_payment_provider', 'monnify' );
+    public static function get_active_provider(): string {
+        return 'paystack';
     }
 
     /**
@@ -418,7 +397,6 @@ interface OFP_Gateway_Interface {
      * @param  int   $client_id    OFP client ID used as the account reference.
      * @return object|null         stdClass { account_number, bank_name } or null.
      */
-    public function create_virtual_account( array $client_data, int $client_id ): ?object;
 
     /**
      * Handle and verify an incoming webhook from this gateway.

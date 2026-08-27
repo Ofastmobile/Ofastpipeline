@@ -57,6 +57,8 @@ class OFP_Admin_Menu {
         add_action( 'admin_init', [ $this, 'handle_save_company_bank' ] ); // Phase 17
         add_action( 'admin_post_ofp_retry_trigger',  [ $this, 'handle_retry_trigger' ] );
         add_action( 'admin_post_ofp_cancel_trigger',  [ $this, 'handle_cancel_trigger' ] );
+        add_action( 'admin_post_ofp_send_broadcast',  [ $this, 'handle_send_broadcast' ] );
+        add_action( 'admin_post_ofp_save_universal_template',  [ $this, 'handle_save_universal_template' ] );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -91,6 +93,7 @@ class OFP_Admin_Menu {
         // ── Submenus (all admins) ─────────────────────────────────────────────
         add_submenu_page( 'ofp-overview', 'Overview',        'Overview',        'read', 'ofp-overview',        [ $this, 'render_overview' ] );
         add_submenu_page( 'ofp-overview', 'Clients',         'Clients',         'read', 'ofp-clients',         [ $this, 'render_clients' ] );
+        add_submenu_page( 'ofp-overview', 'Team Members',    'Team Members',    'read', 'ofp-team',            [ $this, 'render_team' ] );
         add_submenu_page( 'ofp-overview', 'Leads',           'Leads',           'read', 'ofp-leads',           [ $this, 'render_leads' ] );
         add_submenu_page( 'ofp-overview', 'Trigger Queue',   'Trigger Queue',   'read', 'ofp-triggers',        [ $this, 'render_triggers' ] );
         add_submenu_page( 'ofp-overview', 'Communications',  'Communications',  'read', 'ofp-communications',  [ $this, 'render_communications' ] );
@@ -165,9 +168,10 @@ class OFP_Admin_Menu {
 
     public function render_overview():       void { $this->load_view( 'overview' ); }
     public function render_clients():        void { $this->load_view( 'clients-list' ); }
+    public function render_team():           void { $this->load_view( 'team-list' ); }
     public function render_leads():          void { $this->load_view( 'leads-list' ); }
     public function render_triggers():       void { $this->load_view( 'triggers-list' ); }
-    public function render_communications(): void { $this->load_view( 'communications-log' ); }
+    public function render_communications(): void { $this->load_view( 'communications' ); }
     public function render_billing():        void { $this->load_view( 'billing' ); }
     public function render_reports():        void { $this->load_view( 'reports' ); }
     public function render_activity_logs():  void { $this->load_view( 'activity-logs' ); }
@@ -225,10 +229,7 @@ class OFP_Admin_Menu {
 
         $this->require_admin_post( 'ofp_add_client' );
 
-        $subscriptions = [];
-        if ( ! empty( $_POST['want_crm'] ) )     $subscriptions[] = 'crm';
-        if ( ! empty( $_POST['want_listing'] ) )  $subscriptions[] = 'listing';
-        if ( empty( $subscriptions ) )            $subscriptions   = [ 'crm' ];
+        $subscriptions = [ 'crm', 'listing' ];
 
         $client_id = OFP_Client::create( [
             'business_name'     => sanitize_text_field( wp_unslash( $_POST['business_name']     ?? '' ) ),
@@ -238,8 +239,8 @@ class OFP_Admin_Menu {
             'business_phone'    => sanitize_text_field( wp_unslash( $_POST['business_phone']    ?? '' ) ),
             'whatsapp_number'   => sanitize_text_field( wp_unslash( $_POST['whatsapp_number']   ?? '' ) ),
             'subdomain'         => sanitize_title(      wp_unslash( $_POST['subdomain']         ?? '' ) ),
-            'business_category' => sanitize_text_field( wp_unslash( $_POST['business_category'] ?? '' ) ),
-            'plan'              => sanitize_text_field( wp_unslash( $_POST['plan']              ?? 'starter' ) ),
+            'business_category' => 'property',
+            'plan'              => sanitize_text_field( wp_unslash( $_POST['plan']              ?? 'free' ) ),
             'listing_plan'      => sanitize_text_field( wp_unslash( $_POST['listing_plan']      ?? 'free' ) ),
             'subscriptions'     => $subscriptions,
             'onboarding_source' => 'manual',
@@ -570,6 +571,9 @@ class OFP_Admin_Menu {
             'ofp_at_phone_number'  => sanitize_text_field( wp_unslash( $_POST['ofp_at_phone_number']  ?? '' ) ),
             // BulkSMS Nigeria
             'ofp_bsmsn_sender_id'  => sanitize_text_field( wp_unslash( $_POST['ofp_bsmsn_sender_id']  ?? '' ) ),
+            // SmartSMSSolutions
+            'ofp_smartsms_sender_id' => sanitize_text_field( wp_unslash( $_POST['ofp_smartsms_sender_id'] ?? '' ) ),
+            'ofp_smartsms_routing'   => sanitize_text_field( wp_unslash( $_POST['ofp_smartsms_routing']   ?? '3' ) ),
             // Cloudflare Turnstile
             'ofp_turnstile_site_key' => sanitize_text_field( wp_unslash( $_POST['ofp_turnstile_site_key'] ?? '' ) ),
         ];
@@ -581,6 +585,7 @@ class OFP_Admin_Menu {
             'ofp_smtp_password'           => [ 'raw' => $_POST['ofp_smtp_password']           ?? '', 'label' => 'SMTP Password' ],
             'ofp_at_api_key'              => [ 'raw' => $_POST['ofp_at_api_key']              ?? '', 'label' => 'AT API Key' ],
             'ofp_bsmsn_api_key'           => [ 'raw' => $_POST['ofp_bsmsn_api_key']           ?? '', 'label' => 'BulkSMS API Key' ],
+            'ofp_smartsms_api_key'        => [ 'raw' => $_POST['ofp_smartsms_api_key']        ?? '', 'label' => 'SmartSMS API Key' ],
             'ofp_monnify_api_key'         => [ 'raw' => $_POST['ofp_monnify_api_key']         ?? '', 'label' => 'Monnify API Key' ],
             'ofp_monnify_secret_key'      => [ 'raw' => $_POST['ofp_monnify_secret_key']      ?? '', 'label' => 'Monnify Secret Key' ],
             'ofp_paystack_secret_key'     => [ 'raw' => $_POST['ofp_paystack_secret_key']     ?? '', 'label' => 'Paystack Secret Key' ],
@@ -736,8 +741,9 @@ class OFP_Admin_Menu {
             'business_phone'    => sanitize_text_field( wp_unslash( $_POST['business_phone']    ?? '' ) ),
             'whatsapp_number'   => sanitize_text_field( wp_unslash( $_POST['whatsapp_number']   ?? '' ) ),
             'subdomain'         => sanitize_title(      wp_unslash( $_POST['subdomain']         ?? '' ) ),
-            'business_category' => sanitize_text_field( wp_unslash( $_POST['business_category'] ?? '' ) ),
+            'business_category' => 'property',
             'plan'              => sanitize_text_field( wp_unslash( $_POST['plan']              ?? '' ) ),
+            'sms_provider'      => sanitize_text_field( wp_unslash( $_POST['sms_provider']      ?? 'africastalking' ) ),
         ] );
 
         $new_listing_plan = sanitize_text_field( wp_unslash( $_POST['listing_plan'] ?? '' ) );
@@ -1332,5 +1338,74 @@ class OFP_Admin_Menu {
             </form>
         </div>
         <?php
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COMMUNICATIONS (SUPER ADMIN)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function handle_save_universal_template(): void {
+        if ( ! OFP_Auth::is_super_admin() ) {
+            wp_die( 'Access denied.' );
+        }
+
+        check_admin_referer( 'ofp_save_universal_template' );
+
+        $template = wp_unslash( $_POST['ofp_universal_email_template'] ?? '' );
+        update_option( 'ofp_universal_email_template', $template );
+
+        wp_redirect( add_query_arg( [ 'page' => 'ofp-communications', 'tab' => 'templates', 'updated' => '1' ], admin_url( 'admin.php' ) ) );
+        exit;
+    }
+
+    public function handle_send_broadcast(): void {
+        if ( ! OFP_Auth::is_super_admin() ) {
+            wp_die( 'Access denied.' );
+        }
+
+        check_admin_referer( 'ofp_send_broadcast' );
+
+        $channel    = sanitize_text_field( $_POST['channel'] ?? '' );
+        $recipients = sanitize_textarea_field( $_POST['recipients'] ?? '' );
+        $subject    = sanitize_text_field( $_POST['subject'] ?? '' );
+        $message    = wp_kses_post( wp_unslash( $_POST['message'] ?? '' ) );
+
+        if ( empty( $channel ) || empty( $recipients ) || empty( $message ) ) {
+            wp_die( 'Missing required fields.' );
+        }
+
+        $list = array_map( 'trim', explode( ',', $recipients ) );
+        $list = array_filter( $list );
+        
+        $success = 0;
+        $failed  = 0;
+
+        foreach ( $list as $recipient ) {
+            if ( $channel === 'email' ) {
+                if ( ! is_email( $recipient ) ) {
+                    $failed++;
+                    continue;
+                }
+                
+                // Wrap with universal template
+                $wrapper = get_option( 'ofp_universal_email_template', '' );
+                $html_body = $message;
+                if ( ! empty( $wrapper ) && strpos( $wrapper, '{email_body}' ) !== false ) {
+                    $html_body = str_replace( '{email_body}', $message, $wrapper );
+                }
+
+                $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+                $sent = wp_mail( $recipient, $subject, $html_body, $headers );
+                
+                if ( $sent ) $success++; else $failed++;
+            } elseif ( $channel === 'sms' ) {
+                // Use the built-in OFP_SMS class with smartsmssolutions (or default)
+                $result = OFP_SMS::send_manual( null, $recipient, $message );
+                if ( $result ) $success++; else $failed++;
+            }
+        }
+
+        wp_redirect( add_query_arg( [ 'page' => 'ofp-communications', 'tab' => 'send', 'sent' => $success, 'failed' => $failed ], admin_url( 'admin.php' ) ) );
+        exit;
     }
 }

@@ -138,6 +138,23 @@ class OFP_Activator {
             $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN bio TEXT DEFAULT NULL AFTER profile_slug" );
             $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN meta_pixel_id VARCHAR(50) DEFAULT NULL AFTER bio" );
         }
+
+        // user_type and team_member_id columns on ofp_client_sessions (Team Members feature)
+        $user_type_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM {$p}ofp_client_sessions LIKE 'user_type'"
+        );
+        if ( empty( $user_type_exists ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_client_sessions ADD COLUMN user_type VARCHAR(20) DEFAULT 'client' AFTER client_id" );
+            $wpdb->query( "ALTER TABLE {$p}ofp_client_sessions ADD COLUMN team_member_id BIGINT UNSIGNED DEFAULT NULL AFTER user_type" );
+        }
+
+        // team_member_id column on ofp_activity_logs (Team Members feature)
+        $team_member_id_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM {$p}ofp_activity_logs LIKE 'team_member_id'"
+        );
+        if ( empty( $team_member_id_exists ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_activity_logs ADD COLUMN team_member_id BIGINT UNSIGNED DEFAULT NULL AFTER admin_id" );
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -404,15 +421,18 @@ class OFP_Activator {
         // Custom session tokens for the client dashboard (/login).
         // Clients are NOT WordPress users — we manage our own session table.
         dbDelta( "CREATE TABLE {$p}ofp_client_sessions (
-            id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            client_id  BIGINT UNSIGNED NOT NULL,
-            token      VARCHAR(64)     NOT NULL,
-            ip_address VARCHAR(45)              DEFAULT NULL,
-            expires_at DATETIME        NOT NULL,
-            created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            client_id      BIGINT UNSIGNED NOT NULL,
+            user_type      VARCHAR(20)     NOT NULL DEFAULT 'client',
+            team_member_id BIGINT UNSIGNED          DEFAULT NULL,
+            token          VARCHAR(64)     NOT NULL,
+            ip_address     VARCHAR(45)              DEFAULT NULL,
+            expires_at     DATETIME        NOT NULL,
+            created_at     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             UNIQUE KEY token     (token),
-            KEY        client_id (client_id)
+            KEY        client_id (client_id),
+            KEY        team_member_id (team_member_id)
         ) {$charset_collate};" );
 
         // ── 14. ofp_properties  (NEW — v2.1) ─────────────────────────────────
@@ -497,16 +517,67 @@ class OFP_Activator {
 
         // ── 18. ofp_activity_logs (Phase 21) ──────────────────────────────────
         dbDelta( "CREATE TABLE {$p}ofp_activity_logs (
-            id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            client_id   BIGINT UNSIGNED NULL,
-            admin_id    BIGINT UNSIGNED NULL,
-            action      VARCHAR(100)    NOT NULL,
-            details     TEXT            NULL,
-            created_at  DATETIME        NOT NULL,
+            id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            client_id      BIGINT UNSIGNED NULL,
+            admin_id       BIGINT UNSIGNED NULL,
+            team_member_id BIGINT UNSIGNED NULL,
+            action         VARCHAR(100)    NOT NULL,
+            details        TEXT            NULL,
+            created_at     DATETIME        NOT NULL,
             PRIMARY KEY (id),
             KEY idx_client_id (client_id),
             KEY idx_admin_id (admin_id),
+            KEY idx_team_member_id (team_member_id),
             KEY idx_created_at (created_at)
+        ) {$charset_collate};" );
+
+        // ── 19. ofp_team_members (Team Members Feature) ────────────────────────
+        dbDelta( "CREATE TABLE {$p}ofp_team_members (
+            id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            client_id    BIGINT UNSIGNED NOT NULL,
+            name         VARCHAR(150)    NOT NULL,
+            email        VARCHAR(150)    NOT NULL,
+            phone        VARCHAR(20)     NOT NULL,
+            password     VARCHAR(255)             DEFAULT NULL,
+            status       VARCHAR(20)     NOT NULL DEFAULT 'pending',
+            invite_token VARCHAR(64)              DEFAULT NULL,
+            role_name    VARCHAR(50)     NOT NULL DEFAULT 'Manager',
+            permissions  TEXT                     DEFAULT NULL,
+            created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY client_id (client_id),
+            UNIQUE KEY invite_token (invite_token),
+            KEY status (status)
+        ) {$charset_collate};" );
+
+        // ── 20. ofp_otps (OTP Verification Feature) ────────────────────────────
+        dbDelta( "CREATE TABLE {$p}ofp_otps (
+            id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_email  VARCHAR(150)             DEFAULT NULL,
+            user_phone  VARCHAR(20)              DEFAULT NULL,
+            otp_code    VARCHAR(10)     NOT NULL,
+            purpose     VARCHAR(20)     NOT NULL,
+            expires_at  DATETIME        NOT NULL,
+            created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY user_email (user_email),
+            KEY user_phone (user_phone),
+            KEY expires_at (expires_at)
+        ) {$charset_collate};" );
+
+        // ── 21. ofp_client_templates (Custom Templates) ────────────────────────
+        dbDelta( "CREATE TABLE {$p}ofp_client_templates (
+            id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            client_id   BIGINT UNSIGNED NOT NULL,
+            type        VARCHAR(20)     NOT NULL,
+            name        VARCHAR(150)    NOT NULL,
+            subject     VARCHAR(255)    NULL,
+            body        TEXT            NOT NULL,
+            created_at  DATETIME        NOT NULL,
+            updated_at  DATETIME        NOT NULL,
+            PRIMARY KEY (id),
+            KEY client_id (client_id),
+            KEY type (type)
         ) {$charset_collate};" );
 
         // Store the schema version so future upgrades can run targeted migrations.

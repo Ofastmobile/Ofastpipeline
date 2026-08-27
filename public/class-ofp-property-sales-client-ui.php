@@ -17,7 +17,7 @@ class OFP_Property_Sales_Client_UI {
         if ( is_admin() || ! OFP_Auth::current_client() ) return;
 
         $client = OFP_Auth::current_client();
-        if ( ! OFP_Subscription::has_active( 'listing', $client->id ) ) return;
+
         ?>
         <script>
         (function () {

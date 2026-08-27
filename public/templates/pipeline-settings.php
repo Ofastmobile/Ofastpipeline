@@ -126,26 +126,26 @@ $type_options = [
 
     <div class="ofp-container">
 
-        <div class="ofp-page-header">
-            <h1>Pipeline Settings</h1>
-            <p>Customise the automated messages sent to your leads.</p>
-        </div>
-
-        <?php if ( $saved ) : ?>
-            <div class="ofp-alert ofp-alert-success">✅ Pipeline settings saved successfully.</div>
-        <?php endif; ?>
-        <?php if ( $error ) : ?>
-            <div class="ofp-alert ofp-alert-error"><?php echo esc_html( $error ); ?></div>
-        <?php endif; ?>
-
         <div class="ofp-pipeline-layout">
             <div class="ofp-pipeline-main">
-                <div class="ofp-alert ofp-alert-info" style="margin-bottom: 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px;">
-                    <strong style="margin-right: 4px;">Available placeholders:</strong>
-                    <span style="white-space: nowrap;"><code>{{name}}</code> &ndash; lead's name</span>
-                    <span style="white-space: nowrap;"><code>{{phone}}</code> &ndash; lead's phone</span>
-                    <span style="white-space: nowrap;"><code>{{business_name}}</code> &ndash; your business</span>
+                <div class="ofp-page-header" style="padding: 16px 24px; margin-bottom: 24px;">
+                    <h1 style="font-size: 20px; margin-bottom: 6px;">Pipeline Settings</h1>
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px; color: var(--text-muted);">
+                        <span>Customise the automated messages sent to your leads.</span>
+                        <span style="color: var(--text-dark); opacity: 0.5;">|</span>
+                        <strong style="color: var(--text-main);">Placeholders:</strong>
+                        <span style="white-space: nowrap;"><code>{{name}}</code> &ndash; lead's name</span>
+                        <span style="white-space: nowrap;"><code>{{phone}}</code> &ndash; lead's phone</span>
+                        <span style="white-space: nowrap;"><code>{{business_name}}</code> &ndash; your business</span>
+                    </div>
                 </div>
+
+                <?php if ( $saved ) : ?>
+                    <div class="ofp-alert ofp-alert-success">✅ Pipeline settings saved successfully.</div>
+                <?php endif; ?>
+                <?php if ( $error ) : ?>
+                    <div class="ofp-alert ofp-alert-error"><?php echo esc_html( $error ); ?></div>
+                <?php endif; ?>
 
                 <form method="POST" action="" class="ofp-form ofp-pipeline-form">
             <?php wp_nonce_field( 'ofp_save_pipeline_' . $client->id, 'ofp_pipeline_nonce' ); ?>

@@ -14,9 +14,17 @@ if ( ! OFP_Subscription::has_active( 'crm', $client->id ) ) {
     exit;
 }
 
+if ( ! OFP_Auth::has_permission( 'view_leads' ) ) {
+    wp_die( 'You do not have permission to view leads.', 'Access Denied', [ 'response' => 403 ] );
+}
+
 // Handle status update
 $message = '';
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_leads_nonce'] ) ) {
+    if ( ! OFP_Auth::has_permission( 'edit_leads' ) ) {
+        wp_die( 'You do not have permission to edit leads.', 'Access Denied', [ 'response' => 403 ] );
+    }
+
     if ( wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ofp_leads_nonce'] ) ), 'ofp_leads_' . $client->id ) ) {
         $lead_id    = (int) ( $_POST['lead_id'] ?? 0 );
         $new_status = sanitize_text_field( wp_unslash( $_POST['new_status'] ?? '' ) );
@@ -88,7 +96,7 @@ $status_badges = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Leads — OFast Pipeline</title>
+    <title>My Prospects — OFast Pipeline</title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -100,12 +108,12 @@ $status_badges = [
 <div class="ofp-container">
 
     <div class="ofp-page-header">
-        <h1>My Leads</h1>
-        <p>All leads captured through your pipeline.</p>
+        <h1>My Prospects</h1>
+        <p>All prospects captured through your pipeline.</p>
     </div>
 
     <?php if ( $message === 'success' ) : ?>
-        <div class="ofp-alert ofp-alert-success">✅ Lead status updated.</div>
+        <div class="ofp-alert ofp-alert-success">✅ Prospect status updated.</div>
     <?php endif; ?>
 
     <!-- Micro-Stats with Sparklines -->
@@ -113,7 +121,7 @@ $status_badges = [
         
         <div class="ofp-card" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
             <div>
-                <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px;">New Leads</div>
+                <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px;">New Prospects</div>
                 <div style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;"><?php echo esc_html( $stats['today'] ?: 0 ); ?></div>
                 <?php echo OFP_Lead::get_growth_html( $stats['today'], $stats['yesterday'] ); ?>
             </div>
@@ -125,7 +133,7 @@ $status_badges = [
 
         <div class="ofp-card" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
             <div>
-                <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px;">Total Leads</div>
+                <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px;">Total Prospects</div>
                 <div style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;"><?php echo esc_html( $stats['this_month'] ?: 0 ); ?></div>
                 <?php echo OFP_Lead::get_growth_html( $stats['this_month'], $stats['last_month'] ); ?>
             </div>
@@ -173,7 +181,7 @@ $status_badges = [
         <div class="ofp-card" style="display: flex; flex-direction: column;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                 <div>
-                    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Lead Generation</h3>
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Prospect Generation</h3>
                     <p style="margin: 0; font-size: 13px; color: var(--text-muted); margin-top: 4px;">Acquisition over the last 7 days</p>
                 </div>
                 <div style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px; font-weight: 600; color: var(--text-muted);">
@@ -185,13 +193,13 @@ $status_badges = [
                 <div>
                     <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">This Week</div>
                     <div style="font-size: 20px; font-weight: 700; color: var(--accent-blue);">
-                        <span style="font-size: 14px; color: var(--accent-blue); opacity: 0.7;">●</span> <?php echo esc_html( $total ); ?> Leads
+                        <span style="font-size: 14px; color: var(--accent-blue); opacity: 0.7;">●</span> <?php echo esc_html( $total ); ?> Prospects
                     </div>
                 </div>
                 <div>
                     <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Previous Week</div>
                     <div style="font-size: 20px; font-weight: 700; color: var(--text-muted);">
-                        <span style="font-size: 14px; color: var(--text-muted); opacity: 0.5;">●</span> <?php echo esc_html( max( 0, $total - 12 ) ); ?> Leads
+                        <span style="font-size: 14px; color: var(--text-muted); opacity: 0.5;">●</span> <?php echo esc_html( max( 0, $total - 12 ) ); ?> Prospects
                     </div>
                 </div>
             </div>
@@ -243,7 +251,7 @@ $status_badges = [
 
     <div class="ofp-card" style="padding: 0; overflow: hidden;">
         <div style="padding: 24px; display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Recent Leads</h3>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Recent Prospects</h3>
             <a href="#" style="font-size: 13px; color: var(--accent-blue); text-decoration: none; font-weight: 500;">See all</a>
         </div>
         
@@ -258,16 +266,17 @@ $status_badges = [
                             <th>Status</th>
                             <th>IVR</th>
                             <th>Date</th>
-                            <th>Action</th>
+                            <th>Status Action</th>
+                            <th>Message</th>
                         </tr>
                     </thead>
                     <tbody id="ofp-leads-tbody">
                         <tr>
-                            <td colspan="7" style="text-align:center; padding: 48px;">
+                            <td colspan="8" style="text-align:center; padding: 48px;">
                                 <div class="ofp-empty" style="padding:0;">
                                     <div class="ofp-empty-icon" style="font-size:24px;margin-bottom:12px;">📭</div>
-                                    <h3 style="font-size:16px;font-weight:600;margin:0 0 4px;color:var(--text-main);">No leads found</h3>
-                                    <p style="margin:0;color:var(--text-muted);font-size:13px;">Leads matching this filter will appear here.</p>
+                                    <h3 style="font-size:16px;font-weight:600;margin:0 0 4px;color:var(--text-main);">No prospects found</h3>
+                                    <p style="margin:0;color:var(--text-muted);font-size:13px;">Prospects matching this filter will appear here.</p>
                                 </div>
                             </td>
                         </tr>
@@ -285,7 +294,8 @@ $status_badges = [
                             <th>Status</th>
                             <th>IVR</th>
                             <th>Date</th>
-                            <th>Action</th>
+                            <th>Status Action</th>
+                            <th>Message</th>
                         </tr>
                     </thead>
                     <tbody id="ofp-leads-tbody">
@@ -317,6 +327,11 @@ $status_badges = [
                                         <span style="font-size:12px;color:#9ca3af;">Closed</span>
                                     <?php endif; ?>
                                 </td>
+                                <td style="text-align: center;">
+                                    <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" onclick="openMessageModal(<?php echo esc_attr($lead->id); ?>, '<?php echo esc_js($lead->name); ?>', '<?php echo esc_js($lead->phone); ?>', '<?php echo esc_js($lead->email); ?>')" title="Send Message">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
+                                    </button>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -337,8 +352,54 @@ $status_badges = [
     </div>
 
 </div>
+</div>
 </main>
 </div><!-- .ofp-shell -->
+
+<!-- Send Message Modal -->
+<div class="ofp-modal-backdrop" id="message-modal" style="display:none;">
+    <div class="ofp-modal" style="max-width:500px;">
+        <div class="ofp-modal-header">
+            <h3>Send Message to <span id="modal-lead-name" style="color:var(--accent-blue);"></span></h3>
+            <button type="button" class="ofp-modal-close" onclick="closeMessageModal()">&times;</button>
+        </div>
+        <form id="send-message-form">
+            <div class="ofp-modal-body">
+                <input type="hidden" name="lead_id" id="msg-lead-id" value="">
+                
+                <div class="ofp-field" style="margin-bottom:16px;">
+                    <label>Channel <span class="required">*</span></label>
+                    <select name="channel" id="msg-channel" required>
+                        <option value="sms">SMS</option>
+                        <option value="email">Email</option>
+                    </select>
+                </div>
+
+                <div class="ofp-field" style="margin-bottom:16px;">
+                    <label>Template (Optional)</label>
+                    <select name="template_id" id="msg-template">
+                        <option value="">-- No Template --</option>
+                        <!-- Templates will be populated via JS -->
+                    </select>
+                </div>
+
+                <div class="ofp-field" id="msg-subject-wrap" style="margin-bottom:16px; display:none;">
+                    <label>Subject <span class="required">*</span></label>
+                    <input type="text" name="subject" id="msg-subject" placeholder="Email subject line">
+                </div>
+
+                <div class="ofp-field" style="margin-bottom:16px;">
+                    <label>Message Body <span class="required">*</span></label>
+                    <textarea name="body" id="msg-body" rows="6" required placeholder="Write your message..."></textarea>
+                </div>
+            </div>
+            <div class="ofp-modal-footer">
+                <button type="button" class="ofp-btn ofp-btn-ghost" onclick="closeMessageModal()">Cancel</button>
+                <button type="submit" class="ofp-btn ofp-btn-primary" id="msg-submit-btn">Send Message</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <?php wp_footer(); ?>
 <script>
@@ -430,6 +491,108 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+});
+
+// Manual Messaging Logic
+let clientTemplates = [];
+
+// Fetch templates once on load
+fetch(ofpClientData.ajaxurl + '?action=ofp_fetch_templates&nonce=' + ofpClientData.nonce)
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            clientTemplates = res.data;
+        }
+    });
+
+window.openMessageModal = function(leadId, name, phone, email) {
+    document.getElementById('msg-lead-id').value = leadId;
+    document.getElementById('modal-lead-name').textContent = name || 'Lead';
+    document.getElementById('msg-channel').value = 'sms';
+    document.getElementById('msg-subject').value = '';
+    document.getElementById('msg-body').value = '';
+    toggleMessageChannel();
+    populateTemplates();
+    document.getElementById('message-modal').style.display = 'flex';
+};
+
+window.closeMessageModal = function() {
+    document.getElementById('message-modal').style.display = 'none';
+};
+
+function toggleMessageChannel() {
+    const channel = document.getElementById('msg-channel').value;
+    const subjWrap = document.getElementById('msg-subject-wrap');
+    const subj = document.getElementById('msg-subject');
+    
+    if (channel === 'email') {
+        subjWrap.style.display = 'block';
+        subj.setAttribute('required', 'required');
+    } else {
+        subjWrap.style.display = 'none';
+        subj.removeAttribute('required');
+    }
+    populateTemplates();
+}
+
+document.getElementById('msg-channel').addEventListener('change', toggleMessageChannel);
+
+function populateTemplates() {
+    const channel = document.getElementById('msg-channel').value;
+    const select = document.getElementById('msg-template');
+    
+    select.innerHTML = '<option value="">-- No Template --</option>';
+    
+    clientTemplates.filter(t => t.type === channel).forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name;
+        select.appendChild(opt);
+    });
+}
+
+document.getElementById('msg-template').addEventListener('change', function() {
+    const tplId = this.value;
+    if (!tplId) {
+        document.getElementById('msg-subject').value = '';
+        document.getElementById('msg-body').value = '';
+        return;
+    }
+    
+    const tpl = clientTemplates.find(t => t.id == tplId);
+    if (tpl) {
+        if (tpl.type === 'email') {
+            document.getElementById('msg-subject').value = tpl.subject || '';
+        }
+        document.getElementById('msg-body').value = tpl.body || '';
+    }
+});
+
+document.getElementById('send-message-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('msg-submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    const formData = new FormData(this);
+    formData.append('action', 'ofp_send_manual_message');
+    formData.append('nonce', ofpClientData.nonce);
+
+    fetch(ofpClientData.ajaxurl, { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                alert('Message sent successfully!');
+                closeMessageModal();
+            } else {
+                alert(res.data || 'Failed to send message.');
+            }
+        })
+        .catch(() => alert('Network error. Please try again.'))
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = 'Send Message';
+        });
 });
 </script>
 </body>

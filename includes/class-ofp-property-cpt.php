@@ -197,19 +197,57 @@ class OFP_Property_CPT {
             .ofp-meta-field select { padding:6px 10px; border:1px solid #ddd; border-radius:4px; font-size:13px; }
         </style>
 
+        <?php
+        // Check if property has commerce activity (purchases, offers, or payment records).
+        $has_commerce = false;
+        $existing_prop = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}ofp_properties WHERE wp_post_id = %d LIMIT 1",
+            $post->ID
+        ) );
+        if ( $existing_prop ) {
+            $prop_id = (int) $existing_prop->id;
+            $has_commerce = (bool) $wpdb->get_var( $wpdb->prepare(
+                "SELECT 1 FROM {$wpdb->prefix}ofp_property_purchases WHERE property_id = %d LIMIT 1",
+                $prop_id
+            ) );
+            if ( ! $has_commerce ) {
+                $has_commerce = (bool) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT 1 FROM {$wpdb->prefix}ofp_property_offers WHERE property_id = %d LIMIT 1",
+                    $prop_id
+                ) );
+            }
+        }
+        ?>
         <div class="ofp-meta-grid">
             <div class="ofp-meta-field" style="grid-column:1/-1;">
                 <label>Client (Property Owner / Agent)</label>
-                <select name="ofp_client_id">
-                    <option value="">— Select Client —</option>
-                    <option value="0" data-ofp-platform="1" <?php selected( $meta['ofp_client_id'], '0' ); ?>>Admin (Internal)</option>
-                    <?php foreach ( $clients as $c ) : ?>
-                        <option value="<?php echo esc_attr( $c->id ); ?>"
-                            <?php selected( $meta['ofp_client_id'], $c->id ); ?>>
-                            <?php echo esc_html( $c->business_name . ' (' . $c->owner_name . ')' ); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                <?php if ( $has_commerce ) : ?>
+                    <input type="hidden" name="ofp_client_id" value="<?php echo esc_attr( $meta['ofp_client_id'] ); ?>">
+                    <select disabled style="opacity:0.7;">
+                        <?php if ( (string) $meta['ofp_client_id'] === '0' ) : ?>
+                            <option selected>Admin (Internal)</option>
+                        <?php else :
+                            $owner_name = $wpdb->get_var( $wpdb->prepare(
+                                "SELECT CONCAT(business_name, ' (', owner_name, ')') FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
+                                $meta['ofp_client_id']
+                            ) );
+                        ?>
+                            <option selected><?php echo esc_html( $owner_name ?: 'Client #' . $meta['ofp_client_id'] ); ?></option>
+                        <?php endif; ?>
+                    </select>
+                    <p style="color:#ef4444;font-size:11px;margin:4px 0 0;">Owner cannot be changed — this property has active purchases or offers.</p>
+                <?php else : ?>
+                    <select name="ofp_client_id">
+                        <option value="">— Select Client —</option>
+                        <option value="0" data-ofp-platform="1" <?php selected( $meta['ofp_client_id'], '0' ); ?>>Admin (Internal)</option>
+                        <?php foreach ( $clients as $c ) : ?>
+                            <option value="<?php echo esc_attr( $c->id ); ?>"
+                                <?php selected( $meta['ofp_client_id'], $c->id ); ?>>
+                                <?php echo esc_html( $c->business_name . ' (' . $c->owner_name . ')' ); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                <?php endif; ?>
             </div>
 
             <div class="ofp-meta-field">
@@ -243,11 +281,13 @@ class OFP_Property_CPT {
             </div>
 
             <div class="ofp-meta-field">
-                <label>Price Period (for rent)</label>
+                <label>Price Period</label>
+                <?php $pp = $meta['ofp_price_period']; if ( $pp === 'one-time' ) $pp = 'sales'; ?>
                 <select name="ofp_price_period">
-                    <option value="year"     <?php selected( $meta['ofp_price_period'], 'year' ); ?>>Per Year</option>
-                    <option value="month"    <?php selected( $meta['ofp_price_period'], 'month' ); ?>>Per Month</option>
-                    <option value="one-time" <?php selected( $meta['ofp_price_period'], 'one-time' ); ?>>One-Time (Sale)</option>
+                    <option value="sales"  <?php selected( $pp, 'sales' ); ?>>Sales</option>
+                    <option value="year"   <?php selected( $pp, 'year' ); ?>>Per Year (Rent)</option>
+                    <option value="2years" <?php selected( $pp, '2years' ); ?>>Per 2 Years (Rent)</option>
+                    <option value="month"  <?php selected( $pp, 'month' ); ?>>Per Month (Rent)</option>
                 </select>
             </div>
 
@@ -338,6 +378,21 @@ class OFP_Property_CPT {
                     }
                 }
 
+                // Save price period from Quick Edit.
+                if ( isset( $_POST['ofp_price_period'] ) ) {
+                    $price_period = sanitize_text_field( wp_unslash( $_POST['ofp_price_period'] ) );
+                    if ( $price_period === 'one-time' ) $price_period = 'sales';
+                    if ( in_array( $price_period, [ 'sales', 'year', '2years', 'month' ], true ) ) {
+                        update_post_meta( $post_id, 'ofp_price_period', $price_period );
+                    }
+                }
+
+                // Enforce: sale listing type must have 'sales' price period.
+                $current_lt = get_post_meta( $post_id, 'ofp_listing_type', true );
+                if ( $current_lt === 'sale' ) {
+                    update_post_meta( $post_id, 'ofp_price_period', 'sales' );
+                }
+
                 $client_id = absint( get_post_meta( $post_id, 'ofp_client_id', true ) );
                 self::sync_to_plugin_table( $post_id, $client_id );
             }
@@ -363,12 +418,47 @@ class OFP_Property_CPT {
             $value = isset( $_POST[ $key ] )
                 ? $sanitizer( wp_unslash( $_POST[ $key ] ) )
                 : '';
+            // Normalize legacy one-time → sales.
+            if ( $key === 'ofp_price_period' && $value === 'one-time' ) {
+                $value = 'sales';
+            }
             update_post_meta( $post_id, $key, $value );
+        }
+
+        // Enforce: sale listing type must have 'sales' price period.
+        $listing_type = sanitize_text_field( wp_unslash( $_POST['ofp_listing_type'] ?? '' ) );
+        if ( $listing_type === 'sale' ) {
+            update_post_meta( $post_id, 'ofp_price_period', 'sales' );
+        }
+
+        // Lock client_id if property has commerce activity.
+        $client_id = absint( $_POST['ofp_client_id'] ?? 0 );
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $existing_prop = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id, client_id FROM {$p}ofp_properties WHERE wp_post_id = %d LIMIT 1",
+            $post_id
+        ) );
+        if ( $existing_prop ) {
+            $has_commerce = (bool) $wpdb->get_var( $wpdb->prepare(
+                "SELECT 1 FROM {$p}ofp_property_purchases WHERE property_id = %d LIMIT 1",
+                (int) $existing_prop->id
+            ) );
+            if ( ! $has_commerce ) {
+                $has_commerce = (bool) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT 1 FROM {$p}ofp_property_offers WHERE property_id = %d LIMIT 1",
+                    (int) $existing_prop->id
+                ) );
+            }
+            if ( $has_commerce ) {
+                // Keep existing owner — ignore submitted client_id.
+                $client_id = (int) $existing_prop->client_id;
+                update_post_meta( $post_id, 'ofp_client_id', $client_id );
+            }
         }
 
         // Checkbox — absent means unchecked.
         // If client is on free plan, force to 0.
-        $client_id = absint( $_POST['ofp_client_id'] ?? 0 );
         $is_featured = isset( $_POST['ofp_is_featured'] ) ? '1' : '0';
         
         if ( $client_id ) {
@@ -383,10 +473,7 @@ class OFP_Property_CPT {
         update_post_meta( $post_id, 'ofp_is_featured', $is_featured );
 
         // Sync back to ofp_properties table if a client is assigned (or admin).
-        $client_id = isset( $_POST['ofp_client_id'] ) ? absint( $_POST['ofp_client_id'] ) : null;
-        if ( $client_id !== null ) {
-            self::sync_to_plugin_table( $post_id, $client_id );
-        }
+        self::sync_to_plugin_table( $post_id, $client_id );
 
         // Sync ofp_status to WP post_status
         $ofp_status = $_POST['ofp_status'] ?? 'pending_upload';
@@ -639,9 +726,13 @@ class OFP_Property_CPT {
             case 'ofp_price':
                 $price  = (float) get_post_meta( $post_id, 'ofp_price',        true );
                 $period = get_post_meta( $post_id, 'ofp_price_period', true );
+                if ( $period === 'one-time' ) $period = 'sales';
+                $period_labels = [ 'sales' => '', 'year' => 'year', '2years' => '2 years', 'month' => 'month' ];
+                $period_display = $period_labels[ $period ] ?? $period;
                 echo $price
-                    ? '₦' . esc_html( number_format( $price, 0 ) ) . ( $period ? ' / ' . esc_html( $period ) : '' )
+                    ? '₦' . esc_html( number_format( $price, 0 ) ) . ( $period_display ? ' / ' . esc_html( $period_display ) : '' )
                     : '—';
+                echo ' <span style="display:none;" data-price-period="' . esc_attr( $period ?: 'sales' ) . '"></span>';
                 break;
 
             case 'ofp_status':
@@ -679,6 +770,15 @@ class OFP_Property_CPT {
                         <option value="rent">For Rent</option>
                     </select>
                 </label>
+                <label class="inline-edit-group">
+                    <span class="title">Price Period</span>
+                    <select name="ofp_price_period">
+                        <option value="sales">Sales</option>
+                        <option value="year">Per Year (Rent)</option>
+                        <option value="2years">Per 2 Years (Rent)</option>
+                        <option value="month">Per Month (Rent)</option>
+                    </select>
+                </label>
             </div>
         </fieldset>
         <?php
@@ -700,8 +800,23 @@ class OFP_Property_CPT {
                 if (typeof id === 'object') id = this.getId(id);
                 var row = $('#post-' + id);
                 var listingType = row.find('.column-ofp_list_type span[data-listing-type]').data('listing-type') || 'sale';
+                var pricePeriod = row.find('.column-ofp_price span[data-price-period]').data('price-period') || 'sales';
+                if (pricePeriod === 'one-time') pricePeriod = 'sales';
                 var editRow = $('#edit-' + id);
                 editRow.find('select[name="ofp_listing_type"]').val(listingType);
+                editRow.find('select[name="ofp_price_period"]').val(pricePeriod);
+
+                // Auto-set price period when listing type changes.
+                editRow.find('select[name="ofp_listing_type"]').off('change.ofpPeriod').on('change.ofpPeriod', function(){
+                    if ($(this).val() === 'sale') {
+                        editRow.find('select[name="ofp_price_period"]').val('sales');
+                    } else {
+                        var curPeriod = editRow.find('select[name="ofp_price_period"]').val();
+                        if (curPeriod === 'sales') {
+                            editRow.find('select[name="ofp_price_period"]').val('year');
+                        }
+                    }
+                });
             };
         })(jQuery);
         </script>

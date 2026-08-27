@@ -213,32 +213,10 @@ class OFP_Mailer {
             <p>⚠️ <strong>Please change your password</strong> after your first login
                via My Account → Change Password.</p>
 
-            <h3 style="margin-top:28px;">Activate Your Subscription</h3>
-            <p>Transfer your subscription fee to your dedicated virtual account below.
-               Your pipeline activates automatically once payment is confirmed —
-               no manual intervention needed.</p>
-
-            <div style="background:#f0fdf4;border-radius:8px;padding:20px 24px;
-                        margin:16px 0;border-left:4px solid #16a34a;">
-                <p style="margin:0 0 10px;">
-                    <strong>Bank:</strong>
-                    ' . esc_html( $client->virtual_bank_name ?: 'Being set up — check back shortly' ) . '
-                </p>
-                <p style="margin:0;">
-                    <strong>Account Number:</strong>
-                    ' . esc_html( $client->virtual_account_number ?: '—' ) . '
-                </p>
-            </div>
-
-            <p style="color:#6b7280;font-size:14px;">
-                This is a dedicated virtual account for your business only.
-                Every payment is automatically tracked and applied to your account.
-            </p>
-
             <h3 style="margin-top:28px;">What Happens Next?</h3>
             <ol style="padding-left:20px;line-height:2.2;">
                 <li>Log in to your dashboard at the URL above</li>
-                <li>Make your first subscription payment to the account above</li>
+                <li>Follow the onboarding steps to activate your subscription</li>
                 <li>Your lead pipeline activates automatically</li>
                 <li>Leads start flowing in as your ads run</li>
             </ol>

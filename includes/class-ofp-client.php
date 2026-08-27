@@ -89,8 +89,8 @@ class OFP_Client {
         // ── 2. Prepare data ───────────────────────────────────────────────────
         $temp_password      = self::generate_temp_password();
         $onboarding_source  = $data['onboarding_source'] ?? 'manual';
-        $plan               = sanitize_text_field( $data['plan'] ?? 'starter' );
-        $subscriptions      = $data['subscriptions'] ?? [ 'crm' ]; // default to CRM only
+        $plan               = sanitize_text_field( $data['plan'] ?? 'free' );
+        $subscriptions      = $data['subscriptions'] ?? [ 'crm', 'listing' ];
         $phone              = OFP_Security::sanitize_phone( $data['phone'] );
         $business_phone     = OFP_Security::sanitize_phone( $data['business_phone'] ?? $data['phone'] );
         $whatsapp_number    = OFP_Security::sanitize_phone( $data['whatsapp_number'] ?? $data['phone'] );
@@ -170,35 +170,7 @@ class OFP_Client {
 
         // ── 6. Create virtual account via configured payment gateway ─────────
         // OFP_Payment is a provider-agnostic interface built in Phase 6.
-        // It supports any Nigerian gateway that offers dedicated virtual accounts
-        // (Monnify, Paystack, Flutterwave, Providus, etc.).
-        // The active provider is configured in wp-admin → OFast Pipeline → Settings.
-        //
-        // Guard: if OFP_Payment is not built yet (Phase 6), skip gracefully.
-        // The virtual account will be created when Phase 6 is deployed.
-        if ( class_exists( 'OFP_Payment' ) ) {
-            $account = OFP_Payment::create_virtual_account(
-                [
-                    'business_name' => $data['business_name'],
-                    'owner_name'    => $data['owner_name'],
-                    'email'         => $email,
-                ],
-                $client_id
-            );
-
-            if ( $account ) {
-                $wpdb->update(
-                    $wpdb->prefix . 'ofp_clients',
-                    [
-                        'virtual_account_number' => sanitize_text_field( $account->account_number ?? '' ),
-                        'virtual_bank_name'      => sanitize_text_field( $account->bank_name ?? '' ),
-                    ],
-                    [ 'id' => $client_id ]
-                );
-            }
-        }
-
-        // ── 7. Send welcome email ─────────────────────────────────────────────
+        // ── 6. Send welcome email ─────────────────────────────────────────────
         // Pass the plaintext temp password — it's only used here to email the
         // client. The hash is already stored in the DB above.
         OFP_Mailer::send_welcome_email( $client_id, $temp_password );

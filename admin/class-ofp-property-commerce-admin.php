@@ -17,14 +17,6 @@ class OFP_Property_Commerce_Admin {
     public function register_menu(): void {
         if ( ! current_user_can( 'manage_options' ) ) return;
 
-        add_submenu_page(
-            'edit.php?post_type=ofp_property',
-            'Listing Billing',
-            'Billing',
-            'manage_options',
-            'ofp-property-billing',
-            [ $this, 'render_billing' ]
-        );
 
         add_submenu_page(
             'edit.php?post_type=ofp_property',

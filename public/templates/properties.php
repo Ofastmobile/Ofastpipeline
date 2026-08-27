@@ -33,7 +33,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_choose_listing_
 
         if ( ! in_array( $chosen_plan, OFP_Property_CPT::PLAN_KEYS, true ) ) {
             $error = 'Please choose a valid plan.';
-        } elseif ( $active_plan && OFP_Subscription::has_active( 'listing', $client->id ) ) {
+        } elseif ( $active_plan ) {
             // Block submitting a new plan while one is already paid and active.
             // They can only change when the plan has expired.
             $error = 'Your listing plan is currently active. You can choose a different plan when it expires.';
@@ -134,6 +134,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
             } else {
                 update_post_meta( $post_id, 'ofp_client_id', $client->id );
                 update_post_meta( $post_id, 'ofp_price', $price );
+                if ( $listing_type === 'sale' ) {
+                    $price_period = 'sales';
+                } elseif ( $price_period === 'one-time' ) {
+                    $price_period = 'sales';
+                }
                 update_post_meta( $post_id, 'ofp_price_period', $price_period );
                 update_post_meta( $post_id, 'ofp_listing_type', $listing_type );
                 update_post_meta( $post_id, 'ofp_property_type', $property_type );
@@ -265,8 +270,8 @@ if ( isset( $_GET['edit'] ) ) {
                 <!-- Plan status / picker -->
                 <div class="ofp-card">
                     <?php
-                    // Determine if client has a currently paid+active listing subscription.
-                    $has_active_paid_plan = $active_plan && OFP_Subscription::has_active( 'listing', $client->id );
+                    // Determine if client has a currently paid+active plan.
+                    $has_active_paid_plan = $active_plan;
                     // Get the subscription end date for display.
                     $active_sub = OFP_Subscription::get_active( 'listing', $client->id );
                     $plan_expires = $active_sub ? $active_sub->period_end : null;
@@ -387,10 +392,14 @@ if ( isset( $_GET['edit'] ) ) {
                                     <label>Price Period</label>
                                     <select name="price_period" class="ofp-select">
                                         <option value="" hidden>— N/A —</option>
-                                        <?php $current_period = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_price_period', true ) : 'year'; ?>
+                                        <?php 
+                                        $current_period = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_price_period', true ) : 'year'; 
+                                        if ( $current_period === 'one-time' ) $current_period = 'sales';
+                                        ?>
+                                        <option value="sales" <?php selected( $current_period, 'sales' ); ?>>Sales</option>
                                         <option value="year" <?php selected( $current_period, 'year' ); ?>>Per Year (Rent)</option>
+                                        <option value="2years" <?php selected( $current_period, '2years' ); ?>>Per 2 Years (Rent)</option>
                                         <option value="month" <?php selected( $current_period, 'month' ); ?>>Per Month (Rent)</option>
-                                        <option value="one-time" <?php selected( $current_period, 'one-time' ); ?>>One-Time (Sale)</option>
                                     </select>
                                 </div>
 

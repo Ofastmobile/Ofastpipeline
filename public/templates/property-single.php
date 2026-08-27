@@ -100,8 +100,13 @@ while ( have_posts() ) : the_post();
             <div class="ofp-property-sidebar" style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:24px; height:fit-content; position:sticky; top:40px;">
                 <p class="ofp-property-price" style="margin:0 0 24px 0; font-size:28px; font-weight:700; color:#2563eb;">
                     NGN <?php echo esc_html( number_format( $price, 2 ) ); ?>
-                    <?php if ( $listing_type === 'rent' ) : ?>
-                        <span style="font-size:16px; color:#64748b; font-weight:500;">/ <?php echo esc_html( $price_period ); ?></span>
+                    <?php 
+                    if ( $price_period === 'one-time' ) $price_period = 'sales';
+                    $period_labels = [ 'sales' => '', 'year' => 'year', '2years' => '2 years', 'month' => 'month' ];
+                    $period_display = $period_labels[ $price_period ] ?? $price_period;
+                    if ( $period_display ) : 
+                    ?>
+                        <span style="font-size:16px; color:#64748b; font-weight:500;">/ <?php echo esc_html( $period_display ); ?></span>
                     <?php endif; ?>
                 </p>
 
