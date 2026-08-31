@@ -15,7 +15,7 @@ $client = OFP_Auth::current_client();
 $error   = '';
 $success = '';
 
-$active_plan = OFP_Subscription::get_active_listing_plan( $client->id );
+$active_plan = OFP_Subscription::client_plan( $client->id );
 $plan_prices = OFP_Property_CPT::get_plan_prices();
 $plan_caps   = OFP_Property_CPT::get_plan_caps();
 $plan_labels = [ 'free' => 'Free', 'silver' => 'Silver', 'gold' => 'Gold' ];
@@ -33,10 +33,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_choose_listing_
 
         if ( ! in_array( $chosen_plan, OFP_Property_CPT::PLAN_KEYS, true ) ) {
             $error = 'Please choose a valid plan.';
-        } elseif ( $active_plan ) {
-            // Block submitting a new plan while one is already paid and active.
-            // They can only change when the plan has expired.
-            $error = 'Your listing plan is currently active. You can choose a different plan when it expires.';
+        } elseif ( OFP_Subscription::has_paid_plan( $client->id ) ) {
+            $error = 'Your plan is currently active. Upgrade or renew from Funding.';
         } else {
             $plan_price = OFP_Property_CPT::get_plan_price( $chosen_plan );
 
@@ -92,9 +90,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
             $error = 'You do not have permission to edit that listing.';
         }
         elseif ( $is_new && ! OFP_Property_CPT::can_add_property( $client->id ) ) {
-            $error = $active_plan
+            $error = OFP_Subscription::has_paid_plan( $client->id )
                 ? 'You have reached your plan\'s property limit. Choose a higher plan to add more.'
-                : 'Please choose a listing plan before adding a property.';
+                : 'Upgrade your plan to add more properties, or you may have reached the Free plan limit of 1 listing.';
         }
         elseif ( empty( $_POST['title'] ) || empty( $_POST['price'] ) ) {
             $error = 'Title and price are required.';
@@ -112,7 +110,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
             $status        = in_array( $_POST['status'] ?? '', [ 'live', 'pending_upload', 'taken', 'expired' ], true )
                 ? $_POST['status'] : 'pending_upload';
 
-            $can_feature = $active_plan && $active_plan !== 'free';
+            $can_feature = $active_plan !== 'free';
             $is_featured = ( $can_feature && isset( $_POST['is_featured'] ) ) ? '1' : '0';
 
             $post_data = [
@@ -270,62 +268,40 @@ if ( isset( $_GET['edit'] ) ) {
                 <!-- Plan status / picker -->
                 <div class="ofp-card">
                     <?php
-                    // Determine if client has a currently paid+active plan.
-                    $has_active_paid_plan = $active_plan;
-                    // Get the subscription end date for display.
-                    $active_sub = OFP_Subscription::get_active( 'listing', $client->id );
-                    $plan_expires = $active_sub ? $active_sub->period_end : null;
+                    $has_active_paid_plan = OFP_Subscription::has_paid_plan( $client->id );
+                    $active_sub = OFP_Subscription::get_active( 'listing', $client->id )
+                        ?: OFP_Subscription::get_active( 'crm', $client->id );
+                    $plan_expires = $active_sub ? $active_sub->period_end : ( $client->subscription_expires ?? null );
                     ?>
 
                     <?php if ( $has_active_paid_plan ) : ?>
-                        <!-- Plan is currently PAID & ACTIVE: show status, no form -->
                         <h3>
-                            <?php echo esc_html( $plan_labels[ $active_plan ] ); ?> Plan
+                            <?php echo esc_html( $plan_labels[ $active_plan ] ?? ucfirst( $active_plan ) ); ?> Plan
                             <span style="background:#dcfce7; color:#16a34a; font-size:12px; font-weight:600; padding:3px 10px; border-radius:100px; vertical-align:middle; margin-left:8px;">Active</span>
                         </h3>
                         <p class="ofp-hint">
-                            Using <?php echo esc_html( $used_count ); ?> of <?php echo esc_html( $plan_caps[ $active_plan ] ); ?> properties.
+                            Using <?php echo esc_html( $used_count ); ?> of <?php echo esc_html( $plan_caps[ $active_plan ] ?? 1 ); ?> properties.
                             <?php if ( $plan_expires ) : ?>
                             &nbsp; Expires <strong><?php echo esc_html( date( 'd M Y', strtotime( $plan_expires ) ) ); ?></strong>.
                             <?php endif; ?>
                         </p>
                         <p class="ofp-hint" style="margin-top:8px;">
-                            You can choose a different plan after your current plan expires. To top up or renew, use the <a href="<?php echo esc_url( home_url('/funding') ); ?>" style="color:#3b82f6;">Funding page</a>.
+                            Upgrade or renew from the <a href="<?php echo esc_url( home_url('/funding') ); ?>" style="color:#3b82f6;">Funding page</a>
+                            or see <a href="<?php echo esc_url( home_url('/pricing') ); ?>" style="color:#3b82f6;">Plans & Pricing</a>.
                         </p>
-
-                    <?php elseif ( $active_plan && ! $has_active_paid_plan ) : ?>
-                        <!-- Plan selected but PENDING payment (not yet paid) -->
-                        <h3>
-                            <?php echo esc_html( $plan_labels[ $active_plan ] ); ?> Plan
-                            <span style="background:#fef3c7; color:#d97706; font-size:12px; font-weight:600; padding:3px 10px; border-radius:100px; vertical-align:middle; margin-left:8px;">Pending Payment</span>
-                        </h3>
-                        <p class="ofp-hint">
-                            Your plan selection is awaiting payment. Please transfer <strong>NGN <?php echo esc_html( number_format( $plan_prices[ $active_plan ], 2 ) ); ?>/month</strong>
-                            to your virtual account or company account, then notify us via the <a href="<?php echo esc_url( home_url('/funding') ); ?>" style="color:#3b82f6;">Funding page</a>.
-                        </p>
-                        <!-- Blocked changing plan while still pending (per user request) -->
 
                     <?php else : ?>
-                        <!-- No plan yet: full picker shown -->
-                        <h3>Choose a Listing Plan</h3>
-                        <p class="ofp-hint">You need an active listing plan before you can add a property.</p>
-
-                        <form method="POST" style="margin-top:20px; display:flex; flex-direction:column; gap:16px;">
-                            <?php wp_nonce_field( 'ofp_listing_plan_action', 'ofp_listing_plan_nonce' ); ?>
-                            <div class="ofp-plan-grid">
-                                <?php foreach ( OFP_Property_CPT::PLAN_KEYS as $plan ) : ?>
-                                    <label class="ofp-plan-option">
-                                        <input type="radio" name="listing_plan" value="<?php echo esc_attr( $plan ); ?>" required>
-                                        <div class="ofp-plan-name"><?php echo esc_html( $plan_labels[ $plan ] ); ?></div>
-                                        <div class="ofp-plan-price">NGN <?php echo esc_html( number_format( $plan_prices[ $plan ], 0 ) ); ?>/mo</div>
-                                        <div class="ofp-plan-leads">Up to <?php echo esc_html( $plan_caps[ $plan ] ); ?> properties</div>
-                                    </label>
-                                <?php endforeach; ?>
-                            </div>
-                            <div>
-                                <button type="submit" name="ofp_choose_listing_plan" value="1" class="ofp-btn ofp-btn-primary">Choose Plan</button>
-                            </div>
-                        </form>
+                        <h3>
+                            Free Plan
+                            <span style="background:#e0e7ff; color:#4338ca; font-size:12px; font-weight:600; padding:3px 10px; border-radius:100px; vertical-align:middle; margin-left:8px;">Active</span>
+                        </h3>
+                        <p class="ofp-hint">
+                            Using <?php echo esc_html( $used_count ); ?> of <?php echo esc_html( $plan_caps['free'] ?? 1 ); ?> properties.
+                            CRM, leads, and 1 listing are included. Upgrade to Silver or Gold for more listings, templates, and team seats.
+                        </p>
+                        <p style="margin-top:16px;">
+                            <a href="<?php echo esc_url( home_url( '/pricing' ) ); ?>" class="ofp-btn ofp-btn-primary">Upgrade plan</a>
+                        </p>
                     <?php endif; ?>
                 </div>
 
@@ -335,9 +311,8 @@ if ( isset( $_GET['edit'] ) ) {
 
                     <?php if ( ! $editing_post && ! OFP_Property_CPT::can_add_property( $client->id ) ) : ?>
                         <p class="ofp-hint">
-                            <?php echo $active_plan
-                                ? 'You have reached your plan\'s property limit — choose a higher plan above to add more.'
-                                : 'Choose a listing plan above to start adding properties.'; ?>
+                            You have reached your plan's property limit.
+                            <a href="<?php echo esc_url( home_url( '/pricing' ) ); ?>">Upgrade</a> to add more listings.
                         </p>
                     <?php else : ?>
                         <form method="POST" enctype="multipart/form-data" style="margin-top:20px;">
@@ -435,7 +410,7 @@ if ( isset( $_GET['edit'] ) ) {
                                 <?php endif; ?>
 
                                 <?php
-                                $can_feature = $active_plan && $active_plan !== 'free';
+                                $can_feature = $active_plan !== 'free';
                                 $is_featured = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_is_featured', true ) : '0';
                                 ?>
                                 <div class="ofp-field" style="grid-column: 1 / -1;">

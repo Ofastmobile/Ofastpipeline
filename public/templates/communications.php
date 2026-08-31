@@ -9,11 +9,6 @@ OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
 
-if ( ! OFP_Subscription::has_active( 'crm', $client->id ) ) {
-    wp_safe_redirect( home_url( '/dashboard' ) );
-    exit;
-}
-
 global $wpdb;
 $p = $wpdb->prefix;
 

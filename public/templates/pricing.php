@@ -9,8 +9,6 @@ OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
 
-$has_crm     = OFP_Subscription::has_active( 'crm',     $client->id );
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -143,31 +141,7 @@ $has_crm     = OFP_Subscription::has_active( 'crm',     $client->id );
         $prices = class_exists('OFP_Property_CPT') && method_exists('OFP_Property_CPT', 'get_plan_prices') ? OFP_Property_CPT::get_plan_prices() : ['free'=>0,'silver'=>50000,'gold'=>100000];
         $caps   = class_exists('OFP_Property_CPT') && method_exists('OFP_Property_CPT', 'get_plan_caps') ? OFP_Property_CPT::get_plan_caps() : ['free'=>1,'silver'=>3,'gold'=>10];
 
-        // ── Determine the client's effective plan ─────────────────────────
-        // The DB `plan` column may hold OLD keys (starter/growth/pro) or
-        // NEW unified keys (free/silver/gold). Map old → new so comparisons work.
-        $plan_map = [
-            'starter' => 'free',
-            'growth'  => 'silver',
-            'pro'     => 'gold',
-            'bronze'  => 'free',
-            // New keys map to themselves
-            'free'    => 'free',
-            'silver'  => 'silver',
-            'gold'    => 'gold',
-        ];
-
-        $raw_plan = $client->plan ?? 'free';
-        $current_plan = $plan_map[ $raw_plan ] ?? 'free';
-
-        // Also check listing_plan in case it's set to a higher tier
-        if ( isset( $client->listing_plan ) ) {
-            $mapped_listing = $plan_map[ $client->listing_plan ] ?? 'free';
-            $tier_order = ['free' => 1, 'silver' => 2, 'gold' => 3];
-            if ( ($tier_order[$mapped_listing] ?? 1) > ($tier_order[$current_plan] ?? 1) ) {
-                $current_plan = $mapped_listing;
-            }
-        }
+        $current_plan = OFP_Subscription::client_plan( $client->id );
 
         // ── Calculate days until subscription expires ─────────────────────
         // Use the client row's subscription_expires as the primary source

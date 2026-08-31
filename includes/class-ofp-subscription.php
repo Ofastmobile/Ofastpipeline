@@ -2,28 +2,21 @@
 /**
  * OFP_Subscription
  *
- * Manages client subscription lifecycle for both CRM and Listing subscription types.
+ * Client plan + payment lifecycle.
  *
- * SUBSCRIPTION TYPE SYSTEM (v2.1):
- *  A single client can hold up to TWO active subscription rows simultaneously:
- *   - type = 'crm'     : Starter / Growth / Pro plan (lead automation pipeline)
- *   - type = 'listing' : Property listing directory fee
+ * UNIFIED PLAN (current product):
+ *  One client plan: free | silver | gold.
+ *  CRM and listings are features of that plan, not two products.
+ *  Use OFP_Subscription::client_plan( $client_id ) for every feature gate.
  *
- *  Each type is independently priced, independently renewed, and independently
- *  toggled. Both are paid into the same Monnify virtual account — the webhook
- *  handler (OFP_Monnify) sums the expected amounts when matching payments.
+ * LEGACY (still in the database — do not SQL-rename yet):
+ *  ofp_subscriptions.type = 'crm'     used starter / growth / pro
+ *  ofp_subscriptions.type = 'listing' used free / silver / gold
+ *  get_expected_monthly_total() used to ADD both prices (double charge).
+ *  That is stopped. New checkouts write one listing-plan payment.
+ *  Old keys are mapped in place: starter/bronze→free, growth→silver, pro→gold.
  *
- * SUBSCRIPTION LIFECYCLE:
- *  pending → paid → (30 days) → expiring_soon → grace → suspended → cancelled
- *
- *  Status transitions are driven by run_daily_check(), which fires via WP-Cron
- *  every day at midnight. Manual overrides are possible via manual_toggle().
- *
- * PIPELINE CONFIG:
- *  A pipeline_config row is ONLY created when type = 'crm'. Listing-only clients
- *  have no SMS/voice sequence — they just get a listing page and lead capture form.
- *
- * Depends on: OFP_Mailer, OFP_Client, wp_options for pricing.
+ * Depends on: OFP_Mailer, OFP_Client, OFP_Property_CPT, wp_options for pricing.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -55,6 +48,171 @@ class OFP_Subscription {
         'growth'  => 25000.00,
         'pro'     => 40000.00,
     ];
+
+    /** Canonical product plans. Do not add CRM aliases here. */
+    const UNIFIED_PLANS = [ 'free', 'silver', 'gold' ];
+
+    const UNIFIED_TIER_ORDER = [
+        'free'   => 1,
+        'silver' => 2,
+        'gold'   => 3,
+    ];
+
+    /**
+     * Map every historical plan key onto free|silver|gold.
+     * Database rows are left as-is; this is display + gating only.
+     */
+    const PLAN_ALIAS_MAP = [
+        'starter' => 'free',
+        'bronze'  => 'free',
+        'free'    => 'free',
+        'growth'  => 'silver',
+        'silver'  => 'silver',
+        'pro'     => 'gold',
+        'gold'    => 'gold',
+    ];
+
+    /**
+     * Normalize any stored plan key to free|silver|gold.
+     */
+    public static function normalize_plan( ?string $plan ): string {
+        $key = strtolower( trim( (string) $plan ) );
+        return self::PLAN_ALIAS_MAP[ $key ] ?? 'free';
+    }
+
+    /**
+     * Numeric rank for comparing tiers. Higher = more features.
+     */
+    public static function plan_rank( ?string $plan ): int {
+        $normalized = self::normalize_plan( $plan );
+        return self::UNIFIED_TIER_ORDER[ $normalized ] ?? 1;
+    }
+
+    /**
+     * Canonical client plan: free|silver|gold.
+     *
+     * Takes the highest of:
+     *  - ofp_clients.plan (legacy CRM key or unified key)
+     *  - ofp_clients.listing_plan (if the column exists)
+     *  - the active listing subscription row
+     *
+     * Does not rename database values.
+     */
+    public static function client_plan( int $client_id ): string {
+        if ( $client_id <= 0 ) {
+            return 'free';
+        }
+
+        $best = 'free';
+
+        $client = OFP_Client::get( $client_id );
+        if ( $client ) {
+            $best = self::higher_plan( $best, $client->plan ?? null );
+            if ( isset( $client->listing_plan ) ) {
+                $best = self::higher_plan( $best, $client->listing_plan );
+            }
+        }
+
+        $listing = self::get_active_listing_plan( $client_id );
+        if ( $listing ) {
+            $best = self::higher_plan( $best, $listing );
+        }
+
+        return $best;
+    }
+
+    /**
+     * True when the client's unified plan is at least $min (free|silver|gold).
+     */
+    public static function client_plan_at_least( int $client_id, string $min ): bool {
+        return self::plan_rank( self::client_plan( $client_id ) ) >= self::plan_rank( $min );
+    }
+
+    public static function has_paid_plan( int $client_id ): bool {
+        return self::client_plan_at_least( $client_id, 'silver' );
+    }
+
+    public static function allows_email_templates( int $client_id ): bool {
+        return self::client_plan_at_least( $client_id, 'silver' );
+    }
+
+    public static function allows_installments( int $client_id ): bool {
+        return self::client_plan( $client_id ) === 'gold';
+    }
+
+    /**
+     * Client can use the product (CRM, listings, payments) — not suspended.
+     * Replaces has_active('crm') / has_active('listing') as a feature gate.
+     * Those methods still mean "a paid row of that legacy type exists".
+     */
+    public static function has_platform_access( int $client_id ): bool {
+        $client = OFP_Client::get( $client_id );
+        if ( ! $client ) {
+            return false;
+        }
+        return ! in_array( $client->status, [ 'suspended', 'cancelled', 'trash' ], true );
+    }
+
+    /**
+     * Team seat cap for a plan. Free = 0.
+     */
+    public static function team_member_limit( ?string $plan ): int {
+        return match ( self::normalize_plan( $plan ) ) {
+            'silver' => 2,
+            'gold'   => 3,
+            default  => 0,
+        };
+    }
+
+    /**
+     * Monthly price for the unified plan. Uses listing-plan option prices
+     * (what Funding already charges), not the old CRM price list.
+     */
+    public static function unified_plan_price( ?string $plan ): float {
+        $plan = self::normalize_plan( $plan );
+        if ( $plan === 'free' || ! class_exists( 'OFP_Property_CPT' ) ) {
+            return 0.0;
+        }
+        return OFP_Property_CPT::get_plan_price( $plan );
+    }
+
+    /**
+     * Return the higher of two plan keys.
+     */
+    public static function higher_plan( ?string $a, ?string $b ): string {
+        $na = self::normalize_plan( $a );
+        $nb = self::normalize_plan( $b );
+        return self::plan_rank( $nb ) > self::plan_rank( $na ) ? $nb : $na;
+    }
+
+    /**
+     * Write unified keys onto ofp_clients.plan and listing_plan.
+     * Does not rewrite historical ofp_subscriptions rows.
+     */
+    public static function sync_client_plan_columns( int $client_id, ?string $plan ): void {
+        global $wpdb;
+
+        $unified = self::normalize_plan( $plan );
+        if ( $client_id <= 0 ) {
+            return;
+        }
+
+        $data = [
+            'plan'       => $unified,
+            'updated_at' => current_time( 'mysql' ),
+        ];
+
+        $listing_col = $wpdb->get_var( "SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'listing_plan'" );
+        if ( $listing_col ) {
+            $data['listing_plan'] = $unified;
+        }
+
+        $wpdb->update(
+            $wpdb->prefix . 'ofp_clients',
+            $data,
+            [ 'id' => $client_id ]
+        );
+    }
 
     /**
      * Returns all CRM monthly plan prices.
@@ -156,6 +314,10 @@ class OFP_Subscription {
         global $wpdb;
 
         $amount = self::resolve_amount( $type, $plan );
+
+        if ( $type === 'listing' && $plan ) {
+            $plan = self::normalize_plan( $plan );
+        }
 
         $wpdb->insert(
             $wpdb->prefix . 'ofp_subscriptions',
@@ -290,55 +452,18 @@ class OFP_Subscription {
     }
 
     /**
-     * Calculate the total expected monthly payment for a client.
-     * Used by OFP_Monnify when matching incoming webhook payments.
+     * Expected monthly amount for unmatched VA / webhook payments.
      *
-     * @param  int   $client_id  Client ID.
-     * @return float             Total NGN amount expected per month.
+     * ONE plan price only. Previously this added CRM + listing and could
+     * double-charge after the product became a single Free/Silver/Gold app.
      */
     public static function get_expected_monthly_total( int $client_id ): float {
-        global $wpdb;
-
-        $client = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT plan FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
-                $client_id
-            )
-        );
-
-        $total = 0.0;
-
-        // Add CRM plan cost if client has an active or pending CRM subscription.
-        $has_crm = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}ofp_subscriptions
-                 WHERE client_id = %d AND type = 'crm'
-                   AND status IN ('paid','pending')
-                 LIMIT 1",
-                $client_id
-            )
-        );
-
-        if ( $has_crm && $client ) {
-            $total += self::get_plan_price( $client->plan );
+        $plan = self::client_plan( $client_id );
+        if ( $plan === 'free' ) {
+            return 0.0;
         }
 
-        // Add listing fee if client has an active or pending listing subscription.
-        $has_listing = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}ofp_subscriptions
-                 WHERE client_id = %d AND type = 'listing'
-                   AND status IN ('paid','pending')
-                 LIMIT 1",
-                $client_id
-            )
-        );
-
-        if ( $has_listing ) {
-            $total += OFP_Property_CPT::get_plan_price( self::get_active_listing_plan( $client_id ) );
-        }
-
-        return $total;
+        return self::unified_plan_price( $plan );
     }
 
     /**
@@ -472,6 +597,10 @@ class OFP_Subscription {
             $plan = null;
         }
 
+        if ( $type === 'listing' && $plan ) {
+            $plan = self::normalize_plan( $plan );
+        }
+
         // Insert a new paid subscription record for this payment cycle.
         $wpdb->insert(
             $wpdb->prefix . 'ofp_subscriptions',
@@ -507,14 +636,10 @@ class OFP_Subscription {
             )
         );
 
-        // If it's a CRM payment and the plan changed (an upgrade), update the client's tier immediately.
-        if ( $type === 'crm' && $plan && $plan !== $client->plan ) {
-            $wpdb->update(
-                $wpdb->prefix . 'ofp_clients',
-                [ 'plan' => $plan ],
-                [ 'id' => $client_id ]
-            );
-        }
+        // Keep ofp_clients.plan / listing_plan on the unified key so feature
+        // gates (templates, listing caps, installments) see one plan.
+        $sync_plan = $plan ?: ( $client->plan ?? 'free' );
+        self::sync_client_plan_columns( $client_id, $sync_plan );
 
         // Send payment confirmation email.
         OFP_Mailer::send_payment_confirmed( $client, $amount, $type );
@@ -609,14 +734,8 @@ class OFP_Subscription {
 
     /**
      * Apply a payment that meets or exceeds the expected monthly total.
-     * Splits the recording between 'crm' and 'listing' subscription rows
-     * exactly as the original per-gateway logic did.
-     *
-     * @param  int    $client_id
-     * @param  float  $amount
-     * @param  string $payment_ref
-     * @param  string $method
-     * @return void
+     * Records ONE listing-plan row at the client's unified tier.
+     * Does not also write a CRM subscription row.
      */
     private static function apply_full_payment(
         int $client_id,
@@ -624,30 +743,12 @@ class OFP_Subscription {
         string $payment_ref,
         string $method
     ): void {
-        global $wpdb;
-
-        $has_crm = (bool) $wpdb->get_var( $wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}ofp_subscriptions
-             WHERE client_id = %d AND type = 'crm' LIMIT 1",
-            $client_id
-        ) );
-
-        $has_listing = (bool) $wpdb->get_var( $wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}ofp_subscriptions
-             WHERE client_id = %d AND type = 'listing' LIMIT 1",
-            $client_id
-        ) );
-
-        if ( $has_crm ) {
-            self::record_payment( $client_id, 'crm', $amount, $payment_ref, $method );
-        } elseif ( $has_listing ) {
-            self::record_payment( $client_id, 'listing', $amount, $payment_ref, $method );
-        } else {
-            // Client has neither type on record yet — still record it under
-            // 'crm' as a safe default rather than dropping it, since a payment
-            // that made it this far is real money that needs to be accounted for.
-            self::record_payment( $client_id, 'crm', $amount, $payment_ref, $method );
+        $plan = self::client_plan( $client_id );
+        if ( $plan === 'free' ) {
+            $plan = 'silver';
         }
+
+        self::record_payment( $client_id, 'listing', $amount, $payment_ref, $method, $plan );
     }
 
     /**

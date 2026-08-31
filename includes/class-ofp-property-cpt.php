@@ -321,12 +321,9 @@ class OFP_Property_CPT {
                 $client_id = (int) $meta['ofp_client_id'];
                 $can_feature = true;
                 if ( $client_id ) {
-                    $plan = get_user_meta( $client_id, 'listing_plan', true ) ?: 'free';
-                    if ( class_exists('OFP_Subscription') ) {
-                        $sub_plan = OFP_Subscription::get_active_listing_plan( $client_id );
-                        if ( $sub_plan ) {
-                            $plan = $sub_plan;
-                        }
+                    $plan = 'free';
+                    if ( class_exists( 'OFP_Subscription' ) ) {
+                        $plan = OFP_Subscription::client_plan( $client_id );
                     }
                     if ( $plan === 'free' ) {
                         $can_feature = false;
@@ -463,11 +460,11 @@ class OFP_Property_CPT {
         
         if ( $client_id ) {
             $plan = 'free';
-            if ( class_exists('OFP_Subscription') ) {
-                $plan = OFP_Subscription::get_active_listing_plan( $client_id ) ?: 'free';
+            if ( class_exists( 'OFP_Subscription' ) ) {
+                $plan = OFP_Subscription::client_plan( $client_id );
             }
             if ( $plan === 'free' ) {
-                $is_featured = '0'; // Enforce restriction on save.
+                $is_featured = '0';
             }
         }
         update_post_meta( $post_id, 'ofp_is_featured', $is_featured );
@@ -933,10 +930,8 @@ class OFP_Property_CPT {
     }
 
     public static function can_add_property( int $client_id ): bool {
-        $plan = OFP_Subscription::get_active_listing_plan( $client_id );
-        if ( ! $plan ) return false;
-
-        $cap = self::get_plan_cap( $plan );
+        $plan = OFP_Subscription::client_plan( $client_id );
+        $cap  = self::get_plan_cap( $plan );
         return self::count_for_client( $client_id ) < $cap;
     }
 

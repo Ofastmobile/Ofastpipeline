@@ -250,25 +250,10 @@ $company_bank_name    = get_option( 'ofp_company_bank_name', '' );
 $company_account_no   = get_option( 'ofp_company_account_no', '' );
 $company_account_name = get_option( 'ofp_company_account_name', '' );
 
-// Client's current plan context for funding form dropdown.
+// Client's current unified plan (free|silver|gold).
 $crm_plan     = $client->plan ?? null;
 $listing_plan = OFP_Subscription::get_active_listing_plan( $client->id );
-
-// ── 7-day renewal gate (mirrored from pricing.php) ────────────────────
-$plan_map = [
-    'starter' => 'free', 'growth' => 'silver', 'pro' => 'gold',
-    'bronze'  => 'free', 'free'   => 'free',   'silver' => 'silver', 'gold' => 'gold',
-];
-$raw_plan     = $client->plan ?? 'free';
-$current_plan = $plan_map[ $raw_plan ] ?? 'free';
-
-if ( isset( $client->listing_plan ) ) {
-    $mapped_listing = $plan_map[ $client->listing_plan ] ?? 'free';
-    $tier_order     = [ 'free' => 1, 'silver' => 2, 'gold' => 3 ];
-    if ( ( $tier_order[ $mapped_listing ] ?? 1 ) > ( $tier_order[ $current_plan ] ?? 1 ) ) {
-        $current_plan = $mapped_listing;
-    }
-}
+$current_plan = OFP_Subscription::client_plan( $client->id );
 
 $days_to_expiry = 999;
 if ( ! empty( $client->subscription_expires ) ) {
@@ -592,8 +577,8 @@ $listing_prices = [
 
     <div id="tab-auto" class="ofp-funding-pane active">
 
-    <?php if ( OFP_Subscription::has_active( 'crm', $client->id ) ) :
-        $topup_credits = OFP_Credit::get( $client->id );
+    <?php
+        $topup_credits = class_exists( 'OFP_Credit' ) ? OFP_Credit::get( $client->id ) : null;
     ?>
     <div class="ofp-funding-card">
         <div class="ofp-funding-card-label">Automatic</div>
@@ -639,7 +624,6 @@ $listing_prices = [
             </button>
         </form>
     </div>
-    <?php endif; ?>
 
     <?php
     $pending_listing_plan = OFP_Subscription::get_latest_listing_plan_for_client( $client->id );
@@ -689,7 +673,7 @@ $listing_prices = [
     ?>
     <div class="ofp-funding-card" id="ofp-listing-plan-card">
         <div class="ofp-funding-card-label">Automatic</div>
-        <div class="ofp-funding-card-title" id="ofp-listing-card-title"><?php echo $card_context ? esc_html( $card_context ) . ' to ' : 'Pay Listing Plan — '; ?><?php echo esc_html( ucfirst( $default_plan ) ); ?></div>
+        <div class="ofp-funding-card-title" id="ofp-listing-card-title"><?php echo $card_context ? esc_html( $card_context ) . ' to ' : 'Pay Plan — '; ?><?php echo esc_html( ucfirst( $default_plan ) ); ?></div>
         <div class="ofp-funding-card-desc">
             <?php if ( $card_context === 'Upgrade' ) : ?>
                 Upgrade now — you'll get a fresh 30-day cycle on the new plan immediately.
@@ -951,7 +935,7 @@ document.querySelectorAll('.ofp-copy-btn').forEach(function(btn) {
         payBtn.textContent = 'Pay NGN ' + formatNumber(price) + ' Now';
 
         if ( cardTitle ) {
-            cardTitle.textContent = 'Pay Listing Plan — ' + plan.charAt(0).toUpperCase() + plan.slice(1);
+            cardTitle.textContent = 'Pay Plan — ' + plan.charAt(0).toUpperCase() + plan.slice(1);
         }
     });
 })();

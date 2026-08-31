@@ -17,9 +17,12 @@ if ( ! OFP_Auth::has_permission( 'send_messages' ) ) {
 global $wpdb;
 $p = $wpdb->prefix;
 
-$tab = sanitize_text_field( $_GET['tab'] ?? 'log' );
+$tab = sanitize_text_field( $_GET['tab'] ?? 'log');
 $allowed_tabs = [ 'log', 'send', 'templates' ];
 if ( ! in_array( $tab, $allowed_tabs, true ) ) {
+    $tab = 'log';
+}
+if ( in_array( $tab, [ 'send', 'templates' ], true ) && ! OFP_Subscription::allows_email_templates( (int) $client->id ) ) {
     $tab = 'log';
 }
 
@@ -98,8 +101,10 @@ $type_badges = [
     <!-- Tabs -->
     <div class="ofp-tabs" style="margin-bottom: 24px; border-bottom: 1px solid var(--border-color);">
         <a href="<?php echo esc_url( home_url( '/message-templates?tab=log' ) ); ?>" class="ofp-tab <?php echo $tab === 'log' ? 'active' : ''; ?>">Communications Log</a>
+        <?php if ( OFP_Subscription::allows_email_templates( (int) $client->id ) ) : ?>
         <a href="<?php echo esc_url( home_url( '/message-templates?tab=send' ) ); ?>" class="ofp-tab <?php echo $tab === 'send' ? 'active' : ''; ?>">Send Broadcast</a>
         <a href="<?php echo esc_url( home_url( '/message-templates?tab=templates' ) ); ?>" class="ofp-tab <?php echo $tab === 'templates' ? 'active' : ''; ?>">Email Template</a>
+        <?php endif; ?>
     </div>
 
     <?php

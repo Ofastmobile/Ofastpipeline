@@ -101,7 +101,7 @@ $transactions = $wpdb->get_results(
                 <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px;">
                     <div style="font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Plan</div>
                     <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">
-                        <?php echo esc_html( strtoupper( $client->plan ?: '—' ) ); ?>
+                        <?php echo esc_html( strtoupper( OFP_Subscription::client_plan( $client->id ) ) ); ?>
                     </div>
                 </div>
 
@@ -116,7 +116,7 @@ $transactions = $wpdb->get_results(
 
         </div>
 
-        <?php if ( OFP_Subscription::has_active( 'crm', $client->id ) ) : ?>
+        <?php if ( OFP_Subscription::has_platform_access( $client->id ) ) : ?>
         <!-- Credit Balances -->
         <div class="ofp-card">
             <div class="ofp-card-header" style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
