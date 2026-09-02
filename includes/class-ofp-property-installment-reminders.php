@@ -52,7 +52,7 @@ class OFP_Property_Installment_Reminders {
             }
 
             if ( ! empty( $row->buyer_email ) ) {
-                OFP_Mailer::send( $row->buyer_email, $row->buyer_name ?: 'there', $subject, sprintf( '<p>Hello %s,</p><p>%s</p><p>Please use your secure payment link to make the payment.</p>', esc_html( $row->buyer_name ?: 'there' ), esc_html( $message ) ) );
+                OFP_Mailer::send_client_email( $row->buyer_email, $subject, sprintf( '<p>Hello %s,</p><p>%s</p><p>Please use your secure payment link to make the payment.</p>', esc_html( $row->buyer_name ?: 'there' ), esc_html( $message ) ), (int) $row->client_id );
             }
 
             if ( ! empty( $row->sms_provider ) && ! empty( $row->buyer_phone ) && ! empty( $row->client_id ) && class_exists( 'OFP_Credit' ) && OFP_Credit::has_balance( (int) $row->client_id, 'sms', self::SMS_COST ) ) {

@@ -63,6 +63,9 @@ class OFP_Client_Portal {
         add_action( 'wp_ajax_ofp_save_template',   [ $this, 'ajax_save_template' ] );
         add_action( 'wp_ajax_ofp_delete_template', [ $this, 'ajax_delete_template' ] );
         add_action( 'wp_ajax_ofp_fetch_templates', [ $this, 'ajax_fetch_templates' ] );
+        add_action( 'wp_ajax_ofp_set_default_template', [ $this, 'ajax_set_default_template' ] );
+        add_action( 'wp_ajax_ofp_send_client_broadcast', [ $this, 'ajax_send_client_broadcast' ] );
+        add_action( 'wp_ajax_ofp_send_test_email', [ $this, 'ajax_send_test_email' ] );
 
         // Manual Messaging
         add_action( 'wp_ajax_ofp_send_manual_message', [ $this, 'ajax_send_manual_message' ] );
@@ -247,24 +250,39 @@ class OFP_Client_Portal {
         OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
         if ( ! $client ) wp_send_json_error( 'Unauthorized' );
+        if ( ! OFP_Comms::can_edit_templates( (int) $client->id ) ) {
+            wp_send_json_error( 'Email templates are available on Silver and Gold plans.' );
+        }
 
         global $wpdb;
         $p = $wpdb->prefix;
 
         $id      = (int) ( $_POST['template_id'] ?? 0 );
-        $type    = sanitize_text_field( $_POST['type'] ?? '' );
-        $name    = sanitize_text_field( $_POST['name'] ?? '' );
-        $subject = sanitize_text_field( $_POST['subject'] ?? '' );
-        $body    = wp_kses_post( wp_unslash( $_POST['body'] ?? '' ) );
+        $name    = sanitize_text_field( $_POST['name'] ?? 'Email wrapper' );
+        $body    = wp_unslash( $_POST['body'] ?? '' );
+        $is_default = ! empty( $_POST['is_default'] ) ? 1 : 0;
+        $save_as_new = ! empty( $_POST['save_as_new'] );
 
-        if ( ! in_array( $type, [ 'sms', 'email' ], true ) || empty( $name ) || empty( $body ) ) {
-            wp_send_json_error( 'Missing required fields.' );
+        if ( $save_as_new ) {
+            $id = 0;
         }
+
+        if ( empty( $body ) ) {
+            wp_send_json_error( 'Template HTML is required.' );
+        }
+        if ( ! str_contains( $body, '{{content}}' ) && ! str_contains( $body, '{email_body}' ) ) {
+            wp_send_json_error( 'Template must include {{content}} where the message body goes.' );
+        }
+
+        $limit = OFP_Comms::template_limit( (int) $client->id );
+        $count = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$p}ofp_client_templates WHERE client_id = %d AND type = 'email'",
+            $client->id
+        ) );
 
         $now = current_time( 'mysql' );
 
         if ( $id > 0 ) {
-            // Update existing — verify ownership
             $existing = $wpdb->get_var( $wpdb->prepare(
                 "SELECT id FROM {$p}ofp_client_templates WHERE id = %d AND client_id = %d",
                 $id, $client->id
@@ -274,36 +292,54 @@ class OFP_Client_Portal {
             $wpdb->update(
                 "{$p}ofp_client_templates",
                 [
-                    'type'       => $type,
+                    'type'       => 'email',
                     'name'       => $name,
-                    'subject'    => $type === 'email' ? $subject : null,
                     'body'       => $body,
                     'updated_at' => $now,
                 ],
-                [ 'id' => $id ],
-                [ '%s', '%s', '%s', '%s', '%s' ],
-                [ '%d' ]
+                [ 'id' => $id ]
             );
-
-            wp_send_json_success( [ 'message' => 'Template updated.', 'id' => $id ] );
         } else {
-            // Create new
-            $wpdb->insert(
-                "{$p}ofp_client_templates",
-                [
-                    'client_id'  => $client->id,
-                    'type'       => $type,
-                    'name'       => $name,
-                    'subject'    => $type === 'email' ? $subject : null,
-                    'body'       => $body,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ],
-                [ '%d', '%s', '%s', '%s', '%s', '%s', '%s' ]
-            );
-
-            wp_send_json_success( [ 'message' => 'Template created.', 'id' => $wpdb->insert_id ] );
+            if ( $limit === 1 && $count >= 1 ) {
+                $existing_id = (int) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT id FROM {$p}ofp_client_templates WHERE client_id = %d AND type = 'email' ORDER BY id ASC LIMIT 1",
+                    $client->id
+                ) );
+                $wpdb->update(
+                    "{$p}ofp_client_templates",
+                    [
+                        'type'       => 'email',
+                        'name'       => $name,
+                        'body'       => $body,
+                        'updated_at' => $now,
+                    ],
+                    [ 'id' => $existing_id ]
+                );
+                $id = $existing_id;
+            } else {
+                $wpdb->insert(
+                    "{$p}ofp_client_templates",
+                    [
+                        'client_id'  => $client->id,
+                        'type'       => 'email',
+                        'name'       => $name,
+                        'subject'    => null,
+                        'body'       => $body,
+                        'is_default' => 0,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]
+                );
+                $id = (int) $wpdb->insert_id;
+            }
         }
+
+        if ( $is_default || $limit === 1 ) {
+            $wpdb->update( "{$p}ofp_client_templates", [ 'is_default' => 0 ], [ 'client_id' => $client->id ] );
+            $wpdb->update( "{$p}ofp_client_templates", [ 'is_default' => 1 ], [ 'id' => $id ] );
+        }
+
+        wp_send_json_success( [ 'message' => 'Template saved.', 'id' => $id ] );
     }
 
     public function ajax_delete_template(): void {
@@ -311,15 +347,16 @@ class OFP_Client_Portal {
         OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
         if ( ! $client ) wp_send_json_error( 'Unauthorized' );
+        if ( OFP_Subscription::client_plan( (int) $client->id ) !== 'gold' ) {
+            wp_send_json_error( 'Only Gold can delete templates. Silver keeps one wrapper.' );
+        }
 
         global $wpdb;
-        $p = $wpdb->prefix;
-
         $id = (int) ( $_POST['template_id'] ?? 0 );
         if ( ! $id ) wp_send_json_error( 'Invalid template.' );
 
         $deleted = $wpdb->delete(
-            "{$p}ofp_client_templates",
+            $wpdb->prefix . 'ofp_client_templates',
             [ 'id' => $id, 'client_id' => $client->id ],
             [ '%d', '%d' ]
         );
@@ -340,12 +377,215 @@ class OFP_Client_Portal {
         global $wpdb;
         $templates = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT id, type, name, subject, body FROM {$wpdb->prefix}ofp_client_templates WHERE client_id = %d ORDER BY name ASC",
+                "SELECT id, type, name, subject, body, is_default FROM {$wpdb->prefix}ofp_client_templates WHERE client_id = %d AND type = 'email' ORDER BY is_default DESC, name ASC",
                 $client->id
             )
         );
 
         wp_send_json_success( $templates );
+    }
+
+    public function ajax_set_default_template(): void {
+        check_ajax_referer( 'ofp_client_ajax', 'nonce' );
+        OFP_Auth::require_client_login();
+        $client = OFP_Auth::current_client();
+        if ( ! $client ) wp_send_json_error( 'Unauthorized' );
+        if ( OFP_Subscription::client_plan( (int) $client->id ) !== 'gold' ) {
+            wp_send_json_error( 'Default template selection is a Gold feature.' );
+        }
+
+        global $wpdb;
+        $id = (int) ( $_POST['template_id'] ?? 0 );
+        $owned = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}ofp_client_templates WHERE id = %d AND client_id = %d",
+            $id, $client->id
+        ) );
+        if ( ! $owned ) wp_send_json_error( 'Template not found.' );
+
+        $wpdb->update( $wpdb->prefix . 'ofp_client_templates', [ 'is_default' => 0 ], [ 'client_id' => $client->id ] );
+        $wpdb->update( $wpdb->prefix . 'ofp_client_templates', [ 'is_default' => 1 ], [ 'id' => $id ] );
+        wp_send_json_success( 'Default template updated.' );
+    }
+
+    public function ajax_send_test_email(): void {
+        check_ajax_referer( 'ofp_client_ajax', 'nonce' );
+        OFP_Auth::require_client_login();
+        $client = OFP_Auth::current_client();
+        if ( ! $client ) wp_send_json_error( 'Unauthorized' );
+        if ( ! OFP_Comms::can_edit_templates( (int) $client->id ) ) {
+            wp_send_json_error( 'Test emails are available on Silver and Gold.' );
+        }
+
+        $template_id = (int) ( $_POST['template_id'] ?? 0 ) ?: null;
+        $body        = OFP_Comms::sample_body_html();
+        $sent        = OFP_Mailer::send_client_email(
+            $client->email,
+            'Test email — ' . ( $client->business_name ?: 'OFast Pipeline' ),
+            $body,
+            (int) $client->id,
+            $template_id
+        );
+
+        if ( $sent ) {
+            wp_send_json_success( 'Test email sent to ' . $client->email );
+        }
+        wp_send_json_error( 'Could not send test email. Check SMTP settings.' );
+    }
+
+    public function ajax_send_client_broadcast(): void {
+        check_ajax_referer( 'ofp_client_ajax', 'nonce' );
+        OFP_Auth::require_client_login();
+        $client = OFP_Auth::current_client();
+        if ( ! $client ) wp_send_json_error( 'Unauthorized' );
+        if ( ! OFP_Auth::has_permission( 'send_messages' ) ) {
+            wp_send_json_error( 'You do not have permission to send messages.' );
+        }
+        if ( ! OFP_Comms::can_edit_templates( (int) $client->id ) ) {
+            wp_send_json_error( 'Broadcasts are available on Silver and Gold plans.' );
+        }
+
+        $channel     = sanitize_text_field( $_POST['channel'] ?? 'email' );
+        $subject     = sanitize_text_field( $_POST['subject'] ?? '' );
+        $body        = wp_kses_post( wp_unslash( $_POST['body'] ?? '' ) );
+        $template_id = (int) ( $_POST['template_id'] ?? 0 ) ?: null;
+        $source      = sanitize_text_field( $_POST['source'] ?? 'manual' );
+        $ids         = array_filter( array_map( 'intval', (array) ( $_POST['recipient_ids'] ?? [] ) ) );
+        $manual      = sanitize_textarea_field( wp_unslash( $_POST['recipients'] ?? '' ) );
+
+        if ( ! in_array( $channel, [ 'email', 'sms' ], true ) || $body === '' ) {
+            wp_send_json_error( 'Channel and message body are required.' );
+        }
+        if ( $channel === 'email' && $subject === '' ) {
+            wp_send_json_error( 'Email requires a subject.' );
+        }
+
+        $people = $this->resolve_broadcast_recipients( $client, $source, $ids, $manual, $channel );
+        if ( empty( $people ) ) {
+            wp_send_json_error( 'No valid recipients.' );
+        }
+
+        if ( $channel === 'sms' ) {
+            $needed = OFP_Comms::SMS_COST * count( $people );
+            if ( ! OFP_Credit::has_balance( (int) $client->id, 'sms', $needed ) ) {
+                wp_send_json_error( 'Insufficient SMS credit. Top up from Funding.' );
+            }
+        }
+
+        $success = 0;
+        $failed  = 0;
+        $provider = $client->sms_provider ?: 'smartsms';
+
+        foreach ( $people as $person ) {
+            $vars = [
+                'name'           => $person['name'],
+                'email'          => $person['email'],
+                'phone'          => $person['phone'],
+                'property_title' => $person['property_title'],
+                'business_name'  => $client->business_name,
+            ];
+            $msg = OFP_Comms::apply_placeholders( $body, $vars );
+            $sub = OFP_Comms::apply_placeholders( $subject, $vars );
+            $ok  = false;
+            $ref = '';
+
+            if ( $channel === 'email' ) {
+                if ( empty( $person['email'] ) || ! is_email( $person['email'] ) ) {
+                    $failed++;
+                    continue;
+                }
+                $ok = OFP_Mailer::send_client_email( $person['email'], $sub, $msg, (int) $client->id, $template_id );
+            } else {
+                if ( empty( $person['phone'] ) ) {
+                    $failed++;
+                    continue;
+                }
+                $sms = new OFP_SMS( $provider, (int) $client->id );
+                $result = $sms->send( $person['phone'], wp_strip_all_tags( $msg ) );
+                $ok  = ! empty( $result['success'] );
+                $ref = $result['provider_ref'] ?? '';
+                if ( $ok ) {
+                    OFP_Credit::deduct( (int) $client->id, 'sms', OFP_Comms::SMS_COST );
+                }
+            }
+
+            OFP_Comms::log(
+                (int) $client->id,
+                (int) $person['lead_id'],
+                $channel,
+                $msg,
+                $ok ? 'sent' : 'failed',
+                $channel === 'sms' && $ok ? OFP_Comms::SMS_COST : 0,
+                $channel === 'sms' ? $provider : 'smtp',
+                $ref
+            );
+
+            if ( $ok ) {
+                $success++;
+            } else {
+                $failed++;
+            }
+        }
+
+        wp_send_json_success( "Sent {$success}. Failed {$failed}." );
+    }
+
+    private function resolve_broadcast_recipients( object $client, string $source, array $ids, string $manual, string $channel ): array {
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $out = [];
+
+        if ( $source === 'leads' ) {
+            if ( empty( $ids ) ) return [];
+            $placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                "SELECT id, name, email, phone FROM {$p}ofp_leads WHERE client_id = %d AND id IN ({$placeholders})",
+                $client->id,
+                ...$ids
+            ) );
+            foreach ( $rows as $row ) {
+                $out[] = [
+                    'lead_id'        => (int) $row->id,
+                    'name'           => $row->name,
+                    'email'          => $row->email,
+                    'phone'          => $row->phone,
+                    'property_title' => '',
+                ];
+            }
+            return $out;
+        }
+
+        if ( $source === 'buyers' ) {
+            if ( empty( $ids ) ) return [];
+            $placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                "SELECT pu.id, pu.buyer_name, pu.buyer_email, pu.buyer_phone, pr.title AS property_title
+                 FROM {$p}ofp_property_purchases pu
+                 LEFT JOIN {$p}ofp_properties pr ON pr.id = pu.property_id
+                 WHERE pu.client_id = %d AND pu.id IN ({$placeholders})",
+                $client->id,
+                ...$ids
+            ) );
+            foreach ( $rows as $row ) {
+                $out[] = [
+                    'lead_id'        => 0,
+                    'name'           => $row->buyer_name,
+                    'email'          => $row->buyer_email,
+                    'phone'          => $row->buyer_phone,
+                    'property_title' => $row->property_title ?: '',
+                ];
+            }
+            return $out;
+        }
+
+        $parts = array_filter( array_map( 'trim', preg_split( '/[\s,;]+/', $manual ) ) );
+        foreach ( $parts as $part ) {
+            if ( $channel === 'email' && is_email( $part ) ) {
+                $out[] = [ 'lead_id' => 0, 'name' => '', 'email' => $part, 'phone' => '', 'property_title' => '' ];
+            } elseif ( $channel === 'sms' && preg_match( '/[0-9]{8,}/', $part ) ) {
+                $out[] = [ 'lead_id' => 0, 'name' => '', 'email' => '', 'phone' => $part, 'property_title' => '' ];
+            }
+        }
+        return $out;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -389,77 +629,62 @@ class OFP_Client_Portal {
         }
 
         // Replace placeholders
-        $body = str_replace(
-            [ '{{name}}', '{{phone}}', '{{email}}' ],
-            [ $lead->name, $lead->phone, $lead->email ],
-            $body
-        );
+        $body = OFP_Comms::apply_placeholders( $body, [
+            'name'           => $lead->name,
+            'phone'          => $lead->phone,
+            'email'          => $lead->email,
+            'property_title' => '',
+            'business_name'  => $client->business_name,
+        ] );
 
         $success = false;
         $error   = '';
         $cost    = 0.00;
+        $ref     = '';
+        $provider = $client->sms_provider ?: 'smartsms';
 
         if ( $channel === 'sms' ) {
-            $cost = 1.00; // Deduct 1 credit for SMS
-            if ( ! OFP_Credits::has_sufficient_balance( $client->id, $cost ) ) {
-                wp_send_json_error( 'Insufficient credit balance to send SMS.' );
+            $cost = OFP_Comms::SMS_COST;
+            if ( ! OFP_Credit::has_balance( $client->id, 'sms', $cost ) ) {
+                wp_send_json_error( 'Insufficient SMS credit.' );
             }
-            
-            $sms = new OFP_SMS( 'smartsms', $client->id );
-            $result = $sms->send( $lead->phone, $body );
-            
+
+            $sms    = new OFP_SMS( $provider, $client->id );
+            $result = $sms->send( $lead->phone, wp_strip_all_tags( $body ) );
+
             $success = $result['success'] ?? false;
             $error   = $result['error'] ?? '';
+            $ref     = $result['provider_ref'] ?? '';
 
             if ( $success ) {
-                OFP_Credits::deduct( $client->id, $cost, "Manual SMS to {$lead->phone}" );
+                OFP_Credit::deduct( $client->id, 'sms', $cost );
             }
 
         } elseif ( $channel === 'email' ) {
             if ( empty( $lead->email ) ) {
                 wp_send_json_error( 'Lead does not have an email address.' );
             }
-            // Send email (using Universal Admin Template wrapper)
             $success = OFP_Mailer::send_client_email( $lead->email, $subject, $body, $client->id );
             if ( ! $success ) {
                 $error = 'Email failed to send. Check server configuration.';
             }
         }
 
-        // Log Communication
+        OFP_Comms::log(
+            $client->id,
+            (int) $lead->id,
+            $channel,
+            $body,
+            $success ? 'sent' : 'failed',
+            $success && $channel === 'sms' ? $cost : 0,
+            $channel === 'sms' ? $provider : 'smtp',
+            $ref
+        );
+
         if ( $success ) {
-            OFP_Communications_Log::log(
-                $client->id,
-                $lead_id,
-                $channel,
-                $channel === 'sms' ? $lead->phone : $lead->email,
-                'outbound',
-                $body,
-                $cost
-            );
-
-            // Log Accountability Activity
-            $current_user = OFP_Auth::current_user();
-            $team_member_id = null;
-            if ( $current_user && $current_user->is_team_member ) {
-                // Determine team member ID by matching email
-                $team_member_id = $wpdb->get_var( $wpdb->prepare(
-                    "SELECT id FROM {$p}ofp_team_members WHERE client_id = %d AND email = %s",
-                    $client->id, $current_user->email
-                ) );
-            }
-
-            OFP_Activity_Log::log(
-                $client->id,
-                "Sent manual {$channel} to " . ( $lead->name ?: $lead->phone ),
-                "To: " . ( $channel === 'sms' ? $lead->phone : $lead->email ) . "\n\n" . $body,
-                $team_member_id
-            );
-
             wp_send_json_success( 'Message sent successfully.' );
-        } else {
-            wp_send_json_error( 'Failed to send message: ' . $error );
         }
+        wp_send_json_error( $error ?: 'Failed to send message.' );
     }
 }
 

@@ -37,33 +37,43 @@ class OFP_SMS {
 
     private string $provider;
     private string $api_key;
+    private string $sender_id = '';
+    private int $client_id = 0;
 
     /**
-     * @param string $provider   Provider slug: 'africastalking' or 'bulksms'.
-     * @param int    $client_id  Client ID — used only to read their preferred
-     *                           provider, NOT to retrieve per-client API keys.
-     *                           Under the reseller model, all API calls use the
-     *                           global key from OFP Settings.
+     * @param string $provider   Provider slug: 'africastalking', 'bulksms', or 'smartsms'.
+     * @param int    $client_id  Client ID — used to read preferred provider and sms_sender_id.
      */
     public function __construct( string $provider, int $client_id ) {
-        $this->provider = $provider;
-        $this->api_key  = $this->get_global_api_key( $provider );
+        $this->provider  = $provider;
+        $this->client_id = $client_id;
+        $this->api_key   = $this->get_global_api_key( $provider );
+
+        if ( $client_id > 0 ) {
+            global $wpdb;
+            $sid = $wpdb->get_var( $wpdb->prepare(
+                "SELECT sms_sender_id FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
+                $client_id
+            ) );
+            if ( is_string( $sid ) && $sid !== '' ) {
+                $this->sender_id = substr( preg_replace( '/[^A-Za-z0-9]/', '', $sid ), 0, 11 );
+            }
+        }
     }
 
     /**
      * Send an SMS to a single phone number.
      *
-     * @param  string $phone    Recipient phone number.
-     * @param  string $message  Message body (max 160 chars for single SMS).
-     * @return array {
-     *     @type bool   $success      True if provider accepted the message.
-     *     @type string $provider_ref Provider's message ID for tracking.
-     *     @type string $error        Error message if success = false.
-     * }
+     * @param  string      $phone      Recipient phone number.
+     * @param  string      $message    Message body.
+     * @param  string|null $sender_id  Optional override sender ID.
      */
-    public function send( string $phone, string $message ): array {
+    public function send( string $phone, string $message, ?string $sender_id = null ): array {
 
         $phone = $this->normalise_phone( $phone );
+        if ( is_string( $sender_id ) && $sender_id !== '' ) {
+            $this->sender_id = substr( preg_replace( '/[^A-Za-z0-9]/', '', $sender_id ), 0, 11 );
+        }
 
         return match ( $this->provider ) {
             'africastalking' => $this->send_via_at( $phone, $message ),
@@ -75,6 +85,14 @@ class OFP_SMS {
                 'error'        => "Unknown SMS provider: {$this->provider}",
             ],
         };
+    }
+
+    private function resolved_sender( string $fallback_option, string $default = 'OFastPipe' ): string {
+        if ( $this->sender_id !== '' ) {
+            return $this->sender_id;
+        }
+        $opt = get_option( $fallback_option, $default );
+        return $opt !== '' ? (string) $opt : $default;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -98,7 +116,7 @@ class OFP_SMS {
                     'username' => get_option( 'ofp_at_username', '' ),
                     'to'       => $phone,
                     'message'  => $message,
-                    'from'     => get_option( 'ofp_at_sender_id', 'OFastPipe' ),
+                    'from'     => $this->resolved_sender( 'ofp_at_sender_id' ),
                 ],
                 'timeout' => 15,
             ]
@@ -140,7 +158,7 @@ class OFP_SMS {
                 ],
                 'body'    => wp_json_encode( [
                     'to'   => $phone,
-                    'from' => get_option( 'ofp_bsmsn_sender_id', 'OFastPipe' ),
+                    'from' => $this->resolved_sender( 'ofp_bsmsn_sender_id' ),
                     'body' => $message,
                 ] ),
                 'timeout' => 15,
@@ -171,8 +189,8 @@ class OFP_SMS {
      * Docs: https://smartsmssolutions.com/api-doc
      */
     private function send_via_smartsms( string $phone, string $message ): array {
-        $routing   = get_option( 'ofp_smartsms_routing', '3' ); // 3 = Corporate DND bypass
-        $sender_id = get_option( 'ofp_smartsms_sender_id', 'OFastPipe' );
+        $routing   = get_option( 'ofp_smartsms_routing', '3' );
+        $sender_id = $this->resolved_sender( 'ofp_smartsms_sender_id' );
 
         $params = [
             'token'   => $this->api_key,
@@ -298,5 +316,12 @@ class OFP_SMS {
         $result = $sms->send( $phone, $message );
 
         return $result['success'] ?? false;
+    }
+
+    /**
+     * Platform OTP / system SMS (no client sender ID).
+     */
+    public static function send_system_sms( string $phone, string $message ): bool {
+        return self::send_manual( null, $phone, $message );
     }
 }

@@ -153,6 +153,11 @@ include OFP_PATH . 'admin/views/partials/header.php';
                     <option value="smartsms"       <?php selected( $client->sms_provider, 'smartsms' ); ?>>SmartSMSSolutions</option>
                 </select>
             </div>
+            <div class="ofp-field">
+                <label>SMS Sender ID</label>
+                <input type="text" name="sms_sender_id" class="ofp-input" maxlength="11" value="<?php echo esc_attr( $client->sms_sender_id ?? '' ); ?>" placeholder="e.g. ClientBrand">
+                <p class="ofp-hint">Must already be registered on the SMS provider. Max 11 alphanumeric characters. Leave empty to use the platform default.</p>
+            </div>
         </div>
 
         <div class="ofp-form-actions">

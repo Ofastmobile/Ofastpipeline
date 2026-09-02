@@ -59,6 +59,7 @@ class OFP_Admin_Menu {
         add_action( 'admin_post_ofp_cancel_trigger',  [ $this, 'handle_cancel_trigger' ] );
         add_action( 'admin_post_ofp_send_broadcast',  [ $this, 'handle_send_broadcast' ] );
         add_action( 'admin_post_ofp_save_universal_template',  [ $this, 'handle_save_universal_template' ] );
+        add_action( 'admin_post_ofp_send_test_email',  [ $this, 'handle_send_test_email' ] );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -744,6 +745,7 @@ class OFP_Admin_Menu {
             'business_category' => 'property',
             'plan'              => sanitize_text_field( wp_unslash( $_POST['plan']              ?? '' ) ),
             'sms_provider'      => sanitize_text_field( wp_unslash( $_POST['sms_provider']      ?? 'africastalking' ) ),
+            'sms_sender_id'     => substr( preg_replace( '/[^A-Za-z0-9]/', '', sanitize_text_field( wp_unslash( $_POST['sms_sender_id'] ?? '' ) ) ), 0, 11 ),
         ] );
 
         $new_listing_plan = sanitize_text_field( wp_unslash( $_POST['listing_plan'] ?? '' ) );
@@ -1352,9 +1354,30 @@ class OFP_Admin_Menu {
         check_admin_referer( 'ofp_save_universal_template' );
 
         $template = wp_unslash( $_POST['ofp_universal_email_template'] ?? '' );
+        $template = str_replace( '{email_body}', '{{content}}', $template );
         update_option( 'ofp_universal_email_template', $template );
 
         wp_redirect( add_query_arg( [ 'page' => 'ofp-communications', 'tab' => 'templates', 'updated' => '1' ], admin_url( 'admin.php' ) ) );
+        exit;
+    }
+
+    public function handle_send_test_email(): void {
+        if ( ! OFP_Auth::is_super_admin() ) {
+            wp_die( 'Access denied.' );
+        }
+        check_admin_referer( 'ofp_send_test_email' );
+
+        $admin = wp_get_current_user();
+        $to    = $admin->user_email ?: get_option( 'admin_email' );
+        $body  = OFP_Comms::sample_body_html();
+        $html  = OFP_Mailer::wrap_system_email( $admin->display_name ?: 'Admin', 'Test email', $body );
+        $sent  = OFP_Mailer::send_html( $to, 'Test email — OFast Pipeline', $html );
+
+        wp_redirect( add_query_arg( [
+            'page'    => 'ofp-communications',
+            'tab'     => 'templates',
+            'tested'  => $sent ? '1' : '0',
+        ], admin_url( 'admin.php' ) ) );
         exit;
     }
 
@@ -1387,11 +1410,12 @@ class OFP_Admin_Menu {
                     continue;
                 }
                 
-                // Wrap with universal template
                 $wrapper = get_option( 'ofp_universal_email_template', '' );
                 $html_body = $message;
-                if ( ! empty( $wrapper ) && strpos( $wrapper, '{email_body}' ) !== false ) {
-                    $html_body = str_replace( '{email_body}', $message, $wrapper );
+                if ( ! empty( $wrapper ) ) {
+                    $html_body = OFP_Comms::apply_wrapper( $wrapper, $message );
+                } else {
+                    $html_body = OFP_Mailer::default_shell( $message, $subject );
                 }
 
                 $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
