@@ -79,6 +79,23 @@ include OFP_PATH . 'admin/views/partials/header.php';
         </div>
     </div>
 
+    <!-- ── AUTHENTICATION SETTINGS ─────────────────────────────────────── -->
+    <div class="ofp-settings-section">
+        <div class="ofp-settings-section-header">
+            <h3>Authentication Settings</h3>
+        </div>
+        <div class="ofp-form-grid">
+            <div class="ofp-field">
+                <label>Enable OTP Verification</label>
+                <select name="ofp_enable_otp">
+                    <option value="yes" <?php selected( get_option( 'ofp_enable_otp', 'yes' ), 'yes' ); ?>>Yes - Require OTP for Login & Signup</option>
+                    <option value="no" <?php selected( get_option( 'ofp_enable_otp', 'yes' ), 'no' ); ?>>No - Skip OTP (Testing Mode)</option>
+                </select>
+                <p class="ofp-hint">If disabled, clients and team members will be logged in immediately with just their password. Turn off if testing locally.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- ── DEFAULT PIPELINE MESSAGES ─────────────────────────────────────── -->
     <div class="ofp-settings-section">
         <div class="ofp-settings-section-header">

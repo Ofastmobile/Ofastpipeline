@@ -251,6 +251,7 @@ class OFP_Auth {
             : '';
 
         if ( empty( $token ) ) {
+            error_log('current_user(): token is empty (cookie not found)');
             return null;
         }
 
@@ -264,6 +265,7 @@ class OFP_Auth {
         );
 
         if ( ! $session ) {
+            error_log('current_user(): session not found in DB or expired. Token: ' . substr($token, 0, 10) . '...');
             self::clear_cookie();
             return null;
         }

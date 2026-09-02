@@ -299,4 +299,15 @@ class OFP_SMS {
 
         return $result['success'] ?? false;
     }
+
+    /**
+     * Static helper for sending system-level SMS (like OTPs) without a client context.
+     *
+     * @param  string   $phone      Recipient phone.
+     * @param  string   $message    Message body.
+     * @return bool True on success.
+     */
+    public static function send_system_sms( string $phone, string $message ): bool {
+        return self::send_manual( null, $phone, $message );
+    }
 }

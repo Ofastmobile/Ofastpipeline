@@ -75,11 +75,34 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
         } elseif ( OFP_Client::email_exists( $email ) ) {
             $error = 'An account with this email address already exists. Please log in instead.';
         } else {
-            // Generate OTP
-            OFP_Auth::generate_and_send_otp( $email, $phone, 'signup' );
-            $step = 'otp';
-            $user_email = $email;
-            $user_phone = $phone;
+            // Check if OTP is disabled globally
+            if ( get_option( 'ofp_enable_otp', 'yes' ) === 'no' ) {
+                $subscriptions = [ 'crm', 'listing' ];
+
+                $client_id = OFP_Client::create( [
+                    'business_name'     => $business_name,
+                    'owner_name'        => $owner_name,
+                    'email'             => $email,
+                    'phone'             => $phone,
+                    'business_category' => 'property',
+                    'plan'              => $plan,
+                    'listing_plan'      => $plan,
+                    'subscriptions'     => $subscriptions,
+                    'onboarding_source' => 'self_serve',
+                ] );
+
+                if ( $client_id ) {
+                    $success = true;
+                } else {
+                    $error = 'Something went wrong creating your account. Please try again or contact us.';
+                }
+            } else {
+                // Generate OTP
+                OFP_Auth::generate_and_send_otp( $email, $phone, 'signup' );
+                $step = 'otp';
+                $user_email = $email;
+                $user_phone = $phone;
+            }
         }
     }
 }

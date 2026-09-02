@@ -93,6 +93,25 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             $credentials_valid = OFP_Auth::check_credentials( $email, $password );
             
             if ( $credentials_valid ) {
+                // Global OTP Disabled: Skip OTP and login directly
+                if ( get_option( 'ofp_enable_otp', 'yes' ) === 'no' ) {
+                    error_log('Login Bypass Block Hit! client_id: ' . $credentials_valid['client_id']);
+                    try {
+                        OFP_Auth::issue_session( $credentials_valid['client_id'], $credentials_valid['user_type'], $credentials_valid['team_member_id'] );
+                        error_log('issue_session executed successfully');
+                        
+                        $redirect_to = isset( $_GET['redirect_to'] )
+                            ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) )
+                            : home_url( '/dashboard' );
+                            
+                        error_log('redirecting to: ' . $redirect_to);
+                        wp_safe_redirect( $redirect_to );
+                        exit;
+                    } catch (Exception $e) {
+                        error_log('Error in login bypass: ' . $e->getMessage());
+                    }
+                }
+
                 // Generate OTP
                 OFP_Auth::generate_and_send_otp( $email, $credentials_valid['phone'], 'login' );
                 
