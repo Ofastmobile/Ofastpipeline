@@ -246,7 +246,7 @@ class OFP_Property_Commerce_Actions {
             $message .= "Please review and accept the offer here:<br>";
             $message .= "<a href=\"" . esc_url( $offer_url ) . "\">Accept Installment Offer</a><br><br>";
             $message .= "If you have any questions, please contact us.";
-            OFP_Mailer::send( $offer->buyer_email, $offer->buyer_name, $subject, $message );
+            OFP_Mailer::send_client_email( $offer->buyer_email, $subject, $message, (int) $offer->client_id );
         }
 
         do_action( 'ofp_property_offer_created', $offer_id, $raw_token, $offer_url );
@@ -304,7 +304,7 @@ class OFP_Property_Commerce_Actions {
             $message .= "Please review and accept the offer here:<br>";
             $message .= "<a href=\"" . esc_url( $offer_url ) . "\">Accept Installment Offer</a><br><br>";
             $message .= "If you have any questions, please contact us.";
-            OFP_Mailer::send( $offer->buyer_email, $offer->buyer_name, $subject, $message );
+            OFP_Mailer::send_client_email( $offer->buyer_email, $subject, $message, (int) $offer->client_id );
         }
 
         do_action( 'ofp_property_offer_created', $offer_id, $raw_token, $offer_url );

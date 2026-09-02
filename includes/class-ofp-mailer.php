@@ -146,7 +146,8 @@ class OFP_Mailer {
             "From: {$from_name} <{$from_email}>",
         ];
 
-        $full_html = self::wrap_in_template( $to_name, $subject, $body_html );
+        // Pipeline A: admin universal template (if set) else built-in shell.
+        $full_html = self::wrap_system_email( $to_name, $subject, $body_html );
 
         $sent = wp_mail( $to, $subject, $full_html, $headers );
 
@@ -155,6 +156,78 @@ class OFP_Mailer {
         }
 
         return $sent;
+    }
+
+    /**
+     * Pipeline A alias used by OTP / team-invite (to, subject, html).
+     */
+    public static function send_system_email( string $to, string $subject, string $body_html, string $to_name = '' ): bool {
+        return self::send( $to, $to_name, $subject, $body_html );
+    }
+    public static function send_html( string $to, string $subject, string $full_html ): bool {
+        if ( empty( $to ) || ! is_email( $to ) ) {
+            error_log( "[OFP_Mailer] Invalid recipient email: {$to}" );
+            return false;
+        }
+
+        $from_email = get_option( 'ofp_smtp_from_email', get_option( 'admin_email' ) );
+        $from_name  = get_option( 'ofp_smtp_from_name', 'OFast Pipeline' );
+
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            "From: {$from_name} <{$from_email}>",
+        ];
+
+        $sent = wp_mail( $to, $subject, $full_html, $headers );
+        if ( ! $sent ) {
+            error_log( "[OFP_Mailer] wp_mail() failed for: {$to} | Subject: {$subject}" );
+        }
+        return $sent;
+    }
+
+    /**
+     * Pipeline B — emails to buyers / leads / investors.
+     * Client templates wrap these. System emails never call this.
+     */
+    public static function send_client_email(
+        string $to,
+        string $subject,
+        string $body_html,
+        int $client_id,
+        ?int $template_id = null
+    ): bool {
+        $wrapped = self::wrap_outgoing( $client_id, $body_html, $template_id );
+        return self::send_html( $to, $subject, $wrapped );
+    }
+
+    /**
+     * Wrap outgoing (Pipeline B) body in the client's template, else admin
+     * universal, else the built-in shell.
+     */
+    public static function wrap_outgoing( int $client_id, string $body_html, ?int $template_id = null ): string {
+        $wrapper = class_exists( 'OFP_Comms' ) ? OFP_Comms::client_wrapper( $client_id, $template_id ) : '';
+        if ( $wrapper !== '' ) {
+            return OFP_Comms::apply_wrapper( $wrapper, $body_html );
+        }
+        return self::wrap_in_template( '', '', $body_html );
+    }
+
+    /**
+     * Pipeline A wrapper: admin universal {{content}} if set, else built-in.
+     */
+    public static function wrap_system_email( string $to_name, string $subject, string $body_html ): string {
+        $wrapper = class_exists( 'OFP_Comms' ) ? OFP_Comms::admin_wrapper() : '';
+        if ( $wrapper !== '' && ( str_contains( $wrapper, '{{content}}' ) || str_contains( $wrapper, '{email_body}' ) ) ) {
+            return OFP_Comms::apply_wrapper( $wrapper, $body_html );
+        }
+        return self::wrap_in_template( $to_name, $subject, $body_html );
+    }
+
+    /**
+     * Public default shell for previews when no custom wrapper is set.
+     */
+    public static function default_shell( string $body_html, string $subject = 'Preview' ): string {
+        return self::wrap_in_template( '', $subject, $body_html );
     }
 
     // ─────────────────────────────────────────────────────────────────────────

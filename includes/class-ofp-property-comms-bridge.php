@@ -17,11 +17,11 @@ class OFP_Property_Comms_Bridge {
         if ( ! $row ) return;
 
         if ( ! empty( $row->buyer_email ) ) {
-            OFP_Mailer::send(
+            OFP_Mailer::send_client_email(
                 $row->buyer_email,
-                $row->buyer_name ?: 'there',
                 'Purchase recorded — ' . ( $row->property_title ?: 'Property' ),
-                sprintf( '<p>Hello %s,</p><p>Your purchase of <strong>%s</strong> has been recorded.</p><p>Total: <strong>₦%s</strong><br>Balance: <strong>₦%s</strong></p>', esc_html( $row->buyer_name ?: 'there' ), esc_html( $row->property_title ?: 'the property' ), number_format( (float) $row->total_price, 2 ), number_format( (float) $row->balance, 2 ) )
+                sprintf( '<p>Hello %s,</p><p>Your purchase of <strong>%s</strong> has been recorded.</p><p>Total: <strong>₦%s</strong><br>Balance: <strong>₦%s</strong></p>', esc_html( $row->buyer_name ?: 'there' ), esc_html( $row->property_title ?: 'the property' ), number_format( (float) $row->total_price, 2 ), number_format( (float) $row->balance, 2 ) ),
+                (int) $row->client_id
             );
         }
 
@@ -40,11 +40,11 @@ class OFP_Property_Comms_Bridge {
 
         $reference = $reference ?: ( $row->gateway_reference ?: 'PAY-' . $row->id );
         if ( ! empty( $row->buyer_email ) ) {
-            OFP_Mailer::send(
+            OFP_Mailer::send_client_email(
                 $row->buyer_email,
-                $row->buyer_name ?: 'there',
                 'Payment received — ' . ( $row->property_title ?: 'Property' ),
-                sprintf( '<p>Hello %s,</p><p>We received <strong>₦%s</strong> for <strong>%s</strong>.</p><p>Total paid: <strong>₦%s</strong><br>Remaining balance: <strong>₦%s</strong></p><p>Reference: <strong>%s</strong></p>', esc_html( $row->buyer_name ?: 'there' ), number_format( $amount, 2 ), esc_html( $row->property_title ?: 'the property' ), number_format( (float) $row->amount_paid, 2 ), number_format( (float) $row->balance, 2 ), esc_html( $reference ) )
+                sprintf( '<p>Hello %s,</p><p>We received <strong>₦%s</strong> for <strong>%s</strong>.</p><p>Total paid: <strong>₦%s</strong><br>Remaining balance: <strong>₦%s</strong></p><p>Reference: <strong>%s</strong></p>', esc_html( $row->buyer_name ?: 'there' ), number_format( $amount, 2 ), esc_html( $row->property_title ?: 'the property' ), number_format( (float) $row->amount_paid, 2 ), number_format( (float) $row->balance, 2 ), esc_html( $reference ) ),
+                (int) $row->client_id
             );
         }
 

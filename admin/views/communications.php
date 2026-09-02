@@ -194,13 +194,14 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 </p>
             </div>
         <?php endif; ?>
+        <?php $admin_wrapper = get_option( 'ofp_universal_email_template', '' ); ?>
         <div class="ofp-section" style="margin-top:20px;">
-            <h3>Send Broadcast Message</h3>
-            <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ofp-form">
-                <?php wp_nonce_field( 'ofp_send_broadcast' ); ?>
-                <input type="hidden" name="action" value="ofp_send_broadcast">
-                
-                <div class="ofp-form-grid">
+            <h3>Send Broadcast</h3>
+            <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:stretch;">
+                <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ofp-form" id="ofp-admin-send" style="flex:1;min-width:360px;">
+                    <?php wp_nonce_field( 'ofp_send_broadcast' ); ?>
+                    <input type="hidden" name="action" value="ofp_send_broadcast">
+
                     <div class="ofp-field ofp-field-full">
                         <label>Channel <span class="required">*</span></label>
                         <select name="channel" id="broadcast_channel" required>
@@ -211,8 +212,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
                     <div class="ofp-field ofp-field-full">
                         <label>Recipients <span class="required">*</span></label>
-                        <textarea name="recipients" rows="3" required placeholder="Comma-separated list of emails or phone numbers"></textarea>
-                        <p class="ofp-hint">Enter email addresses (for Email) or phone numbers in international format (e.g. 234... for SMS), separated by commas.</p>
+                        <textarea name="recipients" id="broadcast_recipients" rows="3" required placeholder="Comma-separated list of emails or phone numbers"></textarea>
                     </div>
 
                     <div class="ofp-field ofp-field-full" id="broadcast_subject_field">
@@ -222,108 +222,110 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
                     <div class="ofp-field ofp-field-full">
                         <label>Message Body <span class="required">*</span></label>
-                        <?php 
-                        wp_editor( '', 'broadcast_message', [
-                            'textarea_name' => 'message',
-                            'media_buttons' => false,
-                            'textarea_rows' => 10,
-                            'tinymce'       => true,
-                            'quicktags'     => true,
-                        ] ); 
-                        ?>
+                        <textarea name="message" id="broadcast_message" rows="10" required></textarea>
                     </div>
-                </div>
 
-                <div class="ofp-form-actions">
-                    <button type="submit" class="button button-primary ofp-btn-primary">Send Message</button>
+                    <div class="ofp-form-actions">
+                        <button type="submit" class="button button-primary ofp-btn-primary">Send Message</button>
+                    </div>
+                </form>
+                <div style="flex:1;min-width:320px;">
+                    <h4 style="margin-top:0;">Live preview</h4>
+                    <iframe id="broadcast-preview" sandbox srcdoc="" style="width:100%;min-height:520px;border:1px solid #c3c4c7;background:#fff;"></iframe>
                 </div>
-            </form>
+            </div>
         </div>
-        
         <script>
-        document.getElementById('broadcast_channel').addEventListener('change', function() {
-            var subjectField = document.getElementById('broadcast_subject_field');
-            var subjectInput = document.getElementById('broadcast_subject');
-            if (this.value === 'sms') {
-                subjectField.style.display = 'none';
-                subjectInput.removeAttribute('required');
-            } else {
-                subjectField.style.display = 'block';
-                subjectInput.setAttribute('required', 'required');
+        (function(){
+            var SAMPLE = <?php echo wp_json_encode( OFP_Comms::sample_body_html() ); ?>;
+            var WRAP = <?php echo wp_json_encode( $admin_wrapper ); ?>;
+            var channel = document.getElementById('broadcast_channel');
+            var msg = document.getElementById('broadcast_message');
+            var iframe = document.getElementById('broadcast-preview');
+            function preview(){
+                var inner = (msg.value || SAMPLE).replace(/\n/g,'<br>');
+                var html;
+                if (channel.value === 'sms') {
+                    html = '<div style="min-height:100%;display:flex;align-items:center;justify-content:center;background:#e2e8f0;font-family:sans-serif;"><div style="width:280px;height:480px;background:#fff;border-radius:28px;border:8px solid #94a3b8;padding:48px 16px 16px;box-sizing:border-box;"><div style="background:#e2e8f0;border-radius:16px;padding:12px 14px;">'+inner+'</div></div></div>';
+                } else if (WRAP && (WRAP.indexOf('{{content}}') !== -1 || WRAP.indexOf('{email_body}') !== -1)) {
+                    html = WRAP.replace('{{content}}', inner).replace('{email_body}', inner);
+                } else {
+                    html = '<div style="font-family:sans-serif;padding:24px;background:#f1f5f9;"><div style="max-width:600px;margin:0 auto;background:#fff;padding:24px;border-radius:12px;">'+inner+'</div></div>';
+                }
+                iframe.setAttribute('sandbox','');
+                iframe.srcdoc = html;
             }
-        });
+            channel.addEventListener('change', function(){
+                var email = this.value === 'email';
+                document.getElementById('broadcast_subject_field').style.display = email ? 'block' : 'none';
+                preview();
+            });
+            msg.addEventListener('input', preview);
+            preview();
+        })();
         </script>
     <?php endif; ?>
 
     <?php if ( $tab === 'templates' && OFP_Auth::is_super_admin() ) : ?>
         <?php if ( isset( $_GET['updated'] ) ) : ?>
-            <div class="notice notice-success is-dismissible" style="margin-top:20px;">
-                <p>Universal email template saved successfully.</p>
+            <div class="notice notice-success is-dismissible" style="margin-top:20px;"><p>Universal email template saved.</p></div>
+        <?php endif; ?>
+        <?php if ( isset( $_GET['tested'] ) ) : ?>
+            <div class="notice <?php echo (int) $_GET['tested'] ? 'notice-success' : 'notice-error'; ?> is-dismissible" style="margin-top:20px;">
+                <p><?php echo (int) $_GET['tested'] ? 'Test email sent to your WordPress admin email.' : 'Test email failed. Check SMTP settings.'; ?></p>
             </div>
         <?php endif; ?>
+        <?php $saved_tpl = str_replace( '{email_body}', '{{content}}', get_option( 'ofp_universal_email_template', '' ) ); ?>
         <div class="ofp-section" style="margin-top:20px;">
             <h3>Universal Admin Email Template</h3>
             <p class="ofp-hint" style="margin-bottom:20px;">
-                Define the HTML wrapper for all system and broadcast emails. Use the variable <code>{email_body}</code> to indicate where the main message content should be injected. If left empty, the built-in default template will be used.
+                Wrapper for system emails to clients (welcome, billing) and the fallback for client outgoing mail.
+                Use <code>{{content}}</code> where the message body should go. If left empty, the built-in platform template is used.
             </p>
-            
-            <div style="display: flex; gap: 24px; margin-top: 20px;">
-                <!-- Left: Editor -->
-                <div style="flex: 1; min-width: 400px;">
-                    <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ofp-form">
+            <div style="display:flex;gap:24px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:360px;">
+                    <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
                         <?php wp_nonce_field( 'ofp_save_universal_template' ); ?>
                         <input type="hidden" name="action" value="ofp_save_universal_template">
-                        
-                        <div class="ofp-field ofp-field-full">
-                            <textarea id="universal_template_input" name="ofp_universal_email_template" rows="25" style="width: 100%; font-family: monospace; font-size: 13px; line-height: 1.5; padding: 12px;"><?php echo esc_textarea( get_option( 'ofp_universal_email_template', '' ) ); ?></textarea>
-                        </div>
-
-                        <div class="ofp-form-actions" style="margin-top:15px;">
-                            <button type="submit" class="button button-primary ofp-btn-primary">Save Template</button>
-                        </div>
+                        <textarea id="universal_template_input" name="ofp_universal_email_template" rows="22" style="width:100%;font-family:monospace;font-size:13px;"><?php echo esc_textarea( $saved_tpl ); ?></textarea>
+                        <p class="ofp-form-actions" style="margin-top:12px;">
+                            <button type="submit" class="button button-primary">Save Template</button>
+                        </p>
+                    </form>
+                    <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;">
+                        <?php wp_nonce_field( 'ofp_send_test_email' ); ?>
+                        <input type="hidden" name="action" value="ofp_send_test_email">
+                        <button type="submit" class="button">Send test email</button>
                     </form>
                 </div>
-
-                <!-- Right: Live Preview -->
-                <div style="flex: 1; min-width: 400px; display: flex; flex-direction: column;">
-                    <h4 style="margin-top:0; margin-bottom: 12px;">Live Preview</h4>
-                    <div style="flex-grow: 1; border: 1px solid #c3c4c7; border-radius: 4px; background: #fff; min-height: 500px; overflow: hidden; display: flex;">
-                        <iframe id="template-preview-frame" style="width:100%; height:100%; border:none; flex-grow: 1;"></iframe>
-                    </div>
+                <div style="flex:1;min-width:320px;">
+                    <h4 style="margin-top:0;">Live preview</h4>
+                    <iframe id="template-preview-frame" sandbox srcdoc="" style="width:100%;min-height:520px;border:1px solid #c3c4c7;background:#fff;"></iframe>
                 </div>
             </div>
         </div>
-
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             var input = document.getElementById('universal_template_input');
             var iframe = document.getElementById('template-preview-frame');
-
+            var SAMPLE = <?php echo wp_json_encode( OFP_Comms::sample_body_html() ); ?>;
             function updatePreview() {
                 var template = input.value;
-                var previewHtml = '';
-
+                var previewHtml;
                 if (!template.trim()) {
-                    previewHtml = '<div style="padding:40px; text-align:center; color:#64748b; font-family:sans-serif;">Default built-in template will be used.</div>';
+                    previewHtml = '<div style="padding:40px;text-align:center;color:#64748b;font-family:sans-serif;">Default built-in template will be used.</div>';
                 } else {
-                    previewHtml = template.replace(
-                        '{email_body}', 
-                        '<div style="padding: 20px; border: 2px dashed #ccc; background: #fafafa; text-align: center; font-family: sans-serif;"><h3>Message Content Goes Here</h3><p>This is where the actual email body will be injected.</p></div>'
-                    );
+                    previewHtml = template.replaceAll('{{content}}', SAMPLE).replaceAll('{email_body}', SAMPLE);
                 }
-
-                var doc = iframe.contentDocument || iframe.contentWindow.document;
-                doc.open();
-                doc.writeln(previewHtml);
-                doc.close();
+                iframe.setAttribute('sandbox', '');
+                iframe.srcdoc = previewHtml;
             }
-
-            // Update initially and on input
             updatePreview();
             input.addEventListener('input', updatePreview);
         });
         </script>
     <?php endif; ?>
+
 </div>
 
 <?php include OFP_PATH . 'admin/views/partials/footer.php'; ?>
