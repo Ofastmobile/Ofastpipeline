@@ -184,6 +184,8 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <div><strong>Email:</strong> <?php echo esc_html( $client->email ); ?></div>
         <div><strong>Phone:</strong> <?php echo esc_html( $client->phone ); ?></div>
         <div><strong>Status:</strong> <?php echo $status_labels[ $client->status ] ?? esc_html( $client->status ); ?></div>
+        <?php
+        $detail_plan_map = ['free' => 'Free', 'silver' => 'Silver', 'gold' => 'Gold'];
         $detail_plan_label = $detail_plan_map[$client->plan] ?? ucfirst($client->plan ?: '—');
         ?>
         <div><strong>Plan:</strong> <?php echo esc_html( $detail_plan_label ); ?></div>

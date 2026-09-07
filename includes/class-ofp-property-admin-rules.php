@@ -165,7 +165,7 @@ class OFP_Property_Admin_Rules {
             return;
         }
 
-        if ( ! OFP_Subscription::has_active( 'listing', $client_id ) ) {
+        if ( ! OFP_Subscription::has_platform_access( $client_id ) ) {
             update_post_meta( $post_id, 'ofp_owner_validation', 'inactive_listing_subscription' );
             if ( 'publish' === $post->post_status ) {
                 remove_action( 'save_post_ofp_property', [ __CLASS__, 'validate_owner_on_save' ], 99 );

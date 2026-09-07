@@ -32,22 +32,16 @@ class OFP_Team_Member {
         $client = OFP_Client::get( $client_id );
         if ( ! $client ) return new WP_Error( 'not_found', 'Client not found.' );
 
-        // Determine limits based on plan
-        $plan = $client->plan;
-        $max_members = 0;
-        if ( $plan === 'growth' || $plan === 'sliver' ) {
-            $max_members = 2;
-        } elseif ( $plan === 'pro' || $plan === 'gold' ) {
-            $max_members = 3;
+        $plan        = OFP_Subscription::client_plan( $client_id );
+        $max_members = OFP_Subscription::team_member_limit( $plan );
+
+        if ( $max_members <= 0 ) {
+            return new WP_Error( 'not_allowed', 'Free plan does not support team members. Upgrade to Silver or Gold.' );
         }
 
-        if ( $max_members > 0 ) {
-            $current_count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}ofp_team_members WHERE client_id = %d", $client_id ) );
-            if ( $current_count >= $max_members ) {
-                return new WP_Error( 'limit_reached', "Your plan allows a maximum of {$max_members} team members." );
-            }
-        } elseif ( $plan === 'starter' || $plan === 'free' ) {
-            return new WP_Error( 'not_allowed', 'Free plan does not support team members.' );
+        $current_count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}ofp_team_members WHERE client_id = %d", $client_id ) );
+        if ( $current_count >= $max_members ) {
+            return new WP_Error( 'limit_reached', "Your plan allows a maximum of {$max_members} team members." );
         }
 
         // Validate data

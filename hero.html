@@ -1,526 +1,2521 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PrimeEstate CRM - Portal</title>
+  <title>ApexRealty Portal | Real Estate Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
   <style>
-/* ====================================================
-   MINIMALIST REAL ESTATE & CRM HERO STYLES (Vanilla CSS)
-   ==================================================== */
+    /* ==========================================================================
+   Real Estate & CRM Portal Stylesheet (Inspired by PropertyPro.ng)
+   Pure Vanilla CSS - Supports Light & Dark Theme Modes
+   ========================================================================== */
 
-:root {
-  --hero-bg: #0b111e;
-  --hero-accent: #2563eb;
-  --hero-accent-light: #3b82f6;
-  --hero-text-main: #f8fafc;
-  --hero-text-muted: #94a3b8;
-  --hero-border: rgba(255, 255, 255, 0.08);
-  --hero-border-hover: rgba(255, 255, 255, 0.2);
-  --hero-overlay-dark: rgba(11, 17, 30, 0.85);
-  --hero-overlay-mid: rgba(11, 17, 30, 0.72);
-  --hero-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
+    /* Dark Theme (Default) */
+    :root,
+    [data-theme="dark"] {
+      --re-bg-body: #070b14;
+      --re-bg-surface: #0f172a;
+      --re-bg-surface-elevated: #131d33;
+      --re-bg-input: #0b111e;
+      --re-border: #1e293b;
+      --re-border-light: #334155;
+      --re-text-main: #f8fafc;
+      --re-text-muted: #94a3b8;
+      --re-text-heading: #ffffff;
+      --re-primary: #2563eb;
+      --re-primary-hover: #1d4ed8;
+      --re-primary-light: rgba(37, 99, 235, 0.15);
+      --re-accent: #38bdf8;
+      --re-success: #10b981;
+      --re-radius: 14px;
+      --re-radius-sm: 8px;
+      --re-radius-lg: 20px;
+      --re-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      --re-header-bg: rgba(7, 11, 20, 0.92);
+    }
 
-.minimal-hero {
-  position: relative;
-  min-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background-color: var(--hero-bg);
-  background-image: 
-    linear-gradient(135deg, var(--hero-overlay-dark) 0%, var(--hero-overlay-mid) 50%, var(--hero-overlay-dark) 100%),
-    url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=2000&q=85');
-  background-size: cover;
-  background-position: center;
-  color: var(--hero-text-main);
-  font-family: var(--hero-font);
-  overflow: hidden;
-  box-sizing: border-box;
-}
+    /* Light Theme Mode */
+    [data-theme="light"] {
+      --re-bg-body: #f8fafc;
+      --re-bg-surface: #ffffff;
+      --re-bg-surface-elevated: #f1f5f9;
+      --re-bg-input: #f8fafc;
+      --re-border: #e2e8f0;
+      --re-border-light: #cbd5e1;
+      --re-text-main: #1e293b;
+      --re-text-muted: #64748b;
+      --re-text-heading: #0f172a;
+      --re-primary: #2563eb;
+      --re-primary-hover: #1d4ed8;
+      --re-primary-light: rgba(37, 99, 235, 0.08);
+      --re-accent: #0284c7;
+      --re-success: #059669;
+      --re-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.07);
+      --re-header-bg: rgba(255, 255, 255, 0.95);
+    }
 
-.minimal-hero *,
-.minimal-hero *::before,
-.minimal-hero *::after {
-  box-sizing: inherit;
-  margin: 0;
-  padding: 0;
-}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-.hero-container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
+    html {
+      scroll-behavior: smooth;
+    }
 
-/* Header & Navigation */
-.hero-header {
-  padding: 24px 0;
-  border-bottom: 1px solid var(--hero-border);
-  background: rgba(11, 17, 30, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  position: relative;
-  z-index: 30;
-}
+    body.re-body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--re-bg-body);
+      color: var(--re-text-main);
+      line-height: 1.6;
+      transition: background-color 0.25s ease, color 0.25s ease;
+      overflow-x: hidden;
+    }
 
-.nav-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
+    .re-container {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
 
-.hero-logo {
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--hero-text-main);
-  text-decoration: none;
-}
+    /* 1. Header & Navigation */
+    .re-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--re-header-bg);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--re-border);
+      transition: background-color 0.25s ease, border-color 0.25s ease;
+    }
 
-.hero-logo span {
-  color: var(--hero-accent-light);
-  margin-left: 2px;
-}
+    .re-nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
 
-.hero-nav {
-  display: flex;
-  gap: 32px;
-}
+    .re-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--re-text-heading);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
 
-.nav-link {
-  color: var(--hero-text-muted);
-  text-decoration: none;
-  font-size: 0.95rem;
-  font-weight: 500;
-  transition: color 0.2s ease;
-}
+    .re-logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--re-primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--re-radius-sm);
+      font-size: 1.2rem;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
 
-.nav-link:hover {
-  color: var(--hero-text-main);
-}
+    .re-logo-highlight {
+      color: var(--re-primary);
+    }
 
-.mobile-toggle {
-  display: none;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-}
+    .re-nav-links {
+      display: flex;
+      gap: 22px;
+    }
 
-.mobile-toggle span {
-  display: block;
-  width: 22px;
-  height: 2px;
-  background-color: var(--hero-text-main);
-  margin: 4px 0;
-  transition: 0.3s;
-}
+    .re-nav-links a {
+      color: var(--re-text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
 
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 22px;
-  font-size: 0.92rem;
-  font-weight: 600;
-  border-radius: 6px;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
+    .re-nav-links a:hover,
+    .re-nav-links a.active {
+      color: var(--re-primary);
+    }
 
-.btn-primary {
-  background-color: var(--hero-accent);
-  color: #ffffff;
-  border: 1px solid var(--hero-accent);
-}
+    .re-nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-.btn-primary:hover {
-  background-color: var(--hero-accent-light);
-  border-color: var(--hero-accent-light);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-}
+    /* Light / Dark Mode Toggle Button */
+    .re-theme-toggle-btn {
+      background: var(--re-bg-surface-elevated);
+      border: 1px solid var(--re-border);
+      color: var(--re-text-main);
+      padding: 7px 12px;
+      border-radius: var(--re-radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
 
-.btn-secondary {
-  background-color: transparent;
-  color: var(--hero-text-main);
-  border: 1px solid var(--hero-border);
-  margin-left: 12px;
-}
+    .re-theme-toggle-btn:hover {
+      border-color: var(--re-primary);
+    }
 
-.btn-secondary:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: var(--hero-border-hover);
-}
+    [data-theme="dark"] .theme-icon-moon {
+      display: none;
+    }
 
-.btn-outline {
-  background-color: transparent;
-  color: var(--hero-text-main);
-  border: 1px solid var(--hero-border);
-}
+    [data-theme="dark"] .theme-icon-sun {
+      display: inline;
+    }
 
-.btn-outline:hover {
-  border-color: var(--hero-accent-light);
-  color: #ffffff;
-}
+    [data-theme="light"] .theme-icon-sun {
+      display: none;
+    }
 
-/* Hero Body & Content */
-.hero-body {
-  padding: 80px 24px;
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
+    [data-theme="light"] .theme-icon-moon {
+      display: inline;
+    }
 
-.hero-content {
-  max-width: 720px;
-}
+    .re-currency-btn {
+      background: var(--re-bg-surface-elevated);
+      border: 1px solid var(--re-border);
+      color: var(--re-text-main);
+      padding: 7px 12px;
+      border-radius: var(--re-radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
 
-.hero-title {
-  font-size: clamp(2.4rem, 5vw, 3.8rem);
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
-  margin-bottom: 20px;
-  color: var(--hero-text-main);
-}
+    .re-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--re-radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
 
-.highlight-text {
-  color: var(--hero-accent-light);
-}
+    .re-btn-primary {
+      background: var(--re-primary);
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+    }
 
-.hero-subtitle {
-  font-size: 1.125rem;
-  line-height: 1.6;
-  color: var(--hero-text-muted);
-  margin-bottom: 32px;
-  max-width: 580px;
-}
+    .re-btn-primary:hover {
+      background: var(--re-primary-hover);
+      transform: translateY(-1px);
+    }
 
-.hero-actions {
-  display: flex;
-  align-items: center;
-}
+    .re-btn-outline {
+      background: transparent;
+      color: var(--re-text-main);
+      border: 1px solid var(--re-border);
+    }
 
-/* Search Box / CRM Filters (Optional) */
-.hero-search-box {
-  margin-top: 36px;
-  background: rgba(17, 24, 39, 0.75);
-  border: 1px solid var(--hero-border);
-  border-radius: 8px;
-  padding: 16px 20px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  max-width: 680px;
-}
+    .re-btn-outline:hover {
+      border-color: var(--re-primary);
+      color: var(--re-primary);
+    }
 
-.search-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--hero-border);
-  padding-bottom: 10px;
-}
+    .re-mobile-menu-btn {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+    }
 
-.tab-btn {
-  background: transparent;
-  border: none;
-  color: var(--hero-text-muted);
-  font-size: 0.85rem;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+    .re-mobile-menu-btn span {
+      width: 22px;
+      height: 2px;
+      background: var(--re-text-main);
+      border-radius: 2px;
+      transition: 0.2s ease;
+    }
 
-.tab-btn.active,
-.tab-btn:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
-}
+    .re-mobile-drawer {
+      display: none;
+      background: var(--re-bg-surface);
+      border-bottom: 1px solid var(--re-border);
+      padding: 16px 20px;
+    }
 
-.search-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
-  gap: 12px;
-  align-items: end;
-}
+    .re-mobile-drawer.open {
+      display: block;
+    }
 
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+    .re-mobile-link {
+      display: block;
+      padding: 10px 0;
+      color: var(--re-text-main);
+      text-decoration: none;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      border-bottom: 1px solid var(--re-border);
+    }
 
-.form-field label {
-  font-size: 0.75rem;
-  color: var(--hero-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
+    .re-mobile-drawer-actions {
+      margin-top: 16px;
+    }
 
-.form-field input,
-.form-field select {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--hero-border);
-  border-radius: 5px;
-  color: var(--hero-text-main);
-  padding: 8px 10px;
-  font-size: 0.88rem;
-  outline: none;
-}
+    /* 2. Hero Section */
+    .re-hero {
+      position: relative;
+      padding: 60px 0 80px;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      text-align: center;
+    }
 
-.form-field input:focus,
-.form-field select:focus {
-  border-color: var(--hero-accent-light);
-}
+    .re-hero-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-.btn-search {
-  background: var(--hero-accent);
-  color: #ffffff;
-  border: none;
-  padding: 9px 18px;
-  font-size: 0.88rem;
-  font-weight: 600;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
+    .re-hero-copy {
+      max-width: 820px;
+      margin-bottom: 36px;
+    }
 
-.btn-search:hover {
-  background: var(--hero-accent-light);
-}
+    .re-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid rgba(37, 99, 235, 0.4);
+      color: #93c5fd;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 18px;
+    }
 
-/* Bottom Stats Bar */
-.hero-stats-wrapper {
-  border-top: 1px solid var(--hero-border);
-  background: rgba(11, 17, 30, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 24px 0;
-}
+    [data-theme="light"] .re-badge {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+    }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
-}
+    .re-hero-title {
+      font-size: 2.75rem;
+      font-weight: 900;
+      color: #ffffff;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 14px;
+    }
 
-.stat-item {
-  display: flex;
-  flex-direction: column;
-}
+    [data-theme="light"] .re-hero-title {
+      color: #0f172a;
+    }
 
-.stat-number {
-  font-size: 1.85rem;
-  font-weight: 700;
-  color: var(--hero-text-main);
-  letter-spacing: -0.02em;
-  margin-bottom: 4px;
-}
+    .re-title-highlight {
+      color: #38bdf8;
+    }
 
-.stat-label {
-  font-size: 0.85rem;
-  color: var(--hero-text-muted);
-  font-weight: 400;
-}
+    .re-hero-subtitle {
+      font-size: 1rem;
+      color: #cbd5e1;
+      max-width: 680px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
 
-/* Responsive Rules */
-@media (max-width: 860px) {
-  .hero-nav, .hero-header-cta {
-    display: none;
-  }
+    [data-theme="light"] .re-hero-subtitle {
+      color: #475569;
+    }
 
-  .mobile-toggle {
-    display: block;
-  }
+    /* PropertyPro Search Filter Box */
+    .re-filter-box {
+      width: 100%;
+      max-width: 1000px;
+      background: var(--re-bg-surface);
+      border: 1px solid var(--re-border);
+      border-radius: var(--re-radius-lg);
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+      text-align: left;
+      backdrop-filter: blur(20px);
+    }
 
-  .hero-nav.open {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    top: 73px;
-    left: 0;
-    width: 100%;
-    background-color: var(--hero-bg);
-    padding: 24px;
-    border-bottom: 1px solid var(--hero-border);
-    gap: 16px;
-    z-index: 50;
-  }
+    .re-filter-tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--re-border);
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
 
-  .search-form {
-    grid-template-columns: 1fr 1fr;
-  }
+    .re-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--re-text-muted);
+      padding: 8px 18px;
+      border-radius: var(--re-radius-sm);
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
 
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-  }
-}
+    .re-tab-btn:hover {
+      color: var(--re-text-main);
+      background: var(--re-bg-surface-elevated);
+    }
 
-@media (max-width: 480px) {
-  .search-form {
-    grid-template-columns: 1fr;
-  }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  
-  .hero-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-  
-  .btn-secondary {
-    margin-left: 0;
-  }
-}
+    .re-tab-btn.active {
+      background: var(--re-primary);
+      color: #fff;
+    }
 
+    .re-filter-grid {
+      display: grid;
+      grid-template-columns: 2fr 1.5fr 1fr auto;
+      gap: 14px;
+      align-items: flex-end;
+    }
+
+    .re-field-group label {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: var(--re-text-muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    .re-field-group input,
+    .re-field-group select {
+      width: 100%;
+      background: var(--re-bg-input);
+      border: 1px solid var(--re-border);
+      color: var(--re-text-main);
+      padding: 12px 14px;
+      border-radius: var(--re-radius-sm);
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .re-field-group input:focus,
+    .re-field-group select:focus {
+      border-color: var(--re-primary);
+    }
+
+    .re-btn-search {
+      background: var(--re-primary);
+      color: #fff;
+      border: none;
+      padding: 12px 22px;
+      border-radius: var(--re-radius-sm);
+      font-size: 0.875rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: background-color 0.2s ease;
+    }
+
+    .re-btn-search:hover {
+      background: var(--re-primary-hover);
+    }
+
+    .re-quick-chips {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--re-border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 0.75rem;
+    }
+
+    .chips-label {
+      color: var(--re-text-muted);
+      font-weight: 700;
+    }
+
+    .chip-btn {
+      background: var(--re-bg-surface-elevated);
+      border: 1px solid var(--re-border);
+      color: var(--re-text-main);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .chip-btn:hover {
+      border-color: var(--re-primary);
+      color: var(--re-primary);
+    }
+
+    /* 3. Section Headers & Circular Slide Arrows */
+    .re-section {
+      padding: 70px 0;
+    }
+
+    .re-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 36px;
+      gap: 20px;
+    }
+
+    .re-subheading {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: var(--re-primary);
+      margin-bottom: 6px;
+      letter-spacing: 0.08em;
+    }
+
+    .re-heading {
+      font-size: 1.875rem;
+      font-weight: 900;
+      color: var(--re-text-heading);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .re-header-desc {
+      max-width: 500px;
+      font-size: 0.875rem;
+      color: var(--re-text-muted);
+      margin-top: 6px;
+    }
+
+    /* Circular Arrow Buttons (In a circle left & right) */
+    .re-circle-arrows {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .re-circle-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--re-bg-surface);
+      border: 1px solid var(--re-border);
+      color: var(--re-text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: var(--re-shadow);
+      transition: all 0.2s ease;
+    }
+
+    .re-circle-btn:hover {
+      background: var(--re-primary);
+      color: #fff;
+      border-color: var(--re-primary);
+      transform: scale(1.05);
+    }
+
+    .re-circle-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* 4. Sliding Category Carousel (Counter Card Style) */
+    .re-category-track {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      padding: 6px 2px 14px;
+      scrollbar-width: none;
+    }
+
+    .re-category-track::-webkit-scrollbar {
+      display: none;
+    }
+
+    .re-cat-card {
+      flex: 0 0 260px;
+      background: var(--re-bg-surface);
+      border: 1px solid var(--re-border);
+      border-radius: var(--re-radius);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .re-cat-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--re-primary);
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.15);
+    }
+
+    .re-cat-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .re-cat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--re-radius-sm);
+      background: var(--re-primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+
+    .re-cat-badge {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      background: var(--re-bg-surface-elevated);
+      border: 1px solid var(--re-border);
+      color: var(--re-text-muted);
+    }
+
+    .re-cat-val {
+      display: block;
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: var(--re-text-heading);
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .re-cat-title {
+      font-size: 0.9375rem;
+      font-weight: 800;
+      color: var(--re-primary);
+      margin-bottom: 4px;
+    }
+
+    .re-cat-desc {
+      font-size: 0.75rem;
+      color: var(--re-text-muted);
+      line-height: 1.4;
+    }
+
+    /* 5. Property Cards Grid */
+    .re-properties-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 24px;
+    }
+
+    .re-card {
+      background: var(--re-bg-surface);
+      border: 1px solid var(--re-border);
+      border-radius: var(--re-radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.25s ease;
+    }
+
+    .re-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--re-border-light);
+      box-shadow: var(--re-shadow);
+    }
+
+    .re-card-img {
+      position: relative;
+      height: 220px;
+      overflow: hidden;
+    }
+
+    .re-card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .re-card:hover .re-card-img img {
+      transform: scale(1.05);
+    }
+
+    .re-card-badges {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      display: flex;
+      gap: 6px;
+      z-index: 2;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.6875rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-sale {
+      background: #059669;
+      color: #fff;
+    }
+
+    .badge-rent {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .badge-shortlet {
+      background: #7c3aed;
+      color: #fff;
+    }
+
+    .badge-verified {
+      background: rgba(16, 185, 129, 0.25);
+      color: #34d399;
+      border: 1px solid #10b981;
+      backdrop-filter: blur(6px);
+    }
+
+    .re-card-price {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+      z-index: 2;
+    }
+
+    .re-card-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .re-card-location {
+      font-size: 0.75rem;
+      color: var(--re-primary);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .re-card-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--re-text-heading);
+      margin-bottom: 14px;
+      line-height: 1.35;
+    }
+
+    .re-card-specs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      padding: 12px 0;
+      border-top: 1px solid var(--re-border);
+      border-bottom: 1px solid var(--re-border);
+      font-size: 0.75rem;
+      color: var(--re-text-muted);
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .re-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 16px;
+    }
+
+    .re-agent {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .re-agent img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1.5px solid var(--re-primary);
+    }
+
+    .re-agent strong {
+      display: block;
+      font-size: 0.8125rem;
+      color: var(--re-text-heading);
+    }
+
+    .re-agent small {
+      font-size: 0.6875rem;
+      color: var(--re-text-muted);
+    }
+
+    .re-btn-whatsapp {
+      background: #10b981;
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 6px;
+      transition: background-color 0.2s ease;
+    }
+
+    .re-btn-whatsapp:hover {
+      background: #059669;
+    }
+
+    /* 6. FullWidth Stats Counter Bar */
+    .re-fullwidth-stats {
+      width: 100%;
+      background: var(--re-bg-surface);
+      border-top: 1px solid var(--re-border);
+      border-bottom: 1px solid var(--re-border);
+      padding: 60px 0;
+      margin: 40px 0;
+    }
+
+    .re-fws-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--re-border);
+      padding-bottom: 18px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .re-fws-badge {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--re-primary);
+      letter-spacing: 0.05em;
+    }
+
+    .re-fws-affiliations {
+      display: flex;
+      gap: 16px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--re-success);
+    }
+
+    .re-fws-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+
+    .re-fws-card {
+      background: var(--re-bg-surface-elevated);
+      border: 1px solid var(--re-border);
+      border-radius: var(--re-radius);
+      padding: 24px;
+      transition: transform 0.2s ease;
+    }
+
+    .re-fws-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--re-primary);
+    }
+
+    .re-fws-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .re-fws-icon {
+      font-size: 1.5rem;
+    }
+
+    .re-fws-tag {
+      font-size: 0.6875rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: var(--re-primary-light);
+      color: var(--re-primary);
+      border: 1px solid var(--re-primary);
+    }
+
+    .re-fws-num {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--re-text-heading);
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .re-fws-lbl {
+      font-size: 0.8125rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--re-primary);
+      margin-bottom: 6px;
+      letter-spacing: 0.04em;
+    }
+
+    .re-fws-desc {
+      font-size: 0.75rem;
+      color: var(--re-text-muted);
+      line-height: 1.5;
+    }
+
+    /* 7. Neighborhoods Grid */
+    .re-neighborhoods-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .re-loc-card {
+      height: 280px;
+      border-radius: var(--re-radius);
+      background-size: cover;
+      background-position: center;
+      padding: 24px;
+      display: flex;
+      align-items: flex-end;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--re-border);
+      transition: transform 0.3s ease;
+    }
+
+    .re-loc-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .re-loc-content {
+      position: relative;
+      z-index: 2;
+      color: #fff;
+    }
+
+    .re-loc-tag {
+      display: inline-block;
+      background: var(--re-primary);
+      color: #fff;
+      font-size: 0.6875rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .re-loc-content h3 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+
+    .re-loc-content p {
+      font-size: 0.75rem;
+      color: #cbd5e1;
+    }
+
+    /* 8. Testimonials Section */
+    .re-testimonials-track {
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      padding: 6px 2px 14px;
+      scrollbar-width: none;
+    }
+
+    .re-testimonials-track::-webkit-scrollbar {
+      display: none;
+    }
+
+    .re-testi-card {
+      flex: 0 0 360px;
+      background: var(--re-bg-surface);
+      border: 1px solid var(--re-border);
+      border-radius: var(--re-radius);
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: var(--re-shadow);
+      transition: transform 0.25s ease;
+    }
+
+    .re-testi-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--re-primary);
+    }
+
+    .re-testi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .re-stars {
+      color: #f59e0b;
+      font-size: 1rem;
+      letter-spacing: 2px;
+    }
+
+    .re-testi-quote {
+      font-size: 0.875rem;
+      color: var(--re-text-main);
+      line-height: 1.6;
+      font-style: italic;
+      margin-bottom: 20px;
+    }
+
+    .re-testi-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .re-testi-author img {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--re-primary);
+    }
+
+    .re-testi-author strong {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--re-text-heading);
+    }
+
+    .re-testi-author small {
+      font-size: 0.75rem;
+      color: var(--re-text-muted);
+    }
+
+    .re-testi-deal {
+      padding: 10px 14px;
+      background: var(--re-bg-surface-elevated);
+      border-radius: var(--re-radius-sm);
+      border: 1px solid var(--re-border);
+      font-size: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .re-testi-deal strong {
+      color: var(--re-primary);
+    }
+
+    /* 9. Real Estate FAQ Accordion */
+    .re-faq-section {
+      background: var(--re-bg-surface-elevated);
+      border-top: 1px solid var(--re-border);
+      border-bottom: 1px solid var(--re-border);
+    }
+
+    .re-faq-header {
+      margin-bottom: 40px;
+    }
+
+    .re-faq-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .re-faq-tab {
+      background: var(--re-bg-surface);
+      border: 1px solid var(--re-border);
+      color: var(--re-text-muted);
+      padding: 8px 16px;
+      border-radius: var(--re-radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .re-faq-tab.active {
+      background: var(--re-primary);
+      color: #fff;
+      border-color: var(--re-primary);
+    }
+
+    .re-faq-accordion {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .re-faq-item {
+      background: var(--re-bg-surface);
+      border: 1px solid var(--re-border);
+      border-radius: var(--re-radius);
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .re-faq-item.open {
+      border-color: var(--re-primary);
+      box-shadow: 0 4px 16px rgba(37, 99, 235, 0.1);
+    }
+
+    .re-faq-question {
+      width: 100%;
+      padding: 18px 22px;
+      background: none;
+      border: none;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9375rem;
+      font-weight: 800;
+      color: var(--re-text-heading);
+      cursor: pointer;
+    }
+
+    .re-faq-chevron {
+      font-size: 0.75rem;
+      color: var(--re-text-muted);
+      transition: transform 0.2s ease;
+    }
+
+    .re-faq-item.open .re-faq-chevron {
+      transform: rotate(180deg);
+      color: var(--re-primary);
+    }
+
+    .re-faq-answer {
+      display: none;
+      padding: 0 22px 20px;
+      font-size: 0.875rem;
+      color: var(--re-text-muted);
+      line-height: 1.6;
+    }
+
+    .re-faq-item.open .re-faq-answer {
+      display: block;
+    }
+
+    .re-faq-pill {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 4px 10px;
+      background: var(--re-primary-light);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--re-primary);
+    }
+
+    /* 10. CRM Promo Section */
+    .re-crm-promo {
+      padding: 80px 0;
+    }
+
+    .re-crm-card {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, var(--re-bg-surface) 100%);
+      border: 1px solid var(--re-border);
+      border-radius: var(--re-radius-lg);
+      padding: 50px 40px;
+      text-align: center;
+      max-width: 900px;
+      margin: 0 auto;
+      box-shadow: var(--re-shadow);
+    }
+
+    .re-crm-card h2 {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--re-text-heading);
+      margin: 16px 0 12px;
+    }
+
+    .re-crm-card p {
+      color: var(--re-text-muted);
+      max-width: 650px;
+      margin: 0 auto 24px;
+    }
+
+    .re-crm-features-row {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+
+    .re-crm-feat-item {
+      background: var(--re-bg-surface-elevated);
+      border: 1px solid var(--re-border);
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 0.8125rem;
+      font-weight: 700;
+    }
+
+    /* 11. Footer */
+    .re-footer {
+      background: #04070d;
+      border-top: 1px solid var(--re-border);
+      padding: 70px 0 30px;
+      font-size: 0.875rem;
+    }
+
+    [data-theme="light"] .re-footer {
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    .re-footer-inner {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 40px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .re-footer-about p {
+      color: var(--re-text-muted);
+      margin: 14px 0;
+      line-height: 1.6;
+    }
+
+    .re-contact-info {
+      font-size: 0.8125rem;
+    }
+
+    .re-footer-col h4 {
+      color: #ffffff;
+      font-size: 0.9375rem;
+      font-weight: 800;
+      margin-bottom: 18px;
+    }
+
+    .re-footer-col ul {
+      list-style: none;
+    }
+
+    .re-footer-col ul li {
+      margin-bottom: 10px;
+    }
+
+    .re-footer-col a {
+      color: var(--re-text-muted);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .re-footer-col a:hover {
+      color: #ffffff;
+    }
+
+    .re-footer-bottom {
+      padding-top: 24px;
+    }
+
+    .re-footer-bottom-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 0.75rem;
+      color: var(--re-text-muted);
+    }
+
+    .re-footer-bottom-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .re-footer-bottom-links a {
+      color: var(--re-text-muted);
+      text-decoration: none;
+    }
+
+    .re-footer-bottom-links a:hover {
+      color: #fff;
+    }
+
+    /* Responsive Rules for Mobile & Tablet */
+    @media (max-width: 1024px) {
+      .re-filter-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .re-fws-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .re-footer-inner {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+
+      .re-nav-links,
+      .re-nav-actions .re-btn,
+      .re-nav-actions .re-currency-btn {
+        display: none;
+      }
+
+      .re-mobile-menu-btn {
+        display: flex;
+      }
+
+      .re-hero-title {
+        font-size: 2rem;
+      }
+
+      .re-filter-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .re-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .re-circle-arrows {
+        margin-top: 10px;
+      }
+
+      .re-fws-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .re-footer-inner {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
-<body>
 
-<section class="minimal-hero" id="hero">
-  <!-- Top Navigation Bar -->
-  <header class="hero-header">
-    <div class="hero-container nav-container">
-      <a href="#" class="hero-logo">
-        Prime<span>Estate CRM</span>
+<body class="re-body">
+  <header class="re-header">
+    <div class="re-container re-nav-inner">
+      <a href="" class="re-logo">
+        <div class="re-logo-icon">🏢</div>
+        <span>ApexRealty <strong class="re-logo-highlight">Portal</strong></span>
       </a>
 
-      <!-- Mobile Navigation Hamburger -->
-      <button class="mobile-toggle" id="mobileMenuBtn" aria-label="Toggle navigation">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-
-      <!-- Desktop Nav Links -->
-      <nav class="hero-nav" id="heroNav">
-        <a href="#overview" class="nav-link">Overview</a>
-        <a href="#properties" class="nav-link">Properties</a>
-        <a href="#crm" class="nav-link">CRM Pipeline</a>
-        <a href="#analytics" class="nav-link">Analytics</a>
-        <a href="#contact" class="nav-link">Contact</a>
+      <!-- Desktop Navigation Links -->
+      <nav class="re-nav-links">
+        <a href="#featured-listings" class="active">Buy</a>
+        <a href="#featured-listings">Rent</a>
+        <a href="#featured-listings">✨ Short Let</a>
+        <a href="#category-slider">Categories</a>
+        <a href="#neighborhoods">Locations</a>
+        <a href="#testimonials">Reviews</a>
+        <a href="#faq">FAQ</a>
+        <a href="#crm-section">CRM Portal</a>
       </nav>
 
-      <!-- Header Action / Portal Login -->
-      <div class="hero-header-cta">
-        <a href="#portal" class="btn btn-outline">
-          
-            Agent Portal
-          
-        </a>
+      <!-- Nav Actions & Controls -->
+      <div class="re-nav-actions">
+        <!-- Light & Dark Mode Toggle Button -->
+        <button type="button" class="re-theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle Light / Dark Mode"
+          title="Toggle Light / Dark Theme">
+          <span class="theme-icon-sun">☀️ Light</span>
+          <span class="theme-icon-moon">🌙 Dark</span>
+        </button>
+
+        <!-- Currency Switcher -->
+        <button type="button" class="re-currency-btn" id="currencyToggle">₦ NGN</button>
+
+        <!-- Post Property free link -->
+        <a href="#list-property" class="re-btn re-btn-outline"
+          onclick="alert('Open Post Property Modal or redirect to /post-property'); return false;">+ Post Property</a>
+
+        <!-- CRM Agent Portal link -->
+        <a href="" class="re-btn re-btn-primary">Agent Login</a>
+      </div>
+
+      <!-- Mobile Hamburger Button -->
+      <button class="re-mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Mobile Navigation">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+    <!-- Mobile Drawer Menu -->
+    <div class="re-mobile-drawer" id="mobileDrawer">
+      <div class="re-mobile-drawer-inner">
+        <a href="#featured-listings" class="re-mobile-link">🔑 Properties for Sale</a>
+        <a href="#featured-listings" class="re-mobile-link">🏠 Properties for Rent</a>
+        <a href="#featured-listings" class="re-mobile-link">✨ Luxury Short Lets</a>
+        <a href="#category-slider" class="re-mobile-link">📁 Browse by Category</a>
+        <a href="#neighborhoods" class="re-mobile-link">📍 Prime Locations</a>
+        <a href="#testimonials" class="re-mobile-link">⭐ Client Reviews</a>
+        <a href="#faq" class="re-mobile-link">❓ Real Estate FAQ</a>
+        <a href="#crm-section" class="re-mobile-link">💼 Agent CRM Portal</a>
+        <div class="re-mobile-drawer-actions">
+          <button type="button" class="re-btn re-btn-primary w-full"
+            onclick="alert('Redirecting to Post Property form');">+ Post a Property Free</button>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- Hero Content Body -->
-  <div class="hero-container hero-body">
-    <div class="hero-content">
-      <h1 class="hero-title">
-        Building Digital Experiences That <span class="highlight-text">Inspire</span> 
-      </h1>
-      <p class="hero-subtitle">
-        Streamline property listings, automate buyer lead flows, and manage commercial deals within one high-performance business portal.
-      </p>
-      
-      <div class="hero-actions">
-        <a href="#crm" class="btn btn-primary">Launch Portal</a>
-        <a href="#properties" class="btn btn-secondary">Browse Listings</a>
+  <!-- 2. HERO SECTION WITH PROPERTYPRO.NG MULTI-TAB FILTER -->
+  <section class="re-hero"
+    style="background-image: linear-gradient(180deg, rgba(7, 11, 20, 0.82) 0%, rgba(7, 11, 20, 0.95) 100%), url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=2000&q=85');">
+    <div class="re-container re-hero-inner">
+      <div class="re-hero-copy">
+        <div class="re-badge">
+          <span>🛡️ Nigeria's Premier Verified PropTech & CRM Marketplace</span>
+        </div>
+        <h1 class="re-hero-title">
+          Find Verified <span class="re-title-highlight">Properties & Homes</span> in Nigeria
+        </h1>
+        <p class="re-hero-subtitle">
+          Search over 4,800+ vetted duplexes, serviced apartments, and commercial plots with verified titles and direct
+          broker connections.
+        </p>
       </div>
 
-    <!-- Quick Search / CRM Filters -->
-    <div class="hero-search-box">
-      <div class="search-tabs">
-        <button type="button" class="tab-btn active" data-tab="All Properties">All Properties</button>
-        <button type="button" class="tab-btn " data-tab="Commercial">Commercial</button>
-        <button type="button" class="tab-btn " data-tab="Residential">Residential</button>
-        <button type="button" class="tab-btn " data-tab="Client Leads">Client Leads</button>
-      </div>
-      <form class="search-form" action="#" method="get">
-        <div class="form-field">
-          <label>Location / Keyword</label>
-          <input type="text" name="location" placeholder="Location or City" />
+      <!-- PROPERTYPRO.NG FILTER BOX -->
+      <div class="re-filter-box" id="propertyProFilter">
+        <!-- Purpose Tabs (Buy, Rent, Shortlet, Commercial, Land) -->
+        <div class="re-filter-tabs">
+          <button type="button" class="re-tab-btn active" data-purpose="sale">For Sale</button>
+          <button type="button" class="re-tab-btn" data-purpose="rent">For Rent</button>
+          <button type="button" class="re-tab-btn" data-purpose="shortlet">✨ Short Let</button>
+          <button type="button" class="re-tab-btn" data-purpose="commercial">Commercial</button>
+          <button type="button" class="re-tab-btn" data-purpose="land">Land / Plots</button>
         </div>
-        <div class="form-field">
-          <label>Category</label>
-          <select name="type">
-            <option value="">Property / Deal Type</option>
-            <option value="commercial">Commercial Space</option>
-            <option value="residential">Residential Unit</option>
-            <option value="lead-pipeline">CRM Deal Pipeline</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <label>Budget / Range</label>
-          <input type="text" name="budget" placeholder="Price / Budget Range" />
-        </div>
-        <button type="submit" class="btn btn-search">Search Portal</button>
-      </form>
-    </div>
-    </div>
-  </div>
 
-  <!-- Bottom Metric Stats Bar -->
-  <div class="hero-stats-wrapper">
-    <div class="hero-container">
-      <div class="stats-grid">
-        <div class="stat-item">
-          <span class="stat-number">120+</span>
-          <span class="stat-label">Commercial Listings</span>
+        <!-- Filter Input Form Grid -->
+        <form class="re-filter-form" id="realEstateSearchForm" action="" method="get">
+          <input type="hidden" name="purpose" id="filterPurposeInput" value="sale">
+
+          <div class="re-filter-grid">
+            <div class="re-field-group">
+              <label for="filterLocation">Location / Neighborhood</label>
+              <input type="text" name="location" id="filterLocation"
+                placeholder="e.g. Lekki, Ikoyi, Victoria Island, Abuja..." autocomplete="off">
+            </div>
+
+            <div class="re-field-group">
+              <label for="filterType">Property Type</label>
+              <select name="type" id="filterType">
+                <option value="">All Property Types</option>
+                <option value="Detached Duplex">Detached Duplex</option>
+                <option value="Semi-Detached Duplex">Semi-Detached</option>
+                <option value="Terraced Duplex">Terraced Duplex</option>
+                <option value="Luxury Apartment">Luxury Apartment</option>
+                <option value="Penthouse">Sky Penthouse</option>
+                <option value="Office Complex">Office Complex</option>
+                <option value="Land">Land / Plots</option>
+              </select>
+            </div>
+
+            <div class="re-field-group">
+              <label for="filterBeds">Bedrooms</label>
+              <select name="beds" id="filterBeds">
+                <option value="">Any Bedrooms</option>
+                <option value="1">1 Bedroom</option>
+                <option value="2">2 Bedrooms</option>
+                <option value="3">3 Bedrooms</option>
+                <option value="4">4 Bedrooms</option>
+                <option value="5">5+ Bedrooms</option>
+              </select>
+            </div>
+
+            <div class="re-field-group re-field-action">
+              <button type="submit" class="re-btn re-btn-search" id="filterSubmitBtn">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span>Search Properties</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Location Chips -->
+          <div class="re-quick-chips">
+            <span class="chips-label">Popular Locations:</span>
+            <button type="button" class="chip-btn" data-loc="Lekki Phase 1">Lekki Phase 1</button>
+            <button type="button" class="chip-btn" data-loc="Ikoyi">Ikoyi</button>
+            <button type="button" class="chip-btn" data-loc="Victoria Island">Victoria Island</button>
+            <button type="button" class="chip-btn" data-loc="Maitama Abuja">Maitama Abuja</button>
+            <button type="button" class="chip-btn" data-loc="Banana Island">Banana Island</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. SLIDING CATEGORY CAROUSEL (WITH CIRCULAR ARROWS IN CIRCLE LEFT & RIGHT) -->
+  <section class="re-section re-category-section" id="category-slider">
+    <div class="re-container">
+      <div class="re-section-header">
+        <div>
+          <span class="re-subheading">Curated Asset Types</span>
+          <h2 class="re-heading">Explore by Property Category</h2>
+          <p class="re-header-desc">Slide through vetted residential, commercial, and land asset classes</p>
         </div>
-        <div class="stat-item">
-          <span class="stat-number">98%</span>
-          <span class="stat-label">Deal Closure Rate</span>
+
+        <!-- Circular Arrow Slide Navigation Buttons -->
+        <div class="re-circle-arrows">
+          <button type="button" class="re-circle-btn" id="catSlideLeft" aria-label="Slide Categories Left">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button type="button" class="re-circle-btn" id="catSlideRight" aria-label="Slide Categories Right">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
-        <div class="stat-item">
-          <span class="stat-number">5.4k</span>
-          <span class="stat-label">Active Buyer Leads</span>
+      </div>
+
+      <!-- Scrollable Category Track with Counter-style Cards -->
+      <div class="re-category-track" id="categoryTrack">
+        <div class="re-cat-card" data-type="Detached Duplex" data-purpose="sale">
+          <div class="re-cat-top">
+            <div class="re-cat-icon">🏡</div>
+            <span class="re-cat-badge">Explore</span>
+          </div>
+          <div class="re-cat-content">
+            <span class="re-cat-val">140+ Listed</span>
+            <h3 class="re-cat-title">Detached Duplexes</h3>
+            <p class="re-cat-desc">Governor's Consent & C of O</p>
+          </div>
         </div>
-        <div class="stat-item">
-          <span class="stat-number">24/7</span>
-          <span class="stat-label">Automated CRM Sync</span>
+
+        <div class="re-cat-card" data-type="Luxury Apartment" data-purpose="sale">
+          <div class="re-cat-top">
+            <div class="re-cat-icon">🏢</div>
+            <span class="re-cat-badge">Explore</span>
+          </div>
+          <div class="re-cat-content">
+            <span class="re-cat-val">210+ Units</span>
+            <h3 class="re-cat-title">Luxury Apartments</h3>
+            <p class="re-cat-desc">Serviced 2, 3 & 4 Bed Flats</p>
+          </div>
+        </div>
+
+        <div class="re-cat-card" data-type="Penthouse" data-purpose="sale">
+          <div class="re-cat-top">
+            <div class="re-cat-icon">🏙️</div>
+            <span class="re-cat-badge">Explore</span>
+          </div>
+          <div class="re-cat-content">
+            <span class="re-cat-val">45+ Mansions</span>
+            <h3 class="re-cat-title">Sky Penthouses</h3>
+            <p class="re-cat-desc">Panoramic Ocean & City Views</p>
+          </div>
+        </div>
+
+        <div class="re-cat-card" data-type="Luxury Apartment" data-purpose="shortlet">
+          <div class="re-cat-top">
+            <div class="re-cat-icon">✨</div>
+            <span class="re-cat-badge">Explore</span>
+          </div>
+          <div class="re-cat-content">
+            <span class="re-cat-val">85+ Suites</span>
+            <h3 class="re-cat-title">Serviced Shortlets</h3>
+            <p class="re-cat-desc">24/7 Power, WiFi & Concierge</p>
+          </div>
+        </div>
+
+        <div class="re-cat-card" data-type="Office Complex" data-purpose="commercial">
+          <div class="re-cat-top">
+            <div class="re-cat-icon">🏛️</div>
+            <span class="re-cat-badge">Explore</span>
+          </div>
+          <div class="re-cat-content">
+            <span class="re-cat-val">60+ Towers</span>
+            <h3 class="re-cat-title">Commercial Offices</h3>
+            <p class="re-cat-desc">Grade-A Business Districts</p>
+          </div>
+        </div>
+
+        <div class="re-cat-card" data-type="Land" data-purpose="land">
+          <div class="re-cat-top">
+            <div class="re-cat-icon">🌳</div>
+            <span class="re-cat-badge">Explore</span>
+          </div>
+          <div class="re-cat-content">
+            <span class="re-cat-val">110+ Plots</span>
+            <h3 class="re-cat-title">Residential Land</h3>
+            <p class="re-cat-desc">Gazetted & Surveyed Land</p>
+          </div>
+        </div>
+
+        <div class="re-cat-card" data-type="Detached Duplex" data-purpose="sale">
+          <div class="re-cat-top">
+            <div class="re-cat-icon">🏘️</div>
+            <span class="re-cat-badge">Explore</span>
+          </div>
+          <div class="re-cat-content">
+            <span class="re-cat-val">75+ Homes</span>
+            <h3 class="re-cat-title">Semi-Detached & Terraces</h3>
+            <p class="re-cat-desc">Gated Residential Estates</p>
+          </div>
+        </div>
+
+        <div class="re-cat-card" data-type="Hot Deals" data-purpose="sale">
+          <div class="re-cat-top">
+            <div class="re-cat-icon">🔥</div>
+            <span class="re-cat-badge">Explore</span>
+          </div>
+          <div class="re-cat-content">
+            <span class="re-cat-val">95+ Prime</span>
+            <h3 class="re-cat-title">Hot Investment Deals</h3>
+            <p class="re-cat-desc">High Capital Appreciation</p>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
+
+  <!-- 4. FEATURED & VERIFIED PROPERTIES SECTION -->
+  <section class="re-section" id="featured-listings">
+    <div class="re-container">
+      <div class="re-section-header">
+        <div>
+          <span class="re-subheading">Hand-Picked Assets</span>
+          <h2 class="re-heading">Featured & Verified Properties</h2>
+          <p class="re-header-desc">
+            Every listing is vetted with Governor's Consent, Certificate of Occupancy (C of O), or approved layout
+            documentation.
+          </p>
+        </div>
+      </div>
+
+      <div class="re-properties-grid" id="propertiesGrid">
+
+
+        <article class="re-card" data-purpose="sale" data-type="Detached Duplex" data-beds="5"
+          data-location="admiralty way, lekki phase 1, lagos">
+          <div class="re-card-img">
+            <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80"
+              alt="Ultra-Luxury 5-Bedroom Fully Detached Duplex with Cinema & Pool" loading="lazy">
+            <div class="re-card-badges">
+              <span class="badge badge-sale">For Sale</span>
+              <span class="badge badge-verified">✓ Verified Title</span>
+            </div>
+            <div class="re-card-price">₦450,000,000</div>
+          </div>
+          <div class="re-card-body">
+            <div class="re-card-location">📍 Admiralty Way, Lekki Phase 1, Lagos</div>
+            <h3 class="re-card-title">Ultra-Luxury 5-Bedroom Fully Detached Duplex with Cinema & Pool</h3>
+            <div class="re-card-specs">
+              <span>🛏️ 5 Beds</span>
+              <span>🛁 6 Baths</span>
+              <span>🚗 4 Parking</span>
+              <span>📐 650 SQM</span>
+            </div>
+            <div class="re-card-footer">
+              <div class="re-agent">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+                  alt="Tunde Adeleke">
+                <div>
+                  <strong>Tunde Adeleke</strong>
+                  <small>Apex Capital Realty</small>
+                </div>
+              </div>
+              <a href="https://wa.me/2348023456789?text=Hello%2C%20I%20am%20interested%20in%20Ultra-Luxury%205-Bedroom%20Fully%20Detached%20Duplex%20with%20Cinema%20%26%20Pool"
+                target="_blank" rel="noopener" class="re-btn-whatsapp">
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </article>
+
+
+        <article class="re-card" data-purpose="rent" data-type="Luxury Apartment" data-beds="3"
+          data-location="bourdillon road, ikoyi, lagos">
+          <div class="re-card-img">
+            <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80"
+              alt="Waterfront 3-Bedroom Luxury Apartment with Panoramic Marina View" loading="lazy">
+            <div class="re-card-badges">
+              <span class="badge badge-rent">For Rent</span>
+              <span class="badge badge-verified">✓ Verified Title</span>
+            </div>
+            <div class="re-card-price">₦35,000,000/year</div>
+          </div>
+          <div class="re-card-body">
+            <div class="re-card-location">📍 Bourdillon Road, Ikoyi, Lagos</div>
+            <h3 class="re-card-title">Waterfront 3-Bedroom Luxury Apartment with Panoramic Marina View</h3>
+            <div class="re-card-specs">
+              <span>🛏️ 3 Beds</span>
+              <span>🛁 4 Baths</span>
+              <span>🚗 2 Parking</span>
+              <span>📐 280 SQM</span>
+            </div>
+            <div class="re-card-footer">
+              <div class="re-agent">
+                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80"
+                  alt="Chioma Okonkwo">
+                <div>
+                  <strong>Chioma Okonkwo</strong>
+                  <small>Signature Island Estates</small>
+                </div>
+              </div>
+              <a href="https://wa.me/2348134567890?text=Hello%2C%20I%20am%20interested%20in%20Waterfront%203-Bedroom%20Luxury%20Apartment%20with%20Panoramic%20Marina%20View"
+                target="_blank" rel="noopener" class="re-btn-whatsapp">
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </article>
+
+
+        <article class="re-card" data-purpose="sale" data-type="Detached Duplex" data-beds="4"
+          data-location="maitama district, abuja, fct">
+          <div class="re-card-img">
+            <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80"
+              alt="Modern 4-Bedroom Semi-Detached House in Diplomatic Zone" loading="lazy">
+            <div class="re-card-badges">
+              <span class="badge badge-sale">For Sale</span>
+              <span class="badge badge-verified">✓ Verified Title</span>
+            </div>
+            <div class="re-card-price">₦580,000,000</div>
+          </div>
+          <div class="re-card-body">
+            <div class="re-card-location">📍 Maitama District, Abuja, FCT</div>
+            <h3 class="re-card-title">Modern 4-Bedroom Semi-Detached House in Diplomatic Zone</h3>
+            <div class="re-card-specs">
+              <span>🛏️ 4 Beds</span>
+              <span>🛁 5 Baths</span>
+              <span>🚗 3 Parking</span>
+              <span>📐 520 SQM</span>
+            </div>
+            <div class="re-card-footer">
+              <div class="re-agent">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80"
+                  alt="Ibrahim Danjuma">
+                <div>
+                  <strong>Ibrahim Danjuma</strong>
+                  <small>Capital Peak Prime</small>
+                </div>
+              </div>
+              <a href="https://wa.me/2348091234567?text=Hello%2C%20I%20am%20interested%20in%20Modern%204-Bedroom%20Semi-Detached%20House%20in%20Diplomatic%20Zone"
+                target="_blank" rel="noopener" class="re-btn-whatsapp">
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </article>
+
+
+        <article class="re-card" data-purpose="shortlet" data-type="Luxury Apartment" data-beds="2"
+          data-location="victoria island, lagos">
+          <div class="re-card-img">
+            <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80"
+              alt="Designer 2-Bedroom Serviced Shortlet Apartment with Rooftop Lounge" loading="lazy">
+            <div class="re-card-badges">
+              <span class="badge badge-shortlet">Short Let</span>
+              <span class="badge badge-verified">✓ Verified Title</span>
+            </div>
+            <div class="re-card-price">₦145,000/night</div>
+          </div>
+          <div class="re-card-body">
+            <div class="re-card-location">📍 Victoria Island, Lagos</div>
+            <h3 class="re-card-title">Designer 2-Bedroom Serviced Shortlet Apartment with Rooftop Lounge</h3>
+            <div class="re-card-specs">
+              <span>🛏️ 2 Beds</span>
+              <span>🛁 2 Baths</span>
+              <span>🚗 2 Parking</span>
+              <span>📐 160 SQM</span>
+            </div>
+            <div class="re-card-footer">
+              <div class="re-agent">
+                <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80"
+                  alt="Folake Balogun">
+                <div>
+                  <strong>Folake Balogun</strong>
+                  <small>HostPrime Hospitality</small>
+                </div>
+              </div>
+              <a href="https://wa.me/2348189900112?text=Hello%2C%20I%20am%20interested%20in%20Designer%202-Bedroom%20Serviced%20Shortlet%20Apartment%20with%20Rooftop%20Lounge"
+                target="_blank" rel="noopener" class="re-btn-whatsapp">
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </article>
+
+
+        <article class="re-card" data-purpose="commercial" data-type="Office Complex" data-beds="0"
+          data-location="ahmadu bello way, victoria island, lagos">
+          <div class="re-card-img">
+            <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80"
+              alt="Grade-A Commercial Office Floor with 1,200 SQM Open Plan Space" loading="lazy">
+            <div class="re-card-badges">
+              <span class="badge badge-commercial">Commercial</span>
+              <span class="badge badge-verified">✓ Verified Title</span>
+            </div>
+            <div class="re-card-price">₦120,000/sqm</div>
+          </div>
+          <div class="re-card-body">
+            <div class="re-card-location">📍 Ahmadu Bello Way, Victoria Island, Lagos</div>
+            <h3 class="re-card-title">Grade-A Commercial Office Floor with 1,200 SQM Open Plan Space</h3>
+            <div class="re-card-specs">
+              <span>🛏️ 0 Beds</span>
+              <span>🛁 8 Baths</span>
+              <span>🚗 15 Parking</span>
+              <span>📐 1200 SQM</span>
+            </div>
+            <div class="re-card-footer">
+              <div class="re-agent">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+                  alt="Tunde Adeleke">
+                <div>
+                  <strong>Tunde Adeleke</strong>
+                  <small>Apex Capital Realty</small>
+                </div>
+              </div>
+              <a href="https://wa.me/2348023456789?text=Hello%2C%20I%20am%20interested%20in%20Grade-A%20Commercial%20Office%20Floor%20with%201%2C200%20SQM%20Open%20Plan%20Space"
+                target="_blank" rel="noopener" class="re-btn-whatsapp">
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </article>
+
+
+        <article class="re-card" data-purpose="land" data-type="Land" data-beds="0"
+          data-location="banana island, ikoyi, lagos">
+          <div class="re-card-img">
+            <img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+              alt="1,500 SQM Prime Dry Residential Plot with Governor’s Consent" loading="lazy">
+            <div class="re-card-badges">
+              <span class="badge badge-land">Commercial</span>
+              <span class="badge badge-verified">✓ Verified Title</span>
+            </div>
+            <div class="re-card-price">₦1,800,000,000</div>
+          </div>
+          <div class="re-card-body">
+            <div class="re-card-location">📍 Banana Island, Ikoyi, Lagos</div>
+            <h3 class="re-card-title">1,500 SQM Prime Dry Residential Plot with Governor’s Consent</h3>
+            <div class="re-card-specs">
+              <span>🛏️ 0 Beds</span>
+              <span>🛁 0 Baths</span>
+              <span>🚗 0 Parking</span>
+              <span>📐 1500 SQM</span>
+            </div>
+            <div class="re-card-footer">
+              <div class="re-agent">
+                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80"
+                  alt="Chioma Okonkwo">
+                <div>
+                  <strong>Chioma Okonkwo</strong>
+                  <small>Signature Island Estates</small>
+                </div>
+              </div>
+              <a href="https://wa.me/2348134567890?text=Hello%2C%20I%20am%20interested%20in%201%2C500%20SQM%20Prime%20Dry%20Residential%20Plot%20with%20Governor%E2%80%99s%20Consent"
+                target="_blank" rel="noopener" class="re-btn-whatsapp">
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </article>
+
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. FULLWIDTH STATS COUNTER BAR -->
+  <section class="re-fullwidth-stats" id="fullWidthStats">
+    <div class="re-container">
+      <!-- Trust Header -->
+      <div class="re-fws-header">
+        <div class="re-fws-badge">
+          <span>🏆 Nigeria’s Most Trusted PropTech & Real Estate Diligence Network</span>
+        </div>
+        <div class="re-fws-affiliations">
+          <span>✓ NIESV Certified</span>
+          <span>✓ REDAN Member</span>
+          <span>✓ Lagos Lands Bureau Vetted</span>
+        </div>
+      </div>
+
+      <!-- 4-Column Responsive Grid -->
+      <div class="re-fws-grid">
+        <div class="re-fws-card">
+          <div class="re-fws-card-top">
+            <div class="re-fws-icon">📈</div>
+            <span class="re-fws-tag">Escrow Protected</span>
+          </div>
+          <div class="re-fws-num">₦120B+</div>
+          <div class="re-fws-lbl">Verified Transactions</div>
+          <p class="re-fws-desc">Clean registry deals closed with zero legal disputes or encumbrances.</p>
+        </div>
+
+        <div class="re-fws-card">
+          <div class="re-fws-card-top">
+            <div class="re-fws-icon">🏢</div>
+            <span class="re-fws-tag">100% Deed Checked</span>
+          </div>
+          <div class="re-fws-num">4,800+</div>
+          <div class="re-fws-lbl">Active Vetted Listings</div>
+          <p class="re-fws-desc">Duplexes, apartments, serviced short lets, and gazetted land plots.</p>
+        </div>
+
+        <div class="re-fws-card">
+          <div class="re-fws-card-top">
+            <div class="re-fws-icon">🛡️</div>
+            <span class="re-fws-tag">Zero Risk</span>
+          </div>
+          <div class="re-fws-num">99.8%</div>
+          <div class="re-fws-lbl">Clean Title Diligence</div>
+          <p class="re-fws-desc">Governor’s Consent, C of O, and beacon survey coordinate audits.</p>
+        </div>
+
+        <div class="re-fws-card">
+          <div class="re-fws-card-top">
+            <div class="re-fws-icon">⚡</div>
+            <span class="re-fws-tag">Instant WhatsApp</span>
+          </div>
+          <div class="re-fws-num">15 Mins</div>
+          <div class="re-fws-lbl">Avg. Broker Response</div>
+          <p class="re-fws-desc">Direct routing to certified NIESV & REDAN registered lead agents.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. EXPLORE HIGH-GROWTH NEIGHBORHOODS -->
+  <section class="re-section" id="neighborhoods">
+    <div class="re-container">
+      <div class="re-section-header">
+        <div>
+          <span class="re-subheading">Prime Hubs</span>
+          <h2 class="re-heading">Explore Top High-Yield Locations</h2>
+          <p class="re-header-desc">Invest in Nigeria's fastest capital appreciating residential and commercial
+            corridors.</p>
+        </div>
+      </div>
+
+      <div class="re-neighborhoods-grid">
+        <div class="re-loc-card"
+          style="background-image: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 100%), url('https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80')">
+          <div class="re-loc-content">
+            <span class="re-loc-tag">Trending Hub</span>
+            <h3>Lekki Phase 1, Lagos</h3>
+            <p>240+ Active Verified Listings</p>
+          </div>
+        </div>
+
+        <div class="re-loc-card"
+          style="background-image: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 100%), url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80')">
+          <div class="re-loc-content">
+            <span class="re-loc-tag">Prime Luxury</span>
+            <h3>Ikoyi, Lagos</h3>
+            <p>180+ Active Verified Listings</p>
+          </div>
+        </div>
+
+        <div class="re-loc-card"
+          style="background-image: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 100%), url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80')">
+          <div class="re-loc-content">
+            <span class="re-loc-tag">Diplomatic Enclave</span>
+            <h3>Maitama, Abuja</h3>
+            <p>142+ Active Verified Listings</p>
+          </div>
+        </div>
+
+        <div class="re-loc-card"
+          style="background-image: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 100%), url('https://images.unsplash.com/photo-1479839672679-a46483c0e7c8?auto=format&fit=crop&w=800&q=80')">
+          <div class="re-loc-content">
+            <span class="re-loc-tag">Commercial Core</span>
+            <h3>Victoria Island, Lagos</h3>
+            <p>95+ Commercial & Residencies</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. CLIENT TESTIMONIALS & VERIFIED REVIEWS SECTION (WITH CIRCULAR ARROW SLIDER) -->
+  <section class="re-section" id="testimonials">
+    <div class="re-container">
+      <div class="re-section-header">
+        <div>
+          <span class="re-subheading">⭐ 4.9 / 5 Rating from 3,400+ Verified Closings</span>
+          <h2 class="re-heading">Client Testimonials & Verified Stories</h2>
+          <p class="re-header-desc">Discover how diaspora investors, corporate tenants, and first-time buyers closed
+            transactions with zero surprises.</p>
+        </div>
+
+        <!-- Circular Arrow Slide Buttons for Testimonials -->
+        <div class="re-circle-arrows">
+          <button type="button" class="re-circle-btn" id="testiSlideLeft" aria-label="Slide Testimonials Left">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button type="button" class="re-circle-btn" id="testiSlideRight" aria-label="Slide Testimonials Right">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Testimonials Horizontal Carousel -->
+      <div class="re-testimonials-track" id="testimonialsTrack">
+        <!-- Review 1 -->
+        <div class="re-testi-card">
+          <div class="re-testi-header">
+            <div class="re-stars">★★★★★</div>
+            <span class="badge badge-verified">Governor's Consent Verified</span>
+          </div>
+          <p class="re-testi-quote">
+            "Living in the UK, remote property diligence was always my biggest headache. ApexRealty confirmed the title
+            registry search at Alausa in 48 hours and provided a live 4K drone perimeter survey. Everything closed
+            seamlessly."
+          </p>
+          <div class="re-testi-author">
+            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
+              alt="Dr. Kunle Adeleke">
+            <div>
+              <strong>Dr. Kunle Adeleke</strong>
+              <small>Diaspora Investor (London, UK)</small>
+            </div>
+          </div>
+          <div class="re-testi-deal">
+            <span>📍 5-Bed Detached Duplex • Lekki Phase 1</span>
+            <strong>₦350,000,000</strong>
+          </div>
+        </div>
+
+        <!-- Review 2 -->
+        <div class="re-testi-card">
+          <div class="re-testi-header">
+            <div class="re-stars">★★★★★</div>
+            <span class="badge badge-verified">Direct Landlord Deal</span>
+          </div>
+          <p class="re-testi-quote">
+            "The 15-minute response time is completely real. Within two hours of submitting my search criteria, I was
+            connected directly with the building’s verified asset manager. No double agent fees or fake inspection
+            charges."
+          </p>
+          <div class="re-testi-author">
+            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80"
+              alt="Amina Bello-Danladi">
+            <div>
+              <strong>Amina Bello-Danladi</strong>
+              <small>Corporate Legal Director</small>
+            </div>
+          </div>
+          <div class="re-testi-deal">
+            <span>📍 Luxury Serviced 3-Bed • Maitama, Abuja</span>
+            <strong>₦18,500,000 / yr</strong>
+          </div>
+        </div>
+
+        <!-- Review 3 -->
+        <div class="re-testi-card">
+          <div class="re-testi-header">
+            <div class="re-stars">★★★★★</div>
+            <span class="badge badge-verified">Institutional Diligence Passed</span>
+          </div>
+          <p class="re-testi-quote">
+            "Their CRM engine and buyer matching pipeline saved us months of speculative marketing. We listed two prime
+            commercial assets and secured verified institutional buyers in under 3 weeks through their certified broker
+            network."
+          </p>
+          <div class="re-testi-author">
+            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80"
+              alt="Chief Emeka Okonkwo">
+            <div>
+              <strong>Chief Emeka Okonkwo</strong>
+              <small>Commercial Property Developer</small>
+            </div>
+          </div>
+          <div class="re-testi-deal">
+            <span>📍 Grade-A Commercial Tower • Victoria Island</span>
+            <strong>₦1.2 Billion</strong>
+          </div>
+        </div>
+
+        <!-- Review 4 -->
+        <div class="re-testi-card">
+          <div class="re-testi-header">
+            <div class="re-stars">★★★★★</div>
+            <span class="badge badge-verified">Turnkey Shortlet Asset</span>
+          </div>
+          <p class="re-testi-quote">
+            "Our two Ikoyi shortlet apartments are averaging 82% occupancy and generating over 19% net rental yield. The
+            portal's automated lead forwarding connects guests directly into our WhatsApp business manager seamlessly."
+          </p>
+          <div class="re-testi-author">
+            <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=150&q=80"
+              alt="Tunde & Nneka Wright">
+            <div>
+              <strong>Tunde & Nneka Wright</strong>
+              <small>Shortlet Investors (Houston, Texas)</small>
+            </div>
+          </div>
+          <div class="re-testi-deal">
+            <span>📍 2 Waterfront Units • Banana Island</span>
+            <strong>₦480,000,000</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. FREQUENTLY ASKED QUESTIONS (FAQ ACCORDION) -->
+  <section class="re-section re-faq-section" id="faq">
+    <div class="re-container">
+      <div class="re-faq-header text-center">
+        <span class="re-subheading">Got Questions? We’ve Got Answers</span>
+        <h2 class="re-heading">Frequently Asked Questions</h2>
+        <p class="re-header-desc mx-auto">Clear answers on land registry verification, diaspora transactions, fee
+          structures, and WordPress CRM connectivity.</p>
+
+        <!-- Category Filter Tabs -->
+        <div class="re-faq-tabs">
+          <button type="button" class="re-faq-tab active" data-faq-cat="all">All Questions</button>
+          <button type="button" class="re-faq-tab" data-faq-cat="legal">Title & Diligence</button>
+          <button type="button" class="re-faq-tab" data-faq-cat="tours">Inspections & Diaspora</button>
+          <button type="button" class="re-faq-tab" data-faq-cat="fees">Fees & Escrow</button>
+          <button type="button" class="re-faq-tab" data-faq-cat="crm">WordPress & CRM</button>
+        </div>
+      </div>
+
+      <!-- Accordion Container -->
+      <div class="re-faq-accordion" id="faqAccordion">
+        <!-- Item 1 -->
+        <div class="re-faq-item open" data-faq-cat="legal">
+          <button type="button" class="re-faq-question" aria-expanded="true">
+            <span>How are property titles and documents verified?</span>
+            <span class="re-faq-chevron">▼</span>
+          </button>
+          <div class="re-faq-answer">
+            <p>Every listing marked with the "Official Registry Verified" badge undergoes a rigorous 3-tier diligence
+              check: 1) Physical land registry search at the Lagos State Lands Bureau (Alausa) or Abuja AGIS, 2) Legal
+              verification of the root title (Governor’s Consent, Certificate of Occupancy, or Gazetted Excision), and
+              3) Physical beacon coordinate check to ensure the land does not fall under government acquisition.</p>
+            <span class="re-faq-pill">✓ Zero unverified listings allowed on the marketplace.</span>
+          </div>
+        </div>
+
+        <!-- Item 2 -->
+        <div class="re-faq-item" data-faq-cat="tours">
+          <button type="button" class="re-faq-question" aria-expanded="false">
+            <span>Can diaspora or overseas investors purchase properties remotely?</span>
+            <span class="re-faq-chevron">▼</span>
+          </button>
+          <div class="re-faq-answer">
+            <p>Yes! Over 40% of our successful transactions are completed by Nigerians living in the UK, US, Canada, and
+              Europe. We provide high-definition 4K virtual tours, live WhatsApp video walk-throughs with our registered
+              surveyors, and power-of-attorney deed execution managed by certified Nigerian bar association property
+              lawyers.</p>
+            <span class="re-faq-pill">✓ Full diaspora concierge with 4K video inspection.</span>
+          </div>
+        </div>
+
+        <!-- Item 3 -->
+        <div class="re-faq-item" data-faq-cat="tours">
+          <button type="button" class="re-faq-question" aria-expanded="false">
+            <span>How do physical and virtual inspection tours work?</span>
+            <span class="re-faq-chevron">▼</span>
+          </button>
+          <div class="re-faq-answer">
+            <p>Simply click "Schedule Inspection Tour" on any listing card or detail view. You can choose between an
+              in-person guided walk-through with a certified broker or an interactive live video call tour. Our
+              concierge confirms your date, coordinates building access, and sends you a calendar invite within 15
+              minutes.</p>
+            <span class="re-faq-pill">✓ Flexible 7 days a week inspection availability.</span>
+          </div>
+        </div>
+
+        <!-- Item 4 -->
+        <div class="re-faq-item" data-faq-cat="fees">
+          <button type="button" class="re-faq-question" aria-expanded="false">
+            <span>What are the standard agency, legal, and documentation fees in Nigeria?</span>
+            <span class="re-faq-chevron">▼</span>
+          </button>
+          <div class="re-faq-answer">
+            <p>In line with Nigerian estate agency conventions: 1) Professional Agency Fee is standard 5% for property
+              sales and 10% for annual rentals. 2) Legal Documentation Fee is 5% for the preparation and perfection of
+              the Deed of Assignment and contract of sale. All fees are transparently outlined before you sign any
+              document.</p>
+            <span class="re-faq-pill">✓ Transparent pricing with zero hidden surcharges.</span>
+          </div>
+        </div>
+
+        <!-- Item 5 -->
+        <div class="re-faq-item" data-faq-cat="fees">
+          <button type="button" class="re-faq-question" aria-expanded="false">
+            <span>How does escrow protection safeguard my funds during a transaction?</span>
+            <span class="re-faq-chevron">▼</span>
+          </button>
+          <div class="re-faq-answer">
+            <p>Payments are not paid directly to vendors upfront. Funds can be held in institutional escrow accounts
+              managed by registered trust banks. Monies are only released milestone by milestone once title searches are
+              confirmed clear and original documents of title are physically transferred and executed.</p>
+            <span class="re-faq-pill">✓ 100% milestone-secured escrow payment pipeline.</span>
+          </div>
+        </div>
+
+        <!-- Item 6 -->
+        <div class="re-faq-item" data-faq-cat="crm">
+          <button type="button" class="re-faq-question" aria-expanded="false">
+            <span>How does the CRM and Agent Portal connect to my WordPress website?</span>
+            <span class="re-faq-chevron">▼</span>
+          </button>
+          <div class="re-faq-answer">
+            <p>Our exportable code contains ready-to-use WordPress plugin templates, REST API hooks, and clean PHP
+              classes. Leads generated from the PropertyPro-style search filter flow automatically into your custom CRM
+              tables and forward instant inquiry alerts via WhatsApp and email to your assigned brokers.</p>
+            <span class="re-faq-pill">✓ Includes exportable PHP templates for WordPress plugins.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. REAL ESTATE & BUSINESS CRM ENGINE SECTION -->
+  <section class="re-section re-crm-promo" id="crm-section">
+    <div class="re-container">
+      <div class="re-crm-card">
+        <span class="re-badge">Integrated CRM & Broker Engine</span>
+        <h2>Manage Inquiries, WhatsApp Leads & Title Verifications</h2>
+        <p>Built directly into your WordPress custom plugin database: automatically capture lead phone numbers, track
+          inspection bookings, and assign deals to sales agents in real-time.</p>
+        <div class="re-crm-features-row">
+          <div class="re-crm-feat-item">
+            <span>📱 WhatsApp Lead Auto-Sync</span>
+          </div>
+          <div class="re-crm-feat-item">
+            <span>📅 Guided Inspection Calendar</span>
+          </div>
+          <div class="re-crm-feat-item">
+            <span>📑 Title Diligence Vault</span>
+          </div>
+        </div>
+        <div class="re-crm-actions">
+          <a href="" class="re-btn re-btn-primary">Launch Agent CRM Portal</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. COMPLETE RESPONSIVE FOOTER -->
+  <footer class="re-footer">
+    <div class="re-container re-footer-inner">
+      <div class="re-footer-col re-footer-about">
+        <div class="re-logo">
+          <div class="re-logo-icon">🏢</div>
+          <span>ApexRealty <strong class="re-logo-highlight">Portal</strong></span>
+        </div>
+        <p>Nigeria's premier verified PropTech marketplace and real estate CRM portal. Every property title is legally
+          cross-referenced with official state land registries.</p>
+        <p class="re-contact-info">📍 Plot 14 Admiralty Way, Lekki Phase 1, Lagos, Nigeria<br>📞 +234 1 800 273 9732
+          &nbsp;|&nbsp; ✉️ contact@apexrealty.ng</p>
+      </div>
+
+      <div class="re-footer-col">
+        <h4>Prime Locations</h4>
+        <ul>
+          <li><a href="#featured-listings">Lekki Phase 1 Properties</a></li>
+          <li><a href="#featured-listings">Ikoyi Waterfront Mansions</a></li>
+          <li><a href="#featured-listings">Victoria Island Offices</a></li>
+          <li><a href="#featured-listings">Maitama Abuja Diplomatic Villas</a></li>
+          <li><a href="#featured-listings">Banana Island Penthouses</a></li>
+        </ul>
+      </div>
+
+      <div class="re-footer-col">
+        <h4>Quick Navigation</h4>
+        <ul>
+          <li><a href="#featured-listings">Properties For Sale</a></li>
+          <li><a href="#featured-listings">Properties For Rent</a></li>
+          <li><a href="#featured-listings">Short Let Apartments</a></li>
+          <li><a href="#category-slider">Property Categories</a></li>
+          <li><a href="#testimonials">Client Testimonials</a></li>
+          <li><a href="#faq">Real Estate FAQ</a></li>
+        </ul>
+      </div>
+
+      <div class="re-footer-col">
+        <h4>CRM & Developer Portal</h4>
+        <ul>
+          <li><a href="#crm-section">Agent Dashboard</a></li>
+          <li><a href="#crm-section">Inspection Calendar</a></li>
+          <li><a href="#crm-section">Title Verification Service</a></li>
+          <li><a href="#crm-section">WordPress Plugin API</a></li>
+          <li><a href="#crm-section">Broker Commission Hub</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="re-footer-bottom">
+      <div class="re-container re-footer-bottom-inner">
+        <p>© ApexRealty Portal Ltd. All rights reserved. NIESV & REDAN Member Compliant.</p>
+        <div class="re-footer-bottom-links">
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Escrow</a>
+          <a href="#">Title Audit SLA</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/real-estate-portal.js"></script>
 
   <script>
-/**
- * Minimalist Hero Section Controller (Vanilla JS)
- */
-document.addEventListener('DOMContentLoaded', () => {
-  // 1. Mobile Menu Toggle
-  const mobileBtn = document.getElementById('mobileMenuBtn');
-  const heroNav = document.getElementById('heroNav');
+    /**
+     * Real Estate & CRM Portal Frontend Script
+     * Handles Theme Toggle, PropertyPro Filters, Category Slider, FAQ, and Modals
+     */
+    document.addEventListener('DOMContentLoaded', () => {
 
-  if (mobileBtn && heroNav) {
-    mobileBtn.addEventListener('click', () => {
-      heroNav.classList.toggle('open');
-    });
-  }
+      // 1. LIGHT & DARK THEME TOGGLE
+      const themeToggleBtn = document.getElementById('themeToggleBtn');
+      const currentTheme = localStorage.getItem('re_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', currentTheme);
 
-  // 2. Search Tabs Switching
-  const searchTabs = document.querySelectorAll('.hero-search-box .tab-btn');
-  searchTabs.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      searchTabs.forEach((t) => t.classList.remove('active'));
-      btn.classList.add('active');
+      if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+          const active = document.documentElement.getAttribute('data-theme') || 'dark';
+          const newTheme = active === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', newTheme);
+          localStorage.setItem('re_theme', newTheme);
+        });
+      }
+
+      // 2. MOBILE MENU DRAWER TOGGLE
+      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+      const mobileDrawer = document.getElementById('mobileDrawer');
+      if (mobileMenuBtn && mobileDrawer) {
+        mobileMenuBtn.addEventListener('click', () => {
+          mobileDrawer.classList.toggle('open');
+        });
+      }
+
+      // 3. PROPERTYPRO FILTER TABS
+      const tabs = document.querySelectorAll('.re-tab-btn');
+      const purposeInput = document.getElementById('filterPurposeInput');
+      const cards = document.querySelectorAll('.re-card');
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+
+          const purpose = tab.getAttribute('data-purpose');
+          if (purposeInput) purposeInput.value = purpose;
+
+          filterProperties();
+        });
+      });
+
+      // 4. QUICK LOCATION CHIPS
+      const chipButtons = document.querySelectorAll('.chip-btn');
+      const locationInput = document.getElementById('filterLocation');
+
+      chipButtons.forEach(chip => {
+        chip.addEventListener('click', () => {
+          const loc = chip.getAttribute('data-loc');
+          if (locationInput) {
+            locationInput.value = loc;
+            filterProperties();
+          }
+        });
+      });
+
+      if (locationInput) {
+        locationInput.addEventListener('input', () => {
+          filterProperties();
+        });
+      }
+
+      function filterProperties() {
+        const activeTab = document.querySelector('.re-tab-btn.active');
+        const selectedPurpose = activeTab ? activeTab.getAttribute('data-purpose') : 'sale';
+        const locQuery = (locationInput && locationInput.value ? locationInput.value.toLowerCase().trim() : '');
+
+        cards.forEach(card => {
+          const cardPurpose = card.getAttribute('data-purpose');
+          const cardLocation = (card.getAttribute('data-location') || '').toLowerCase();
+
+          const matchesPurpose = (selectedPurpose === 'all' || cardPurpose === selectedPurpose);
+          const matchesLocation = !locQuery || cardLocation.includes(locQuery);
+
+          if (matchesPurpose && matchesLocation) {
+            card.style.display = 'flex';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      }
+
+      // 5. CATEGORY SLIDER WITH CIRCULAR ARROWS
+      const categoryTrack = document.getElementById('categoryTrack');
+      const catLeft = document.getElementById('catSlideLeft');
+      const catRight = document.getElementById('catSlideRight');
+
+      if (categoryTrack && catLeft && catRight) {
+        catLeft.addEventListener('click', () => {
+          categoryTrack.scrollBy({ left: -280, behavior: 'smooth' });
+        });
+
+        catRight.addEventListener('click', () => {
+          categoryTrack.scrollBy({ left: 280, behavior: 'smooth' });
+        });
+      }
+
+      // Clicking Category Cards sets active filter
+      const catCards = document.querySelectorAll('.re-cat-card');
+      catCards.forEach(cat => {
+        cat.addEventListener('click', () => {
+          const purpose = cat.getAttribute('data-purpose');
+          if (purpose) {
+            const matchingTab = document.querySelector('.re-tab-btn[data-purpose="' + purpose + '"]');
+            if (matchingTab) {
+              matchingTab.click();
+            }
+          }
+          const featSection = document.getElementById('featured-listings');
+          if (featSection) featSection.scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+
+      // 6. TESTIMONIALS SLIDER WITH CIRCULAR ARROWS
+      const testiTrack = document.getElementById('testimonialsTrack');
+      const testiLeft = document.getElementById('testiSlideLeft');
+      const testiRight = document.getElementById('testiSlideRight');
+
+      if (testiTrack && testiLeft && testiRight) {
+        testiLeft.addEventListener('click', () => {
+          testiTrack.scrollBy({ left: -380, behavior: 'smooth' });
+        });
+
+        testiRight.addEventListener('click', () => {
+          testiTrack.scrollBy({ left: 380, behavior: 'smooth' });
+        });
+      }
+
+      // 7. REAL ESTATE FAQ ACCORDION
+      const faqQuestions = document.querySelectorAll('.re-faq-question');
+      faqQuestions.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = btn.closest('.re-faq-item');
+          if (!item) return;
+
+          const isOpen = item.classList.contains('open');
+
+          // Close all items
+          document.querySelectorAll('.re-faq-item').forEach(el => el.classList.remove('open'));
+
+          if (!isOpen) {
+            item.classList.add('open');
+          }
+        });
+      });
+
+      // FAQ Category Filter Tabs
+      const faqTabs = document.querySelectorAll('.re-faq-tab');
+      const faqItems = document.querySelectorAll('.re-faq-item');
+
+      faqTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          faqTabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+
+          const cat = tab.getAttribute('data-faq-cat');
+
+          faqItems.forEach(item => {
+            const itemCat = item.getAttribute('data-faq-cat');
+            if (cat === 'all' || itemCat === cat) {
+              item.style.display = 'block';
+            } else {
+              item.style.display = 'none';
+            }
+          });
+        });
+      });
+
+      // 8. CURRENCY TOGGLE (₦ NGN <-> $ USD)
+      const currencyBtn = document.getElementById('currencyToggle');
+      let isUsd = false;
+
+      if (currencyBtn) {
+        currencyBtn.addEventListener('click', () => {
+          isUsd = !isUsd;
+          currencyBtn.textContent = isUsd ? '$ USD' : '₦ NGN';
+          // In production plugin, multiply/divide listing prices by USD rate
+        });
+      }
     });
-  });
-});
 
   </script>
 </body>
+
 </html>

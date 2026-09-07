@@ -21,17 +21,11 @@ if ( $user_type !== 'client' && ! $is_manager ) {
 
 $team_members = OFP_Team_Member::get_all_for_client( $client->id );
 
-// Check plan limits
-$plan = $client->plan;
-$max_members = 0;
-if ( $plan === 'growth' || $plan === 'sliver' ) {
-    $max_members = 2;
-} elseif ( $plan === 'pro' || $plan === 'gold' ) {
-    $max_members = 3;
-}
+$plan          = OFP_Subscription::client_plan( $client->id );
+$max_members   = OFP_Subscription::team_member_limit( $plan );
 $current_count = count( $team_members );
-$can_invite = ( $max_members > 0 && $current_count < $max_members );
-$free_plan = ( $plan === 'starter' || $plan === 'free' );
+$can_invite    = ( $max_members > 0 && $current_count < $max_members );
+$free_plan     = ( $plan === 'free' );
 
 ?>
 <!DOCTYPE html>

@@ -82,7 +82,7 @@ class OFP_Client_Portal {
         check_ajax_referer( 'ofp_client_ajax', 'nonce' );
         OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
-        if ( ! $client || ! OFP_Subscription::has_active( 'crm', $client->id ) ) wp_send_json_error( 'Unauthorized' );
+        if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) wp_send_json_error( 'Unauthorized' );
 
         $filter_status = sanitize_text_field( $_POST['status'] ?? '' );
         global $wpdb;

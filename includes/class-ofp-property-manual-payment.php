@@ -198,7 +198,7 @@ class OFP_Property_Manual_Payment {
     private static function render_client_verification_page(): void {
         OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
-        if ( ! $client || ! OFP_Subscription::has_active( 'listing', $client->id ) ) { wp_safe_redirect( home_url( '/dashboard' ) ); exit; }
+        if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) { wp_safe_redirect( home_url( '/dashboard' ) ); exit; }
         global $wpdb;
         $p = $wpdb->prefix;
         $payments = $wpdb->get_results( $wpdb->prepare( "SELECT py.*, pu.buyer_name, pr.title AS property_title FROM {$p}ofp_property_payments py INNER JOIN {$p}ofp_property_purchases pu ON pu.id=py.purchase_id LEFT JOIN {$p}ofp_properties pr ON pr.id=pu.property_id WHERE pu.client_id=%d ORDER BY py.created_at DESC, py.id DESC LIMIT 250", (int) $client->id ) );
@@ -209,7 +209,7 @@ class OFP_Property_Manual_Payment {
         check_ajax_referer( 'ofp_client_payment_' . $payment_id, 'nonce' );
         OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
-        if ( ! $client || ! OFP_Subscription::has_active( 'listing', $client->id ) || ! self::can_manage_client_payment( $payment_id, $client ) ) wp_send_json_error( 'Unauthorized', 403 );
+        if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) || ! self::can_manage_client_payment( $payment_id, $client ) ) wp_send_json_error( 'Unauthorized', 403 );
         $result = $approve ? OFP_Property_Payment_Record::success( $payment_id, 0 ) : OFP_Property_Payment_Record::reject( $payment_id, 0, 'Rejected by property client.' );
         wp_send_json_success( [ 'result' => $result ] );
     }
@@ -220,7 +220,7 @@ class OFP_Property_Manual_Payment {
     public static function inject_client_verification_nav(): void {
         if ( is_admin() ) return;
         $client = OFP_Auth::current_client();
-        if ( ! $client || ! OFP_Subscription::has_active( 'listing', $client->id ) ) return;
+        if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) return;
         ?><script>(function(){function add(){var list=document.querySelector('.ofp-sidebar-nav ul');if(!list||list.querySelector('[data-ofp-nav-marker="payment-verification"]'))return;var items=list.querySelectorAll(':scope>li');var source=items[0];if(!source)return;var li=source.cloneNode(true),a=li.querySelector('a');if(!a)return;a.href=<?php echo wp_json_encode( home_url('/property-payment-verification/') ); ?>;a.removeAttribute('aria-disabled');a.classList.remove('locked');a.setAttribute('data-ofp-nav-marker','payment-verification');var icon=a.querySelector('.ofp-nav-icon');if(icon)icon.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>';var label=a.querySelector('.ofp-nav-label');if(label)label.textContent='Payment Verification';list.appendChild(li)}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',add);else add()})();</script><?php
     }
 }

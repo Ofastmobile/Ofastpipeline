@@ -10,6 +10,7 @@ OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
 
+$can_create_installments = OFP_Subscription::allows_installments( (int) $client->id );
 
 global $wpdb;
 $p = $wpdb->prefix;
@@ -18,7 +19,9 @@ $error  = '';
 $share_url = '';
 
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_property_offer'] ) ) {
-    if ( ! isset( $_POST['ofp_property_offer_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ofp_property_offer_nonce'] ) ), 'ofp_property_offer_' . $client->id ) ) {
+    if ( ! $can_create_installments ) {
+        $error = 'Installment offers are available on the Gold plan. Upgrade to create new offers.';
+    } elseif ( ! isset( $_POST['ofp_property_offer_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ofp_property_offer_nonce'] ) ), 'ofp_property_offer_' . $client->id ) ) {
         $error = 'Security check failed. Please refresh and try again.';
     } else {
         $property_id        = absint( $_POST['property_id'] ?? 0 );
@@ -169,6 +172,12 @@ $existing_offers = $wpdb->get_results( $wpdb->prepare(
         <div style="display:grid; grid-template-columns: 1fr; gap:24px;">
             <div class="ofp-card">
                 <h3 style="margin-bottom:4px;">Create Installment Offer</h3>
+                <?php if ( ! $can_create_installments ) : ?>
+                    <p class="ofp-hint">Installment offers are a Gold plan feature. Existing offers stay visible below.</p>
+                    <p style="margin-top:16px;">
+                        <a href="<?php echo esc_url( home_url( '/pricing' ) ); ?>" class="ofp-btn ofp-btn-primary">Upgrade to Gold</a>
+                    </p>
+                <?php else : ?>
                 <p class="ofp-hint">This creates an offer only. No payment or virtual account is created until the buyer accepts it.</p>
 
                 <form method="post" style="margin-top:24px;">
@@ -250,6 +259,7 @@ $existing_offers = $wpdb->get_results( $wpdb->prepare(
                         <button type="submit" class="ofp-btn ofp-btn-primary">Create Installment Offer</button>
                     </div>
                 </form>
+                <?php endif; ?>
             </div>
 
             <div class="ofp-card">

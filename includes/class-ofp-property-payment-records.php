@@ -122,7 +122,7 @@ class OFP_Property_Payment_Records {
             wp_safe_redirect( home_url( '/login' ) );
             exit;
         }
-        if ( ! OFP_Subscription::has_active( 'listing', $client->id ) ) {
+        if ( ! OFP_Subscription::has_platform_access( $client->id ) ) {
             wp_safe_redirect( home_url( '/dashboard' ) );
             exit;
         }
@@ -273,7 +273,7 @@ class OFP_Property_Payment_Records {
         check_admin_referer( 'ofp_client_payment_' . ( $approve ? 'verify_' : 'reject_' ) . $payment_id );
         OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
-        if ( ! $client || ! OFP_Subscription::has_active( 'listing', $client->id ) ) wp_die( 'Access denied.' );
+        if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) wp_die( 'Access denied.' );
 
         global $wpdb;
         $owned = $wpdb->get_var( $wpdb->prepare(

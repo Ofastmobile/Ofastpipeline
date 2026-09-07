@@ -157,6 +157,18 @@ class OFP_Mailer {
         return $sent;
     }
 
+    /**
+     * Send a system email directly, usually for OTPs or system alerts.
+     *
+     * @param string $to
+     * @param string $subject
+     * @param string $body_html
+     * @return bool
+     */
+    public static function send_system_email( string $to, string $subject, string $body_html ): bool {
+        return self::send( $to, 'User', $subject, $body_html );
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // SYSTEM EMAILS
     // ─────────────────────────────────────────────────────────────────────────

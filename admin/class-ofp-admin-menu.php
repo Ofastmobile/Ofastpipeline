@@ -548,6 +548,8 @@ class OFP_Admin_Menu {
             // Domain routing (Phase 16)
             'ofp_crm_base_domain'     => sanitize_text_field( wp_unslash( $_POST['ofp_crm_base_domain']     ?? '' ) ),
             'ofp_global_pixel_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_global_pixel_id']     ?? '' ) ),
+            // Authentication
+            'ofp_enable_otp'          => sanitize_text_field( wp_unslash( $_POST['ofp_enable_otp']          ?? 'yes' ) ),
             // Default pipeline messages
             'ofp_default_instant_sms' => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_instant_sms'] ?? '' ) ),
             'ofp_default_followup_1'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_1']  ?? '' ) ),
@@ -839,10 +841,18 @@ class OFP_Admin_Menu {
             exit;
         }
 
-        $token = OFP_Auth::generate_admin_preview_token( $client_id );
-        $url   = add_query_arg( 'admin_preview', $token, home_url( '/login' ) );
+        // Issue a client session directly (bypass login/OTP entirely).
+        OFP_Auth::issue_session( $client_id, 'client' );
 
-        wp_safe_redirect( $url );
+        // Log the preview for audit trail.
+        $admin = OFP_Auth::current_admin();
+        error_log( sprintf(
+            '[OFP_Auth] Admin preview: %s (admin #%d) previewed client #%d (%s) at %s',
+            $admin->email ?? 'unknown', $admin->id ?? 0, $client_id, $client->business_name, current_time( 'mysql' )
+        ) );
+
+        // Redirect straight to the client dashboard.
+        wp_redirect( home_url( '/dashboard?preview=1' ) );
         exit;
     }
 

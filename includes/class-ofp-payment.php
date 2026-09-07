@@ -238,8 +238,12 @@ class OFP_Payment {
         if ( preg_match( '/^ofp_sub_crm_(\d+)_/', $reference, $m ) ) {
             return [ 'type' => 'crm', 'client_id' => (int) $m[1], 'plan' => null ];
         }
-        if ( preg_match( '/^ofp_sub_listing_(\d+)_(bronze|silver|gold)_/', $reference, $m ) ) {
-            return [ 'type' => 'listing', 'client_id' => (int) $m[1], 'plan' => $m[2] ];
+        if ( preg_match( '/^ofp_sub_listing_(\d+)_(bronze|free|silver|gold)_/', $reference, $m ) ) {
+            return [
+                'type'      => 'listing',
+                'client_id' => (int) $m[1],
+                'plan'      => OFP_Subscription::normalize_plan( $m[2] ),
+            ];
         }
         return null;
     }
@@ -263,14 +267,21 @@ class OFP_Payment {
         }
 
         if ( $type === 'crm' ) {
-            $amount      = $override_amount ?? OFP_Subscription::get_plan_price( $client->plan );
-            $description = 'CRM Plan Payment — ' . ucfirst( (string) $client->plan );
-        } elseif ( $type === 'listing' ) {
+            // Product is one plan. Old CRM checkouts become a listing-plan
+            // payment at the mapped Free/Silver/Gold tier.
+            $type = 'listing';
+            $plan = OFP_Subscription::normalize_plan( $plan ?: ( $client->plan ?? 'silver' ) );
+            if ( $plan === 'free' ) {
+                $plan = 'silver';
+            }
+        }
+
+        if ( $type === 'listing' ) {
             if ( ! $plan || ! in_array( $plan, OFP_Property_CPT::PLAN_KEYS, true ) ) {
                 return null;
             }
             $amount      = $override_amount ?? OFP_Property_CPT::get_plan_price( $plan );
-            $description = 'Listing Plan Payment — ' . ucfirst( $plan );
+            $description = ucfirst( $plan ) . ' Plan Payment';
         } else {
             return null;
         }

@@ -81,7 +81,7 @@ class OFP_Property_Receipt_Viewer {
         }
 
         // Verify client has active listing subscription
-        if ( ! OFP_Subscription::has_active( 'listing', $client->id ) ) {
+        if ( ! OFP_Subscription::has_platform_access( $client->id ) ) {
             return false;
         }
 
