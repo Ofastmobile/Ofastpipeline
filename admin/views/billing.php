@@ -101,6 +101,9 @@ include OFP_PATH . 'admin/views/partials/header.php';
                             if ( $sub->status === 'underpaid' && ! empty( $sub->expected_amount ) ) {
                                 $shortfall = max( 0, (float) $sub->expected_amount - (float) $sub->amount );
                                 echo '<div style="font-size:11px;color:#dc2626;margin-top:4px;">Expected ₦' . esc_html( number_format( (float) $sub->expected_amount, 0 ) ) . ' — short ₦' . esc_html( number_format( $shortfall, 0 ) ) . '</div>';
+                            } elseif ( $sub->status === 'paid' && ! empty( $sub->expected_amount ) && (float) $sub->amount > (float) $sub->expected_amount + 1 ) {
+                                $excess = (float) $sub->amount - (float) $sub->expected_amount;
+                                echo '<div style="font-size:11px;color:#b45309;margin-top:4px;">Expected ₦' . esc_html( number_format( (float) $sub->expected_amount, 0 ) ) . ' — overpaid by ₦' . esc_html( number_format( $excess, 0 ) ) . '</div>';
                             }
                             ?>
                         </td>

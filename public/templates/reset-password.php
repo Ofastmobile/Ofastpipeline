@@ -1,6 +1,6 @@
 <?php
 /**
- * Template: /reset-password?email={email}&token={raw_token}
+ * Template: /reset-password?token={raw_token}
  *
  * Public route, no login required.
  *
@@ -11,13 +11,13 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-$email = sanitize_email( wp_unslash( $_GET['email'] ?? ( $_POST['email'] ?? '' ) ) );
 $token = sanitize_text_field( wp_unslash( $_GET['token'] ?? ( $_POST['token'] ?? '' ) ) );
+$is_team_member = ! empty( $_GET['tm'] ) || ! empty( $_POST['tm'] );
 
 $error   = '';
 $success = false;
 
-$token_valid = $email && $token && OFP_Auth::verify_reset_token( $email, $token );
+$token_valid = $token && OFP_Auth::verify_reset_token( $token, $is_team_member );
 
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && $token_valid ) {
 
@@ -35,7 +35,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && $token_valid ) {
         } elseif ( $password !== $password2 ) {
             $error = 'Passwords do not match.';
         } else {
-            $done = OFP_Auth::complete_password_reset( $email, $token, $password );
+            $done = OFP_Auth::complete_password_reset( $token, $password, $is_team_member );
             if ( $done ) {
                 $success = true;
                 // Token is now consumed
@@ -216,8 +216,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && $token_valid ) {
 
             <form method="POST" action="">
                 <?php wp_nonce_field( 'ofp_reset_password_action', 'ofp_reset_nonce' ); ?>
-                <input type="hidden" name="email" value="<?php echo esc_attr( $email ); ?>">
                 <input type="hidden" name="token" value="<?php echo esc_attr( $token ); ?>">
+                <input type="hidden" name="tm" value="<?php echo esc_attr( $is_team_member ? '1' : '0' ); ?>">
 
                 <div class="ofp-field">
                     <label for="ofp-password">New Password</label>

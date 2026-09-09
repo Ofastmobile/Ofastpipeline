@@ -102,8 +102,41 @@ $status_badges = [
         </div>
     <?php endif; ?>
 
+    <?php $ofp_current_user = OFP_Auth::current_user(); ?>
+    <?php if ( empty( $ofp_current_user->is_team_member ) && OFP_Subscription::client_plan( $client->id ) === 'free' ) : ?>
+        <div class="ofp-alert ofp-alert-info" id="ofp-free-plan-banner" style="display:none;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+            <span>
+                ✨ You're on the <strong>Free</strong> plan. Upgrade to unlock more listings with priority
+                placement, team member seats, full email templates, and (on Gold) editable installment plans
+                for buyers.
+            </span>
+            <span style="display:flex;gap:10px;align-items:center;white-space:nowrap;">
+                <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>"
+                   style="display:inline-block;background:var(--btn-primary);color:#fff;padding:8px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;">
+                    See Plans →
+                </a>
+                <button type="button" id="ofp-free-plan-banner-dismiss"
+                        style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1;padding:0 4px;"
+                        title="Dismiss for today" aria-label="Dismiss">&times;</button>
+            </span>
+        </div>
+        <script>
+            (function() {
+                var key = 'ofp_free_plan_banner_dismissed_until';
+                var until = parseInt(localStorage.getItem(key) || '0', 10);
+                var banner = document.getElementById('ofp-free-plan-banner');
+                if (Date.now() > until) {
+                    banner.style.display = 'flex';
+                }
+                document.getElementById('ofp-free-plan-banner-dismiss').addEventListener('click', function() {
+                    banner.style.display = 'none';
+                    localStorage.setItem(key, String(Date.now() + 24 * 60 * 60 * 1000));
+                });
+            })();
+        </script>
+    <?php endif; ?>
 
-        <!-- 4 Stats Cards matched to image -->
+
         <div class="ofp-stats-grid">
             <div class="ofp-stat-card">
                 <div class="ofp-stat-header">
@@ -150,55 +183,88 @@ $status_badges = [
             </div>
         </div>
 
-        <!-- 2 Charts Placeholders -->
+        <!-- 2 Charts (real data via AJAX) -->
         <div class="ofp-grid-2">
             <div class="ofp-card">
                 <div class="ofp-card-header">
                     <span class="ofp-card-title">Prospect Volume Trend</span>
-                    <a href="#" class="ofp-card-link">Live Data (7 days)</a>
+                    <span class="ofp-card-link">Live Data (7 days)</span>
                 </div>
-                <div class="ofp-chart-placeholder">
-                    <div class="ofp-bar orange" style="height:30%"></div>
-                    <div class="ofp-bar orange" style="height:50%"></div>
-                    <div class="ofp-bar orange" style="height:20%"></div>
-                    <div class="ofp-bar orange" style="height:70%"></div>
-                    <div class="ofp-bar orange" style="height:40%"></div>
-                    <div class="ofp-bar orange" style="height:60%"></div>
-                    <div class="ofp-bar orange" style="height:10%"></div>
-                </div>
-                <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:11px;color:var(--text-muted);text-align:center;">
-                    <?php for($i=6; $i>=0; $i--): ?>
-                        <div style="flex:1;">
-                            <div><?php echo date('M d', strtotime("-$i days")); ?></div>
-                            <div style="font-weight:600;margin-top:2px;color:var(--text-main);"><?php echo rand(2,15); ?></div>
-                        </div>
-                    <?php endfor; ?>
+                <div style="position:relative;height:220px;">
+                    <canvas id="ofp-chart-leads"></canvas>
                 </div>
             </div>
 
             <div class="ofp-card">
                 <div class="ofp-card-header">
                     <span class="ofp-card-title">Conversion Trend</span>
-                    <a href="#" class="ofp-card-link">Live Data (6 months)</a>
+                    <span class="ofp-card-link">Live Data (6 months)</span>
                 </div>
-                <div class="ofp-chart-placeholder">
-                    <div class="ofp-bar blue" style="height:15%"></div>
-                    <div class="ofp-bar blue" style="height:25%"></div>
-                    <div class="ofp-bar blue" style="height:45%"></div>
-                    <div class="ofp-bar blue" style="height:60%"></div>
-                    <div class="ofp-bar blue" style="height:80%"></div>
-                    <div class="ofp-bar blue" style="height:95%"></div>
-                </div>
-                <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:11px;color:var(--text-muted);text-align:center;">
-                    <?php for($i=5; $i>=0; $i--): ?>
-                        <div style="flex:1;">
-                            <div><?php echo date('M Y', strtotime("-$i months")); ?></div>
-                            <div style="font-weight:600;margin-top:2px;color:var(--text-main);"><?php echo rand(10,50); ?>%</div>
-                        </div>
-                    <?php endfor; ?>
+                <div style="position:relative;height:220px;">
+                    <canvas id="ofp-chart-conversion"></canvas>
                 </div>
             </div>
         </div>
+
+        <script>
+        (function() {
+            if ( typeof ofpClientData === 'undefined' || typeof Chart === 'undefined' ) return;
+
+            var body = new URLSearchParams();
+            body.append('action', 'ofp_dashboard_chart_data');
+            body.append('nonce', ofpClientData.nonce);
+
+            fetch(ofpClientData.ajaxurl, { method: 'POST', credentials: 'same-origin', body: body })
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (!res.success) return;
+
+                    var daily = res.data.daily;
+                    var monthly = res.data.monthly;
+
+                    new Chart(document.getElementById('ofp-chart-leads'), {
+                        type: 'bar',
+                        data: {
+                            labels: daily.map(function(d) { return d.label; }),
+                            datasets: [{
+                                label: 'Leads',
+                                data: daily.map(function(d) { return d.count; }),
+                                backgroundColor: '#f97316',
+                                borderRadius: 6,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                        }
+                    });
+
+                    new Chart(document.getElementById('ofp-chart-conversion'), {
+                        type: 'line',
+                        data: {
+                            labels: monthly.map(function(m) { return m.label; }),
+                            datasets: [{
+                                label: 'Conversion %',
+                                data: monthly.map(function(m) { return m.rate; }),
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59,130,246,0.15)',
+                                fill: true,
+                                tension: 0.3,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + '%'; } } } }
+                        }
+                    });
+                })
+                .catch(function(err) { console.error('OFP chart data error:', err); });
+        })();
+        </script>
 
         <!-- 2 Tables -->
         <div class="ofp-grid-2">

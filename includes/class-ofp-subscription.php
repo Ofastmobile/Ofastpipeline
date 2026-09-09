@@ -452,6 +452,27 @@ class OFP_Subscription {
     }
 
     /**
+     * True when a client is inside the 7-day window before their
+     * subscription expires — the only time a paid (Silver/Gold) client is
+     * allowed to renew or switch tiers. Free clients bypass this check
+     * entirely wherever it's used (they can pick any plan anytime).
+     */
+    public static function in_renewal_window( int $client_id ): bool {
+        $client = OFP_Client::get( $client_id );
+        if ( ! $client || empty( $client->subscription_expires ) ) {
+            return true; // No expiry on record yet — don't block.
+        }
+
+        $expiry = strtotime( $client->subscription_expires );
+        if ( ! $expiry ) {
+            return true;
+        }
+
+        $days_to_expiry = ( $expiry - time() ) / DAY_IN_SECONDS;
+        return $days_to_expiry <= 7;
+    }
+
+    /**
      * Expected monthly amount for unmatched VA / webhook payments.
      *
      * ONE plan price only. Previously this added CRM + listing and could
@@ -510,38 +531,71 @@ class OFP_Subscription {
         global $wpdb;
         $p = $wpdb->prefix;
 
-        // ── 7-day reminder ────────────────────────────────────────────────────
-        $clients_7 = $wpdb->get_results(
-            "SELECT * FROM {$p}ofp_clients
-             WHERE subscription_expires = DATE_ADD( CURDATE(), INTERVAL 7 DAY )
-               AND status = 'active'"
+        // ── Renewal window reminders — every day from 7 days out to the last
+        // day before expiry, escalating in urgency as the date gets closer.
+        // (Previously this only fired once at exactly 7 days and once at
+        // exactly 3 days — a client who missed those two emails got nothing
+        // else until they actually expired.)
+        $clients_expiring = $wpdb->get_results(
+            "SELECT *, DATEDIFF( subscription_expires, CURDATE() ) AS days_left
+             FROM {$p}ofp_clients
+             WHERE subscription_expires BETWEEN CURDATE() AND DATE_ADD( CURDATE(), INTERVAL 7 DAY )
+               AND status = 'active'
+               AND plan IN ('silver', 'gold')"
         );
-        foreach ( $clients_7 as $client ) {
-            self::send_reminder( $client, 7 );
+        foreach ( $clients_expiring as $client ) {
+            self::send_reminder( $client, (int) $client->days_left );
         }
 
-        // ── 3-day reminder ────────────────────────────────────────────────────
-        $clients_3 = $wpdb->get_results(
-            "SELECT * FROM {$p}ofp_clients
-             WHERE subscription_expires = DATE_ADD( CURDATE(), INTERVAL 3 DAY )
-               AND status = 'active'"
-        );
-        foreach ( $clients_3 as $client ) {
-            self::send_reminder( $client, 3 );
-        }
+        // ── Daily upgrade nudge for clients currently on the free plan ───────
+        // Covers both clients who never upgraded and clients who dropped back
+        // to free after a paid plan expired without renewal.
+        self::send_free_plan_nudges();
 
         // ── active → free (expired yesterday or earlier) ─────────────────────
         // If a paid plan expires, we drop them down to the free tier instead of suspending.
-        $wpdb->query(
-            "UPDATE {$p}ofp_clients
-             SET plan = 'free', listing_plan = 'free'
+        $expired_clients = $wpdb->get_results(
+            "SELECT id, plan, listing_plan FROM {$p}ofp_clients
              WHERE subscription_expires < CURDATE()
                AND status = 'active'
                AND (plan != 'free' OR listing_plan != 'free')"
         );
 
+        foreach ( $expired_clients as $expired ) {
+            $wpdb->update(
+                $p . 'ofp_clients',
+                [ 'plan' => 'free', 'listing_plan' => 'free' ],
+                [ 'id' => $expired->id ]
+            );
+
+            if ( class_exists( 'OFP_Logger' ) ) {
+                OFP_Logger::log( 'Plan expired — dropped to Free', (int) $expired->id, [
+                    'previous_plan' => $expired->plan,
+                ] );
+            }
+        }
+
         // ── Clean expired session tokens ──────────────────────────────────────
         OFP_Auth::purge_expired_sessions();
+    }
+
+    /**
+     * Daily FOMO/upgrade nudge for every active client currently on the
+     * free plan — whether they signed up on free, or dropped back to it
+     * after a paid plan lapsed. Runs once a day via the daily cron, so each
+     * client gets at most one of these a day.
+     */
+    public static function send_free_plan_nudges(): void {
+        global $wpdb;
+
+        $free_clients = $wpdb->get_results(
+            "SELECT * FROM {$wpdb->prefix}ofp_clients
+             WHERE status = 'active' AND plan = 'free'"
+        );
+
+        foreach ( $free_clients as $client ) {
+            OFP_Mailer::send_free_plan_nudge( $client );
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -554,14 +608,16 @@ class OFP_Subscription {
      * Called by OFP_Monnify::handle_webhook() after a payment is verified,
      * and by OFP_Payment::confirm_subscription_checkout() (Phase 20).
      *
-     * @param  int         $client_id     Client ID.
-     * @param  string      $type          'crm' or 'listing'.
-     * @param  float       $amount        Amount paid in NGN.
-     * @param  string      $payment_ref   Gateway transaction reference.
-     * @param  string      $method        Payment method (e.g. 'virtual_account', 'checkout').
-     * @param  string|null $plan_override Explicit plan tier — pass this when the caller
-     *                                    already knows it (e.g. checkout flow encodes the
-     *                                    tier in the reference). Only relevant for 'listing'.
+     * @param  int         $client_id      Client ID.
+     * @param  string      $type           'crm' or 'listing'.
+     * @param  float       $amount         Amount paid in NGN.
+     * @param  string      $payment_ref    Gateway transaction reference.
+     * @param  string      $method         Payment method (e.g. 'virtual_account', 'checkout').
+     * @param  string|null $plan_override  Explicit plan tier — pass this when the caller
+     *                                     already knows it (e.g. checkout flow encodes the
+     *                                     tier in the reference). Only relevant for 'listing'.
+     * @param  float|null  $expected_amount What this checkout expected to receive — stored so
+     *                                     an overpaid row still shows the right baseline in Billing.
      * @return void
      */
     public static function record_payment(
@@ -570,7 +626,8 @@ class OFP_Subscription {
         float $amount,
         string $payment_ref,
         string $method = 'virtual_account',
-        ?string $plan_override = null
+        ?string $plan_override = null,
+        ?float $expected_amount = null
     ): void {
         global $wpdb;
 
@@ -605,17 +662,18 @@ class OFP_Subscription {
         $wpdb->insert(
             $wpdb->prefix . 'ofp_subscriptions',
             [
-                'client_id'      => $client_id,
-                'type'           => $type,
-                'plan'           => $plan,
-                'amount'         => $amount,
-                'payment_method' => $method,
-                'payment_ref'    => sanitize_text_field( $payment_ref ),
-                'status'         => 'paid',
-                'period_start'   => $period_start,
-                'period_end'     => $period_end,
-                'paid_at'        => current_time( 'mysql' ),
-                'created_at'     => current_time( 'mysql' ),
+                'client_id'       => $client_id,
+                'type'            => $type,
+                'plan'            => $plan,
+                'amount'          => $amount,
+                'expected_amount' => $expected_amount,
+                'payment_method'  => $method,
+                'payment_ref'     => sanitize_text_field( $payment_ref ),
+                'status'          => 'paid',
+                'period_start'    => $period_start,
+                'period_end'      => $period_end,
+                'paid_at'         => current_time( 'mysql' ),
+                'created_at'      => current_time( 'mysql' ),
             ]
         );
 
@@ -776,7 +834,8 @@ class OFP_Subscription {
         float $amount_paid,
         float $expected,
         string $payment_ref,
-        string $method
+        string $method,
+        ?string $plan_override = null
     ): void {
         global $wpdb;
 
@@ -786,12 +845,14 @@ class OFP_Subscription {
             return;
         }
 
+        $plan = $plan_override ? self::normalize_plan( $plan_override ) : $client->plan;
+
         $wpdb->insert(
             $wpdb->prefix . 'ofp_subscriptions',
             [
                 'client_id'       => $client_id,
-                'type'            => $client->plan ? 'crm' : 'listing',
-                'plan'            => $client->plan,
+                'type'            => 'listing',
+                'plan'            => $plan,
                 'amount'          => $amount_paid,
                 'expected_amount' => $expected,
                 'payment_method'  => $method,
@@ -810,6 +871,7 @@ class OFP_Subscription {
             'Underpayment Received — ' . $client->business_name,
             '<h2>⚠️ Underpayment Received</h2>'
             . '<p><strong>Client:</strong> ' . esc_html( $client->business_name ) . '</p>'
+            . '<p><strong>Plan:</strong> ' . esc_html( ucfirst( $plan ) ) . '</p>'
             . '<p><strong>Amount received:</strong> NGN ' . number_format( $amount_paid, 2 ) . '</p>'
             . '<p><strong>Amount expected:</strong> NGN ' . number_format( $expected, 2 ) . '</p>'
             . '<p><strong>Shortfall:</strong> NGN ' . number_format( $shortfall, 2 ) . '</p>'
@@ -833,7 +895,53 @@ class OFP_Subscription {
             OFP_Logger::log( 'Underpayment received', $client_id, [
                 'amount_paid' => $amount_paid,
                 'expected'    => $expected,
+                'plan'        => $plan,
                 'method'      => $method,
+                'reference'   => $payment_ref
+            ] );
+        }
+    }
+
+    /**
+     * A checkout payment came in for MORE than the plan it was for.
+     * The plan is already activated by the time this runs (record_payment
+     * already ran) — this just puts the excess in front of an admin to
+     * decide what to do with it (refund, credit, ignore). It never blocks
+     * or delays activation.
+     */
+    public static function flag_overpayment(
+        int $client_id,
+        float $amount_paid,
+        float $expected,
+        string $payment_ref
+    ): void {
+        $client = OFP_Client::get( $client_id );
+        if ( ! $client ) {
+            return;
+        }
+
+        $excess = max( 0, $amount_paid - $expected );
+
+        OFP_Mailer::send(
+            get_option( 'admin_email' ),
+            'Admin',
+            'Overpayment Received — ' . $client->business_name,
+            '<h2>💰 Overpayment Received</h2>'
+            . '<p><strong>Client:</strong> ' . esc_html( $client->business_name ) . '</p>'
+            . '<p><strong>Amount received:</strong> NGN ' . number_format( $amount_paid, 2 ) . '</p>'
+            . '<p><strong>Plan price:</strong> NGN ' . number_format( $expected, 2 ) . '</p>'
+            . '<p><strong>Excess:</strong> NGN ' . number_format( $excess, 2 ) . '</p>'
+            . '<p><strong>Reference:</strong> ' . esc_html( $payment_ref ) . '</p>'
+            . '<p>The plan is already active — this is just the extra amount, decide '
+            . 'whether to refund it or credit it toward their next renewal in wp-admin → '
+            . 'OFast Pipeline → Billing.</p>'
+        );
+
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( 'Overpayment received', $client_id, [
+                'amount_paid' => $amount_paid,
+                'expected'    => $expected,
+                'excess'      => $excess,
                 'reference'   => $payment_ref
             ] );
         }
@@ -964,12 +1072,45 @@ class OFP_Subscription {
      * @param string $type         'crm' or 'listing'
      * @param float  $amount_paid  The amount the client actually paid (stored for reference)
      */
+    /**
+     * Activate or extend a subscription from an admin-approved manual
+     * (bank transfer) funding request.
+     *
+     * Bug fix: this used to only touch status/amount/period_end and never
+     * wrote the plan anywhere (not on ofp_clients.plan, not on the
+     * ofp_subscriptions row it updated). client_plan() and
+     * get_active_listing_plan() both depend on that plan value, so a
+     * manually-approved Silver/Gold payment would extend the expiry date
+     * but the client would still show as 'free' everywhere else — the
+     * Funding page kept asking them to pay even though they were "active".
+     *
+     * @param  int         $client_id
+     * @param  string      $type        'listing' (or legacy 'crm', mapped through).
+     * @param  float       $amount_paid
+     * @param  string|null $plan        The tier this payment activates: silver|gold.
+     *                                  Required for a correct plan sync; if omitted,
+     *                                  falls back to the client's current plan so old
+     *                                  callers don't fatal, but won't fix a mismatch.
+     */
     public static function activate_from_manual_payment(
         int $client_id,
         string $type,
-        float $amount_paid
+        float $amount_paid,
+        ?string $plan = null
     ): void {
         global $wpdb;
+
+        $client = OFP_Client::get( $client_id );
+        if ( ! $client ) {
+            return;
+        }
+
+        // Product is unified — CRM manual approvals become a listing payment too.
+        $type = 'listing';
+        $plan = $plan ? self::normalize_plan( $plan ) : ( $client->plan ?? 'silver' );
+        if ( $plan === 'free' ) {
+            $plan = 'silver';
+        }
 
         $existing = $wpdb->get_row( $wpdb->prepare( "
             SELECT * FROM {$wpdb->prefix}ofp_subscriptions
@@ -983,18 +1124,17 @@ class OFP_Subscription {
             $wpdb->update(
                 $wpdb->prefix . 'ofp_subscriptions',
                 [
-                    'status'         => 'paid',
-                    'payment_method' => 'manual',
-                    'amount'         => $amount_paid,
-                    'period_end'     => $period_end,
+                    'status'          => 'paid',
+                    'plan'            => $plan,
+                    'payment_method'  => 'manual',
+                    'amount'          => $amount_paid,
+                    'expected_amount' => null,
+                    'period_end'      => $period_end,
                 ],
                 [ 'id' => $existing->id ]
             );
         } else {
             // No row at all — create and immediately activate.
-            $client = OFP_Client::get( $client_id );
-            $plan   = ( $type === 'crm' ) ? ( $client->plan ?? 'starter' ) : null;
-
             $wpdb->insert( $wpdb->prefix . 'ofp_subscriptions', [
                 'client_id'      => $client_id,
                 'type'           => $type,
@@ -1009,8 +1149,7 @@ class OFP_Subscription {
 
         // Bring the client status back to 'active' if they were pending/suspended/etc.
         $needs_activation = [ 'pending_review', 'pending', 'grace', 'suspended' ];
-        $client = OFP_Client::get( $client_id );
-        if ( $client && in_array( $client->status, $needs_activation, true ) ) {
+        if ( in_array( $client->status, $needs_activation, true ) ) {
             OFP_Client::update_status( $client_id, 'active' );
         }
 
@@ -1024,6 +1163,10 @@ class OFP_Subscription {
             $period_end,
             $client_id
         ) );
+
+        // The fix: keep ofp_clients.plan / listing_plan in sync so client_plan(),
+        // the Funding page, and every menu/feature gate all agree immediately.
+        self::sync_client_plan_columns( $client_id, $plan );
     }
 
     // ─────────────────────────────────────────────────────────────────────────

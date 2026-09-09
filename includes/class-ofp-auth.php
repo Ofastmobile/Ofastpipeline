@@ -86,13 +86,21 @@ class OFP_Auth {
             }
             if ( password_verify( $password, $team_member->password ) ) {
                 // We also need to ensure the parent client isn't suspended
-                $parent_client = $wpdb->get_var(
+                $parent_client = $wpdb->get_row(
                     $wpdb->prepare(
-                        "SELECT status FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
+                        "SELECT status, plan FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
                         $team_member->client_id
                     )
                 );
-                if ( in_array( $parent_client, [ 'suspended', 'cancelled', 'trash' ], true ) ) {
+                if ( ! $parent_client || in_array( $parent_client->status, [ 'suspended', 'cancelled', 'trash' ], true ) ) {
+                    return false;
+                }
+
+                // Free plan doesn't include team members — if the main
+                // client's subscription lapsed and they're back on Free,
+                // team members lose login access along with everything
+                // else that plan doesn't cover, until the client upgrades.
+                if ( class_exists( 'OFP_Subscription' ) && OFP_Subscription::team_member_limit( $parent_client->plan ) <= 0 ) {
                     return false;
                 }
 
@@ -275,7 +283,23 @@ class OFP_Auth {
                     $session->team_member_id
                 )
             );
+
             if ( $user ) {
+                // Free plan doesn't include team members. If the client's
+                // subscription lapsed and dropped them to Free while this
+                // team member still had an active session, kick them out
+                // right now rather than waiting for them to log in again —
+                // otherwise they'd keep working the dashboard for however
+                // long their session cookie still has left.
+                if ( class_exists( 'OFP_Subscription' ) ) {
+                    $current_plan = OFP_Subscription::client_plan( $session->client_id );
+                    if ( OFP_Subscription::team_member_limit( $current_plan ) <= 0 ) {
+                        $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'token' => $token ] );
+                        self::clear_cookie();
+                        return null;
+                    }
+                }
+
                 $user->is_team_member = true;
                 $user->parent_client_id = $session->client_id;
                 // Decode permissions for easy access
@@ -357,36 +381,36 @@ class OFP_Auth {
      *
      * @return object|null  Full ofp_clients row, or null.
      */
+    /**
+     * Resolve the CLIENT record for whoever is logged in — whether that's
+     * the main client themselves, or a team member acting under that
+     * client's account. Always returns the parent client's row, so
+     * standard client-scoped queries (leads, listings, plan, etc.) work
+     * the same way regardless of who's actually logged in.
+     *
+     * Rebuilt on top of current_user() instead of duplicating the session
+     * lookup — the two used to be two separate, drifting implementations,
+     * which is exactly how team members ended up able to keep a session
+     * alive (and reach billing pages) after their client's plan no longer
+     * allowed team members at all: current_user() didn't get checked by
+     * most pages, only current_client() did, and current_client() never
+     * had that check in the first place.
+     */
     public static function current_client(): ?object {
+        $user = self::current_user();
+        if ( ! $user ) {
+            return null;
+        }
+
+        if ( empty( $user->is_team_member ) ) {
+            return $user;
+        }
+
         global $wpdb;
-
-        $token = isset( $_COOKIE[ self::COOKIE_NAME ] )
-            ? sanitize_text_field( wp_unslash( $_COOKIE[ self::COOKIE_NAME ] ) )
-            : '';
-
-        if ( empty( $token ) ) {
-            return null;
-        }
-
-        $session = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}ofp_client_sessions
-                 WHERE token = %s AND expires_at > NOW()
-                 LIMIT 1",
-                $token
-            )
-        );
-
-        if ( ! $session ) {
-            self::clear_cookie();
-            return null;
-        }
-
-        // Always return the main client record so standard scoped queries work
         return $wpdb->get_row(
             $wpdb->prepare(
                 "SELECT * FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
-                $session->client_id
+                $user->parent_client_id
             )
         );
     }
@@ -416,6 +440,28 @@ class OFP_Auth {
     public static function require_client_login(): void {
         if ( ! self::current_client() ) {
             wp_safe_redirect( home_url( '/login' ) );
+            exit;
+        }
+    }
+
+    /**
+     * Block team members from pages that move money (Funding, plan
+     * checkout, manual funding requests). This is a hard rule — unlike
+     * has_permission(), no role (not even Manager) can bypass it. Only
+     * the main client login can pay, upgrade, downgrade, or submit a
+     * manual funding request. Call this AFTER require_client_login().
+     */
+    public static function require_main_client_only(): void {
+        $user = self::current_user();
+        if ( $user && ! empty( $user->is_team_member ) ) {
+            if ( class_exists( 'OFP_Logger' ) ) {
+                OFP_Logger::log( 'Team member blocked from billing page', $user->parent_client_id ?? null, [
+                    'team_member_id' => $user->id ?? null,
+                    'name'           => $user->name ?? null,
+                    'page'           => $_SERVER['REQUEST_URI'] ?? '',
+                ] );
+            }
+            wp_safe_redirect( home_url( '/dashboard?billing_restricted=1' ) );
             exit;
         }
     }
@@ -483,7 +529,7 @@ class OFP_Auth {
         global $wpdb;
 
         // Check clients
-        $client = $wpdb->get_row( $wpdb->prepare( "SELECT id, email FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1", sanitize_email( $email ) ) );
+        $client = $wpdb->get_row( $wpdb->prepare( "SELECT id, email, owner_name FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1", sanitize_email( $email ) ) );
         if ( $client ) {
             $raw_token = bin2hex( random_bytes( 32 ) );
             $wpdb->update(
@@ -494,7 +540,7 @@ class OFP_Auth {
                 ],
                 [ 'id' => $client->id ]
             );
-            $reset_url = add_query_arg( [ 'token' => $raw_token, 'email' => $client->email ], home_url( '/reset-password' ) );
+            $reset_url = add_query_arg( [ 'token' => $raw_token ], home_url( '/reset-password' ) );
             OFP_Mailer::send_password_reset( $client, $reset_url );
             return true;
         }
@@ -511,11 +557,12 @@ class OFP_Auth {
                 ],
                 [ 'id' => $team_member->id ]
             );
-            $reset_url = add_query_arg( [ 'token' => $raw_token, 'email' => $team_member->email, 'tm' => 1 ], home_url( '/reset-password' ) );
+            $reset_url = add_query_arg( [ 'token' => $raw_token, 'tm' => 1 ], home_url( '/reset-password' ) );
             
             // Hacky object creation for mailer compatibility
             $obj = new stdClass();
             $obj->business_name = $team_member->name;
+            $obj->owner_name = $team_member->name;
             $obj->email = $team_member->email;
             
             OFP_Mailer::send_password_reset( $obj, $reset_url );
@@ -525,28 +572,32 @@ class OFP_Auth {
         return false;
     }
 
-    public static function verify_reset_token( string $email, string $raw_token, bool $is_team_member = false ): bool {
+    /**
+     * Verify a reset token by its hash alone (no email needed).
+     *
+     * @return object|false  The matching client/team member row, or false if invalid/expired.
+     */
+    public static function verify_reset_token( string $raw_token, bool $is_team_member = false ) {
         global $wpdb;
-        $email = sanitize_email( $email );
         $expected_hash = hash('sha256', $raw_token);
 
         if ( $is_team_member ) {
-            $tm = $wpdb->get_row( $wpdb->prepare( "SELECT invite_token FROM {$wpdb->prefix}ofp_team_members WHERE email = %s LIMIT 1", $email ) );
-            if ( ! $tm || ! hash_equals( $expected_hash, $tm->invite_token ?? '' ) ) return false;
-            return true;
+            $tm = $wpdb->get_row( $wpdb->prepare( "SELECT id, email, name, invite_token FROM {$wpdb->prefix}ofp_team_members WHERE invite_token = %s LIMIT 1", $expected_hash ) );
+            if ( ! $tm ) return false;
+            return $tm;
         } else {
-            $client = $wpdb->get_row( $wpdb->prepare( "SELECT reset_token_hash, reset_token_expires FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1", $email ) );
-            if ( ! $client || empty( $client->reset_token_hash ) ) return false;
+            $client = $wpdb->get_row( $wpdb->prepare( "SELECT id, email, owner_name, reset_token_hash, reset_token_expires FROM {$wpdb->prefix}ofp_clients WHERE reset_token_hash = %s LIMIT 1", $expected_hash ) );
+            if ( ! $client ) return false;
             if ( strtotime( $client->reset_token_expires ) < time() ) return false;
-            if ( ! hash_equals( $expected_hash, $client->reset_token_hash ) ) return false;
-            return true;
+            return $client;
         }
     }
 
-    public static function complete_password_reset( string $email, string $raw_token, string $new_password, bool $is_team_member = false ): bool {
+    public static function complete_password_reset( string $raw_token, string $new_password, bool $is_team_member = false ): bool {
         global $wpdb;
 
-        if ( ! self::verify_reset_token( $email, $raw_token, $is_team_member ) ) {
+        $row = self::verify_reset_token( $raw_token, $is_team_member );
+        if ( ! $row ) {
             return false;
         }
 
@@ -556,21 +607,19 @@ class OFP_Auth {
             $updated = $wpdb->update(
                 $wpdb->prefix . 'ofp_team_members',
                 [ 'password' => $new_hash, 'invite_token' => null ],
-                [ 'email' => sanitize_email( $email ) ]
+                [ 'id' => $row->id ]
             );
             if ( $updated ) {
-                $id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}ofp_team_members WHERE email = %s", sanitize_email( $email ) ) );
-                $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'team_member_id' => $id ] );
+                $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'team_member_id' => $row->id ] );
             }
         } else {
             $updated = $wpdb->update(
                 $wpdb->prefix . 'ofp_clients',
                 [ 'password' => $new_hash, 'reset_token_hash' => null, 'reset_token_expires' => null ],
-                [ 'email' => sanitize_email( $email ) ]
+                [ 'id' => $row->id ]
             );
             if ( $updated ) {
-                $id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE email = %s", sanitize_email( $email ) ) );
-                $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'client_id' => $id, 'user_type' => 'client' ] );
+                $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'client_id' => $row->id, 'user_type' => 'client' ] );
             }
         }
 

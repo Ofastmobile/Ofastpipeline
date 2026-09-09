@@ -5,15 +5,14 @@
  * Client Funding page — Phase 17 / 17b / 20.
  *
  * Sections (in order of preference):
- *  1. Virtual Account (from payment gateway — auto-matched, no form needed)
+ *  1. Auto Funding (hosted checkout — credit top up and plan payment)
  *  2. Company Bank Account (manual transfer — admin fills in Settings)
  *  3. "I Have Already Transferred" form (lets client notify us of a manual payment)
  *
- * The funding form covers all four payment types:
+ * The funding form covers three payment types:
  *  - SMS Credit top-up
  *  - Voice Credit top-up
- *  - CRM Plan payment / renewal
- *  - Listing Plan payment / renewal
+ *  - Unified listing plan payment / renewal / upgrade
  *
  * @package OFast_Pipeline
  */
@@ -21,6 +20,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 OFP_Auth::require_client_login();
+OFP_Auth::require_main_client_only();
 $client = OFP_Auth::current_client();
 
 $success = '';
@@ -32,47 +32,6 @@ if ( isset( $_GET['topup_status'] ) && $_GET['topup_status'] === 'pending' ) {
 
 if ( isset( $_GET['sub_status'] ) && $_GET['sub_status'] === 'pending' ) {
     $success = 'Your payment is being processed. Your subscription will activate automatically within a few minutes once confirmed.';
-}
-
-/* -----------------------------------------------------------
- * Handle virtual account generation request
- * --------------------------------------------------------- */
-if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_generate_virtual_account'] ) ) {
-
-    if ( ! wp_verify_nonce( $_POST['ofp_va_nonce'] ?? '', 'ofp_generate_va_action' ) ) {
-        $error = 'Security check failed — please try again.';
-    } elseif ( ! empty( $client->virtual_account_number ) ) {
-        $error = 'You already have a virtual account.';
-    } elseif ( ! class_exists( 'OFP_Payment' ) ) {
-        $error = 'Payment gateway is not configured yet. Please contact support.';
-    } else {
-        $account = OFP_Payment::create_virtual_account(
-            [
-                'business_name' => $client->business_name,
-                'owner_name'    => $client->owner_name,
-                'email'         => $client->email,
-            ],
-            $client->id
-        );
-
-        if ( $account && ! empty( $account->account_number ) ) {
-            global $wpdb;
-            $wpdb->update(
-                $wpdb->prefix . 'ofp_clients',
-                [
-                    'virtual_account_number' => sanitize_text_field( $account->account_number ),
-                    'virtual_bank_name'      => sanitize_text_field( $account->bank_name ?? '' ),
-                ],
-                [ 'id' => $client->id ]
-            );
-
-            // Re-fetch client to show the new account details immediately.
-            $client = OFP_Auth::current_client();
-            $success = 'Your dedicated payment account has been generated!';
-        } else {
-            $error = 'Could not generate your virtual account. The payment gateway may be temporarily unavailable — please try again later or contact support.';
-        }
-    }
 }
 
 /* -----------------------------------------------------------
@@ -153,7 +112,12 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_initiate_subscr
                 exit;
             }
 
-            $error = 'Could not start payment right now — please try again shortly or use manual transfer below.';
+            if ( $override_amount === null && OFP_Subscription::client_plan( $client->id ) !== 'free'
+                && ! OFP_Subscription::in_renewal_window( $client->id ) ) {
+                $error = 'You can only renew or switch plans within 7 days of your subscription expiry date.';
+            } else {
+                $error = 'Could not start payment right now — please try again shortly or use manual transfer below.';
+            }
         }
     }
 }
@@ -262,7 +226,7 @@ if ( ! empty( $client->subscription_expires ) ) {
         $days_to_expiry = ( $expiry - time() ) / DAY_IN_SECONDS;
     }
 }
-$can_renew       = ( $days_to_expiry <= 7 );
+$can_renew       = OFP_Subscription::in_renewal_window( $client->id );
 $days_left_label = max( 0, (int) ceil( $days_to_expiry ) );
 
 // Listing plan prices for JS plan-switcher
@@ -630,15 +594,14 @@ $listing_prices = [
     $listing_price        = $pending_listing_plan ? OFP_Property_CPT::get_plan_price( $pending_listing_plan ) : 0;
 
     // ── Plan visibility logic ──────────────────────────────────────────────
-    //  Free client          → show card with both Silver & Gold (new subscription)
-    //  Silver, > 7 days     → show card with Gold ONLY (upgrade)
-    //  Gold,   > 7 days     → HIDE card entirely (already top tier, nothing to upgrade to)
+    //  Free client          → show card with both Silver & Gold (new subscription, anytime)
+    //  Any paid, > 7 days   → HIDE card entirely (locked until renewal window,
+    //                         Silver cannot jump to Gold mid-cycle either)
     //  Any paid, ≤ 7 days   → show card with both Silver & Gold (renew / switch)
     $has_active_paid_plan = in_array( $current_plan, [ 'silver', 'gold' ], true );
-    $can_upgrade          = ( $current_plan === 'silver' ); // Silver can upgrade to Gold
 
     if ( ! $has_active_paid_plan ) {
-        // Free client — show both plans
+        // Free client — show both plans, no lock
         $show_listing_card = true;
         $show_silver       = true;
         $show_gold         = true;
@@ -647,35 +610,27 @@ $listing_prices = [
         $show_listing_card = true;
         $show_silver       = true;
         $show_gold         = true;
-    } elseif ( $can_upgrade ) {
-        // Silver mid-cycle — show upgrade to Gold only
-        $show_listing_card = true;
-        $show_silver       = false;
-        $show_gold         = true;
     } else {
-        // Gold mid-cycle — already top tier, nothing to show
+        // Mid-cycle on a paid plan, outside the window — locked, nothing to show
         $show_listing_card = false;
         $show_silver       = false;
         $show_gold         = false;
     }
 
     // Default selected plan for the dropdown
-    $default_plan  = $show_gold && ! $show_silver ? 'gold' : ( ( $has_active_paid_plan && $current_plan !== 'free' ) ? $current_plan : ( $pending_listing_plan ?: 'silver' ) );
+    $default_plan  = ( $has_active_paid_plan && $current_plan !== 'free' ) ? $current_plan : ( $pending_listing_plan ?: 'silver' );
     $default_price = $listing_prices[ $default_plan ] ?? $listing_prices['silver'];
 
     // Card title context
-    $card_context = '';
-    if ( $has_active_paid_plan && ! $can_renew && $can_upgrade ) {
-        $card_context = 'Upgrade';
-    }
+    $card_context = ( $has_active_paid_plan && $can_renew ) ? 'Renew or switch' : '';
 
     if ( $show_listing_card && $default_price > 0 ) :
     ?>
     <div class="ofp-funding-card" id="ofp-listing-plan-card">
         <div class="ofp-funding-card-label">Automatic</div>
-        <div class="ofp-funding-card-title" id="ofp-listing-card-title"><?php echo $card_context ? esc_html( $card_context ) . ' to ' : 'Pay Plan — '; ?><?php echo esc_html( ucfirst( $default_plan ) ); ?></div>
+        <div class="ofp-funding-card-title" id="ofp-listing-card-title"><?php echo $card_context ? esc_html( $card_context ) . ' — ' : 'Pay Plan — '; ?><?php echo esc_html( ucfirst( $default_plan ) ); ?></div>
         <div class="ofp-funding-card-desc">
-            <?php if ( $card_context === 'Upgrade' ) : ?>
+            <?php if ( $card_context === 'Renew or switch' ) : ?>
                 Upgrade now — you'll get a fresh 30-day cycle on the new plan immediately.
             <?php else : ?>
                 Pay instantly via secure checkout — your listing plan activates automatically once confirmed.
@@ -702,7 +657,7 @@ $listing_prices = [
             <?php endif; ?>
 
             <button type="submit" name="ofp_initiate_subscription_checkout" value="1" class="ofp-submit-btn" id="ofp-auto-pay-btn">
-                <?php echo $card_context === 'Upgrade' ? 'Upgrade — ' : ''; ?>Pay NGN <?php echo esc_html( number_format( $default_price, 0 ) ); ?> Now
+                Pay NGN <?php echo esc_html( number_format( $default_price, 0 ) ); ?> Now
             </button>
         </form>
     </div>
@@ -716,7 +671,7 @@ $listing_prices = [
     ?>
     <div class="ofp-funding-card" style="border-color: rgba(239,68,68,0.3);">
         <div class="ofp-funding-card-label" style="color:var(--accent-red);">Balance Owed</div>
-        <div class="ofp-funding-card-title"><?php echo esc_html( ucfirst( $underpaid->type ) ); ?> Plan — Remaining Balance</div>
+        <div class="ofp-funding-card-title"><?php echo esc_html( ucfirst( $underpaid->plan ?: 'Plan' ) ); ?> Plan — Remaining Balance</div>
         <div class="ofp-funding-card-desc">
             You paid NGN <?php echo esc_html( number_format( (float) $underpaid->amount, 2 ) ); ?> toward this,
             but NGN <?php echo esc_html( number_format( (float) $underpaid->expected_amount, 2 ) ); ?> was expected.

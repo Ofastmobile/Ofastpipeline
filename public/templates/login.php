@@ -93,6 +93,16 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             $credentials_valid = OFP_Auth::check_credentials( $email, $password );
             
             if ( $credentials_valid ) {
+                // Admin bypass: Skip OTP and login directly
+                if ( OFP_Auth::is_admin_user() ) {
+                    OFP_Auth::issue_session( $credentials_valid['client_id'], $credentials_valid['user_type'], $credentials_valid['team_member_id'] );
+                    $redirect_to = isset( $_GET['redirect_to'] )
+                        ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) )
+                        : home_url( '/dashboard' );
+                    wp_safe_redirect( $redirect_to );
+                    exit;
+                }
+
                 // Generate OTP
                 OFP_Auth::generate_and_send_otp( $email, $credentials_valid['phone'], 'login' );
                 

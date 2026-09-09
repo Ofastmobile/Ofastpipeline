@@ -54,12 +54,18 @@ class OFP_Team_Member {
         }
 
         // Deduct SMS credit
+        // Bug fix: this used to call OFP_Credit::deduct($client_id, 1,
+        // 'team_invite_sms', "...") — deduct()'s real signature is
+        // (client_id, channel, amount), so the 2nd/3rd args were swapped
+        // and a non-numeric string was passed where a float was expected.
+        // That throws a fatal TypeError in PHP 8, so every single team
+        // invite attempt was crashing at this line before this fix.
         if ( class_exists( 'OFP_Credit' ) ) {
-            $balance = OFP_Credit::get_balance( $client_id );
-            if ( $balance < 1 ) {
+            $sms_cost = class_exists( 'OFP_Queue' ) ? OFP_Queue::SMS_COST : 6.99;
+            if ( ! OFP_Credit::has_balance( $client_id, 'sms', $sms_cost ) ) {
                 return new WP_Error( 'insufficient_credit', 'Insufficient SMS credits to send the invitation.' );
             }
-            OFP_Credit::deduct( $client_id, 1, 'team_invite_sms', "Sent team invitation to {$phone}" );
+            OFP_Credit::deduct( $client_id, 'sms', $sms_cost );
         }
 
         // Insert Record
@@ -88,14 +94,41 @@ class OFP_Team_Member {
         $invite_url = home_url( "/team-invite?token={$invite_token}" );
         
         if ( class_exists( 'OFP_Mailer' ) ) {
-            $subject = "You have been invited to join " . $client->business_name;
-            $html = "<p>Hi {$name},</p><p>You have been invited to join <strong>{$client->business_name}</strong> on the Ofast Pipeline dashboard.</p><p><a href='{$invite_url}'>Click here to accept the invitation and set your password</a>.</p>";
+            $subject = 'You have been invited to join ' . $client->business_name;
+            $html = '
+                <h2>You\'re invited!</h2>
+                <p>Hi ' . esc_html( $name ) . ',</p>
+                <p><strong>' . esc_html( $client->business_name ) . '</strong> has invited you to join their
+                   team on Ofast Pipeline as a <strong>' . esc_html( $role_name ) . '</strong>.</p>
+                <p>Click below to accept and set your password:</p>
+                <p>
+                    <a href="' . esc_url( $invite_url ) . '"
+                       style="display:inline-block;background:#1a73e8;color:#fff;
+                              padding:12px 28px;border-radius:8px;text-decoration:none;
+                              font-weight:600;margin:12px 0;">
+                        Accept Invitation
+                    </a>
+                </p>
+                <p style="color:#6b7280;font-size:13px;">
+                    You\'ll log in using this same link\'s email address once you set your
+                    password. You\'ll see the same dashboard as ' . esc_html( $client->business_name ) . ',
+                    scoped to what your role allows.
+                </p>
+            ';
             OFP_Mailer::send_system_email( $email, $subject, $html );
         }
         
         if ( class_exists( 'OFP_SMS' ) ) {
             $sms = "You're invited to join {$client->business_name} on Ofast Pipeline. Click here to accept: {$invite_url}";
             OFP_SMS::send_system_sms( $phone, $sms );
+        }
+
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( 'Team member invited', $client_id, [
+                'name'      => $name,
+                'email'     => $email,
+                'role_name' => $role_name,
+            ] );
         }
 
         return true;
@@ -125,6 +158,13 @@ class OFP_Team_Member {
             [ 'id' => $team_member->id ]
         );
 
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( 'Team member accepted invite', $team_member->client_id, [
+                'name'  => $team_member->name,
+                'email' => $team_member->email,
+            ] );
+        }
+
         return true;
     }
 
@@ -141,8 +181,17 @@ class OFP_Team_Member {
      */
     public static function delete( int $team_member_id, int $client_id ) {
         global $wpdb;
+        $team_member = $wpdb->get_row( $wpdb->prepare( "SELECT name, email FROM {$wpdb->prefix}ofp_team_members WHERE id = %d AND client_id = %d", $team_member_id, $client_id ) );
         $wpdb->delete( $wpdb->prefix . 'ofp_team_members', [ 'id' => $team_member_id, 'client_id' => $client_id ] );
         $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'team_member_id' => $team_member_id ] );
+
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( 'Team member removed', $client_id, [
+                'name'  => $team_member->name ?? null,
+                'email' => $team_member->email ?? null,
+            ] );
+        }
+
         return true;
     }
 
@@ -151,7 +200,7 @@ class OFP_Team_Member {
      */
     public static function update_permissions( int $team_member_id, int $client_id, string $role_name, array $permissions ) {
         global $wpdb;
-        return $wpdb->update(
+        $result = $wpdb->update(
             $wpdb->prefix . 'ofp_team_members',
             [
                 'role_name'   => sanitize_text_field( $role_name ),
@@ -159,5 +208,14 @@ class OFP_Team_Member {
             ],
             [ 'id' => $team_member_id, 'client_id' => $client_id ]
         );
+
+        if ( $result !== false && class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( 'Team member role updated', $client_id, [
+                'team_member_id' => $team_member_id,
+                'role_name'      => $role_name,
+            ] );
+        }
+
+        return $result;
     }
 }

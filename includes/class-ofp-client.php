@@ -329,7 +329,18 @@ class OFP_Client {
      * @return bool
      */
     public static function update_status( int $id, string $status ): bool {
-        return self::update( $id, [ 'status' => sanitize_text_field( $status ) ] );
+        $status = sanitize_text_field( $status );
+        $before = self::get( $id );
+        $ok = self::update( $id, [ 'status' => $status ] );
+
+        if ( $ok && class_exists( 'OFP_Logger' ) && ( ! $before || $before->status !== $status ) ) {
+            OFP_Logger::log( 'Client status changed to ' . $status, $id, [
+                'previous_status' => $before->status ?? null,
+                'new_status'      => $status,
+            ] );
+        }
+
+        return $ok;
     }
 
     /**
@@ -356,6 +367,9 @@ class OFP_Client {
 
         if ( $updated ) {
             OFP_Mailer::send_approval_notification( $client );
+            if ( class_exists( 'OFP_Logger' ) ) {
+                OFP_Logger::log( 'Client approved', $id, [ 'previous_status' => 'pending_review' ] );
+            }
         }
 
         return $updated;

@@ -10,12 +10,9 @@
  *  They never talk to a gateway class directly.
  *
  *  The active provider is set in wp-admin → OFast Pipeline → Settings.
- *  Switching from Monnify to Paystack = changing one setting, zero code changes.
  *
  * SUPPORTED GATEWAYS:
- *  - monnify      (Monnify Virtual Accounts)
- *  - paystack     (Paystack Dedicated Virtual Accounts)
- *  - flutterwave  (Flutterwave Virtual Account Numbers)
+ *  - paystack     (Paystack Dedicated Virtual Accounts, cards, and transfer)
  *
  * ADDING A NEW GATEWAY:
  *  1. Create includes/gateways/class-ofp-gateway-{slug}.php
@@ -206,16 +203,23 @@ class OFP_Payment {
     /**
      * Build a unique subscription checkout reference.
      *
+     * The expected amount (in kobo) is embedded in the reference itself so
+     * confirm_subscription_checkout() can verify the exact amount that was
+     * expected at initiation time, without re-deriving it from current
+     * pricing (which may have changed) or trusting the gateway amount blindly.
+     *
      * @param  int         $client_id
-     * @param  string      $type  'crm' or 'listing'.
-     * @param  string|null $plan  Required for 'listing' (bronze|silver|gold).
+     * @param  string      $type    'crm' or 'listing'.
+     * @param  string|null $plan    Required for 'listing' (bronze|silver|gold).
+     * @param  float       $amount  The exact amount (NGN) this checkout expects.
      * @return string
      */
-    public static function generate_subscription_checkout_reference( int $client_id, string $type, ?string $plan = null ): string {
+    public static function generate_subscription_checkout_reference( int $client_id, string $type, ?string $plan = null, float $amount = 0.0 ): string {
+        $amount_kobo = (int) round( $amount * 100 );
         if ( $type === 'listing' && $plan ) {
-            return sprintf( 'ofp_sub_listing_%d_%s_%s', $client_id, $plan, wp_generate_password( 8, false, false ) );
+            return sprintf( 'ofp_sub_listing_%d_%s_%d_%s', $client_id, $plan, $amount_kobo, wp_generate_password( 8, false, false ) );
         }
-        return sprintf( 'ofp_sub_crm_%d_%s', $client_id, wp_generate_password( 8, false, false ) );
+        return sprintf( 'ofp_sub_crm_%d_%d_%s', $client_id, $amount_kobo, wp_generate_password( 8, false, false ) );
     }
 
     /**
@@ -232,17 +236,18 @@ class OFP_Payment {
      * Parse a subscription checkout reference.
      *
      * @param  string $reference
-     * @return array|null { type, client_id, plan }
+     * @return array|null { type, client_id, plan, expected_amount }
      */
     public static function parse_subscription_checkout_reference( string $reference ): ?array {
-        if ( preg_match( '/^ofp_sub_crm_(\d+)_/', $reference, $m ) ) {
-            return [ 'type' => 'crm', 'client_id' => (int) $m[1], 'plan' => null ];
+        if ( preg_match( '/^ofp_sub_crm_(\d+)_(\d+)_/', $reference, $m ) ) {
+            return [ 'type' => 'crm', 'client_id' => (int) $m[1], 'plan' => null, 'expected_amount' => ( (int) $m[2] ) / 100 ];
         }
-        if ( preg_match( '/^ofp_sub_listing_(\d+)_(bronze|free|silver|gold)_/', $reference, $m ) ) {
+        if ( preg_match( '/^ofp_sub_listing_(\d+)_(bronze|free|silver|gold)_(\d+)_/', $reference, $m ) ) {
             return [
-                'type'      => 'listing',
-                'client_id' => (int) $m[1],
-                'plan'      => OFP_Subscription::normalize_plan( $m[2] ),
+                'type'            => 'listing',
+                'client_id'       => (int) $m[1],
+                'plan'            => OFP_Subscription::normalize_plan( $m[2] ),
+                'expected_amount' => ( (int) $m[3] ) / 100,
             ];
         }
         return null;
@@ -250,6 +255,14 @@ class OFP_Payment {
 
     /**
      * Initiate a hosted checkout for a CRM or Listing subscription payment.
+     *
+     * Tier-lock rule: a client already on Silver or Gold can only pick a
+     * plan (renew same tier, or switch tiers) inside the 7-day window before
+     * their subscription_expires date. Free clients can pick any plan anytime.
+     * This is enforced here (not just hidden in the UI) so it can't be bypassed
+     * by posting the form directly. The one exception is $override_amount —
+     * that's used to pay off an existing underpayment shortfall, which is
+     * always allowed regardless of the window.
      *
      * @param  int         $client_id
      * @param  string      $type            'crm' or 'listing'.
@@ -280,6 +293,15 @@ class OFP_Payment {
             if ( ! $plan || ! in_array( $plan, OFP_Property_CPT::PLAN_KEYS, true ) ) {
                 return null;
             }
+
+            if ( $override_amount === null && class_exists( 'OFP_Subscription' )
+                && OFP_Subscription::client_plan( $client_id ) !== 'free'
+                && ! OFP_Subscription::in_renewal_window( $client_id ) ) {
+                // Mid-cycle on a paid plan, outside the 7-day renewal window —
+                // block plan selection entirely (renew or switch).
+                return null;
+            }
+
             $amount      = $override_amount ?? OFP_Property_CPT::get_plan_price( $plan );
             $description = ucfirst( $plan ) . ' Plan Payment';
         } else {
@@ -290,7 +312,7 @@ class OFP_Payment {
             return null;
         }
 
-        $reference = self::generate_subscription_checkout_reference( $client_id, $type, $plan );
+        $reference = self::generate_subscription_checkout_reference( $client_id, $type, $plan, $amount );
         $gateway   = self::get_gateway();
 
         if ( ! $gateway || ! method_exists( $gateway, 'initiate_transaction' ) ) {
@@ -312,6 +334,15 @@ class OFP_Payment {
 
     /**
      * Confirm a subscription checkout payment and activate/renew accordingly.
+     *
+     * Verifies the amount actually received against the amount this exact
+     * checkout expected (embedded in the reference at initiation time):
+     *  - Paid the expected amount (within a 1 NGN rounding tolerance) → activate normally.
+     *  - Paid MORE → still activate (client shouldn't be denied service they paid
+     *    for), but flag the excess for manual admin review.
+     *  - Paid LESS → do NOT activate. Record as underpaid so it shows in the
+     *    admin Billing page and the client's Funding page with the exact
+     *    shortfall, same treatment as the old virtual-account underpayment flow.
      *
      * @param  string $reference
      * @param  float  $amount_paid
@@ -340,14 +371,36 @@ class OFP_Payment {
             return false;
         }
 
+        $expected = $parsed['expected_amount'] ?? 0.0;
+        $tolerance = 1.00; // 1 NGN, covers gateway rounding, not a real shortfall/excess.
+
+        if ( $expected > 0 && $amount_paid < ( $expected - $tolerance ) ) {
+            // Underpaid — do not activate. Flag it instead.
+            OFP_Subscription::record_underpayment(
+                $parsed['client_id'],
+                $amount_paid,
+                $expected,
+                $reference,
+                'checkout',
+                $parsed['plan']
+            );
+            return true;
+        }
+
         OFP_Subscription::record_payment(
             $parsed['client_id'],
             $parsed['type'],
             $amount_paid,
             $reference,
             'checkout',
-            $parsed['plan']
+            $parsed['plan'],
+            $expected > 0 ? $expected : null
         );
+
+        if ( $expected > 0 && $amount_paid > ( $expected + $tolerance ) ) {
+            // Overpaid — plan is active, but flag the excess for manual review.
+            OFP_Subscription::flag_overpayment( $parsed['client_id'], $amount_paid, $expected, $reference );
+        }
 
         return true;
     }

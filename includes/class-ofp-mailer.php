@@ -28,7 +28,8 @@
  * EMAIL METHODS:
  *  - send()                      Core send — all other methods route through this.
  *  - send_welcome_email()        New client onboarded (manual or self-serve).
- *  - send_subscription_reminder() 7-day and 3-day expiry warnings.
+ *  - send_subscription_reminder() daily expiry warnings for the 7-day renewal window.
+ *  - send_free_plan_nudge() daily upgrade nudge for free-plan clients.
  *  - send_payment_confirmed()    Payment received, subscription renewed.
  *  - send_low_credit_warning()   SMS or voice balance below 20%.
  *  - send_approval_notification() Self-serve signup approved by admin.
@@ -146,8 +147,7 @@ class OFP_Mailer {
             "From: {$from_name} <{$from_email}>",
         ];
 
-        // Pipeline A: admin universal template (if set) else built-in shell.
-        $full_html = self::wrap_system_email( $to_name, $subject, $body_html );
+        $full_html = self::wrap_in_template( $to_name, $subject, $body_html );
 
         $sent = wp_mail( $to, $subject, $full_html, $headers );
 
@@ -155,79 +155,32 @@ class OFP_Mailer {
             error_log( "[OFP_Mailer] wp_mail() failed for: {$to} | Subject: {$subject}" );
         }
 
+        if ( class_exists( 'OFP_Logger' ) ) {
+            global $wpdb;
+            $client_id = $wpdb->get_var( $wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1",
+                $to
+            ) );
+
+            OFP_Logger::log( $sent ? 'Email sent' : 'Email failed', $client_id ? (int) $client_id : null, [
+                'to'      => $to,
+                'subject' => $subject,
+            ] );
+        }
+
         return $sent;
     }
 
     /**
-     * Pipeline A alias used by OTP / team-invite (to, subject, html).
+     * Send a system email directly, usually for OTPs or system alerts.
+     *
+     * @param string $to
+     * @param string $subject
+     * @param string $body_html
+     * @return bool
      */
-    public static function send_system_email( string $to, string $subject, string $body_html, string $to_name = '' ): bool {
-        return self::send( $to, $to_name, $subject, $body_html );
-    }
-    public static function send_html( string $to, string $subject, string $full_html ): bool {
-        if ( empty( $to ) || ! is_email( $to ) ) {
-            error_log( "[OFP_Mailer] Invalid recipient email: {$to}" );
-            return false;
-        }
-
-        $from_email = get_option( 'ofp_smtp_from_email', get_option( 'admin_email' ) );
-        $from_name  = get_option( 'ofp_smtp_from_name', 'OFast Pipeline' );
-
-        $headers = [
-            'Content-Type: text/html; charset=UTF-8',
-            "From: {$from_name} <{$from_email}>",
-        ];
-
-        $sent = wp_mail( $to, $subject, $full_html, $headers );
-        if ( ! $sent ) {
-            error_log( "[OFP_Mailer] wp_mail() failed for: {$to} | Subject: {$subject}" );
-        }
-        return $sent;
-    }
-
-    /**
-     * Pipeline B — emails to buyers / leads / investors.
-     * Client templates wrap these. System emails never call this.
-     */
-    public static function send_client_email(
-        string $to,
-        string $subject,
-        string $body_html,
-        int $client_id,
-        ?int $template_id = null
-    ): bool {
-        $wrapped = self::wrap_outgoing( $client_id, $body_html, $template_id );
-        return self::send_html( $to, $subject, $wrapped );
-    }
-
-    /**
-     * Wrap outgoing (Pipeline B) body in the client's template, else admin
-     * universal, else the built-in shell.
-     */
-    public static function wrap_outgoing( int $client_id, string $body_html, ?int $template_id = null ): string {
-        $wrapper = class_exists( 'OFP_Comms' ) ? OFP_Comms::client_wrapper( $client_id, $template_id ) : '';
-        if ( $wrapper !== '' ) {
-            return OFP_Comms::apply_wrapper( $wrapper, $body_html );
-        }
-        return self::wrap_in_template( '', '', $body_html );
-    }
-
-    /**
-     * Pipeline A wrapper: admin universal {{content}} if set, else built-in.
-     */
-    public static function wrap_system_email( string $to_name, string $subject, string $body_html ): string {
-        $wrapper = class_exists( 'OFP_Comms' ) ? OFP_Comms::admin_wrapper() : '';
-        if ( $wrapper !== '' && ( str_contains( $wrapper, '{{content}}' ) || str_contains( $wrapper, '{email_body}' ) ) ) {
-            return OFP_Comms::apply_wrapper( $wrapper, $body_html );
-        }
-        return self::wrap_in_template( $to_name, $subject, $body_html );
-    }
-
-    /**
-     * Public default shell for previews when no custom wrapper is set.
-     */
-    public static function default_shell( string $body_html, string $subject = 'Preview' ): string {
-        return self::wrap_in_template( '', $subject, $body_html );
+    public static function send_system_email( string $to, string $subject, string $body_html ): bool {
+        return self::send( $to, 'User', $subject, $body_html );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -310,7 +263,7 @@ class OFP_Mailer {
     /**
      * Send a subscription expiry reminder email.
      *
-     * Called by OFP_Subscription::run_daily_check() at 7 days and 3 days
+     * Called by OFP_Subscription::run_daily_check() once a day for every
      * before subscription_expires date.
      *
      * @param  object $client    Full wp_ofp_clients row.
@@ -321,10 +274,10 @@ class OFP_Mailer {
 
         $urgent  = $days_left <= 3;
         $prefix  = $urgent ? '⚠️ Urgent: ' : '';
-        $day_str = $days_left === 1 ? '1 day' : "{$days_left} days";
+        $day_str = $days_left <= 0 ? 'today' : ( $days_left === 1 ? '1 day' : "{$days_left} days" );
 
         $body = '
-            <h2>' . $prefix . 'Your subscription expires in ' . esc_html( $day_str ) . '</h2>
+            <h2>' . $prefix . ( $days_left <= 0 ? 'Your subscription expires today' : 'Your subscription expires in ' . esc_html( $day_str ) ) . '</h2>
 
             <p>Hi ' . esc_html( $client->owner_name ) . ',</p>
 
@@ -332,20 +285,18 @@ class OFP_Mailer {
                <strong>' . esc_html( $client->business_name ) . '</strong>
                expires on <strong>' . esc_html( $client->subscription_expires ) . '</strong>.</p>
 
-            <p>To keep your lead pipeline running without interruption, please renew
-               before the expiry date by transferring your subscription fee to your
-               dedicated virtual account:</p>
+            <p>To keep your listings running without interruption, please renew
+               before the expiry date. Click below to renew instantly via secure
+               checkout, card or bank transfer:</p>
 
-            <div style="background:#fef3c7;border-radius:8px;padding:20px 24px;
-                        margin:20px 0;border-left:4px solid #f59e0b;">
-                <p style="margin:0 0 10px;">
-                    <strong>Bank:</strong> ' . esc_html( $client->virtual_bank_name ) . '
-                </p>
-                <p style="margin:0;">
-                    <strong>Account Number:</strong>
-                    ' . esc_html( $client->virtual_account_number ) . '
-                </p>
-            </div>
+            <p>
+                <a href="' . esc_url( home_url( '/funding' ) ) . '"
+                   style="display:inline-block;background:#1a73e8;color:#fff;
+                          padding:12px 28px;border-radius:8px;text-decoration:none;
+                          font-weight:600;margin:12px 0;">
+                    Renew Now
+                </a>
+            </p>
 
             ' . ( $urgent ? '
             <p style="color:#dc2626;font-weight:600;">
@@ -357,9 +308,7 @@ class OFP_Mailer {
 
             <p>
                 <a href="' . esc_url( home_url( '/credits' ) ) . '"
-                   style="display:inline-block;background:#1a73e8;color:#fff;
-                          padding:12px 28px;border-radius:8px;text-decoration:none;
-                          font-weight:600;margin-top:8px;">
+                   style="color:#1a73e8;text-decoration:none;font-weight:600;">
                     View My Account
                 </a>
             </p>
@@ -368,7 +317,64 @@ class OFP_Mailer {
         self::send(
             $client->email,
             $client->owner_name,
-            $prefix . "Your OFast Pipeline subscription expires in {$day_str}",
+            $prefix . ( $days_left <= 0 ? 'Your OFast Pipeline subscription expires today' : "Your OFast Pipeline subscription expires in {$day_str}" ),
+            $body
+        );
+    }
+
+    /**
+     * Daily upgrade nudge for a client currently on the free plan.
+     * Called once a day (per client) from OFP_Subscription::send_free_plan_nudges().
+     *
+     * Keeps the tone encouraging rather than pushy — this goes out every
+     * day, so a heavy-handed "act now or else" message would get old fast
+     * and could feel like spam.
+     *
+     * @param  object $client  Full wp_ofp_clients row.
+     * @return void
+     */
+    public static function send_free_plan_nudge( object $client ): void {
+        if ( ! class_exists( 'OFP_Property_CPT' ) ) {
+            return;
+        }
+
+        $silver_price = number_format( OFP_Property_CPT::get_plan_price( 'silver' ), 0 );
+        $gold_price   = number_format( OFP_Property_CPT::get_plan_price( 'gold' ), 0 );
+
+        $body = '
+            <h2>Get more out of your listings</h2>
+
+            <p>Hi ' . esc_html( $client->owner_name ) . ',</p>
+
+            <p>You\'re currently on the <strong>Free</strong> plan for
+               <strong>' . esc_html( $client->business_name ) . '</strong>.
+               Upgrading unlocks a lot more:</p>
+
+            <ul style="line-height:1.9;">
+                <li>List more properties, with priority placement</li>
+                <li>Editable installment plans for buyers (Gold)</li>
+                <li>Add your team — Silver and Gold include team member seats</li>
+                <li>Full email templates and follow-up automation</li>
+            </ul>
+
+            <p>
+                <a href="' . esc_url( home_url( '/funding' ) ) . '"
+                   style="display:inline-block;background:#1a73e8;color:#fff;
+                          padding:12px 28px;border-radius:8px;text-decoration:none;
+                          font-weight:600;margin:12px 0;">
+                    Upgrade Now
+                </a>
+            </p>
+
+            <p style="color:#6b7280;font-size:13px;">
+                Silver is NGN ' . esc_html( $silver_price ) . '/month, Gold is NGN ' . esc_html( $gold_price ) . '/month.
+            </p>
+        ';
+
+        self::send(
+            $client->email,
+            $client->owner_name,
+            'Get more out of your ' . get_bloginfo( 'name' ) . ' listings',
             $body
         );
     }

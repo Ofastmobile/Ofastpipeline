@@ -59,7 +59,6 @@ class OFP_Admin_Menu {
         add_action( 'admin_post_ofp_cancel_trigger',  [ $this, 'handle_cancel_trigger' ] );
         add_action( 'admin_post_ofp_send_broadcast',  [ $this, 'handle_send_broadcast' ] );
         add_action( 'admin_post_ofp_save_universal_template',  [ $this, 'handle_save_universal_template' ] );
-        add_action( 'admin_post_ofp_send_test_email',  [ $this, 'handle_send_test_email' ] );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -555,9 +554,7 @@ class OFP_Admin_Menu {
             'ofp_default_followup_2'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_2']  ?? '' ) ),
             'ofp_default_followup_3'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_3']  ?? '' ) ),
             // Payment gateway
-            'ofp_payment_provider'       => sanitize_text_field( wp_unslash( $_POST['ofp_payment_provider']       ?? 'monnify' ) ),
-            'ofp_monnify_base_url'       => esc_url_raw(          wp_unslash( $_POST['ofp_monnify_base_url']       ?? '' ) ),
-            'ofp_monnify_contract_code'  => sanitize_text_field( wp_unslash( $_POST['ofp_monnify_contract_code']  ?? '' ) ),
+            'ofp_payment_provider'       => 'paystack',
             // SMTP mode + fields
             'ofp_smtp_mode'        => $smtp_mode,
             'ofp_smtp_host'        => sanitize_text_field( wp_unslash( $_POST['ofp_smtp_host']        ?? '' ) ),
@@ -587,11 +584,7 @@ class OFP_Admin_Menu {
             'ofp_at_api_key'              => [ 'raw' => $_POST['ofp_at_api_key']              ?? '', 'label' => 'AT API Key' ],
             'ofp_bsmsn_api_key'           => [ 'raw' => $_POST['ofp_bsmsn_api_key']           ?? '', 'label' => 'BulkSMS API Key' ],
             'ofp_smartsms_api_key'        => [ 'raw' => $_POST['ofp_smartsms_api_key']        ?? '', 'label' => 'SmartSMS API Key' ],
-            'ofp_monnify_api_key'         => [ 'raw' => $_POST['ofp_monnify_api_key']         ?? '', 'label' => 'Monnify API Key' ],
-            'ofp_monnify_secret_key'      => [ 'raw' => $_POST['ofp_monnify_secret_key']      ?? '', 'label' => 'Monnify Secret Key' ],
             'ofp_paystack_secret_key'     => [ 'raw' => $_POST['ofp_paystack_secret_key']     ?? '', 'label' => 'Paystack Secret Key' ],
-            'ofp_flutterwave_secret_key'  => [ 'raw' => $_POST['ofp_flutterwave_secret_key']  ?? '', 'label' => 'Flutterwave Secret Key' ],
-            'ofp_flutterwave_secret_hash' => [ 'raw' => $_POST['ofp_flutterwave_secret_hash'] ?? '', 'label' => 'Flutterwave Hash' ],
             'ofp_turnstile_secret'        => [ 'raw' => $_POST['ofp_turnstile_secret']        ?? '', 'label' => 'Turnstile Secret' ],
         ];
 
@@ -745,7 +738,6 @@ class OFP_Admin_Menu {
             'business_category' => 'property',
             'plan'              => sanitize_text_field( wp_unslash( $_POST['plan']              ?? '' ) ),
             'sms_provider'      => sanitize_text_field( wp_unslash( $_POST['sms_provider']      ?? 'africastalking' ) ),
-            'sms_sender_id'     => substr( preg_replace( '/[^A-Za-z0-9]/', '', sanitize_text_field( wp_unslash( $_POST['sms_sender_id'] ?? '' ) ) ), 0, 11 ),
         ] );
 
         $new_listing_plan = sanitize_text_field( wp_unslash( $_POST['listing_plan'] ?? '' ) );
@@ -841,10 +833,18 @@ class OFP_Admin_Menu {
             exit;
         }
 
-        $token = OFP_Auth::generate_admin_preview_token( $client_id );
-        $url   = add_query_arg( 'admin_preview', $token, home_url( '/login' ) );
+        // Issue a client session directly (bypass login/OTP entirely).
+        OFP_Auth::issue_session( $client_id, 'client' );
 
-        wp_safe_redirect( $url );
+        // Log the preview for audit trail.
+        $admin = OFP_Auth::current_admin();
+        error_log( sprintf(
+            '[OFP_Auth] Admin preview: %s (admin #%d) previewed client #%d (%s) at %s',
+            $admin->email ?? 'unknown', $admin->id ?? 0, $client_id, $client->business_name, current_time( 'mysql' )
+        ) );
+
+        // Redirect straight to the client dashboard.
+        wp_redirect( home_url( '/dashboard?preview=1' ) );
         exit;
     }
 
@@ -1081,7 +1081,13 @@ class OFP_Admin_Menu {
             ) );
 
             if ( $request && $request->status === 'pending' ) {
-                // Route approval based on what the payment was for (Phase 17b fix).
+                // Route approval based on what the payment was for.
+                // Bug fix: the client form saves channel as 'plan_silver' /
+                // 'plan_gold', but this used to check for 'crm_plan' /
+                // 'listing_plan' which never matched anything — so approving
+                // a manual plan payment silently did nothing to the client's
+                // actual plan or subscription, only marked the request row
+                // 'approved'.
                 if ( in_array( $request->channel, [ 'sms', 'voice' ], true ) ) {
                     // SMS or Voice credit top-up.
                     OFP_Credit::topup(
@@ -1090,19 +1096,14 @@ class OFP_Admin_Menu {
                         $request->amount,
                         'manual_funding_' . $request_id
                     );
-                } elseif ( $request->channel === 'crm_plan' ) {
-                    // CRM plan payment — activate or extend the subscription.
-                    OFP_Subscription::activate_from_manual_payment(
-                        $request->client_id,
-                        'crm',
-                        $request->amount
-                    );
-                } elseif ( $request->channel === 'listing_plan' ) {
-                    // Listing plan payment — activate or extend the listing subscription.
+                } elseif ( strpos( $request->channel, 'plan_' ) === 0 ) {
+                    // Plan payment — e.g. 'plan_silver' or 'plan_gold'.
+                    $plan = substr( $request->channel, strlen( 'plan_' ) );
                     OFP_Subscription::activate_from_manual_payment(
                         $request->client_id,
                         'listing',
-                        $request->amount
+                        $request->amount,
+                        $plan
                     );
                 }
 
@@ -1117,16 +1118,31 @@ class OFP_Admin_Menu {
                     [ 'id' => $request_id ]
                 );
 
-                // Notify the client.
+                // Notify the client, with wording that matches what actually happened.
+                if ( strpos( $request->channel, 'plan_' ) === 0 ) {
+                    $plan_label = ucfirst( substr( $request->channel, strlen( 'plan_' ) ) );
+                    $notify_message = 'Your manual payment of NGN ' . number_format( $request->amount, 2 ) .
+                        ' has been approved. Your ' . $plan_label . ' plan is now active.';
+                } else {
+                    $notify_message = 'Your manual funding of NGN ' . number_format( $request->amount, 2 ) .
+                        ' has been approved and credited to your ' . ucfirst( $request->channel ) . ' balance.';
+                }
+
                 OFP_Notification::create(
                     $request->client_id,
                     'manual_funding_approved',
                     'Funding approved',
-                    'Your manual funding of NGN ' . number_format( $request->amount, 2 ) .
-                    ' has been approved and credited to your ' . ucfirst( $request->channel ) . ' balance.'
+                    $notify_message
                 );
 
                 echo '<div class="notice notice-success"><p>Funding request approved and client credited.</p></div>';
+
+                if ( class_exists( 'OFP_Logger' ) ) {
+                    OFP_Logger::log( 'Manual funding approved', $request->client_id, [
+                        'channel' => $request->channel,
+                        'amount'  => $request->amount,
+                    ] );
+                }
             }
         }
 
@@ -1162,6 +1178,13 @@ class OFP_Admin_Menu {
                 );
 
                 echo '<div class="notice notice-error"><p>Funding request rejected.</p></div>';
+
+                if ( class_exists( 'OFP_Logger' ) ) {
+                    OFP_Logger::log( 'Manual funding rejected', $request->client_id, [
+                        'channel' => $request->channel,
+                        'amount'  => $request->amount,
+                    ] );
+                }
             }
         }
 
@@ -1354,30 +1377,9 @@ class OFP_Admin_Menu {
         check_admin_referer( 'ofp_save_universal_template' );
 
         $template = wp_unslash( $_POST['ofp_universal_email_template'] ?? '' );
-        $template = str_replace( '{email_body}', '{{content}}', $template );
         update_option( 'ofp_universal_email_template', $template );
 
         wp_redirect( add_query_arg( [ 'page' => 'ofp-communications', 'tab' => 'templates', 'updated' => '1' ], admin_url( 'admin.php' ) ) );
-        exit;
-    }
-
-    public function handle_send_test_email(): void {
-        if ( ! OFP_Auth::is_super_admin() ) {
-            wp_die( 'Access denied.' );
-        }
-        check_admin_referer( 'ofp_send_test_email' );
-
-        $admin = wp_get_current_user();
-        $to    = $admin->user_email ?: get_option( 'admin_email' );
-        $body  = OFP_Comms::sample_body_html();
-        $html  = OFP_Mailer::wrap_system_email( $admin->display_name ?: 'Admin', 'Test email', $body );
-        $sent  = OFP_Mailer::send_html( $to, 'Test email — OFast Pipeline', $html );
-
-        wp_redirect( add_query_arg( [
-            'page'    => 'ofp-communications',
-            'tab'     => 'templates',
-            'tested'  => $sent ? '1' : '0',
-        ], admin_url( 'admin.php' ) ) );
         exit;
     }
 
@@ -1410,18 +1412,29 @@ class OFP_Admin_Menu {
                     continue;
                 }
                 
+                // Wrap with universal template
                 $wrapper = get_option( 'ofp_universal_email_template', '' );
                 $html_body = $message;
-                if ( ! empty( $wrapper ) ) {
-                    $html_body = OFP_Comms::apply_wrapper( $wrapper, $message );
-                } else {
-                    $html_body = OFP_Mailer::default_shell( $message, $subject );
+                if ( ! empty( $wrapper ) && strpos( $wrapper, '{email_body}' ) !== false ) {
+                    $html_body = str_replace( '{email_body}', $message, $wrapper );
                 }
 
                 $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
                 $sent = wp_mail( $recipient, $subject, $html_body, $headers );
-                
+
                 if ( $sent ) $success++; else $failed++;
+
+                if ( class_exists( 'OFP_Logger' ) ) {
+                    global $wpdb;
+                    $client_id = $wpdb->get_var( $wpdb->prepare(
+                        "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1",
+                        $recipient
+                    ) );
+                    OFP_Logger::log( $sent ? 'Broadcast email sent' : 'Broadcast email failed', $client_id ? (int) $client_id : null, [
+                        'to'      => $recipient,
+                        'subject' => $subject,
+                    ] );
+                }
             } elseif ( $channel === 'sms' ) {
                 // Use the built-in OFP_SMS class with smartsmssolutions (or default)
                 $result = OFP_SMS::send_manual( null, $recipient, $message );

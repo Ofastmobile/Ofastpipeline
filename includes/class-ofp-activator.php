@@ -34,20 +34,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 class OFP_Activator {
 
     /**
-     * Run schema upgrades on load when the stored DB version lags.
-     * Needed so Local can pull this branch without re-activating the plugin.
+     * Main activation entry point.
      */
-    public static function maybe_upgrade(): void {
-        if ( get_option( 'ofp_db_version' ) === OFP_VERSION ) {
-            return;
-        }
-        self::maybe_upgrade_schema();
-        update_option( 'ofp_db_version', OFP_VERSION, false );
-    }
     public static function activate(): void {
         self::create_tables();
         self::maybe_upgrade_schema();
-        update_option( 'ofp_db_version', OFP_VERSION, false );
         self::seed_super_admin();
         self::schedule_cron_events();
         self::generate_encryption_keys();
@@ -164,28 +155,6 @@ class OFP_Activator {
         if ( empty( $team_member_id_exists ) ) {
             $wpdb->query( "ALTER TABLE {$p}ofp_activity_logs ADD COLUMN team_member_id BIGINT UNSIGNED DEFAULT NULL AFTER admin_id" );
         }
-
-        // Comms rebuild: per-client SMS sender ID (admin-registered on the provider).
-        $sms_sender_exists = $wpdb->get_results(
-            "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'sms_sender_id'"
-        );
-        if ( empty( $sms_sender_exists ) ) {
-            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN sms_sender_id VARCHAR(20) DEFAULT NULL AFTER sms_provider" );
-        }
-
-        // Gold default email wrapper flag.
-        $tpl_default_exists = $wpdb->get_results(
-            "SHOW COLUMNS FROM {$p}ofp_client_templates LIKE 'is_default'"
-        );
-        if ( empty( $tpl_default_exists ) ) {
-            $wpdb->query( "ALTER TABLE {$p}ofp_client_templates ADD COLUMN is_default TINYINT(1) NOT NULL DEFAULT 0 AFTER body" );
-        }
-
-        // Email wrappers only — leftover SMS template rows become email wrappers.
-        $tpl_table = $p . 'ofp_client_templates';
-        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $tpl_table ) ) === $tpl_table ) {
-            $wpdb->query( "UPDATE {$tpl_table} SET type = 'email' WHERE type <> 'email'" );
-        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -231,7 +200,7 @@ class OFP_Activator {
             password               VARCHAR(255)    NOT NULL,
             subdomain              VARCHAR(100)             DEFAULT NULL,
             custom_domain          VARCHAR(150)             DEFAULT NULL,
-            plan                   VARCHAR(20)              DEFAULT 'free',
+            plan                   VARCHAR(20)              DEFAULT 'starter',
             status                 VARCHAR(20)     NOT NULL DEFAULT 'active',
             onboarding_source      VARCHAR(20)     NOT NULL DEFAULT 'manual',
             business_category      VARCHAR(50)              DEFAULT NULL,
@@ -239,11 +208,8 @@ class OFP_Activator {
             trashed_at             DATETIME                 DEFAULT NULL,
             subscription_expires   DATE                     DEFAULT NULL,
             setup_fee_paid         TINYINT(1)      NOT NULL DEFAULT 0,
-            virtual_account_number VARCHAR(50)              DEFAULT NULL,
-            virtual_bank_name      VARCHAR(100)             DEFAULT NULL,
             at_phone_number        VARCHAR(20)              DEFAULT NULL,
             sms_provider           VARCHAR(30)     NOT NULL DEFAULT 'africastalking',
-            sms_sender_id          VARCHAR(20)              DEFAULT NULL,
             sms_api_key_encrypted  TEXT                     DEFAULT NULL,
             voice_api_key_encrypted TEXT                    DEFAULT NULL,
             business_phone         VARCHAR(20)              DEFAULT NULL,
@@ -605,7 +571,6 @@ class OFP_Activator {
             name        VARCHAR(150)    NOT NULL,
             subject     VARCHAR(255)    NULL,
             body        TEXT            NOT NULL,
-            is_default  TINYINT(1)      NOT NULL DEFAULT 0,
             created_at  DATETIME        NOT NULL,
             updated_at  DATETIME        NOT NULL,
             PRIMARY KEY (id),

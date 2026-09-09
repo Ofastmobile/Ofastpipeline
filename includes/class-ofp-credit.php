@@ -199,6 +199,14 @@ class OFP_Credit {
                 'created_at'    => current_time( 'mysql' ),
             ]
         );
+
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( ucfirst( $channel ) . ' credit topped up', $client_id, [
+                'channel'   => $channel,
+                'amount'    => $amount,
+                'reference' => $reference,
+            ] );
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

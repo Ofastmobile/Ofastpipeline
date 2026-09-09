@@ -254,11 +254,11 @@ class OFP_Queue {
                         $wpdb->update( $p . 'ofp_trigger_queue', [ 'status' => 'cancelled' ], [ 'id' => $trigger->id ] );
                         return;
                     }
-                    $success = OFP_Mailer::send_client_email(
+                    $success = OFP_Mailer::send(
                         $lead->email,
+                        $lead->name ?: 'there',
                         'A message from ' . $trigger->business_name,
-                        nl2br( esc_html( $message ) ),
-                        (int) $trigger->client_id
+                        nl2br( esc_html( $message ) )
                     );
                     self::log( $trigger, [ 'success' => $success, 'provider_ref' => 'wp_mail' ], $message, 0 );
                     break;

@@ -230,6 +230,157 @@ class OFP_Lead {
     }
 
     /**
+     * Daily lead counts for the last N days, keyed by Y-m-d, oldest first.
+     * Days with no leads are filled with 0 so the chart has no gaps.
+     *
+     * @param  int $client_id
+     * @param  int $days       Number of days to include (default 7).
+     * @return array           [ [ 'date' => 'Y-m-d', 'label' => 'M d', 'count' => int ], ... ]
+     */
+    public static function get_daily_counts( int $client_id, int $days = 7 ): array {
+        global $wpdb;
+        $p = $wpdb->prefix;
+
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT DATE(created_at) AS d, COUNT(*) AS c
+                 FROM {$p}ofp_leads
+                 WHERE client_id = %d
+                   AND created_at >= DATE_SUB( CURDATE(), INTERVAL %d DAY )
+                 GROUP BY DATE(created_at)",
+                $client_id,
+                $days - 1
+            ),
+            OBJECT_K
+        );
+
+        $out = [];
+        for ( $i = $days - 1; $i >= 0; $i-- ) {
+            $date = date( 'Y-m-d', strtotime( "-{$i} days" ) );
+            $out[] = [
+                'date'  => $date,
+                'label' => date( 'M d', strtotime( $date ) ),
+                'count' => isset( $rows[ $date ] ) ? (int) $rows[ $date ]->c : 0,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Monthly conversion rate (%) for the last N months, oldest first.
+     * Rate = converted leads that month / total leads created that month.
+     *
+     * @param  int $client_id
+     * @param  int $months     Number of months to include (default 6).
+     * @return array           [ [ 'month' => 'Y-m', 'label' => 'M Y', 'rate' => int ], ... ]
+     */
+    public static function get_monthly_conversion( int $client_id, int $months = 6 ): array {
+        global $wpdb;
+        $p = $wpdb->prefix;
+
+        $totals = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT DATE_FORMAT(created_at, '%%Y-%%m') AS ym, COUNT(*) AS c
+                 FROM {$p}ofp_leads
+                 WHERE client_id = %d
+                   AND created_at >= DATE_SUB( DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL %d MONTH )
+                 GROUP BY ym",
+                $client_id,
+                $months - 1
+            ),
+            OBJECT_K
+        );
+
+        $converted = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT DATE_FORMAT(converted_at, '%%Y-%%m') AS ym, COUNT(*) AS c
+                 FROM {$p}ofp_leads
+                 WHERE client_id = %d
+                   AND status = 'converted'
+                   AND converted_at >= DATE_SUB( DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL %d MONTH )
+                 GROUP BY ym",
+                $client_id,
+                $months - 1
+            ),
+            OBJECT_K
+        );
+
+        $out = [];
+        for ( $i = $months - 1; $i >= 0; $i-- ) {
+            $ym    = date( 'Y-m', strtotime( "-{$i} months" ) );
+            $total = isset( $totals[ $ym ] ) ? (int) $totals[ $ym ]->c : 0;
+            $conv  = isset( $converted[ $ym ] ) ? (int) $converted[ $ym ]->c : 0;
+            $rate  = $total > 0 ? round( ( $conv / $total ) * 100 ) : 0;
+
+            $out[] = [
+                'month' => $ym,
+                'label' => date( 'M Y', strtotime( $ym . '-01' ) ),
+                'rate'  => $rate,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Monthly lead totals + conversions for the last N months, oldest first.
+     * Used for the Reports page "Monthly Performance" chart (raw counts,
+     * not a rate, so it can plot two bars per month).
+     *
+     * @param  int $client_id
+     * @param  int $months     Number of months to include (default 12).
+     * @return array           [ [ 'month' => 'Y-m', 'label' => 'M Y', 'total' => int, 'converted' => int ], ... ]
+     */
+    public static function get_monthly_stats( int $client_id, int $months = 12 ): array {
+        global $wpdb;
+        $p = $wpdb->prefix;
+
+        $totals = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT DATE_FORMAT(created_at, '%%Y-%%m') AS ym, COUNT(*) AS c
+                 FROM {$p}ofp_leads
+                 WHERE client_id = %d
+                   AND created_at >= DATE_SUB( DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL %d MONTH )
+                 GROUP BY ym",
+                $client_id,
+                $months - 1
+            ),
+            OBJECT_K
+        );
+
+        $converted = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT DATE_FORMAT(converted_at, '%%Y-%%m') AS ym, COUNT(*) AS c
+                 FROM {$p}ofp_leads
+                 WHERE client_id = %d
+                   AND status = 'converted'
+                   AND converted_at >= DATE_SUB( DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL %d MONTH )
+                 GROUP BY ym",
+                $client_id,
+                $months - 1
+            ),
+            OBJECT_K
+        );
+
+        $out = [];
+        for ( $i = $months - 1; $i >= 0; $i-- ) {
+            $ym    = date( 'Y-m', strtotime( "-{$i} months" ) );
+            $total = isset( $totals[ $ym ] ) ? (int) $totals[ $ym ]->c : 0;
+            $conv  = isset( $converted[ $ym ] ) ? (int) $converted[ $ym ]->c : 0;
+
+            $out[] = [
+                'month'     => $ym,
+                'label'     => date( 'M Y', strtotime( $ym . '-01' ) ),
+                'total'     => $total,
+                'converted' => $conv,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * Calculates growth percentage and returns formatted HTML for the UI.
      *
      * @param int $current The current period's value

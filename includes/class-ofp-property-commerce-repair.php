@@ -157,7 +157,7 @@ class OFP_Property_Commerce_Repair {
             $message_html .= sprintf('<p>Total Price: NGN %s<br>Initial Payment: NGN %s</p>', number_format((float)$offer->total_price, 2), number_format((float)$offer->initial_payment, 2));
             $message_html .= sprintf('<p>Please review and accept the offer here:<br><a href="%s">Accept Installment Offer</a></p>', esc_url($offer_url));
             $message_html .= '<p>If you have any questions, please contact us.</p>';
-            OFP_Mailer::send_client_email($offer->buyer_email, 'Property Installment Offer - ' . ($offer->property_title?:''), $message_html, (int)$offer->client_id);
+            OFP_Mailer::send($offer->buyer_email, $offer->buyer_name?:'there', 'Property Installment Offer - ' . ($offer->property_title?:''), $message_html);
         }
         if(!empty($offer->sms_provider)&&!empty($offer->buyer_phone)&&!empty($offer->client_id)&&class_exists('OFP_Credit')&&OFP_Credit::has_balance((int)$offer->client_id,'sms',6.99)){ $sms=new OFP_SMS($offer->sms_provider,(int)$offer->client_id); $sent=$sms->send($offer->buyer_phone,$message); if(!empty($sent['success']))OFP_Credit::deduct((int)$offer->client_id,'sms',6.99); }
         if(!empty($offer->client_id)&&class_exists('OFP_Notification'))OFP_Notification::create((int)$offer->client_id,'property_offer_created','Installment offer created',sprintf('An installment offer has been created for %s and sent to %s.', $offer->property_title?:'a property',$offer->buyer_name));

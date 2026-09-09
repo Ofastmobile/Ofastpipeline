@@ -94,7 +94,6 @@ $status_badges = [
     <title>My Prospects — OFast Pipeline</title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="ofp-portal-body">
 
@@ -218,8 +217,6 @@ $status_badges = [
                 <div style="position: absolute; text-align: center; pointer-events: none;">
                     <?php 
                         $rate = $total > 0 ? round(($stats['converted'] / $total) * 100) : 0;
-                        // Use a dummy rate if it's 0 so the chart looks good for the mockup
-                        if ($rate === 0) $rate = 72; 
                     ?>
                     <div style="font-size: 32px; font-weight: 700; color: var(--accent-blue);"><?php echo $rate; ?>%</div>
                     <div style="font-size: 12px; color: var(--text-muted);">Converted</div>
@@ -403,61 +400,72 @@ document.addEventListener('DOMContentLoaded', function() {
     const gridColor = document.documentElement.getAttribute('data-theme') === 'light' ? '#e2e8f0' : 'rgba(255, 255, 255, 0.05)';
     const textColor = document.documentElement.getAttribute('data-theme') === 'light' ? '#64748b' : '#94a3b8';
 
-    // Lead Generation Line Chart
+    // Lead Generation Line Chart (real data via AJAX, last 7 days)
     const lineCtx = document.getElementById('leadsLineChart');
-    if (lineCtx) {
-        // Create a gradient for the line chart fill
+    if (lineCtx && typeof ofpClientData !== 'undefined') {
         const gradient = lineCtx.getContext('2d').createLinearGradient(0, 0, 0, 220);
         gradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
         gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
 
-        new Chart(lineCtx, {
-            type: 'line',
-            data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                datasets: [{
-                    label: 'Leads',
-                    data: [12, 19, 15, 25, 22, 30, 28], // Dummy trend data
-                    borderColor: '#3b82f6',
-                    backgroundColor: gradient,
-                    borderWidth: 3,
-                    pointBackgroundColor: '#fff',
-                    pointBorderColor: '#3b82f6',
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    fill: true,
-                    tension: 0.4 // Smooth curves
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: '#1e2638',
-                        titleColor: '#f8fafc',
-                        bodyColor: '#cbd5e1',
-                        borderColor: 'rgba(255,255,255,0.1)',
-                        borderWidth: 1,
-                        padding: 10,
-                        displayColors: false
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: { display: false, drawBorder: false },
-                        ticks: { color: textColor, font: { family: "'Inter', sans-serif", size: 12 } }
+        const lineBody = new URLSearchParams();
+        lineBody.append('action', 'ofp_dashboard_chart_data');
+        lineBody.append('nonce', ofpClientData.nonce);
+
+        fetch(ofpClientData.ajaxurl, { method: 'POST', credentials: 'same-origin', body: lineBody })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (!res.success) return;
+                const daily = res.data.daily || [];
+
+                new Chart(lineCtx, {
+                    type: 'line',
+                    data: {
+                        labels: daily.map(function(d) { return d.label; }),
+                        datasets: [{
+                            label: 'Leads',
+                            data: daily.map(function(d) { return d.count; }),
+                            borderColor: '#3b82f6',
+                            backgroundColor: gradient,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#3b82f6',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: true,
+                            tension: 0.4
+                        }]
                     },
-                    y: {
-                        border: { display: false },
-                        grid: { color: gridColor },
-                        ticks: { color: textColor, font: { family: "'Inter', sans-serif", size: 12 }, padding: 10 }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1e2638',
+                                titleColor: '#f8fafc',
+                                bodyColor: '#cbd5e1',
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                borderWidth: 1,
+                                padding: 10,
+                                displayColors: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false, drawBorder: false },
+                                ticks: { color: textColor, font: { family: "'Inter', sans-serif", size: 12 } }
+                            },
+                            y: {
+                                border: { display: false },
+                                grid: { color: gridColor },
+                                ticks: { color: textColor, font: { family: "'Inter', sans-serif", size: 12 }, padding: 10, precision: 0 }
+                            }
+                        }
                     }
-                }
-            }
-        });
+                });
+            })
+            .catch(function(err) { console.error('OFP leads chart error:', err); });
     }
 
     // Conversion Donut Chart

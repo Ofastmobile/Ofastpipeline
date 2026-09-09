@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION', '2.1.6' );
+define( 'OFP_VERSION', '2.1.5' );
 define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
@@ -28,7 +28,6 @@ require_once OFP_PATH . 'includes/class-ofp-deactivator.php';
 require_once OFP_PATH . 'includes/class-ofp-security.php';
 require_once OFP_PATH . 'includes/class-ofp-auth.php';
 require_once OFP_PATH . 'includes/class-ofp-mailer.php';
-require_once OFP_PATH . 'includes/class-ofp-comms.php';
 require_once OFP_PATH . 'includes/class-ofp-client.php';
 require_once OFP_PATH . 'includes/class-ofp-team-member.php';
 require_once OFP_PATH . 'includes/class-ofp-lead.php';
@@ -87,7 +86,6 @@ add_filter( 'cron_schedules', function ( array $schedules ): array {
 } );
 
 add_action( 'plugins_loaded', function (): void {
-    OFP_Activator::maybe_upgrade();
     OFP_Mailer::configure_smtp();
 
     new OFP_Admin_Menu();

@@ -8,7 +8,6 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 if ( ! OFP_Auth::is_super_admin() ) wp_die( 'Access denied.' );
 
-$active_provider = get_option( 'ofp_payment_provider', 'monnify' );
 $smtp_mode       = get_option( 'ofp_smtp_mode', 'default' );
 
 // ── Helper: renders a configured / not-set badge ────────────────────────
