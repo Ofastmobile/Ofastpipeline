@@ -56,6 +56,10 @@ require_once OFP_PATH . 'includes/class-ofp-property-payment-records.php';
 require_once OFP_PATH . 'includes/class-ofp-property-checkout.php';
 require_once OFP_PATH . 'includes/class-ofp-property-payment-entry-ui.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce-repair.php';
+require_once OFP_PATH . 'includes/class-ofp-property-rent.php';
+require_once OFP_PATH . 'includes/class-ofp-property-rent-visibility.php';
+require_once OFP_PATH . 'includes/class-ofp-property-lease-payment.php';
+require_once OFP_PATH . 'includes/class-ofp-property-tenant-portal.php';
 
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-paystack.php';
@@ -110,6 +114,9 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Property_Payment_Records::init();
     OFP_Property_Payment_Entry_UI::init();
     OFP_Property_Commerce_Repair::init();
+    OFP_Property_Rent::init();
+    OFP_Property_Rent_Visibility::init();
+    OFP_Property_Tenant_Portal::init();
 } );
 
 add_action( 'init', function (): void {

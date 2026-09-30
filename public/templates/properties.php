@@ -611,7 +611,10 @@ if ( isset( $_GET['edit'] ) ) {
                                             <td style="padding: 12px 16px;">
                                                 <?php 
                                                     $db_status = get_post_meta( $property->ID, 'ofp_status', true ) ?: 'pending_upload';
-                                                    if ( $property->post_status === 'pending' ) {
+                                                    $is_occupied = class_exists( 'OFP_Property_Rent' ) && OFP_Property_Rent::wp_property_is_occupied( (int) $property->ID );
+                                                    if ( $is_occupied ) {
+                                                        echo '<span style="color:#7c3aed;font-weight:600;">Occupied</span>';
+                                                    } elseif ( $property->post_status === 'pending' ) {
                                                         echo '<span style="color:#f59e0b;font-weight:500;">Pending Review</span>';
                                                     } else {
                                                         $status_labels = [

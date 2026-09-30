@@ -513,6 +513,10 @@ class OFP_Client {
             "DELETE FROM {$p}ofp_pipeline_configs WHERE client_id = %d",
             "DELETE FROM {$p}ofp_archives WHERE client_id = %d",
             "DELETE FROM {$p}ofp_client_sessions WHERE client_id = %d",
+            "DELETE lp FROM {$p}ofp_property_lease_payments lp INNER JOIN {$p}ofp_property_leases l ON l.id = lp.lease_id WHERE l.client_id = %d",
+            "DELETE FROM {$p}ofp_property_leases WHERE client_id = %d",
+            "DELETE FROM {$p}ofp_property_rent_options WHERE client_id = %d",
+            "DELETE FROM {$p}ofp_property_tenants WHERE client_id = %d",
             "DELETE FROM {$p}ofp_properties WHERE client_id = %d",
             "DELETE FROM {$p}ofp_property_inquiries WHERE client_id = %d",
         ];

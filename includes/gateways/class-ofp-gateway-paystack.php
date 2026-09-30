@@ -152,9 +152,25 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
                     'paystack',
                     (string) ( $data->data->id ?? $reference )
                 );
-                return new WP_REST_Response( [ 'status' => $processed ? 'va_payment_processed' : 'va_payment_unmatched' ], $processed ? 200 : 422 );
+                if ( $processed ) return new WP_REST_Response( [ 'status' => 'va_payment_processed' ], 200 );
+            }
+            if ( $customer_code && class_exists( 'OFP_Property_Lease_Payment' ) ) {
+                $amount_paid = ( (float) ( $data->data->amount ?? 0 ) ) / 100;
+                $processed = OFP_Property_Lease_Payment::process_verified_virtual_account_payment(
+                    $customer_code,
+                    $amount_paid,
+                    'paystack',
+                    (string) ( $data->data->id ?? $reference )
+                );
+                return new WP_REST_Response( [ 'status' => $processed ? 'lease_va_payment_processed' : 'va_payment_unmatched' ], $processed ? 200 : 422 );
             }
             return new WP_REST_Response( [ 'status' => 'ignored' ], 200 );
+        }
+
+        if ( $reference && class_exists( 'OFP_Property_Lease_Payment' ) && OFP_Property_Lease_Payment::is_reference( $reference ) ) {
+            $amount_paid = ( (float) ( $data->data->amount ?? 0 ) ) / 100;
+            $processed = OFP_Property_Lease_Payment::process_verified_checkout( $reference, $amount_paid, 'paystack', (string) ( $data->data->id ?? $reference ) );
+            return new WP_REST_Response( [ 'status' => $processed ? 'lease_payment_processed' : 'lease_payment_rejected' ], $processed ? 200 : 422 );
         }
 
         // Property commerce gets its own handler and never falls through to

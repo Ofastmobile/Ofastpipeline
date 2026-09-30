@@ -40,6 +40,7 @@ class OFP_Client_Portal {
         'team' => 'team.php',
         'team-invite' => 'team-invite.php',
         'message-templates' => 'message-templates.php',
+        'tenants' => 'tenants.php',
     ];
 
     private array $public_routes = [ 'login', 'signup', 'forgot-password', 'reset-password', 'team-invite' ];

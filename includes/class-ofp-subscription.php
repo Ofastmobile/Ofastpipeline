@@ -140,6 +140,11 @@ class OFP_Subscription {
         return self::client_plan( $client_id ) === 'gold';
     }
 
+    /** Rent management follows the same Gold-only server-side gate as installments. */
+    public static function allows_rent_management( int $client_id ): bool {
+        return self::client_plan( $client_id ) === 'gold';
+    }
+
     /**
      * Client can use the product (CRM, listings, payments) — not suspended.
      * Replaces has_active('crm') / has_active('listing') as a feature gate.
