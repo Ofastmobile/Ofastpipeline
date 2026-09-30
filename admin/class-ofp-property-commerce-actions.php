@@ -33,7 +33,8 @@ class OFP_Property_Commerce_Actions {
     public static function render_create_offer(): void {
         ?>
         <h2 class="nav-tab-wrapper">
-            <a href="?post_type=ofp_property&page=ofp-property-offers" class="nav-tab">Offers Table</a>
+            <a href="?post_type=ofp_property&page=ofp-property-purchases" class="nav-tab">Sales Table</a>
+            <a href="?post_type=ofp_property&page=ofp-property-add-purchase" class="nav-tab">Add Purchase</a>
             <a href="?post_type=ofp_property&page=ofp-property-create-offer" class="nav-tab nav-tab-active">Create Offer</a>
         </h2>
         <?php
@@ -195,7 +196,7 @@ class OFP_Property_Commerce_Actions {
 
         wp_safe_redirect( add_query_arg(
             [ 'created' => 1, 'offer_id' => $offer_id, 'offer_url' => rawurlencode( $offer_url ) ],
-            admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-offers' )
+            admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-purchases' )
         ) );
         exit;
     }
@@ -217,12 +218,12 @@ class OFP_Property_Commerce_Actions {
         ) );
 
         if ( ! $offer ) {
-            wp_safe_redirect( add_query_arg( 'error', rawurlencode( 'Offer not found.' ), admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-offers' ) ) );
+            wp_safe_redirect( add_query_arg( 'error', rawurlencode( 'Offer not found.' ), admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-purchases' ) ) );
             exit;
         }
 
         if ( $offer->status === 'accepted' ) {
-            wp_safe_redirect( add_query_arg( 'error', rawurlencode( 'Accepted offers cannot be resent.' ), admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-offers' ) ) );
+            wp_safe_redirect( add_query_arg( 'error', rawurlencode( 'Accepted offers cannot be resent.' ), admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-purchases' ) ) );
             exit;
         }
 
@@ -251,7 +252,7 @@ class OFP_Property_Commerce_Actions {
 
         do_action( 'ofp_property_offer_created', $offer_id, $raw_token, $offer_url );
 
-        wp_safe_redirect( add_query_arg( 'resent', 1, admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-offers' ) ) );
+        wp_safe_redirect( add_query_arg( 'resent', 1, admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-purchases' ) ) );
         exit;
     }
 

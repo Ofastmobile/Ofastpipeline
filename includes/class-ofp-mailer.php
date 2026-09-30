@@ -300,11 +300,12 @@ class OFP_Mailer {
 
             ' . ( $urgent ? '
             <p style="color:#dc2626;font-weight:600;">
-                ⚠️ Your pipeline will enter a 5-day grace period after expiry,
-                then be suspended if payment is not received.
+                ⚠️ Once your subscription expires, your plan drops to Free immediately —
+                no grace period. Renew now to keep your current plan and listings editable.
             </p>' : '
-            <p>Your pipeline will continue running during a 5-day grace period
-               after expiry, giving you time to renew without interruption.</p>' ) . '
+            <p>Renew before the expiry date to keep your current plan active without
+               any interruption. There is no grace period — your plan drops to Free
+               the moment it expires.</p>' ) . '
 
             <p>
                 <a href="' . esc_url( home_url( '/credits' ) ) . '"

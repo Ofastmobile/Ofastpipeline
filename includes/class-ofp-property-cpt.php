@@ -170,16 +170,23 @@ class OFP_Property_CPT {
         wp_nonce_field( 'ofp_property_meta', 'ofp_property_nonce' );
 
         $meta = [
-            'ofp_client_id'     => get_post_meta( $post->ID, 'ofp_client_id',     true ),
-            'ofp_listing_type'  => get_post_meta( $post->ID, 'ofp_listing_type',  true ),
-            'ofp_property_type' => get_post_meta( $post->ID, 'ofp_property_type', true ),
-            'ofp_price'         => get_post_meta( $post->ID, 'ofp_price',         true ),
-            'ofp_price_period'  => get_post_meta( $post->ID, 'ofp_price_period',  true ),
-            'ofp_bedrooms'      => get_post_meta( $post->ID, 'ofp_bedrooms',      true ),
-            'ofp_bathrooms'     => get_post_meta( $post->ID, 'ofp_bathrooms',     true ),
-            'ofp_location_text' => get_post_meta( $post->ID, 'ofp_location_text', true ),
-            'ofp_is_featured'   => get_post_meta( $post->ID, 'ofp_is_featured',   true ),
-            'ofp_status'        => get_post_meta( $post->ID, 'ofp_status',        true ),
+            'ofp_client_id'      => get_post_meta( $post->ID, 'ofp_client_id',     true ),
+            'ofp_listing_type'   => get_post_meta( $post->ID, 'ofp_listing_type',  true ),
+            'ofp_property_type'  => get_post_meta( $post->ID, 'ofp_property_type', true ),
+            'ofp_price'          => get_post_meta( $post->ID, 'ofp_price',         true ),
+            'ofp_price_period'   => get_post_meta( $post->ID, 'ofp_price_period',  true ),
+            'ofp_bedrooms'       => get_post_meta( $post->ID, 'ofp_bedrooms',      true ),
+            'ofp_bathrooms'      => get_post_meta( $post->ID, 'ofp_bathrooms',     true ),
+            'ofp_parking'        => get_post_meta( $post->ID, 'ofp_parking',        true ),
+            'ofp_area_sqm'       => get_post_meta( $post->ID, 'ofp_area_sqm',       true ),
+            'ofp_title_document' => get_post_meta( $post->ID, 'ofp_title_document', true ),
+            'ofp_condition'      => get_post_meta( $post->ID, 'ofp_condition',      true ),
+            'ofp_furnishing'     => get_post_meta( $post->ID, 'ofp_furnishing',     true ),
+            'ofp_video_url'      => get_post_meta( $post->ID, 'ofp_video_url',      true ),
+            'ofp_amenities'      => json_decode( get_post_meta( $post->ID, 'ofp_amenities', true ) ?: '[]', true ) ?: [],
+            'ofp_location_text'  => get_post_meta( $post->ID, 'ofp_location_text',  true ),
+            'ofp_is_featured'    => get_post_meta( $post->ID, 'ofp_is_featured',   true ),
+            'ofp_status'         => get_post_meta( $post->ID, 'ofp_status',        true ),
         ];
 
         // Get all active clients for the dropdown.
@@ -255,6 +262,8 @@ class OFP_Property_CPT {
                 <select name="ofp_listing_type">
                     <option value="sale" <?php selected( $meta['ofp_listing_type'], 'sale' ); ?>>For Sale</option>
                     <option value="rent" <?php selected( $meta['ofp_listing_type'], 'rent' ); ?>>For Rent</option>
+                    <option value="shortlet" <?php selected( $meta['ofp_listing_type'], 'shortlet' ); ?>>Short Let</option>
+                    <option value="commercial" <?php selected( $meta['ofp_listing_type'], 'commercial' ); ?>>Commercial</option>
                 </select>
             </div>
 
@@ -262,7 +271,7 @@ class OFP_Property_CPT {
                 <label>Property Type</label>
                 <select name="ofp_property_type">
                     <?php
-                    $types = [ 'apartment' => 'Apartment', 'duplex' => 'Duplex', 'bungalow' => 'Bungalow',
+                    $types = [ 'apartment' => 'Apartment', 'duplex' => 'Duplex', 'semi-detached' => 'Semi-Detached', 'bungalow' => 'Bungalow',
                                'terrace'   => 'Terrace', 'land' => 'Land', 'office' => 'Office',
                                'shop'      => 'Shop', 'warehouse' => 'Warehouse', 'other' => 'Other' ];
                     foreach ( $types as $val => $label ) :
@@ -299,6 +308,97 @@ class OFP_Property_CPT {
             <div class="ofp-meta-field">
                 <label>Bathrooms</label>
                 <input type="number" name="ofp_bathrooms" value="<?php echo esc_attr( $meta['ofp_bathrooms'] ); ?>" min="0" max="20">
+            </div>
+
+            <div class="ofp-meta-field">
+                <label>Parking Spaces</label>
+                <input type="number" name="ofp_parking" value="<?php echo esc_attr( $meta['ofp_parking'] ); ?>" min="0" max="50">
+            </div>
+
+            <div class="ofp-meta-field">
+                <label>Area (SQM)</label>
+                <input type="number" name="ofp_area_sqm" value="<?php echo esc_attr( $meta['ofp_area_sqm'] ); ?>" min="0">
+            </div>
+
+            <div class="ofp-meta-field">
+                <label>Title Document</label>
+                <select name="ofp_title_document">
+                    <option value="">-- Select Title --</option>
+                    <?php
+                    $docs = [
+                        'C of O'               => 'Certificate of Occupancy (C of O)',
+                        'Governor\'s Consent'  => 'Governor\'s Consent',
+                        'Gazette'              => 'Gazette',
+                        'Deed of Assignment'   => 'Deed of Assignment',
+                        'R of O'               => 'Right of Occupancy (R of O)',
+                        'Excision'             => 'Excision',
+                        'Court Judgment'       => 'Court Judgment',
+                        'Other'                => 'Other',
+                    ];
+                    foreach ( $docs as $val => $lbl ) :
+                    ?>
+                        <option value="<?php echo esc_attr( $val ); ?>" <?php selected( $meta['ofp_title_document'], $val ); ?>><?php echo esc_html( $lbl ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="ofp-meta-field">
+                <label>Condition</label>
+                <select name="ofp_condition">
+                    <option value="">-- Select Condition --</option>
+                    <?php
+                    $conditions = [ 'Newly Built', 'Fairly Used', 'Renovation Needed', 'Under Construction', 'Off-Plan' ];
+                    foreach ( $conditions as $c ) :
+                    ?>
+                        <option value="<?php echo esc_attr( $c ); ?>" <?php selected( $meta['ofp_condition'], $c ); ?>><?php echo esc_html( $c ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="ofp-meta-field">
+                <label>Furnishing</label>
+                <select name="ofp_furnishing">
+                    <option value="">-- Select Furnishing --</option>
+                    <?php
+                    $furnishings = [ 'Furnished', 'Semi-Furnished', 'Unfurnished' ];
+                    foreach ( $furnishings as $f ) :
+                    ?>
+                        <option value="<?php echo esc_attr( $f ); ?>" <?php selected( $meta['ofp_furnishing'], $f ); ?>><?php echo esc_html( $f ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="ofp-meta-field" style="grid-column:1/-1;">
+                <label>Video Tour Walkthrough URL (YouTube, Vimeo, or MP4 link)</label>
+                <input type="url" name="ofp_video_url" value="<?php echo esc_attr( $meta['ofp_video_url'] ); ?>" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+
+            <div class="ofp-meta-field" style="grid-column:1/-1;">
+                <label>Amenities &amp; Features</label>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:8px; margin-top:4px;">
+                    <?php
+                    $all_amenities = [
+                        'swimming_pool'   => 'Swimming Pool',
+                        'smart_home'      => 'Smart Home Automation',
+                        'power_247'       => '24/7 Electricity',
+                        'cctv_security'   => 'CCTV & Uniformed Security',
+                        'gym'             => 'Gym / Fitness Center',
+                        'elevator'        => 'Elevator / Lift',
+                        'playground'      => 'Children Play Area',
+                        'bq'              => 'Boys Quarters (BQ)',
+                        'water_treatment' => 'Water Treatment Plant',
+                        'fitted_kitchen'  => 'Fully Fitted Kitchen',
+                    ];
+                    $selected_amenities = is_array( $meta['ofp_amenities'] ) ? $meta['ofp_amenities'] : [];
+                    foreach ( $all_amenities as $key => $label ) :
+                    ?>
+                        <label style="display:flex; align-items:center; gap:6px; font-weight:normal; font-size:12px; cursor:pointer;">
+                            <input type="checkbox" name="ofp_amenities[]" value="<?php echo esc_attr( $key ); ?>"
+                                <?php checked( in_array( $key, $selected_amenities, true ) ); ?>>
+                            <?php echo esc_html( $label ); ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
             </div>
 
             <div class="ofp-meta-field" style="grid-column:1/-1;">
@@ -400,15 +500,21 @@ class OFP_Property_CPT {
         if ( ! current_user_can( 'edit_post', $post_id ) ) return;
 
         $fields = [
-            'ofp_client_id'     => 'absint',
-            'ofp_listing_type'  => 'sanitize_text_field',
-            'ofp_property_type' => 'sanitize_text_field',
-            'ofp_price'         => 'floatval',
-            'ofp_price_period'  => 'sanitize_text_field',
-            'ofp_bedrooms'      => 'absint',
-            'ofp_bathrooms'     => 'absint',
-            'ofp_location_text' => 'sanitize_text_field',
-            'ofp_status'        => 'sanitize_text_field',
+            'ofp_client_id'      => 'absint',
+            'ofp_listing_type'   => 'sanitize_text_field',
+            'ofp_property_type'  => 'sanitize_text_field',
+            'ofp_price'          => 'floatval',
+            'ofp_price_period'   => 'sanitize_text_field',
+            'ofp_bedrooms'       => 'absint',
+            'ofp_bathrooms'      => 'absint',
+            'ofp_parking'        => 'absint',
+            'ofp_area_sqm'       => 'absint',
+            'ofp_title_document' => 'sanitize_text_field',
+            'ofp_condition'      => 'sanitize_text_field',
+            'ofp_furnishing'     => 'sanitize_text_field',
+            'ofp_video_url'      => 'esc_url_raw',
+            'ofp_location_text'  => 'sanitize_text_field',
+            'ofp_status'         => 'sanitize_text_field',
         ];
 
         foreach ( $fields as $key => $sanitizer ) {
@@ -421,6 +527,12 @@ class OFP_Property_CPT {
             }
             update_post_meta( $post_id, $key, $value );
         }
+
+        // Save amenities array
+        $amenities = isset( $_POST['ofp_amenities'] ) && is_array( $_POST['ofp_amenities'] )
+            ? array_map( 'sanitize_text_field', wp_unslash( $_POST['ofp_amenities'] ) )
+            : [];
+        update_post_meta( $post_id, 'ofp_amenities', json_encode( array_values( $amenities ) ) );
 
         // Enforce: sale listing type must have 'sales' price period.
         $listing_type = sanitize_text_field( wp_unslash( $_POST['ofp_listing_type'] ?? '' ) );
@@ -831,18 +943,34 @@ class OFP_Property_CPT {
         if ( is_front_page() && OFP_Host_Router::current_zone() === 'property' ) {
             $theme_override = locate_template( 'archive-ofp_property.php' );
             if ( $theme_override ) return $theme_override;
+            if ( file_exists( OFP_PATH . 'public/templates/property-marketplace.php' ) ) {
+                return OFP_PATH . 'public/templates/property-marketplace.php';
+            }
             return OFP_PATH . 'public/templates/property-archive.php';
+        }
+
+        // Main site front page: load modern property-homepage.php
+        if ( ( is_front_page() || is_home() ) && OFP_Host_Router::current_zone() !== 'app' ) {
+            if ( file_exists( OFP_PATH . 'public/templates/property-homepage.php' ) ) {
+                return OFP_PATH . 'public/templates/property-homepage.php';
+            }
         }
 
         if ( is_post_type_archive( 'ofp_property' ) && OFP_Host_Router::current_zone() !== 'app' ) {
             $theme_override = locate_template( 'archive-ofp_property.php' );
             if ( $theme_override ) return $theme_override;
+            if ( file_exists( OFP_PATH . 'public/templates/property-marketplace.php' ) ) {
+                return OFP_PATH . 'public/templates/property-marketplace.php';
+            }
             return OFP_PATH . 'public/templates/property-archive.php';
         }
 
         if ( is_singular( 'ofp_property' ) ) {
             $theme_override = locate_template( 'single-ofp_property.php' );
             if ( $theme_override ) return $theme_override;
+            if ( file_exists( OFP_PATH . 'public/templates/property-single-detail.php' ) ) {
+                return OFP_PATH . 'public/templates/property-single-detail.php';
+            }
             return OFP_PATH . 'public/templates/property-single.php';
         }
 

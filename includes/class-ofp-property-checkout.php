@@ -154,6 +154,19 @@ class OFP_Property_Checkout {
         return $configured;
     }
 
+    /**
+     * Builds a secure, buyer-facing checkout link for a purchase.
+     * Same signed-token scheme verify_purchase_token() below expects.
+     * Shared so nobody duplicates this HMAC pattern inline again.
+     */
+    public static function payment_link( int $purchase_id, int $ttl = 2592000 ): string {
+        $expires = time() + $ttl;
+        $payload = $purchase_id . '.' . $expires;
+        $sig = hash_hmac( 'sha256', $payload, wp_salt( 'auth' ) );
+        $token = $payload . '.' . $sig;
+        return add_query_arg( 'token', rawurlencode( $token ), home_url( '/property-checkout/' ) );
+    }
+
     private static function verify_purchase_token( string $token ): ?int {
         $parts = explode( '.', $token );
         if ( count( $parts ) !== 3 ) return null;

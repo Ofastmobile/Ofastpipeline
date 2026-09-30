@@ -499,9 +499,18 @@ class OFP_Subscription {
      */
     public static function get_active_listing_plan( int $client_id ): ?string {
         global $wpdb;
+        // Only a row that has actually been PAID counts as active access.
+        // 'pending' rows are created the moment a client merely SELECTS a
+        // plan on the Properties page, before they've paid a cent, and they
+        // never get a period_end (nothing to expire yet) — so treating
+        // 'pending' as equivalent to 'paid' here meant selecting Gold alone,
+        // with no payment ever completed, granted permanent Gold access
+        // that the daily expiry cron could never touch (period_end IS NULL
+        // matches forever). This was the root cause of plans that never
+        // demoted back to Free after expiring.
         $row = $wpdb->get_row( $wpdb->prepare( "
             SELECT plan FROM {$wpdb->prefix}ofp_subscriptions
-            WHERE client_id = %d AND type = 'listing' AND status IN ('paid', 'pending')
+            WHERE client_id = %d AND type = 'listing' AND status = 'paid'
             AND (period_end IS NULL OR period_end >= CURDATE())
             ORDER BY period_end DESC LIMIT 1
         ", $client_id ) );
@@ -568,6 +577,15 @@ class OFP_Subscription {
                 [ 'id' => $expired->id ]
             );
 
+            if ( class_exists( 'OFP_Notification' ) ) {
+                OFP_Notification::create(
+                    (int) $expired->id,
+                    'plan_expired_demoted',
+                    'Your plan has expired',
+                    'Your subscription expired and your plan has dropped to Free. You can still view your existing listings, but editing them, Team, and Sales & Installments are locked until you renew.'
+                );
+            }
+
             if ( class_exists( 'OFP_Logger' ) ) {
                 OFP_Logger::log( 'Plan expired — dropped to Free', (int) $expired->id, [
                     'previous_plan' => $expired->plan,
@@ -582,11 +600,17 @@ class OFP_Subscription {
     /**
      * Daily FOMO/upgrade nudge for every active client currently on the
      * free plan — whether they signed up on free, or dropped back to it
-     * after a paid plan lapsed. Runs once a day via the daily cron, so each
-     * client gets at most one of these a day.
+     * after a paid plan lapsed. Only actually sends on 4 days a week
+     * (Mon/Wed/Fri/Sun), so clients aren't emailed every single day —
+     * the cron itself still runs daily, this just gates the send.
      */
     public static function send_free_plan_nudges(): void {
         global $wpdb;
+
+        // 1=Mon ... 7=Sun. Four evenly-spread days a week.
+        if ( ! in_array( (int) gmdate( 'N' ), [ 1, 3, 5, 7 ], true ) ) {
+            return;
+        }
 
         $free_clients = $wpdb->get_results(
             "SELECT * FROM {$wpdb->prefix}ofp_clients
@@ -595,6 +619,15 @@ class OFP_Subscription {
 
         foreach ( $free_clients as $client ) {
             OFP_Mailer::send_free_plan_nudge( $client );
+
+            if ( class_exists( 'OFP_Notification' ) ) {
+                OFP_Notification::create(
+                    (int) $client->id,
+                    'free_plan_nudge',
+                    'Upgrade to unlock more',
+                    'You\'re on the Free plan. Upgrade to Silver or Gold to list more properties, add team members, and use installment plans.'
+                );
+            }
         }
     }
 
@@ -1014,6 +1047,16 @@ class OFP_Subscription {
      */
     private static function send_reminder( object $client, int $days_left ): void {
         OFP_Mailer::send_subscription_reminder( $client, $days_left );
+
+        if ( class_exists( 'OFP_Notification' ) ) {
+            $when = $days_left <= 0 ? 'today' : ( $days_left === 1 ? 'tomorrow' : "in {$days_left} days" );
+            OFP_Notification::create(
+                (int) $client->id,
+                'subscription_expiring',
+                'Your plan expires ' . $when,
+                'Renew before it expires to keep your current plan active — there is no grace period, it drops to Free immediately.'
+            );
+        }
     }
 
     /**

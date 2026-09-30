@@ -17,10 +17,8 @@ class OFP_Property_Payment_Records {
         add_action( 'admin_post_ofp_client_payment_verify', [ __CLASS__, 'client_verify' ] );
         add_action( 'admin_post_ofp_client_payment_reject', [ __CLASS__, 'client_reject' ] );
 
-        // The manual-payment engine still owns submission, but its old
-        // verification UI/menu is no longer exposed.
-        remove_action( 'admin_menu', [ 'OFP_Property_Manual_Payment', 'register_admin_menu' ] );
-        remove_action( 'wp_footer', [ 'OFP_Property_Manual_Payment', 'inject_client_verification_nav' ], 998 );
+        // The manual-payment engine only owns buyer receipt submission now;
+        // verification lives entirely here (see class-ofp-property-manual-payment.php).
     }
 
     public static function admin_menu(): void {

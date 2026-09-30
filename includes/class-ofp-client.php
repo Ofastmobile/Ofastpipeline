@@ -11,15 +11,14 @@
  *  4.  Create the credit record in wp_ofp_credits (starts at zero balance)
  *  5.  Create subscriptions based on what was requested (crm / listing / both)
  *      — OFP_Subscription::create() handles this, including pipeline_config for CRM
- *  6.  Create a Monnify virtual account for subscription payments
- *  7.  Send the welcome email with login credentials + virtual account details
+ *  6.  Send the welcome email with login credentials
  *
  * TWO ONBOARDING PATHS (v2.1):
  *  - Manual  : Admin creates client via wp-admin form. Status goes straight to 'active'.
  *  - Self-serve: Client signs up via /signup. Status starts as 'pending_review'.
  *                Admin must approve before the account activates (fraud gate).
  *
- * Depends on: OFP_Security, OFP_Subscription, OFP_Monnify, OFP_Mailer, OFP_Credit.
+ * Depends on: OFP_Security, OFP_Subscription, OFP_Mailer, OFP_Credit.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -168,8 +167,6 @@ class OFP_Client {
             }
         }
 
-        // ── 6. Create virtual account via configured payment gateway ─────────
-        // OFP_Payment is a provider-agnostic interface built in Phase 6.
         // ── 6. Send welcome email ─────────────────────────────────────────────
         // Pass the plaintext temp password — it's only used here to email the
         // client. The hash is already stored in the DB above.

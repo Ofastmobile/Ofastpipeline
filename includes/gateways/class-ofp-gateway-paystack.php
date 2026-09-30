@@ -9,6 +9,9 @@
  *  Paystack calls them "Dedicated Virtual Accounts" (DVA).
  *  Each customer gets a dedicated account from Paystack's bank partners.
  *  Payments trigger the charge.success webhook event.
+ *  DVAs are used for BUYER property payments (bank transfer), not client
+ *  subscription funding. One DVA is created per purchase, and can receive
+ *  any number of installment deposits over the life of that purchase.
  *
  * WEBHOOK VERIFICATION:
  *  Paystack signs webhooks with HMAC SHA512 using your secret key.
@@ -34,8 +37,16 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         return ! empty( $this->secret_key );
     }
 
-    public function create_virtual_account( array $client_data, int $client_id ): ?object {
-        $customer_code = $this->create_customer( $client_data, $client_id );
+    /**
+     * Creates a Paystack customer + dedicated virtual account for a buyer's
+     * property purchase.
+     *
+     * @param  array $customer_data  [ 'email', 'first_name', 'last_name' ]
+     * @param  array $metadata       Arbitrary metadata to attach on Paystack's side, e.g. [ 'ofp_purchase_id' => 12 ].
+     * @return object|null           stdClass { account_number, bank_name, customer_code } or null.
+     */
+    public function create_virtual_account( array $customer_data, array $metadata = [] ): ?object {
+        $customer_code = $this->create_customer( $customer_data, $metadata );
         if ( ! $customer_code ) return null;
 
         $response = wp_remote_post(
@@ -64,6 +75,8 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         return (object) [
             'account_number' => $body->data->account_number,
             'bank_name'      => $body->data->bank->name ?? 'Paystack',
+            'bank_code'      => $body->data->bank->id ?? '',
+            'customer_code'  => $customer_code,
         ];
     }
 
@@ -123,6 +136,26 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         }
 
         $reference = $data->data->reference ?? '';
+        $channel   = $data->data->channel ?? '';
+
+        // Buyer dedicated virtual account deposit (bank transfer into their
+        // purchase's own account number). No reference we control exists on
+        // these, so we match by the Paystack customer_code we saved when the
+        // DVA was created.
+        if ( $channel === 'dedicated_nuban' ) {
+            $customer_code = $data->data->customer->customer_code ?? '';
+            if ( $customer_code && class_exists( 'OFP_Property_Payment_Context' ) ) {
+                $amount_paid = ( (float) ( $data->data->amount ?? 0 ) ) / 100;
+                $processed = OFP_Property_Payment_Context::process_verified_va_payment(
+                    $customer_code,
+                    $amount_paid,
+                    'paystack',
+                    (string) ( $data->data->id ?? $reference )
+                );
+                return new WP_REST_Response( [ 'status' => $processed ? 'va_payment_processed' : 'va_payment_unmatched' ], $processed ? 200 : 422 );
+            }
+            return new WP_REST_Response( [ 'status' => 'ignored' ], 200 );
+        }
 
         // Property commerce gets its own handler and never falls through to
         // the CRM/subscription payment processor.
@@ -149,33 +182,22 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
             return new WP_REST_Response( [ 'status' => 'subscription_checkout_processed' ], 200 );
         }
 
-        // Legacy client virtual-account payments continue through the existing
-        // subscription handler. Unknown references are ignored rather than
-        // guessed into the subscription business.
-        $client_id   = (int) ( $data->data->metadata->ofp_client_id ?? 0 );
-        $amount      = (float) ( $data->data->amount ?? 0 ) / 100;
-        $payment_ref = sanitize_text_field( $data->data->reference ?? '' );
-
-        if ( ! $client_id || $amount <= 0 ) {
-            return new WP_REST_Response( [ 'status' => 'ignored' ], 200 );
-        }
-
-        $this->process_payment( $client_id, $amount, $payment_ref );
-        return new WP_REST_Response( [ 'status' => 'processed' ], 200 );
+        return new WP_REST_Response( [ 'status' => 'ignored' ], 200 );
     }
 
-    private function create_customer( array $client_data, int $client_id ): ?string {
-        $name_parts = explode( ' ', $client_data['owner_name'], 2 );
+    private function create_customer( array $customer_data, array $metadata = [] ): ?string {
+        $name_parts = explode( ' ', $customer_data['name'] ?? '', 2 );
 
         $response = wp_remote_post(
             $this->base_url . '/customer',
             [
                 'headers' => $this->get_headers(),
                 'body'    => wp_json_encode( [
-                    'email'      => $client_data['email'],
-                    'first_name' => $name_parts[0] ?? $client_data['owner_name'],
-                    'last_name'  => $name_parts[1] ?? $client_data['business_name'],
-                    'metadata'   => [ 'ofp_client_id' => $client_id ],
+                    'email'      => $customer_data['email'],
+                    'first_name' => $customer_data['first_name'] ?? ( $name_parts[0] ?? '' ),
+                    'last_name'  => $customer_data['last_name'] ?? ( $name_parts[1] ?? '' ),
+                    'phone'      => $customer_data['phone'] ?? '',
+                    'metadata'   => $metadata,
                 ] ),
                 'timeout' => 20,
             ]
@@ -194,9 +216,5 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
             'Authorization' => 'Bearer ' . $this->secret_key,
             'Content-Type'  => 'application/json',
         ];
-    }
-
-    private function process_payment( int $client_id, float $amount, string $payment_ref ): void {
-        OFP_Subscription::process_gateway_payment( $client_id, $amount, $payment_ref, 'paystack_virtual_account' );
     }
 }

@@ -180,7 +180,7 @@ $transactions = $wpdb->get_results(
             <div class="ofp-table-wrap ofp-table-responsive">
                 <table class="ofp-table">
                     <thead>
-                        <tr><th>Type</th><th>Plan</th><th>Amount</th><th>Status</th><th>Period</th><th>Date</th></tr>
+                        <tr><th>Type</th><th>Plan</th><th>Amount</th><th>Status</th><th>Period</th><th>Payment Ref</th><th>Date</th></tr>
                     </thead>
                     <tbody>
                         <?php foreach ( $subscriptions as $sub ) : ?>
@@ -200,6 +200,11 @@ $transactions = $wpdb->get_results(
                                 </td>
                                 <td style="font-size:12px;color:#9ca3af;">
                                     <?php echo $sub->period_start ? esc_html( $sub->period_start . ' → ' . $sub->period_end ) : '—'; ?>
+                                </td>
+                                <td>
+                                    <code style="font-size:12px; color:var(--text-main); background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px;">
+                                        <?php echo esc_html( $sub->payment_ref ?? '—' ); ?>
+                                    </code>
                                 </td>
                                 <td style="font-size:12px;color:#9ca3af;">
                                     <?php echo $sub->paid_at ? esc_html( gmdate( 'M j, Y', strtotime( $sub->paid_at ) ) ) : '—'; ?>

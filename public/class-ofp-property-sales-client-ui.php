@@ -17,33 +17,32 @@ class OFP_Property_Sales_Client_UI {
         if ( is_admin() || ! OFP_Auth::current_client() ) return;
 
         $client = OFP_Auth::current_client();
+        $sales_locked = ! OFP_Subscription::has_paid_plan( (int) $client->id );
+        $sales_url    = $sales_locked ? home_url( '/pricing' ) : home_url( '/property-sales' );
 
         ?>
         <script>
         (function () {
             var items = [
                 {
-                    url: <?php echo wp_json_encode( home_url( '/property-sales' ) ); ?>,
+                    url: <?php echo wp_json_encode( $sales_url ); ?>,
                     label: 'Sales & Installments',
                     marker: 'sales',
+                    locked: <?php echo $sales_locked ? 'true' : 'false'; ?>,
                     icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7.5 16.5l3-3 2.25 2.25L19.5 9" /></svg>'
-                },
-                {
-                    url: <?php echo wp_json_encode( home_url( '/property-purchases' ) ); ?>,
-                    label: 'Purchases',
-                    marker: 'purchases',
-                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75h19.5v12H2.25zM6 6.75V4.5h12v2.25M6.75 12h.008v.008H6.75V12zm3 0h.008v.008H9.75V12zm3 0h.008v.008h-.008V12z" /></svg>'
                 },
                 {
                     url: <?php echo wp_json_encode( home_url( '/property-payments' ) ); ?>,
                     label: 'Payment Records',
                     marker: 'payment-records',
+                    locked: false,
                     icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 5.25h-15A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75h15a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0019.5 5.25zM2.25 9h19.5M6 13.5h3" /></svg>'
                 },
                 {
                     url: <?php echo wp_json_encode( home_url( '/listing-billing' ) ); ?>,
                     label: 'Listing Billing',
                     marker: 'listing-billing',
+                    locked: false,
                     icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zM7.5 12h.008v.008H7.5V12zm3 0h.008v.008h-.008V12z" /></svg>'
                 }
             ];
@@ -80,8 +79,13 @@ class OFP_Property_Sales_Client_UI {
                 if (!link) return null;
 
                 link.href = item.url;
-                link.removeAttribute('aria-disabled');
-                link.classList.remove('locked');
+                if (item.locked) {
+                    link.setAttribute('aria-disabled', 'true');
+                    link.classList.add('locked');
+                } else {
+                    link.removeAttribute('aria-disabled');
+                    link.classList.remove('locked');
+                }
                 link.classList.remove('active');
                 
                 if (window.location.href.indexOf(item.url) !== -1) {

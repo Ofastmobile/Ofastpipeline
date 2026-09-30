@@ -16,6 +16,7 @@ $error   = '';
 $success = '';
 
 $active_plan = OFP_Subscription::client_plan( $client->id );
+$can_edit_properties = OFP_Subscription::has_paid_plan( $client->id );
 $plan_prices = OFP_Property_CPT::get_plan_prices();
 $plan_caps   = OFP_Property_CPT::get_plan_caps();
 $plan_labels = [ 'free' => 'Free', 'silver' => 'Silver', 'gold' => 'Gold' ];
@@ -89,6 +90,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
         if ( ! $is_new && ! OFP_Property_CPT::is_owned_by( $editing_id, $client->id ) ) {
             $error = 'You do not have permission to edit that listing.';
         }
+        elseif ( ! $is_new && ! OFP_Subscription::has_paid_plan( $client->id ) ) {
+            $error = 'Your listing plan has expired. Renew or choose a plan to edit your existing listings.';
+        }
         elseif ( $is_new && ! OFP_Property_CPT::can_add_property( $client->id ) ) {
             $error = OFP_Subscription::has_paid_plan( $client->id )
                 ? 'You have reached your plan\'s property limit. Choose a higher plan to add more.'
@@ -102,7 +106,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
             $description   = sanitize_textarea_field( $_POST['description'] ?? '' );
             $price         = (float) $_POST['price'];
             $price_period  = sanitize_text_field( $_POST['price_period'] ?? 'year' );
-            $listing_type  = in_array( $_POST['listing_type'] ?? '', [ 'sale', 'rent' ], true ) ? $_POST['listing_type'] : 'sale';
+            $listing_type  = in_array( $_POST['listing_type'] ?? '', [ 'sale', 'rent', 'shortlet', 'commercial' ], true ) ? $_POST['listing_type'] : 'sale';
             $property_type = sanitize_text_field( $_POST['property_type'] ?? 'apartment' );
             $bedrooms      = (int) ( $_POST['bedrooms'] ?? 0 );
             $bathrooms     = (int) ( $_POST['bathrooms'] ?? 0 );
@@ -145,6 +149,23 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                 update_post_meta( $post_id, 'ofp_location_text', $location_text );
                 update_post_meta( $post_id, 'ofp_status', $status );
                 update_post_meta( $post_id, 'ofp_is_featured', $is_featured );
+
+                // Additional property detail fields
+                $parking       = (int) ( $_POST['parking'] ?? 0 );
+                $area_sqm      = (int) ( $_POST['area_sqm'] ?? 0 );
+                $title_doc     = sanitize_text_field( $_POST['title_document'] ?? '' );
+                $condition_val = sanitize_text_field( $_POST['condition'] ?? '' );
+                $furnishing    = sanitize_text_field( $_POST['furnishing'] ?? '' );
+                $video_url     = esc_url_raw( $_POST['video_url'] ?? '' );
+                $amenities     = json_encode( array_map( 'sanitize_text_field', (array) ( $_POST['amenities'] ?? [] ) ) );
+
+                update_post_meta( $post_id, 'ofp_parking', $parking );
+                update_post_meta( $post_id, 'ofp_area_sqm', $area_sqm );
+                update_post_meta( $post_id, 'ofp_title_document', $title_doc );
+                update_post_meta( $post_id, 'ofp_condition', $condition_val );
+                update_post_meta( $post_id, 'ofp_furnishing', $furnishing );
+                update_post_meta( $post_id, 'ofp_video_url', $video_url );
+                update_post_meta( $post_id, 'ofp_amenities', $amenities );
 
                 // Photo upload
                 if ( ! empty( $_FILES['photos']['name'][0] ) ) {
@@ -232,10 +253,16 @@ if ( isset($_GET['success']) ) {
 
 $my_properties  = OFP_Property_CPT::get_client_properties( $client->id );
 $editing_post   = null;
+$edit_blocked   = false;
 if ( isset( $_GET['edit'] ) ) {
     $edit_id = (int) $_GET['edit'];
     if ( OFP_Property_CPT::is_owned_by( $edit_id, $client->id ) ) {
-        $editing_post = get_post( $edit_id );
+        if ( OFP_Subscription::has_paid_plan( $client->id ) ) {
+            $editing_post = get_post( $edit_id );
+        } else {
+            $edit_blocked = true;
+            $error = 'Your listing plan has expired. Renew or choose a plan to edit your existing listings.';
+        }
     }
 }
 ?>
@@ -340,6 +367,8 @@ if ( isset( $_GET['edit'] ) ) {
                                         <?php $current_ltype = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_listing_type', true ) : 'sale'; ?>
                                         <option value="sale" <?php selected( $current_ltype, 'sale' ); ?>>For Sale</option>
                                         <option value="rent" <?php selected( $current_ltype, 'rent' ); ?>>For Rent</option>
+                                        <option value="shortlet" <?php selected( $current_ltype, 'shortlet' ); ?>>Short Let</option>
+                                        <option value="commercial" <?php selected( $current_ltype, 'commercial' ); ?>>Commercial</option>
                                     </select>
                                 </div>
 
@@ -349,7 +378,7 @@ if ( isset( $_GET['edit'] ) ) {
                                         <option value="" hidden>— Select —</option>
                                         <?php 
                                         $current_ptype = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_property_type', true ) : 'apartment'; 
-                                        $types = [ 'apartment' => 'Apartment', 'duplex' => 'Duplex', 'bungalow' => 'Bungalow', 'terrace' => 'Terrace', 'land' => 'Land', 'office' => 'Office', 'shop' => 'Shop', 'warehouse' => 'Warehouse', 'other' => 'Other' ];
+                                        $types = [ 'apartment' => 'Apartment', 'duplex' => 'Duplex', 'semi-detached' => 'Semi-Detached', 'bungalow' => 'Bungalow', 'terrace' => 'Terrace', 'land' => 'Land', 'office' => 'Office', 'shop' => 'Shop', 'warehouse' => 'Warehouse', 'other' => 'Other' ];
                                         foreach ( $types as $val => $label ) {
                                             echo '<option value="' . esc_attr($val) . '" ' . selected($current_ptype, $val, false) . '>' . esc_html($label) . '</option>';
                                         }
@@ -426,6 +455,85 @@ if ( isset( $_GET['edit'] ) ) {
                                 <div class="ofp-field" style="grid-column: 1 / -1;">
                                     <label>Photos <span class="ofp-hint" style="display:inline;margin:0;">(first photo becomes the main image)</span></label>
                                     <input type="file" name="photos[]" accept="image/*" multiple style="font-size:14px; padding:10px 0;">
+                                </div>
+
+                                <div class="ofp-field">
+                                    <label>Parking Spaces</label>
+                                    <input type="number" name="parking" min="0"
+                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_parking', true ) : '' ); ?>">
+                                </div>
+
+                                <div class="ofp-field">
+                                    <label>Area (SQM)</label>
+                                    <input type="number" name="area_sqm" min="0"
+                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_area_sqm', true ) : '' ); ?>">
+                                </div>
+
+                                <div class="ofp-field">
+                                    <label>Title Document</label>
+                                    <?php $current_title_doc = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_title_document', true ) : ''; ?>
+                                    <select name="title_document" class="ofp-select">
+                                        <option value="">-- Select --</option>
+                                        <option value="C of O" <?php selected( $current_title_doc, 'C of O' ); ?>>C of O</option>
+                                        <option value="Governor's Consent" <?php selected( $current_title_doc, "Governor's Consent" ); ?>>Governor's Consent</option>
+                                        <option value="Gazette" <?php selected( $current_title_doc, 'Gazette' ); ?>>Gazette</option>
+                                        <option value="Deed of Assignment" <?php selected( $current_title_doc, 'Deed of Assignment' ); ?>>Deed of Assignment</option>
+                                        <option value="R of O" <?php selected( $current_title_doc, 'R of O' ); ?>>R of O</option>
+                                        <option value="Excision" <?php selected( $current_title_doc, 'Excision' ); ?>>Excision</option>
+                                        <option value="Other" <?php selected( $current_title_doc, 'Other' ); ?>>Other</option>
+                                    </select>
+                                </div>
+
+                                <div class="ofp-field">
+                                    <label>Condition</label>
+                                    <?php $current_condition = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_condition', true ) : ''; ?>
+                                    <select name="condition" class="ofp-select">
+                                        <option value="">-- Select --</option>
+                                        <option value="Newly Built" <?php selected( $current_condition, 'Newly Built' ); ?>>Newly Built</option>
+                                        <option value="Fairly Used" <?php selected( $current_condition, 'Fairly Used' ); ?>>Fairly Used</option>
+                                        <option value="Renovation Needed" <?php selected( $current_condition, 'Renovation Needed' ); ?>>Renovation Needed</option>
+                                        <option value="Under Construction" <?php selected( $current_condition, 'Under Construction' ); ?>>Under Construction</option>
+                                        <option value="Off-Plan" <?php selected( $current_condition, 'Off-Plan' ); ?>>Off-Plan</option>
+                                    </select>
+                                </div>
+
+                                <div class="ofp-field">
+                                    <label>Furnishing</label>
+                                    <?php $current_furnishing = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_furnishing', true ) : ''; ?>
+                                    <select name="furnishing" class="ofp-select">
+                                        <option value="">-- Select --</option>
+                                        <option value="Furnished" <?php selected( $current_furnishing, 'Furnished' ); ?>>Furnished</option>
+                                        <option value="Semi-Furnished" <?php selected( $current_furnishing, 'Semi-Furnished' ); ?>>Semi-Furnished</option>
+                                        <option value="Unfurnished" <?php selected( $current_furnishing, 'Unfurnished' ); ?>>Unfurnished</option>
+                                    </select>
+                                </div>
+
+                                <div class="ofp-field" style="grid-column: 1 / -1;">
+                                    <label>Video Tour URL</label>
+                                    <input type="url" name="video_url" placeholder="https://www.youtube.com/watch?v=..."
+                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_video_url', true ) : '' ); ?>">
+                                </div>
+
+                                <div class="ofp-field" style="grid-column: 1 / -1;">
+                                    <label>Amenities</label>
+                                    <?php
+                                    $all_amenities = [
+                                        'swimming_pool' => 'Swimming Pool', 'smart_home' => 'Smart Home', 'power_247' => '24/7 Electricity',
+                                        'cctv_security' => 'CCTV / Security', 'gym' => 'Gym / Fitness', 'elevator' => 'Elevator',
+                                        'playground' => 'Children Play Area', 'bq' => 'Boys Quarters (BQ)',
+                                        'water_treatment' => 'Water Treatment', 'fitted_kitchen' => 'Fitted Kitchen',
+                                    ];
+                                    $selected_amenities = $editing_post ? ( json_decode( get_post_meta( $editing_post->ID, 'ofp_amenities', true ) ?: '[]', true ) ?: [] ) : [];
+                                    ?>
+                                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:8px; margin-top:4px;">
+                                        <?php foreach ( $all_amenities as $key => $label ) : ?>
+                                            <label style="display:flex; align-items:center; gap:6px; font-weight:normal; font-size:13px; cursor:pointer;">
+                                                <input type="checkbox" name="amenities[]" value="<?php echo esc_attr( $key ); ?>"
+                                                    <?php checked( in_array( $key, $selected_amenities, true ) ); ?>>
+                                                <?php echo esc_html( $label ); ?>
+                                            </label>
+                                        <?php endforeach; ?>
+                                    </div>
                                 </div>
                             </div>
 
@@ -520,7 +628,11 @@ if ( isset( $_GET['edit'] ) ) {
                                                 NGN <?php echo esc_html( number_format( (float) get_post_meta( $property->ID, 'ofp_price', true ), 2 ) ); ?>
                                             </td>
                                             <td style="padding: 12px 16px; text-align:right;">
-                                                <a href="?edit=<?php echo esc_attr( $property->ID ); ?>" style="color:#3b82f6; text-decoration:none; margin-right:16px; font-weight:500;">Edit</a>
+                                                <?php if ( $can_edit_properties ) : ?>
+                                                    <a href="?edit=<?php echo esc_attr( $property->ID ); ?>" style="color:#3b82f6; text-decoration:none; margin-right:16px; font-weight:500;">Edit</a>
+                                                <?php else : ?>
+                                                    <span style="color:#94a3b8; margin-right:16px; font-weight:500;" title="Renew or choose a plan to edit">Renew to Edit</span>
+                                                <?php endif; ?>
                                                 <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this property?');">
                                                     <?php wp_nonce_field( 'ofp_delete_property_action', 'ofp_delete_nonce' ); ?>
                                                     <input type="hidden" name="property_id" value="<?php echo esc_attr( $property->ID ); ?>">

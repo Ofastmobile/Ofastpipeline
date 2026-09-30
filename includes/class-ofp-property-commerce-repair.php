@@ -173,7 +173,21 @@ class OFP_Property_Commerce_Repair {
     }
 
     public static function client_listing_actions(): void {
-        if(!is_page()||!class_exists('OFP_Auth')||!OFP_Auth::is_client_logged_in())return; $client=OFP_Auth::current_client(); if(!$client||!OFP_Subscription::has_platform_access($client->id))return; global $wpdb; $rows=$wpdb->get_results($wpdb->prepare("SELECT title,status,wp_post_id FROM {$wpdb->prefix}ofp_properties WHERE client_id=%d ORDER BY created_at DESC",(int)$client->id)); if(empty($rows))return; $payload=[]; foreach($rows as $row)$payload[]=['title'=>(string)$row->title,'status'=>(string)$row->status,'url'=>$row->wp_post_id?get_permalink((int)$row->wp_post_id):'']; ?>
+        if ( ! is_page() || ! class_exists( 'OFP_Auth' ) ) return;
+        $client = OFP_Auth::current_client();
+        if ( ! $client || ! class_exists( 'OFP_Subscription' ) || ! OFP_Subscription::has_platform_access( $client->id ) ) return;
+        global $wpdb;
+        $rows = $wpdb->get_results( $wpdb->prepare( "SELECT title,status,wp_post_id FROM {$wpdb->prefix}ofp_properties WHERE client_id=%d ORDER BY created_at DESC", (int) $client->id ) );
+        if ( empty( $rows ) ) return;
+        $payload = [];
+        foreach ( $rows as $row ) {
+            $payload[] = [
+                'title'  => (string) $row->title,
+                'status' => (string) $row->status,
+                'url'    => $row->wp_post_id ? get_permalink( (int) $row->wp_post_id ) : '',
+            ];
+        }
+        ?>
         <script>(function(){var p=<?php echo wp_json_encode($payload); ?>,h=document.querySelectorAll('.ofp-container h3');p.forEach(function(x){for(var i=0;i<h.length;i++){if(h[i].textContent.trim()!==x.title.trim())continue;var b=h[i].parentNode;if(!b||b.querySelector('.ofp-client-property-action'))break;var a=document.createElement('div');a.className='ofp-client-property-action';a.style.cssText='display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap;';if(x.status==='live'&&x.url){var l=document.createElement('a');l.href=x.url;l.textContent='View Listing';l.style.cssText='display:inline-block;text-decoration:none;padding:8px 12px;border-radius:7px;background:#2563eb;color:#fff;';a.appendChild(l);}else if(x.status==='pending_upload'){var s=document.createElement('span');s.textContent='Awaiting admin publishing';s.style.color='#b45309';a.appendChild(s);}var m=document.createElement('span');m.textContent='Managed by OFast Pipeline';m.style.cssText='font-size:12px;color:#64748b;';a.appendChild(m);b.appendChild(a);break;}});})();</script>
         <?php
     }

@@ -10,6 +10,11 @@ OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
 
+if ( ! OFP_Subscription::has_paid_plan( $client->id ) ) {
+    wp_safe_redirect( add_query_arg( 'upgrade', 'sales', home_url( '/pricing' ) ) );
+    exit;
+}
+
 $can_create_installments = OFP_Subscription::allows_installments( (int) $client->id );
 
 global $wpdb;
@@ -119,10 +124,19 @@ $existing_offers = $wpdb->get_results( $wpdb->prepare(
     "SELECT o.*, p.title AS property_title
      FROM {$p}ofp_property_offers o
      LEFT JOIN {$p}ofp_properties p ON p.id = o.property_id
-     WHERE o.client_id = %d
+     WHERE o.client_id = %d AND o.status != 'accepted'
      ORDER BY o.created_at DESC
      LIMIT 20",
     $client->id
+) );
+
+$my_purchases = $wpdb->get_results( $wpdb->prepare(
+    "SELECT pu.*, p.title AS property_title
+     FROM {$p}ofp_property_purchases pu
+     LEFT JOIN {$p}ofp_properties p ON p.id = pu.property_id
+     WHERE pu.client_id = %d
+     ORDER BY pu.created_at DESC LIMIT 100",
+    (int) $client->id
 ) );
 ?>
 <!DOCTYPE html>
@@ -150,7 +164,8 @@ $existing_offers = $wpdb->get_results( $wpdb->prepare(
             <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
                 Property Sales
             </h1>
-            <p style="color:#64748b; margin:0; font-size:14px;">Create installment offers for buyers and track the offers you have sent.</p>
+            <p style="color:#64748b; margin:0; font-size:14px;">Every buyer deal in one place — pending offers awaiting a decision, and active or completed purchases with their paid amount and balance.</p>
+            <p style="margin-top:12px;"><a href="<?php echo esc_url( home_url( '/property-purchases' ) ); ?>" class="ofp-btn ofp-btn-primary">Add Purchase</a></p>
         </div>
 
         <?php if ( $notice ) : ?>
@@ -263,9 +278,9 @@ $existing_offers = $wpdb->get_results( $wpdb->prepare(
             </div>
 
             <div class="ofp-card">
-                <h3>Recent Offers</h3>
-                <?php if ( empty( $existing_offers ) ) : ?>
-                    <p class="ofp-hint">No installment offers created yet.</p>
+                <h3>My Sales</h3>
+                <?php if ( empty( $existing_offers ) && empty( $my_purchases ) ) : ?>
+                    <p class="ofp-hint">No sales yet. Use <strong>Add Purchase</strong> above or create an installment offer to start one.</p>
                 <?php else : ?>
                     <div class="ofp-table-responsive">
                         <table class="ofp-table" style="width: 100%; white-space: nowrap;">
@@ -274,19 +289,56 @@ $existing_offers = $wpdb->get_results( $wpdb->prepare(
                                     <th>ID</th>
                                     <th>Buyer</th>
                                     <th>Property</th>
-                                    <th>Owner</th>
                                     <th>Total</th>
-                                    <th>Plan</th>
-                                    <th>Payment Starts</th>
-                                    <th>First Due Date</th>
-                                    <th>Grace Period</th>
-                                    <th>Offer Expires</th>
+                                    <th>Paid / Plan</th>
+                                    <th>Balance</th>
                                     <th>Status</th>
+                                    <th>Created</th>
                                     <th style="text-align:right;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                            <?php foreach ( $existing_offers as $offer ) : ?>
+                            <?php foreach ( $my_purchases as $purchase ) :
+                                $purchase_status_styles = [
+                                    'active'    => 'background:#dbeafe; color:#2563eb;',
+                                    'completed' => 'background:#dcfce7; color:#16a34a;',
+                                    'defaulted' => 'background:#fee2e2; color:#ef4444;',
+                                ];
+                                $purchase_style = $purchase_status_styles[ $purchase->status ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
+                            ?>
+                                <tr>
+                                    <td style="color:var(--text-muted);">#<?php echo esc_html( $purchase->id ); ?></td>
+                                    <td>
+                                        <div style="font-weight: 500;">
+                                            <a href="<?php echo esc_url( add_query_arg( 'purchase_id', $purchase->id, home_url( '/property-purchases' ) ) ); ?>" style="color:var(--primary); text-decoration:none;">
+                                                <?php echo esc_html( $purchase->buyer_name ); ?>
+                                            </a>
+                                        </div>
+                                        <div style="font-size: 12px; color: var(--text-muted);"><?php echo esc_html( $purchase->buyer_phone ); ?></div>
+                                    </td>
+                                    <td style="color:var(--text-main);"><?php echo esc_html( $purchase->property_title ?: '—' ); ?></td>
+                                    <td style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $purchase->total_price, 2 ) ); ?></td>
+                                    <td style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $purchase->amount_paid, 2 ) ); ?></td>
+                                    <td><strong style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $purchase->balance, 2 ) ); ?></strong></td>
+                                    <td>
+                                        <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr($purchase_style); ?>">
+                                            <?php echo esc_html( ucfirst( $purchase->status ) ); ?>
+                                        </span>
+                                    </td>
+                                    <td style="color: var(--text-muted); font-size:13px;"><?php echo esc_html( wp_date( 'M j, Y', strtotime( $purchase->created_at ) ) ); ?></td>
+                                    <td style="text-align:right;">
+                                        <a href="<?php echo esc_url( add_query_arg( 'purchase_id', $purchase->id, home_url( '/property-purchases' ) ) ); ?>" class="ofp-btn ofp-btn-small" style="background:var(--bg-card); color:var(--text-main); border:1px solid #dcdcde;">View</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            <?php foreach ( $existing_offers as $offer ) :
+                                $offer_status_styles = [
+                                    'pending'  => 'background:#fef3c7; color:#d97706;',
+                                    'declined' => 'background:#fee2e2; color:#ef4444;',
+                                    'expired'  => 'background:rgba(128,128,128,0.1); color:var(--text-muted);',
+                                ];
+                                $offer_style = $offer_status_styles[ $offer->status ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
+                            ?>
                                 <tr>
                                     <td style="color:var(--text-muted);">#<?php echo esc_html( $offer->id ); ?></td>
                                     <td>
@@ -294,48 +346,24 @@ $existing_offers = $wpdb->get_results( $wpdb->prepare(
                                         <div style="font-size: 12px; color: var(--text-muted);"><?php echo esc_html( $offer->buyer_phone ); ?></div>
                                     </td>
                                     <td style="color: var(--text-main);"><?php echo esc_html( $offer->property_title ?: '—' ); ?></td>
-                                    <td style="color: var(--text-main);"><?php echo esc_html( $client->business_name ?: $client->owner_name ); ?></td>
                                     <td style="color: var(--text-main); font-weight: 500;">NGN <?php echo esc_html( number_format( (float) $offer->total_price, 2 ) ); ?></td>
                                     <td style="color: var(--text-muted); font-size:13px;">
                                         Initial: NGN <?php echo esc_html( number_format( (float) $offer->initial_payment, 2 ) ); ?><br>
                                         <?php echo esc_html( $offer->installment_count ); ?> × NGN <?php echo esc_html( number_format( (float) $offer->installment_amount, 2 ) ); ?>
                                     </td>
-                                    <td style="color: var(--text-main); font-size:13px;">
-                                        <?php echo $offer->payment_start_date ? esc_html( wp_date( 'M j, Y', strtotime( $offer->payment_start_date ) ) ) : '—'; ?>
-                                    </td>
-                                    <td style="color: var(--text-main); font-size:13px;">
-                                        <?php echo $offer->first_due_date ? esc_html( wp_date( 'M j, Y', strtotime( $offer->first_due_date ) ) ) : '—'; ?>
-                                    </td>
-                                    <td style="color: var(--text-main); font-size:13px;">
-                                        <?php echo esc_html( $offer->grace_period_days ); ?> days
-                                    </td>
-                                    <td style="color: var(--text-muted); font-size:13px;">
-                                        <?php echo $offer->expires_at ? esc_html( wp_date( 'M j, Y', strtotime( $offer->expires_at ) ) ) : '—'; ?>
-                                    </td>
+                                    <td style="color: var(--text-muted);">—</td>
                                     <td>
-                                        <?php 
-                                            $status_styles = [
-                                                'pending'  => 'background:#fef3c7; color:#d97706;',
-                                                'accepted' => 'background:#dcfce7; color:#16a34a;',
-                                                'rejected' => 'background:#fee2e2; color:#ef4444;',
-                                                'expired'  => 'background:rgba(128,128,128,0.1); color:var(--text-muted);'
-                                            ];
-                                            $style = $status_styles[ $offer->status ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
-                                        ?>
-                                        <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr($style); ?>">
-                                            <?php echo esc_html( ucfirst( $offer->status ) ); ?>
+                                        <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr($offer_style); ?>">
+                                            <?php echo $offer->status === 'pending' ? 'Offer sent, waiting' : esc_html( ucfirst( $offer->status ) ); ?>
                                         </span>
                                     </td>
+                                    <td style="color: var(--text-muted); font-size:13px;"><?php echo esc_html( wp_date( 'M j, Y', strtotime( $offer->created_at ) ) ); ?></td>
                                     <td style="text-align:right;">
-                                        <?php if ( $offer->status === 'accepted' ) : ?>
-                                            Sent
-                                        <?php else : ?>
-                                            <?php if ( ! empty( $offer->offer_token ) ) : ?>
-                                                <input type="hidden" value="<?php echo esc_attr( add_query_arg( 'offer', rawurlencode( $offer->offer_token ), home_url( '/property-offer' ) ) ); ?>">
-                                                <button type="button" class="ofp-btn ofp-btn-small" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);alert('Link copied!')" style="margin-bottom:4px;">Copy Link</button>
-                                            <?php endif; ?>
-                                            <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_client_resend_offer&offer_id=' . $offer->id ), 'ofp_client_resend_offer' ) ); ?>" class="ofp-btn ofp-btn-small" style="background:var(--bg-card); color:var(--text-main); border:1px solid #dcdcde;">Resend</a>
+                                        <?php if ( ! empty( $offer->offer_token ) && $offer->status === 'pending' ) : ?>
+                                            <input type="hidden" value="<?php echo esc_attr( add_query_arg( 'offer', rawurlencode( $offer->offer_token ), home_url( '/property-offer' ) ) ); ?>">
+                                            <button type="button" class="ofp-btn ofp-btn-small" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);alert('Link copied!')" style="margin-bottom:4px;">Copy Link</button>
                                         <?php endif; ?>
+                                        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_client_resend_offer&offer_id=' . $offer->id ), 'ofp_client_resend_offer' ) ); ?>" class="ofp-btn ofp-btn-small" style="background:var(--bg-card); color:var(--text-main); border:1px solid #dcdcde;">Resend</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

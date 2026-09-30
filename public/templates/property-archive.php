@@ -7,6 +7,11 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+if ( file_exists( __DIR__ . '/property-marketplace.php' ) ) {
+    include __DIR__ . '/property-marketplace.php';
+    return;
+}
+
 get_header();
 
 $paged = max( 1, get_query_var( 'paged' ) ?: 1 );

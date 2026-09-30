@@ -26,13 +26,13 @@ class OFP_Client_Portal {
         'leads' => 'leads.php',
         'pipeline-settings' => 'pipeline-settings.php',
         'api-settings' => 'api-settings.php',
-        'communications' => 'communications.php',
+        'communications' => 'message-templates.php',
         'credits' => 'credits.php',
         'reports' => 'reports.php',
         'account' => 'account.php',
         'my-listing' => 'my-listing.php',
         'properties' => 'properties.php',
-        'listing-billing' => 'listing-billing.php',
+        'listing-billing' => 'credits.php',
         'notifications' => 'notifications.php',
         'notification-settings' => 'notification-settings.php',
         'funding' => 'funding.php',
@@ -185,6 +185,18 @@ class OFP_Client_Portal {
 
         $route = get_query_var( 'ofp_route', '' );
         if ( empty( $route ) || ! array_key_exists( $route, $this->routes ) ) return;
+
+        // Redirect old /communications URL to the unified /message-templates page.
+        if ( $route === 'communications' ) {
+            wp_safe_redirect( home_url( '/message-templates' ), 301 );
+            exit;
+        }
+
+        // Redirect old /listing-billing URL to the unified /credits page.
+        if ( $route === 'listing-billing' ) {
+            wp_safe_redirect( home_url( '/credits' ), 301 );
+            exit;
+        }
 
         if ( ! in_array( $route, $this->public_routes, true ) ) {
             OFP_Auth::require_client_login();

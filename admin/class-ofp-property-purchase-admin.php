@@ -31,8 +31,9 @@ class OFP_Property_Purchase_Admin {
         $active_tab = 'add-purchase';
         ?>
         <h2 class="nav-tab-wrapper">
-            <a href="?post_type=ofp_property&page=ofp-property-purchases" class="nav-tab">Purchases Table</a>
+            <a href="?post_type=ofp_property&page=ofp-property-purchases" class="nav-tab">Sales Table</a>
             <a href="?post_type=ofp_property&page=ofp-property-add-purchase" class="nav-tab nav-tab-active">Add Purchase</a>
+            <a href="?post_type=ofp_property&page=ofp-property-create-offer" class="nav-tab">Create Offer</a>
         </h2>
         <?php
 
@@ -70,7 +71,7 @@ class OFP_Property_Purchase_Admin {
                 <div class="notice notice-error"><p><?php echo esc_html( $error ); ?></p></div>
             <?php endif; ?>
 
-            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
                 <?php wp_nonce_field( 'ofp_create_property_purchase' ); ?>
                 <input type="hidden" name="action" value="ofp_create_property_purchase">
 
@@ -120,6 +121,7 @@ class OFP_Property_Purchase_Admin {
                         </select>
                     </td></tr>
                     <tr><th><label for="payment_reference">Payment reference</label></th><td><input class="regular-text" id="payment_reference" name="payment_reference"><p class="description">Receipt number, transaction ID, or any reference for this payment.</p></td></tr>
+                    <tr><th><label for="payment_receipt">Payment receipt</label></th><td><input type="file" id="payment_receipt" name="payment_receipt" accept="image/jpeg,image/png,application/pdf" required><p class="description">Required. Proof of the amount paid above. JPG, PNG or PDF, max 5 MB.</p></td></tr>
                 </table>
                 <?php submit_button( 'Create Purchase' ); ?>
             </form>
@@ -199,6 +201,7 @@ class OFP_Property_Purchase_Admin {
         elseif ( $lead_id && ! $lead ) $error = 'Selected lead could not be found.';
         elseif ( $lead && $lead->property_id && (int) $lead->property_id !== $property_id ) $error = 'Selected lead belongs to a different property.';
         elseif ( ! in_array( $payment_method, $allowed_methods, true ) ) $error = 'Invalid payment method.';
+        elseif ( empty( $_FILES['payment_receipt']['name'] ) || ! empty( $_FILES['payment_receipt']['error'] ) ) $error = 'A payment receipt is required.';
 
         if ( $error ) {
             wp_safe_redirect( add_query_arg( 'error', rawurlencode( $error ), admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-add-purchase' ) ) );
@@ -224,10 +227,17 @@ class OFP_Property_Purchase_Admin {
 
         $purchase_id = (int) $result;
 
-        // Record the initial payment if amount_paid > 0.
+        // Record the initial payment if amount_paid > 0. Receipt is required
+        // (validated above), so this always has proof attached.
         if ( $amount_paid > 0 && class_exists( 'OFP_Property_Payment_Record' ) ) {
+            $receipt = OFP_Property_Manual_Payment::store_receipt( $_FILES['payment_receipt'] );
+            if ( is_wp_error( $receipt ) ) {
+                wp_safe_redirect( add_query_arg( [ 'created' => $purchase_id, 'error' => rawurlencode( 'Purchase created, but the receipt could not be saved: ' . $receipt->get_error_message() ) ], admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-add-purchase' ) ) );
+                exit;
+            }
+
             $method_label = str_replace( '_', ' ', $payment_method );
-            OFP_Property_Payment_Record::create([
+            $payment_id = OFP_Property_Payment_Record::create([
                 'purchase_id'    => $purchase_id,
                 'payment_method' => 'manual',
                 'amount'         => $amount_paid,
@@ -236,6 +246,21 @@ class OFP_Property_Purchase_Admin {
                 'payer_reference' => $payment_reference,
                 'note'           => 'Initial payment via ' . $method_label . ( $payment_reference ? ' (Ref: ' . $payment_reference . ')' : '' ),
             ]);
+
+            if ( ! is_wp_error( $payment_id ) ) {
+                global $wpdb;
+                $wpdb->update(
+                    $wpdb->prefix . 'ofp_property_payments',
+                    [ 'receipt_path' => $receipt['path'], 'receipt_mime' => $receipt['mime'], 'receipt_size' => $receipt['size'], 'updated_at' => current_time( 'mysql' ) ],
+                    [ 'id' => (int) $payment_id ]
+                );
+                // create() only inserts the row; success() is what actually
+                // applies it to the installment schedule and balance, and
+                // fires the buyer notification.
+                OFP_Property_Payment_Record::success( (int) $payment_id, get_current_user_id() );
+            } else {
+                OFP_Property_Manual_Payment::delete_receipt( $receipt['path'] );
+            }
         }
 
         wp_safe_redirect( add_query_arg( 'created', $purchase_id, admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-add-purchase' ) ) );

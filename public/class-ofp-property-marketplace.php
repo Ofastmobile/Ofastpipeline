@@ -20,13 +20,17 @@ class OFP_Property_Marketplace {
     }
 
     public static function enqueue_scripts(): void {
-        // Only load on the marketplace route
-        if ( '1' === (string) get_query_var( 'ofp_marketplace', '' ) ) {
-            wp_enqueue_style( 'ofp-marketplace-css', OFP_URL . 'assets/css/marketplace.css', [], OFP_VERSION );
-            wp_enqueue_script( 'ofp-marketplace-js', OFP_URL . 'assets/js/marketplace.js', [], OFP_VERSION, true );
+        // Only load on the marketplace route, property single pages, property archive, or homepage
+        if ( '1' === (string) get_query_var( 'ofp_marketplace', '' ) || is_singular( 'ofp_property' ) || is_front_page() || is_home() || is_post_type_archive( 'ofp_property' ) || is_page( [ 'home', 'homepage', 'marketplace', 'properties' ] ) ) {
+            wp_enqueue_script( 'tailwind-js', 'https://cdn.tailwindcss.com', [], null, false );
+            $tailwind_cfg = "window.tailwind = window.tailwind || {}; window.tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['\"Segoe UI\"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Arial', 'sans-serif'], system: ['\"Segoe UI\"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Arial', 'sans-serif'] } } };";
+            wp_add_inline_script( 'tailwind-js', $tailwind_cfg, 'before' );
+            wp_add_inline_script( 'tailwind-js', "if (typeof tailwind !== 'undefined') { " . $tailwind_cfg . " }", 'after' );
+            wp_enqueue_script( 'alpine-js', 'https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js', [], null, true );
+            wp_enqueue_style( 'ofp-alpine-tailwind', OFP_URL . 'assets/css/alpine-tailwind-overrides.css', [], OFP_VERSION );
             
             // Pass AJAX URL to JS
-            wp_localize_script( 'ofp-marketplace-js', 'ofp_marketplace', [
+            wp_localize_script( 'alpine-js', 'ofp_marketplace', [
                 'ajax_url' => admin_url( 'admin-ajax.php' )
             ] );
         }
@@ -50,7 +54,7 @@ class OFP_Property_Marketplace {
             return;
         }
 
-        $template = OFP_PATH . 'public/templates/property-archive.php';
+        $template = OFP_PATH . 'public/templates/property-marketplace.php';
 
         if ( ! file_exists( $template ) ) {
             status_header( 404 );

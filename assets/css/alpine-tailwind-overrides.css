@@ -1,0 +1,94 @@
+/* 
+ * Alpine/Tailwind Overrides 
+ * Contains styles that are better handled in CSS than Tailwind utility classes
+ */
+
+/* Hide Scrollbar for horizontal scrolling areas */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+/* Custom background for the hero section - white overlay on light mode, dark overlay on dark mode */
+.hero-bg {
+    background-image: 
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.65) 40%, rgba(255, 255, 255, 0.95) 85%, #ffffff 100%),
+        url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=2000&q=80');
+    background-size: cover;
+    background-position: center;
+    background-attachment: scroll;
+}
+html.dark .hero-bg {
+    background-image: 
+        linear-gradient(to bottom, rgba(11, 17, 32, 0.5) 0%, rgba(11, 17, 32, 0.8) 50%, rgba(2, 6, 23, 0.95) 100%),
+        url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=2000&q=80');
+}
+
+/* Custom styling for range sliders */
+input[type=range]::-webkit-slider-thumb {
+    pointer-events: all;
+    width: 24px;
+    height: 24px;
+    -webkit-appearance: none;
+    @apply w-6 h-6 appearance-none pointer-events-auto;
+}
+
+/* Base font settings - Front end font is Segoe UI */
+html,
+body,
+button,
+input,
+optgroup,
+select,
+textarea,
+h1, h2, h3, h4, h5, h6,
+p, span, a, li,
+.font-system,
+.font-sans {
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* WP Admin Bar Override - prevent it from covering header */
+body.admin-bar header {
+    top: 32px;
+}
+@media screen and (max-width: 782px) {
+    body.admin-bar header {
+        top: 46px;
+    }
+}
+
+/* Theme Toggle Button SVG visibility */
+html.dark .theme-toggle-moon {
+    display: none !important;
+}
+html.dark .theme-toggle-sun {
+    display: block !important;
+}
+html:not(.dark) .theme-toggle-moon {
+    display: block !important;
+}
+html:not(.dark) .theme-toggle-sun {
+    display: none !important;
+}
+
+/* Trust Badge text styling requested by user */
+.trust-badge-desc {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !important;
+    font-style: normal;
+    font-weight: 400;
+    color: #64748b;
+    color: oklch(0.554 0.046 257.417);
+    font-size: 12px;
+    line-height: 17px;
+}
+html.dark .trust-badge-desc {
+    color: #94a3b8;
+    color: oklch(0.707 0.022 261.325);
+}
+

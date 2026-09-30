@@ -83,7 +83,7 @@ $type_badges = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messaging — OFast Pipeline</title>
+    <title>Communications — OFast Pipeline</title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
@@ -94,7 +94,7 @@ $type_badges = [
 <div class="ofp-container">
 
     <div class="ofp-page-header">
-        <h1>Messaging</h1>
+        <h1>Communications</h1>
         <p>Communications log, manual broadcasts, and email template management.</p>
     </div>
 

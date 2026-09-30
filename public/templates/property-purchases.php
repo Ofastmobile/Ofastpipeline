@@ -10,7 +10,12 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
+OFP_Auth::require_active_subscription( $client );
 
+if ( ! OFP_Subscription::has_paid_plan( $client->id ) ) {
+    wp_safe_redirect( add_query_arg( 'upgrade', 'sales', home_url( '/pricing' ) ) );
+    exit;
+}
 
 global $wpdb;
 $p = $wpdb->prefix;
@@ -60,6 +65,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_client_p
             $error = 'Amount paid must be greater than zero.';
         } elseif ( ! in_array( $payment_method, $allowed_methods, true ) ) {
             $error = 'Invalid payment method.';
+        } elseif ( empty( $_FILES['payment_receipt']['name'] ) || ! empty( $_FILES['payment_receipt']['error'] ) ) {
+            $error = 'A payment receipt is required.';
         }
 
         if ( ! $error && $buyer_source === 'lead' ) {
@@ -98,18 +105,38 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_client_p
                 $error = $purchase_id->get_error_message();
             } else {
                 if ( $amount_paid > 0 && class_exists( 'OFP_Property_Payment_Record' ) ) {
-                    $method_label = str_replace( '_', ' ', $payment_method );
-                    OFP_Property_Payment_Record::create([
-                        'purchase_id'    => (int) $purchase_id,
-                        'payment_method' => 'manual',
-                        'amount'         => $amount_paid,
-                        'status'         => 'successful',
-                        'payer_name'     => $buyer_name,
-                        'payer_reference' => $payment_reference,
-                        'note'           => 'Initial payment via ' . $method_label . ( $payment_reference ? ' (Ref: ' . $payment_reference . ')' : '' ),
-                    ]);
+                    $receipt = OFP_Property_Manual_Payment::store_receipt( $_FILES['payment_receipt'] );
+                    if ( is_wp_error( $receipt ) ) {
+                        $message = 'Purchase #' . (int) $purchase_id . ' created, but the receipt could not be saved: ' . $receipt->get_error_message();
+                    } else {
+                        $method_label = str_replace( '_', ' ', $payment_method );
+                        $payment_id = OFP_Property_Payment_Record::create([
+                            'purchase_id'    => (int) $purchase_id,
+                            'payment_method' => 'manual',
+                            'amount'         => $amount_paid,
+                            'status'         => 'successful',
+                            'payer_name'     => $buyer_name,
+                            'payer_reference' => $payment_reference,
+                            'note'           => 'Initial payment via ' . $method_label . ( $payment_reference ? ' (Ref: ' . $payment_reference . ')' : '' ),
+                        ]);
+
+                        if ( ! is_wp_error( $payment_id ) ) {
+                            $wpdb->update(
+                                "{$p}ofp_property_payments",
+                                [ 'receipt_path' => $receipt['path'], 'receipt_mime' => $receipt['mime'], 'receipt_size' => $receipt['size'], 'updated_at' => current_time( 'mysql' ) ],
+                                [ 'id' => (int) $payment_id ]
+                            );
+                            // create() only inserts the row; success() applies
+                            // it to the schedule/balance and fires the buyer notification.
+                            OFP_Property_Payment_Record::success( (int) $payment_id, (int) $client->id );
+                        } else {
+                            OFP_Property_Manual_Payment::delete_receipt( $receipt['path'] );
+                        }
+                        $message = 'Purchase #' . (int) $purchase_id . ' created successfully.';
+                    }
+                } else {
+                    $message = 'Purchase #' . (int) $purchase_id . ' created successfully.';
                 }
-                $message = 'Purchase #' . (int) $purchase_id . ' created successfully.';
             }
         }
     }
@@ -129,16 +156,59 @@ $my_leads = $wpdb->get_results( $wpdb->prepare(
     (int) $client->id
 ) );
 
-$my_purchases = $wpdb->get_results( $wpdb->prepare(
-    "SELECT pu.*, p.title AS property_title, o.expires_at AS offer_expires,
-     (SELECT MIN(due_date) FROM {$p}ofp_property_installments WHERE purchase_id = pu.id AND status = 'scheduled') AS next_due_date
-     FROM {$p}ofp_property_purchases pu
-     LEFT JOIN {$p}ofp_properties p ON p.id = pu.property_id
-     LEFT JOIN {$p}ofp_property_offers o ON o.id = pu.offer_id
-     WHERE pu.client_id = %d
-     ORDER BY pu.created_at DESC LIMIT 100",
-    (int) $client->id
-) );
+// --- Log a manual payment against an existing purchase ---
+$log_payment_error = '';
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_log_manual_payment'] ) ) {
+    $log_purchase_id = absint( $_POST['log_purchase_id'] ?? 0 );
+    if ( ! wp_verify_nonce( $_POST['ofp_log_payment_nonce'] ?? '', 'ofp_log_manual_payment_' . $log_purchase_id ) ) {
+        $log_payment_error = 'Security check failed. Please try again.';
+    } else {
+        $log_purchase = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id, buyer_name FROM {$p}ofp_property_purchases WHERE id = %d AND client_id = %d LIMIT 1",
+            $log_purchase_id,
+            (int) $client->id
+        ) );
+        $log_amount = max( 0.0, (float) ( $_POST['log_amount'] ?? 0 ) );
+        $log_reference = sanitize_text_field( wp_unslash( $_POST['log_reference'] ?? '' ) );
+        $log_note = sanitize_textarea_field( wp_unslash( $_POST['log_note'] ?? '' ) );
+
+        if ( ! $log_purchase ) {
+            $log_payment_error = 'Purchase not found.';
+        } elseif ( $log_amount <= 0 ) {
+            $log_payment_error = 'Enter a valid payment amount.';
+        } elseif ( empty( $_FILES['log_receipt']['name'] ) || ! empty( $_FILES['log_receipt']['error'] ) ) {
+            $log_payment_error = 'A payment receipt is required.';
+        } else {
+            $log_receipt = OFP_Property_Manual_Payment::store_receipt( $_FILES['log_receipt'] );
+            if ( is_wp_error( $log_receipt ) ) {
+                $log_payment_error = $log_receipt->get_error_message();
+            } else {
+                $log_payment_id = OFP_Property_Payment_Record::create([
+                    'purchase_id'    => $log_purchase_id,
+                    'payment_method' => 'manual',
+                    'amount'         => $log_amount,
+                    'status'         => 'successful',
+                    'payer_name'     => $log_purchase->buyer_name,
+                    'payer_reference' => $log_reference,
+                    'note'           => $log_note,
+                ]);
+                if ( is_wp_error( $log_payment_id ) ) {
+                    OFP_Property_Manual_Payment::delete_receipt( $log_receipt['path'] );
+                    $log_payment_error = $log_payment_id->get_error_message();
+                } else {
+                    $wpdb->update(
+                        "{$p}ofp_property_payments",
+                        [ 'receipt_path' => $log_receipt['path'], 'receipt_mime' => $log_receipt['mime'], 'receipt_size' => $log_receipt['size'], 'updated_at' => current_time( 'mysql' ) ],
+                        [ 'id' => (int) $log_payment_id ]
+                    );
+                    OFP_Property_Payment_Record::success( (int) $log_payment_id, (int) $client->id );
+                    wp_safe_redirect( add_query_arg( [ 'purchase_id' => $log_purchase_id, 'payment_logged' => 1 ], home_url( '/property-purchases' ) ) );
+                    exit;
+                }
+            }
+        }
+    }
+}
 
 // --- Purchase Details View ---
 $detail_purchase_id = absint( $_GET['purchase_id'] ?? 0 );
@@ -155,7 +225,7 @@ if ( $detail_purchase_id ) {
         wp_die( 'Purchase not found or access denied.' );
     }
     $installments = $wpdb->get_results( $wpdb->prepare(
-        "SELECT * FROM {$p}ofp_property_installments WHERE purchase_id = %d ORDER BY installment_number ASC",
+        "SELECT * FROM {$p}ofp_property_installments WHERE purchase_id = %d ORDER BY installment_no ASC",
         $detail_purchase_id
     ) );
 ?>
@@ -180,7 +250,7 @@ if ( $detail_purchase_id ) {
 <div class="ofp-container">
     <div style="padding-bottom: 60px;">
         <div style="margin: 0 0 24px;">
-            <p style="margin:0 0 8px;"><a href="<?php echo esc_url( home_url( '/property-purchases' ) ); ?>" style="color:var(--primary); text-decoration:none; font-size:14px;">← Back to Purchases</a></p>
+            <p style="margin:0 0 8px;"><a href="<?php echo esc_url( home_url( '/property-sales' ) ); ?>" style="color:var(--primary); text-decoration:none; font-size:14px;">← Back to Sales</a></p>
             <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
                 Purchase #<?php echo esc_html( $detail_purchase->id ); ?>
             </h1>
@@ -236,22 +306,23 @@ if ( $detail_purchase_id ) {
                         <tbody>
                             <?php foreach ( $installments as $ins ) : ?>
                                 <tr>
-                                    <td style="color:var(--text-muted);"><?php echo $ins->installment_number == 0 ? '—' : esc_html( $ins->installment_number ); ?></td>
-                                    <td style="color:var(--text-main);"><?php echo $ins->installment_number == 0 ? 'Initial Payment' : 'Installment'; ?></td>
-                                    <td style="color:var(--text-main); font-weight:500;">NGN <?php echo esc_html( number_format( (float) $ins->amount, 2 ) ); ?></td>
+                                    <td style="color:var(--text-muted);"><?php echo $ins->installment_no == 1 && (float) $detail_purchase->initial_payment > 0 ? '—' : esc_html( $ins->installment_no ); ?></td>
+                                    <td style="color:var(--text-main);"><?php echo $ins->installment_no == 1 && (float) $detail_purchase->initial_payment > 0 ? 'Initial Payment' : 'Installment'; ?></td>
+                                    <td style="color:var(--text-main); font-weight:500;">NGN <?php echo esc_html( number_format( (float) $ins->amount_due, 2 ) ); ?></td>
                                     <td style="color:var(--text-main); font-size:13px;"><?php echo esc_html( wp_date( 'M j, Y', strtotime( $ins->due_date ) ) ); ?></td>
                                     <td>
                                         <?php
                                             $ins_styles = [
-                                                'paid'      => 'background:#dcfce7; color:#16a34a;',
-                                                'pending'   => 'background:#fef3c7; color:#d97706;',
-                                                'scheduled' => 'background:#dbeafe; color:#2563eb;',
-                                                'defaulted' => 'background:#fee2e2; color:#ef4444;',
+                                                'paid'           => 'background:#dcfce7; color:#16a34a;',
+                                                'partially_paid' => 'background:#fef3c7; color:#d97706;',
+                                                'due'            => 'background:#fef3c7; color:#d97706;',
+                                                'scheduled'      => 'background:#dbeafe; color:#2563eb;',
+                                                'overdue'        => 'background:#fee2e2; color:#ef4444;',
                                             ];
                                             $ins_style = $ins_styles[ $ins->status ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
                                         ?>
                                         <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr($ins_style); ?>">
-                                            <?php echo esc_html( ucfirst( $ins->status ) ); ?>
+                                            <?php echo esc_html( ucfirst( str_replace( '_', ' ', $ins->status ) ) ); ?>
                                         </span>
                                     </td>
                                     <td style="color:var(--text-muted); font-size:13px;"><?php echo $ins->paid_at ? esc_html( wp_date( 'M j, Y', strtotime( $ins->paid_at ) ) ) : '—'; ?></td>
@@ -262,6 +333,45 @@ if ( $detail_purchase_id ) {
                 </div>
             <?php endif; ?>
         </div>
+
+        <?php if ( 'completed' !== $detail_purchase->status ) : ?>
+        <div class="ofp-card" style="margin-top:20px;">
+            <h3 style="margin:0 0 4px; font-size:16px;">Log Manual Payment</h3>
+            <p class="ofp-hint">Record money you've already received from this buyer directly (cash, bank transfer to your own account, etc). A receipt is required, and this marks the payment as received immediately.</p>
+            <?php if ( ! empty( $_GET['payment_logged'] ) ) : ?>
+                <div class="ofp-alert ofp-alert-success" style="margin:12px 0;">Payment logged and applied successfully.</div>
+            <?php endif; ?>
+            <?php if ( $log_payment_error ) : ?>
+                <div class="ofp-alert ofp-alert-error" style="margin:12px 0;"><?php echo esc_html( $log_payment_error ); ?></div>
+            <?php endif; ?>
+            <form method="post" enctype="multipart/form-data" style="margin-top:16px;">
+                <?php wp_nonce_field( 'ofp_log_manual_payment_' . $detail_purchase->id, 'ofp_log_payment_nonce' ); ?>
+                <input type="hidden" name="ofp_log_manual_payment" value="1">
+                <input type="hidden" name="log_purchase_id" value="<?php echo esc_attr( $detail_purchase->id ); ?>">
+                <div class="ofp-form-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                    <div class="ofp-field">
+                        <label>Amount received</label>
+                        <input type="number" name="log_amount" step="0.01" min="0.01" max="<?php echo esc_attr( $detail_purchase->balance ); ?>" required style="width:100%;">
+                    </div>
+                    <div class="ofp-field">
+                        <label>Reference <span class="ofp-hint" style="display:inline;margin:0;">(Optional)</span></label>
+                        <input type="text" name="log_reference" placeholder="Bank transfer ref, etc." style="width:100%;">
+                    </div>
+                    <div class="ofp-field">
+                        <label>Receipt <span class="ofp-hint" style="display:inline;margin:0;">(Required)</span></label>
+                        <input type="file" name="log_receipt" accept="image/jpeg,image/png,application/pdf" required style="width:100%;">
+                    </div>
+                    <div class="ofp-field">
+                        <label>Note <span class="ofp-hint" style="display:inline;margin:0;">(Optional)</span></label>
+                        <input type="text" name="log_note" placeholder="e.g. Installment 3, paid in cash" style="width:100%;">
+                    </div>
+                </div>
+                <div style="margin-top:16px;">
+                    <button class="ofp-btn ofp-btn-primary" type="submit">Log Payment</button>
+                </div>
+            </form>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 <?php wp_footer(); ?>
@@ -293,8 +403,9 @@ if ( $detail_purchase_id ) {
 <div class="ofp-container">
     <div style="padding-bottom: 60px;">
         <div style="margin: 0 0 24px;">
+            <p style="margin:0 0 8px;"><a href="<?php echo esc_url( home_url( '/property-sales' ) ); ?>" style="color:var(--primary); text-decoration:none; font-size:14px;">← Back to Sales</a></p>
             <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
-                Property Purchases
+                Add Purchase
             </h1>
             <p style="color:#64748b; margin:0; font-size:14px;">Manage manual property purchases and installments for your buyers.</p>
         </div>
@@ -307,7 +418,7 @@ if ( $detail_purchase_id ) {
                 <h3 style="margin-bottom:4px;">Create Purchase</h3>
                 <p class="ofp-hint">Create a purchase for a buyer who has agreed to buy one of your sale properties. No buyer account is created.</p>
 
-                <form method="post" style="margin-top:24px;">
+                <form method="post" enctype="multipart/form-data" style="margin-top:24px;">
                     <?php wp_nonce_field( 'ofp_client_create_purchase', 'ofp_client_purchase_nonce' ); ?>
                     <input type="hidden" name="ofp_create_client_purchase" value="1">
 
@@ -393,6 +504,11 @@ if ( $detail_purchase_id ) {
                             <label>Payment Reference <span class="ofp-hint" style="display:inline;margin:0;">(Optional)</span></label>
                             <input type="text" name="payment_reference" placeholder="Receipt number, transaction ID, etc." style="width:100%;">
                         </div>
+                        <div class="ofp-field">
+                            <label>Payment Receipt <span class="ofp-hint" style="display:inline;margin:0;">(Required)</span></label>
+                            <input type="file" name="payment_receipt" accept="image/jpeg,image/png,application/pdf" required style="width:100%;">
+                            <p class="ofp-hint">Proof of the amount paid above. JPG, PNG or PDF, max 5 MB.</p>
+                        </div>
                     </div>
 
                     <div style="margin-top:24px;">
@@ -401,71 +517,6 @@ if ( $detail_purchase_id ) {
                 </form>
             </div>
 
-            <div class="ofp-card">
-                <h3 style="margin-bottom:16px;">Recent Purchases</h3>
-                <div class="ofp-table-responsive" style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
-                    <table class="ofp-table" style="width:100%; min-width:1200px; white-space:nowrap;">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Buyer</th>
-                                <th>Property</th>
-                                <th>Total</th>
-                                <th>Paid</th>
-                                <th>Balance</th>
-                                <th>Payment Starts</th>
-                                <th>First Due</th>
-                                <th>Grace</th>
-                                <th>Offer Expires</th>
-                                <th>Next Due Date</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        <?php if ( empty( $my_purchases ) ) : ?>
-                            <tr><td colspan="10" style="text-align:center; color:#64748b;">No purchases yet.</td></tr>
-                        <?php else : ?>
-                            <?php foreach ( $my_purchases as $purchase ) : ?>
-                                <tr>
-                                    <td style="color:var(--text-muted);">#<?php echo esc_html( $purchase->id ); ?></td>
-                                    <td>
-                                        <div style="font-weight: 500;">
-                                            <a href="<?php echo esc_url( add_query_arg( 'purchase_id', $purchase->id, home_url( '/property-purchases' ) ) ); ?>" style="color:var(--primary); text-decoration:none;">
-                                                <?php echo esc_html( $purchase->buyer_name ); ?>
-                                            </a>
-                                        </div>
-                                        <div style="font-size: 12px; color: var(--text-muted);"><?php echo esc_html( $purchase->buyer_phone ); ?></div>
-                                    </td>
-                                    <td style="color:var(--text-main);"><?php echo esc_html( $purchase->property_title ?: '—' ); ?></td>
-                                    <td style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $purchase->total_price, 2 ) ); ?></td>
-                                    <td style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $purchase->amount_paid, 2 ) ); ?></td>
-                                    <td><strong style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $purchase->balance, 2 ) ); ?></strong></td>
-                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo $purchase->payment_start_date ? esc_html( wp_date( 'M j, Y', strtotime( $purchase->payment_start_date ) ) ) : '—'; ?></td>
-                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo $purchase->first_due_date ? esc_html( wp_date( 'M j, Y', strtotime( $purchase->first_due_date ) ) ) : '—'; ?></td>
-                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo esc_html( (int) $purchase->grace_period_days ); ?> days</td>
-                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo !empty($purchase->offer_expires) ? esc_html( wp_date( 'M j, Y', strtotime( $purchase->offer_expires ) ) ) : '—'; ?></td>
-                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo $purchase->next_due_date ? esc_html( wp_date( 'M j, Y', strtotime( $purchase->next_due_date ) ) ) : '—'; ?></td>
-                                    <td>
-                                        <?php 
-                                            $status_styles = [
-                                                'active'    => 'background:#dcfce7; color:#16a34a;',
-                                                'completed' => 'background:#dbeafe; color:#2563eb;',
-                                                'defaulted' => 'background:#fee2e2; color:#ef4444;',
-                                                'cancelled' => 'background:rgba(128,128,128,0.1); color:var(--text-muted);'
-                                            ];
-                                            $style = $status_styles[ $purchase->status ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
-                                        ?>
-                                        <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr($style); ?>">
-                                            <?php echo esc_html( ucfirst( $purchase->status ) ); ?>
-                                        </span>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
     </div>
 </div>

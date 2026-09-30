@@ -7,6 +7,11 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+if ( file_exists( __DIR__ . '/property-single-detail.php' ) ) {
+    include __DIR__ . '/property-single-detail.php';
+    return;
+}
+
 // Phase 23: Facebook Meta Pixel Injection
 add_action( 'wp_head', function() {
     $post_id   = get_the_ID();

@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OFP_Property_Commerce {
 
-    const SCHEMA_VERSION = '1.0.3';
+    const SCHEMA_VERSION = '1.0.4';
 
     /**
      * Bootstrap the property-commerce layer.
@@ -186,6 +186,21 @@ class OFP_Property_Commerce {
             }
         }
 
+        // Buyer dedicated virtual account details, one per purchase.
+        if ( version_compare( $current_version, '1.0.4', '<' ) ) {
+            $cols = $wpdb->get_col( "DESCRIBE {$p}ofp_property_purchases" );
+            $adds = [];
+            if ( ! in_array( 'va_account_number', $cols, true ) ) $adds[] = "ADD COLUMN `va_account_number` VARCHAR(20) NULL AFTER `status`";
+            if ( ! in_array( 'va_bank_name', $cols, true ) ) $adds[] = "ADD COLUMN `va_bank_name` VARCHAR(100) NULL AFTER `va_account_number`";
+            if ( ! in_array( 'va_bank_code', $cols, true ) ) $adds[] = "ADD COLUMN `va_bank_code` VARCHAR(20) NULL AFTER `va_bank_name`";
+            if ( ! in_array( 'va_customer_code', $cols, true ) ) $adds[] = "ADD COLUMN `va_customer_code` VARCHAR(60) NULL AFTER `va_bank_code`";
+
+            if ( ! empty( $adds ) ) {
+                $wpdb->query( "ALTER TABLE {$p}ofp_property_purchases " . implode( ', ', $adds ) );
+                $wpdb->query( "ALTER TABLE {$p}ofp_property_purchases ADD KEY `va_customer_code` (`va_customer_code`)" );
+            }
+        }
+
         update_option( 'ofp_property_commerce_schema', self::SCHEMA_VERSION, false );
     }
 
@@ -337,6 +352,51 @@ class OFP_Property_Commerce {
      * Supports one payment covering multiple months and partial payments.
      * Returns an array summary; never silently discards money.
      */
+    /**
+     * Creates (or returns the existing) dedicated virtual account for a
+     * purchase, so the buyer has one account number that works for every
+     * installment, for the life of that purchase.
+     *
+     * @return object|null  { account_number, bank_name, bank_code, customer_code } or null if not created.
+     */
+    public static function ensure_virtual_account( int $purchase_id ): ?object {
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $purchase = $wpdb->get_row( $wpdb->prepare( "SELECT id, buyer_name, buyer_email, buyer_phone, va_account_number, va_bank_name, va_bank_code, va_customer_code FROM {$p}ofp_property_purchases WHERE id = %d LIMIT 1", $purchase_id ) );
+        if ( ! $purchase ) return null;
+
+        if ( ! empty( $purchase->va_customer_code ) ) {
+            return (object) [
+                'account_number' => $purchase->va_account_number,
+                'bank_name'      => $purchase->va_bank_name,
+                'bank_code'      => $purchase->va_bank_code,
+                'customer_code'  => $purchase->va_customer_code,
+            ];
+        }
+
+        if ( empty( $purchase->buyer_email ) || ! class_exists( 'OFP_Payment' ) ) return null;
+
+        $va = OFP_Payment::create_buyer_virtual_account(
+            [ 'name' => $purchase->buyer_name, 'email' => $purchase->buyer_email, 'phone' => $purchase->buyer_phone ],
+            [ 'ofp_purchase_id' => $purchase_id ]
+        );
+        if ( ! $va ) return null;
+
+        $wpdb->update(
+            "{$p}ofp_property_purchases",
+            [
+                'va_account_number' => $va->account_number,
+                'va_bank_name'      => $va->bank_name,
+                'va_bank_code'      => $va->bank_code,
+                'va_customer_code'  => $va->customer_code,
+                'updated_at'        => current_time( 'mysql' ),
+            ],
+            [ 'id' => $purchase_id ]
+        );
+
+        return $va;
+    }
+
     public static function allocate_payment( int $payment_id ): array {
         global $wpdb;
         $p = $wpdb->prefix;

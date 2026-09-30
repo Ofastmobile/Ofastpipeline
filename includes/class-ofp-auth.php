@@ -100,7 +100,12 @@ class OFP_Auth {
                 // client's subscription lapsed and they're back on Free,
                 // team members lose login access along with everything
                 // else that plan doesn't cover, until the client upgrades.
-                if ( class_exists( 'OFP_Subscription' ) && OFP_Subscription::team_member_limit( $parent_client->plan ) <= 0 ) {
+                // Uses the unified plan (highest of CRM plan, listing plan,
+                // and any live listing subscription) so this agrees with
+                // every other feature gate in the app — checking only the
+                // raw CRM `plan` column would wrongly block a team member
+                // whose client paid for Listing only, or vice versa.
+                if ( class_exists( 'OFP_Subscription' ) && OFP_Subscription::team_member_limit( OFP_Subscription::client_plan( $team_member->client_id ) ) <= 0 ) {
                     return false;
                 }
 
@@ -413,6 +418,24 @@ class OFP_Auth {
                 $user->parent_client_id
             )
         );
+    }
+
+    /**
+     * Check if a client (or team member acting for a client) is currently logged in.
+     *
+     * @return bool
+     */
+    public static function is_client_logged_in(): bool {
+        return self::current_client() !== null;
+    }
+
+    /**
+     * Check if any user (client or team member) is currently logged in.
+     *
+     * @return bool
+     */
+    public static function is_logged_in(): bool {
+        return self::current_user() !== null;
     }
 
     /**

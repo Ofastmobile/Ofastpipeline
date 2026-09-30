@@ -9,6 +9,11 @@ OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
 
+if ( ! OFP_Subscription::has_paid_plan( $client->id ) ) {
+    wp_safe_redirect( add_query_arg( 'upgrade', 'team', home_url( '/pricing' ) ) );
+    exit;
+}
+
 // Only the main client can manage team members, or maybe a manager with permission.
 // "team menu will only be seen by main clients or the sub admin"
 $user_type = OFP_Auth::get_user_type();
