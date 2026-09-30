@@ -130,16 +130,29 @@ $marketplace_query = new WP_Query( $args );
         (function() {
             var theme = localStorage.getItem('ofp_theme');
             var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (theme === 'dark' || (!theme && prefersDark)) {
-                document.documentElement.classList.add('dark');
+            var isDark = theme ? (theme === 'dark') : prefersDark;
+            var html = document.documentElement;
+            if (isDark) {
+                html.classList.add('dark');
+                html.classList.remove('light');
+                html.setAttribute('data-theme', 'dark');
             } else {
-                document.documentElement.classList.remove('dark');
+                html.classList.remove('dark');
+                html.classList.add('light');
+                html.setAttribute('data-theme', 'light');
             }
         })();
 
         function ofpToggleTheme() {
             var html = document.documentElement;
             var isDark = html.classList.toggle('dark');
+            if (isDark) {
+                html.classList.remove('light');
+                html.setAttribute('data-theme', 'dark');
+            } else {
+                html.classList.add('light');
+                html.setAttribute('data-theme', 'light');
+            }
             try {
                 localStorage.setItem('ofp_theme', isDark ? 'dark' : 'light');
             } catch (e) {}
@@ -157,7 +170,7 @@ $marketplace_query = new WP_Query( $args );
                     } catch(err) {}
                 });
             }
-            window.dispatchEvent(new CustomEvent('ofp-theme-changed', { detail: { dark: isDark } }));
+            window.dispatchEvent(new CustomEvent('ofp-theme-changed', { detail: { dark: isDark, theme: isDark ? 'dark' : 'light' } }));
         }
         window.ofpToggleTheme = ofpToggleTheme;
         window.toggleDark = ofpToggleTheme;
@@ -279,10 +292,10 @@ $marketplace_query = new WP_Query( $args );
                         </svg>
                     </button>
                     <!-- Post Property Button -->
-                    <button
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap uppercase">
+                    <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap uppercase inline-flex items-center justify-center">
                         Post Property
-                    </button>
+                    </a>
                 </div>
             </div>
 

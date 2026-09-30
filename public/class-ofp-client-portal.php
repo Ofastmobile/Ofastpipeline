@@ -51,6 +51,7 @@ class OFP_Client_Portal {
         add_action( 'template_redirect', [ $this, 'handle_routes' ] );
         add_action( 'init', [ $this, 'handle_logout' ] );
         add_action( 'template_redirect', [ $this, 'redirect_authenticated_away_from_auth_pages' ] );
+        add_action( 'wp_head', [ $this, 'render_theme_head_script' ], 0 );
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
         add_action( 'wp_ajax_ofp_fetch_leads', [ $this, 'ajax_fetch_leads' ] );
         add_action( 'wp_ajax_nopriv_ofp_fetch_leads', [ $this, 'ajax_fetch_leads' ] );
@@ -88,6 +89,72 @@ class OFP_Client_Portal {
             'ajaxurl' => admin_url( 'admin-ajax.php' ),
             'nonce' => wp_create_nonce( 'ofp_client_ajax' ),
         ] );
+    }
+
+    /**
+     * Prevents FOUC (Flash of Unstyled Content) and ensures instant, synchronized theme
+     * rendering across all client portal and public property pages.
+     */
+    public function render_theme_head_script(): void {
+        ?>
+        <script id="ofp-theme-init">
+        (function() {
+            try {
+                var theme = localStorage.getItem('ofp_theme');
+                var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var isDark = theme ? (theme === 'dark') : prefersDark;
+                var html = document.documentElement;
+                if (isDark) {
+                    html.classList.add('dark');
+                    html.classList.remove('light');
+                    html.setAttribute('data-theme', 'dark');
+                } else {
+                    html.classList.remove('dark');
+                    html.classList.add('light');
+                    html.setAttribute('data-theme', 'light');
+                }
+            } catch(e) {}
+        })();
+
+        if (typeof window.ofpToggleTheme !== 'function') {
+            window.ofpToggleTheme = function() {
+                var html = document.documentElement;
+                var currentlyDark = html.classList.contains('dark') || html.getAttribute('data-theme') === 'dark' || (html.getAttribute('data-theme') !== 'light' && !html.classList.contains('light'));
+                var makeDark = !currentlyDark;
+
+                if (makeDark) {
+                    html.classList.add('dark');
+                    html.classList.remove('light');
+                    html.setAttribute('data-theme', 'dark');
+                    try { localStorage.setItem('ofp_theme', 'dark'); } catch(e) {}
+                } else {
+                    html.classList.remove('dark');
+                    html.classList.add('light');
+                    html.setAttribute('data-theme', 'light');
+                    try { localStorage.setItem('ofp_theme', 'light'); } catch(e) {}
+                }
+
+                if (typeof tailwind !== 'undefined' && tailwind.config) {
+                    tailwind.config.darkMode = 'class';
+                }
+
+                if (window.Alpine) {
+                    document.querySelectorAll('[x-data]').forEach(function(el) {
+                        try {
+                            if (el._x_dataStack) {
+                                el._x_dataStack.forEach(function(s) {
+                                    if (typeof s.darkMode !== 'undefined') s.darkMode = makeDark;
+                                });
+                            }
+                        } catch(err) {}
+                    });
+                }
+
+                window.dispatchEvent(new CustomEvent('ofp-theme-changed', { detail: { dark: makeDark, theme: makeDark ? 'dark' : 'light' } }));
+            };
+        }
+        </script>
+        <?php
     }
 
     public function ajax_fetch_leads(): void {

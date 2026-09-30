@@ -25,7 +25,9 @@
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
 }
 
-[data-theme="light"] {
+[data-theme="light"],
+html.light,
+html:not(.dark):not([data-theme="dark"]) {
     --bg-body: #f8fafc;
     --bg-sidebar: #ffffff;
     --bg-card: #ffffff;
@@ -46,6 +48,27 @@
     --dropdown-border: #e2e8f0;
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Theme Toggle Sun/Moon Icon Display ─────────────────────────────────── */
+html.dark .theme-toggle-moon,
+html[data-theme="dark"] .theme-toggle-moon {
+    display: none !important;
+}
+html.dark .theme-toggle-sun,
+html[data-theme="dark"] .theme-toggle-sun {
+    display: block !important;
+}
+
+html.light .theme-toggle-moon,
+html[data-theme="light"] .theme-toggle-moon,
+html:not(.dark):not([data-theme="dark"]) .theme-toggle-moon {
+    display: block !important;
+}
+html.light .theme-toggle-sun,
+html[data-theme="light"] .theme-toggle-sun,
+html:not(.dark):not([data-theme="dark"]) .theme-toggle-sun {
+    display: none !important;
 }
 
 /* ── Reset & Base ─────────────────────────────────────────────────────────── */

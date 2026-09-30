@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Property_Rent {
 
-    const SCHEMA_VERSION = '1.0.2';
+    const SCHEMA_VERSION = '1.0.3';
 
     /** Rent periods selectable by a landlord when setting up a property. */
     const STANDARD_PERIODS = [ 'monthly', 'quarterly', 'biannual', 'yearly', 'shortlet', 'custom' ];
@@ -80,6 +80,7 @@ class OFP_Property_Rent {
             terms_text            LONGTEXT NULL,
             terms_accepted_at     DATETIME NULL,
             terms_accepted_ip     VARCHAR(45) NULL,
+            offer_token           VARCHAR(64) NULL,
             offer_token_hash      CHAR(64) NOT NULL,
             offer_sent_at         DATETIME NULL,
             offer_expires_at      DATETIME NULL,
@@ -124,6 +125,12 @@ class OFP_Property_Rent {
             KEY status (status),
             KEY created_at (created_at)
         ) {$charset_collate};" );
+
+        // Ensure offer_token column exists if table was created in 1.0.2
+        $cols = (array) $wpdb->get_col( "DESCRIBE {$p}ofp_property_leases" );
+        if ( ! in_array( 'offer_token', $cols, true ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_property_leases ADD COLUMN `offer_token` VARCHAR(64) NULL AFTER `terms_accepted_ip`" );
+        }
 
         update_option( 'ofp_property_rent_schema_version', self::SCHEMA_VERSION, false );
     }
@@ -290,6 +297,7 @@ class OFP_Property_Rent {
             'rent_amount'      => $amount,
             'balance'          => $amount,
             'terms_text'       => sanitize_textarea_field( $data['terms_text'] ?? '' ) ?: null,
+            'offer_token'      => $token,
             'offer_token_hash' => hash( 'sha256', $token ),
             'offer_sent_at'    => current_time( 'mysql' ),
             'offer_expires_at' => $expires_at,

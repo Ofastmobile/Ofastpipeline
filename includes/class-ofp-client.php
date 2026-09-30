@@ -590,6 +590,38 @@ class OFP_Client {
     }
 
     /**
+     * Check whether a given subdomain slug is already registered.
+     *
+     * @param  string $subdomain  Subdomain to check.
+     * @param  int    $exclude_id Optional client ID to exclude from check.
+     * @return bool               True if the subdomain is taken.
+     */
+    public static function subdomain_exists( string $subdomain, int $exclude_id = 0 ): bool {
+        global $wpdb;
+        $slug = sanitize_title( $subdomain );
+        if ( empty( $slug ) ) {
+            return false;
+        }
+
+        if ( $exclude_id > 0 ) {
+            return (bool) $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE subdomain = %s AND id != %d LIMIT 1",
+                    $slug,
+                    $exclude_id
+                )
+            );
+        }
+
+        return (bool) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE subdomain = %s LIMIT 1",
+                $slug
+            )
+        );
+    }
+
+    /**
      * Return a summary stats array for a given client.
      * Used on the admin client-detail page and the client's own dashboard.
      *

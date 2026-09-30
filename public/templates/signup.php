@@ -26,6 +26,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
     $email         = sanitize_email(      wp_unslash( $_POST['email']          ?? '' ) );
     $phone         = OFP_Security::sanitize_phone( wp_unslash( $_POST['phone'] ?? '' ) );
     $plan          = sanitize_text_field( wp_unslash( $_POST['plan']           ?? 'free' ) );
+    $subdomain     = sanitize_title(      wp_unslash( $_POST['subdomain']      ?? '' ) );
+    if ( empty( $subdomain ) && ! empty( $business_name ) ) {
+        $subdomain = sanitize_title( $business_name );
+    }
 
     if ( isset( $_POST['otp_step'] ) && $_POST['otp_step'] === '1' ) {
         // --- STEP 2: Verify OTP and Create Account ---
@@ -45,6 +49,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                     'owner_name'        => $owner_name,
                     'email'             => $email,
                     'phone'             => $phone,
+                    'subdomain'         => $subdomain,
                     'business_category' => 'property',
                     'plan'              => $plan,
                     'listing_plan'      => $plan,
@@ -74,6 +79,12 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             $error = 'Please enter a valid phone number.';
         } elseif ( OFP_Client::email_exists( $email ) ) {
             $error = 'An account with this email address already exists. Please log in instead.';
+        } elseif ( empty( $subdomain ) || strlen( $subdomain ) < 3 ) {
+            $error = 'Please enter a portal subdomain of at least 3 characters.';
+        } elseif ( class_exists( 'OFP_Host_Router' ) && OFP_Host_Router::is_reserved( $subdomain ) ) {
+            $error = 'That subdomain is reserved by the system. Please choose another.';
+        } elseif ( class_exists( 'OFP_Client' ) && OFP_Client::subdomain_exists( $subdomain ) ) {
+            $error = 'That subdomain is already taken. Please choose another.';
         } else {
             // Generate OTP
             OFP_Auth::generate_and_send_otp( $email, $phone, 'signup' );
@@ -189,6 +200,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                     <input type="hidden" name="email" value="<?php echo esc_attr( $_POST['email'] ); ?>">
                     <input type="hidden" name="phone" value="<?php echo esc_attr( $_POST['phone'] ); ?>">
                     <input type="hidden" name="plan" value="<?php echo esc_attr( $_POST['plan'] ?? 'free' ); ?>">
+                    <input type="hidden" name="subdomain" value="<?php echo esc_attr( $subdomain ); ?>">
 
                     <div class="ofp-field" style="margin-bottom: 20px;">
                         <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">7-Character Verification Code (OTP) <span style="color:red">*</span></label>
@@ -209,6 +221,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 
             <?php else : ?>
 
+                <?php
+                $base_domain = get_option( 'ofp_crm_base_domain' ) ?: ( isset( $_SERVER['HTTP_HOST'] ) ? preg_replace( '/:\d+$/', '', $_SERVER['HTTP_HOST'] ) : 'ofastpipeline.com' );
+                ?>
                 <form method="POST" action="" id="ofp-signup-form">
 
                     <!-- STEP 1: Details -->
@@ -220,6 +235,26 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                             <input type="text" name="business_name" required
                                    value="<?php echo esc_attr( sanitize_text_field( $_POST['business_name'] ?? '' ) ); ?>"
                                    placeholder="e.g. Lekki Homes Realty" style="width:100%; padding:12px 14px; border:1.5px solid #e5e7eb; border-radius:8px; font-size:15px;">
+                        </div>
+
+                        <div class="ofp-field" style="margin-bottom: 15px;">
+                            <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">
+                                Choose Your Portal Subdomain <span style="color:red">*</span>
+                            </label>
+                            <div style="display:flex; align-items:center; border:1.5px solid #e5e7eb; border-radius:8px; background:#fff; overflow:hidden;">
+                                <input type="text" name="subdomain" id="ofp-subdomain-input" required
+                                       value="<?php echo esc_attr( sanitize_title( $_POST['subdomain'] ?? '' ) ); ?>"
+                                       placeholder="e.g. lekkihomes"
+                                       pattern="[a-z0-9-]+"
+                                       minlength="3"
+                                       style="flex:1; border:none; padding:12px 14px; font-size:15px; outline:none; background:transparent;">
+                                <span style="padding:0 14px; color:#6b7280; font-size:14px; background:#f9fafb; border-left:1px solid #e5e7eb; height:46px; display:flex; align-items:center;">
+                                    .<?php echo esc_html( $base_domain ); ?>
+                                </span>
+                            </div>
+                            <p style="font-size:12px; color:#6b7280; margin-top:4px;">
+                                Your agency's direct address: <strong id="ofp-subdomain-preview">https://youragency.<?php echo esc_html( $base_domain ); ?></strong>
+                            </p>
                         </div>
 
                         <div class="ofp-field" style="margin-bottom: 15px;">
@@ -250,6 +285,53 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                     </div> <!-- End Step 1 -->
 
                 </form>
+
+                <script>
+                (function() {
+                    var bizInput = document.querySelector('input[name="business_name"]');
+                    var subInput = document.getElementById('ofp-subdomain-input');
+                    var preview  = document.getElementById('ofp-subdomain-preview');
+                    var baseDomain = <?php echo json_encode( $base_domain ); ?>;
+                    var userModified = false;
+
+                    if (!bizInput || !subInput) return;
+
+                    subInput.addEventListener('input', function() {
+                        userModified = true;
+                        updatePreview();
+                    });
+
+                    bizInput.addEventListener('input', function() {
+                        if (!userModified && (!subInput.value || subInput.value === slugify(bizInput.dataset.lastVal || ''))) {
+                            subInput.value = slugify(bizInput.value);
+                            updatePreview();
+                        }
+                        bizInput.dataset.lastVal = bizInput.value;
+                    });
+
+                    function slugify(text) {
+                        return (text || '').toString().toLowerCase()
+                            .trim()
+                            .replace(/\s+/g, '-')
+                            .replace(/[^a-z0-9\-]+/g, '')
+                            .replace(/\-\-+/g, '-')
+                            .replace(/^-+/, '')
+                            .replace(/-+$/, '');
+                    }
+
+                    function updatePreview() {
+                        var slug = slugify(subInput.value) || 'youragency';
+                        if (preview) {
+                            preview.textContent = 'https://' + slug + '.' + baseDomain;
+                        }
+                    }
+
+                    if (bizInput.value && !subInput.value) {
+                        subInput.value = slugify(bizInput.value);
+                    }
+                    updatePreview();
+                })();
+                </script>
 
             <?php endif; ?>
         </div>

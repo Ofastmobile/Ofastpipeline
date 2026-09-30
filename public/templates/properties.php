@@ -542,7 +542,7 @@ if ( isset( $_GET['edit'] ) ) {
                                     <?php echo $editing_post ? 'Save Changes' : 'Submit Property'; ?>
                                 </button>
                                 <?php if ( $editing_post ) : ?>
-                                    <a href="?_x=<?php echo rand(); ?>" class="ofp-btn" style="background:#f1f5f9; color:#475569; margin-left:12px; text-decoration:none;">Cancel Edit</a>
+                                    <a href="?_x=<?php echo rand(); ?>" class="ofp-btn" style="background:var(--bg-body); color:var(--text-muted); border:1px solid var(--border-color); margin-left:12px; text-decoration:none;">Cancel Edit</a>
                                 <?php endif; ?>
                             </div>
                         </form>

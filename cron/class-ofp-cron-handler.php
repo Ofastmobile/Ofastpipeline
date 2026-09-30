@@ -6,6 +6,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 require_once OFP_PATH . 'includes/class-ofp-property-installment-reminders.php';
+require_once OFP_PATH . 'includes/class-ofp-property-lease-reminders.php';
 
 class OFP_Cron_Handler {
 
@@ -23,6 +24,7 @@ class OFP_Cron_Handler {
     public function check_subscriptions(): void {
         OFP_Subscription::run_daily_check();
         OFP_Property_Installment_Reminders::run_daily();
+        OFP_Property_Lease_Reminders::run_daily();
 
         if ( class_exists( 'OFP_Logger' ) ) {
             OFP_Logger::purge_old_logs( 30 );

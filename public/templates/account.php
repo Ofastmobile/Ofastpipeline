@@ -448,6 +448,23 @@ if ( isset( $_GET['success'] ) && $_GET['success'] === 'logo' ) {
                                 <input type="text" class="ofp-input" value="<?php echo esc_attr( $client->phone ); ?>" readonly>
                             </div>
 
+                            <div class="ofp-form-group full-width">
+                                <label class="ofp-label">Branded Portal Address (Read Only)</label>
+                                <?php
+                                $base_domain = get_option( 'ofp_crm_base_domain' ) ?: ( isset( $_SERVER['HTTP_HOST'] ) ? preg_replace( '/:\d+$/', '', $_SERVER['HTTP_HOST'] ) : 'ofastpipeline.com' );
+                                $client_subdomain = ! empty( $client->subdomain ) ? $client->subdomain : '';
+                                $portal_url = $client_subdomain ? ( 'https://' . $client_subdomain . '.' . $base_domain ) : '';
+                                ?>
+                                <input type="text" class="ofp-input" value="<?php echo esc_attr( $portal_url ?: 'No custom subdomain assigned' ); ?>" readonly>
+                                <span style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                                    <?php if ( $portal_url ) : ?>
+                                        Your agency's direct dashboard link. (To change your subdomain, please contact support.)
+                                    <?php else : ?>
+                                        Contact support to configure a custom branded subdomain for your team.
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+
                             <!-- Phase 23 Additions -->
                             <div class="ofp-form-group full-width" style="margin-top:16px;">
                                 <h3 style="font-size:14px; font-weight:600; color:var(--text-main); margin:0;">Public Profile & Tracking</h3>
