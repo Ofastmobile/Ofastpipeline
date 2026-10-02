@@ -451,6 +451,11 @@ $marketplace_query = new WP_Query( $args );
                             class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors cursor-pointer">
                             Commercial
                         </button>
+                        <button type="button" @click="filterTab = 'land'; $nextTick(() => $refs.filterForm.submit())"
+                            :class="filterTab === 'land' ? 'bg-lime-700 text-white' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                            class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors cursor-pointer">
+                            Land
+                        </button>
                     </div>
 
                     <div class="flex items-center gap-2 w-full lg:w-auto">
@@ -653,6 +658,8 @@ $marketplace_query = new WP_Query( $args );
                     $listing_label = 'FOR SALE';
                     if ( $listing_type === 'rent' ) $listing_label = 'FOR RENT';
                     if ( $listing_type === 'shortlet' ) $listing_label = 'SHORT LET';
+                    if ( $listing_type === 'commercial' ) $listing_label = 'COMMERCIAL';
+                    if ( $listing_type === 'land' ) $listing_label = 'LAND';
             ?>
             <?php
             $price_num = floatval( preg_replace( '/[^\d.]/', '', (string) $price ) );
@@ -717,6 +724,19 @@ $marketplace_query = new WP_Query( $args );
                         </p>
                     </div>
 
+<?php if ( $listing_type === 'land' ) : ?>
+                    <!-- Land specs: plot size and title document -->
+                    <div class="grid grid-cols-2 gap-2 py-3 border-y border-slate-100 dark:border-white/5 my-1">
+                        <div class="leading-none">
+                            <span class="text-[13px] font-bold text-slate-900 dark:text-white block"><?php echo esc_html( $sqm ? number_format_i18n( (float) $sqm ) . ' SQM' : '-' ); ?></span>
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Plot Size</span>
+                        </div>
+                        <div class="leading-none">
+                            <span class="text-[13px] font-bold text-slate-900 dark:text-white block"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_title_document', true ) ?: '-' ); ?></span>
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Title</span>
+                        </div>
+                    </div>
+<?php else : ?>
                     <!-- 4 Specs: Beds, Baths, Parking, SQM -->
                     <div class="grid grid-cols-4 gap-2 py-3 border-y border-slate-100 dark:border-white/5 my-1">
                         <div class="flex items-start gap-1.5">
@@ -756,6 +776,7 @@ $marketplace_query = new WP_Query( $args );
                             </div>
                         </div>
                     </div>
+<?php endif; ?>
 
                     <!-- Card Footer -->
                     <div class="flex items-center justify-between pt-1">

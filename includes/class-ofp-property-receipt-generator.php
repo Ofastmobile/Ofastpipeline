@@ -53,7 +53,8 @@ class OFP_Property_Receipt_Generator {
         $p = $wpdb->prefix;
 
         $payment = $wpdb->get_row( $wpdb->prepare(
-            "SELECT p.*, l.rent_amount, l.amount_paid, l.balance, l.rent_period, l.custom_days,
+            "SELECT p.*, l.rent_amount, l.legal_fee, l.agency_fee, l.caution_fee, l.service_charge,
+                    l.total_initial_package, l.cycle_number, l.amount_paid, l.balance, l.rent_period, l.custom_days,
                     l.start_date, l.end_date, l.property_id AS lease_property_id,
                     t.full_name AS tenant_name, t.email AS tenant_email, t.phone AS tenant_phone, t.id AS tenant_record_id,
                     pr.title AS property_title, pr.listing_type,
@@ -209,10 +210,10 @@ class OFP_Property_Receipt_Generator {
             'payment_channel'     => $payment->payment_method ?: 'N/A',
 
             // Payment allocation (installment-style — adapted for rent)
-            'plan_name'           => OFP_Property_Rent::period_label( $payment->rent_period, (int) $payment->custom_days ) . ' Rent',
-            'installment_number'  => 'N/A',
+            'plan_name'           => OFP_Property_Rent::period_label( $payment->rent_period, (int) $payment->custom_days ) . ' Rent (Cycle #' . ( (int) ( $payment->cycle_number ?: 1 ) ) . ')',
+            'installment_number'  => 'Cycle #' . ( (int) ( $payment->cycle_number ?: 1 ) ),
             'due_date'            => $payment->end_date ? wp_date( 'M j, Y', strtotime( $payment->end_date ) ) : 'N/A',
-            'next_payment_date'   => 'As needed',
+            'next_payment_date'   => 'As scheduled',
 
             // Tenancy details section
             'tenant_id'           => $payment->tenant_record_id ?: '',
@@ -221,7 +222,7 @@ class OFP_Property_Receipt_Generator {
             'lease_start'         => $payment->start_date ? wp_date( 'M j, Y', strtotime( $payment->start_date ) ) : 'Pending activation',
             'lease_end'           => $payment->end_date ? wp_date( 'M j, Y', strtotime( $payment->end_date ) ) : 'Pending activation',
             'rent_balance'        => 'NGN ' . number_format( (float) $payment->balance, 2 ),
-            'security_deposit'    => 'N/A',
+            'security_deposit'    => ( ! empty( $payment->caution_fee ) && (float) $payment->caution_fee > 0 ) ? 'NGN ' . number_format( (float) $payment->caution_fee, 2 ) : 'N/A',
             'utility_reference'   => 'N/A',
 
             // Footer

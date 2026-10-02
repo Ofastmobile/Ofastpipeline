@@ -45,7 +45,7 @@ class OFP_Property_Commerce_Actions {
             "SELECT pr.id, pr.title, pr.price, pr.listing_type, pr.client_id
              FROM {$p}ofp_properties pr
              LEFT JOIN {$p}postmeta pm_status ON pm_status.post_id = pr.wp_post_id AND pm_status.meta_key = 'ofp_status'
-             WHERE pr.listing_type = 'sale'
+             WHERE pr.listing_type IN ('sale','land')
                AND ( pr.status = 'live' OR pm_status.meta_value = 'live' )
              ORDER BY pr.title ASC"
         );
@@ -135,7 +135,7 @@ class OFP_Property_Commerce_Actions {
 
         $error = '';
         if ( ! $property ) $error = 'Property not found.';
-        elseif ( $property->listing_type !== 'sale' ) $error = 'Offers are only available for sale properties.';
+        elseif ( ! OFP_Property_CPT::is_sale_like( (string) $property->listing_type ) ) $error = 'Offers are only available for sale or land properties.';
         elseif ( ! $buyer_name || ! $buyer_phone ) $error = 'Buyer name and phone are required.';
         elseif ( $buyer_email !== '' && ! is_email( $buyer_email ) ) $error = 'Buyer email is invalid.';
         elseif ( (float) $property->price <= 0 ) $error = 'Property price is invalid.';

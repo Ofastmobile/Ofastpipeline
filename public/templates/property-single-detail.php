@@ -74,6 +74,7 @@ $listing_label = 'FOR SALE';
 if ( $listing_type === 'rent' ) $listing_label = 'FOR RENT';
 if ( $listing_type === 'shortlet' ) $listing_label = 'SHORT LET';
 if ( $listing_type === 'commercial' ) $listing_label = 'COMMERCIAL';
+if ( $listing_type === 'land' ) $listing_label = 'LAND';
 
 // Gallery images array
 $gallery_urls = [];
@@ -605,6 +606,7 @@ if ( empty( $gallery_urls ) ) {
                         <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Type</span>
                         <span class="font-bold" style="text-transform: capitalize;"><?php echo esc_html( str_replace('-', ' ', get_post_meta( get_the_ID(), 'ofp_property_type', true )) ); ?></span>
                     </div>
+                    <?php if ( $listing_type !== 'land' ) : ?>
                     <div class="w-px h-10 bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
                     <div class="flex flex-col items-center flex-1 min-w-[80px]">
                         <svg class="w-6 h-6 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -625,6 +627,7 @@ if ( empty( $gallery_urls ) ) {
                         <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Bathrooms</span>
                         <span class="font-bold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_bathrooms', true ) ?: '-' ); ?> Baths</span>
                     </div>
+                    <?php endif; ?>
                     <div class="w-px h-10 bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
                     <div class="flex flex-col items-center flex-1 min-w-[80px]">
                         <svg class="w-6 h-6 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -632,7 +635,7 @@ if ( empty( $gallery_urls ) ) {
                                 d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4">
                             </path>
                         </svg>
-                        <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Area Size</span>
+                        <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider"><?php echo $listing_type === 'land' ? 'Plot Size' : 'Area Size'; ?></span>
                         <span class="font-bold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_area_sqm', true ) ?: '-' ); ?> SQM</span>
                     </div>
                 </div>
@@ -675,11 +678,13 @@ if ( empty( $gallery_urls ) ) {
                                     class="font-semibold text-emerald-600"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_status', true ) === 'live' ? 'Live / Available' : 'Unavailable' ); ?></span></div>
                             <div><span class="text-slate-500 block mb-1">Title Document:</span><span
                                     class="font-semibold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_title_document', true ) ?: 'N/A' ); ?></span></div>
+                            <?php if ( $listing_type !== 'land' ) : ?>
                             <div><span class="text-slate-500 block mb-1">Condition:</span><span
                                     class="font-semibold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_condition', true ) ?: 'N/A' ); ?></span></div>
                             <div><span class="text-slate-500 block mb-1">Furnishing:</span><span
                                     class="font-semibold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_furnishing', true ) ?: 'N/A' ); ?></span></div>
                             <div><span class="text-slate-500 block mb-1">Parking:</span><span class="font-semibold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_parking', true ) ?: '-' ); ?></span></div>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -1184,6 +1189,7 @@ if ( empty( $gallery_urls ) ) {
             if ( $similar_query->have_posts() ) :
                 while ( $similar_query->have_posts() ) : $similar_query->the_post();
                     $s_price = (float) get_post_meta( get_the_ID(), 'ofp_price', true );
+                    $s_lt    = get_post_meta( get_the_ID(), 'ofp_listing_type', true );
                     $s_beds  = get_post_meta( get_the_ID(), 'ofp_bedrooms', true );
                     $s_baths = get_post_meta( get_the_ID(), 'ofp_bathrooms', true );
                     $s_sqm   = get_post_meta( get_the_ID(), 'ofp_area_sqm', true );
@@ -1212,8 +1218,8 @@ if ( empty( $gallery_urls ) ) {
                         <?php echo esc_html( $s_loc ); ?>
                     </div>
                     <div class="flex justify-between text-[10px] uppercase font-bold text-slate-500 mt-auto border-t border-slate-100 dark:border-slate-800 pt-3">
-                        <span><?php echo esc_html( $s_beds ?: '-' ); ?> Beds</span>
-                        <span><?php echo esc_html( $s_baths ?: '-' ); ?> Baths</span>
+                        <?php if ( $s_lt !== 'land' ) : ?><span><?php echo esc_html( $s_beds ?: '-' ); ?> Beds</span><?php endif; ?>
+                        <?php if ( $s_lt !== 'land' ) : ?><span><?php echo esc_html( $s_baths ?: '-' ); ?> Baths</span><?php endif; ?>
                         <span><?php echo esc_html( $s_sqm ?: '-' ); ?> SQM</span>
                     </div>
                 </div>

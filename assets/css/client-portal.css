@@ -23,11 +23,13 @@
     --dropdown-border: rgba(255, 255, 255, 0.1);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+    color-scheme: dark;
 }
 
 [data-theme="light"],
 html.light,
 html:not(.dark):not([data-theme="dark"]) {
+    color-scheme: light;
     --bg-body: #f8fafc;
     --bg-sidebar: #ffffff;
     --bg-card: #ffffff;
@@ -1103,24 +1105,86 @@ body.ofp-portal-body {
 .ofp-field input[type="number"],
 .ofp-field input[type="tel"],
 .ofp-field input[type="password"],
+.ofp-field input[type="date"],
 .ofp-field select,
-.ofp-field textarea {
-    padding: 12px 16px;
+.ofp-field textarea,
+.ofp-input,
+.ofp-select,
+.ofp-textarea {
+    width: 100%;
+    padding: 11px 14px;
     border-radius: 8px;
     border: 1px solid var(--border-color);
     background: var(--bg-body);
     color: var(--text-main);
     font-size: 14px;
     font-family: inherit;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.ofp-field input::placeholder,
+.ofp-field textarea::placeholder,
+.ofp-input::placeholder,
+.ofp-textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
 }
 
 .ofp-field input:focus,
 .ofp-field select:focus,
-.ofp-field textarea:focus {
+.ofp-field textarea:focus,
+.ofp-input:focus,
+.ofp-select:focus,
+.ofp-textarea:focus {
     outline: none;
     border-color: var(--accent-blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    background: var(--bg-body);
+}
+
+.ofp-field input:hover,
+.ofp-field select:hover,
+.ofp-field textarea:hover,
+.ofp-input:hover,
+.ofp-select:hover,
+.ofp-textarea:hover {
+    border-color: var(--border-highlight);
+}
+
+.ofp-field textarea,
+.ofp-textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.5;
+}
+
+.ofp-select,
+.ofp-field select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px 16px;
+    padding-right: 40px;
+    cursor: pointer;
+}
+
+.ofp-select option,
+.ofp-field select option {
+    background: var(--bg-card);
+    color: var(--text-main);
+    padding: 8px 12px;
+}
+
+input[type="date"].ofp-input,
+.ofp-field input[type="date"] {
+    color-scheme: dark;
+}
+[data-theme="light"] input[type="date"].ofp-input,
+[data-theme="light"] .ofp-field input[type="date"] {
+    color-scheme: light;
 }
 
 .ofp-hint {

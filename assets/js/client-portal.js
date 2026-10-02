@@ -287,7 +287,7 @@
     function initOfpCustomSelects() {
         var selects = document.querySelectorAll('.ofp-select');
         selects.forEach(function(select) {
-            if (select.closest('.ofp-custom-select-wrapper')) return;
+            if (select.closest('.ofp-custom-select-wrapper') || select.closest('.ofp-modal') || select.closest('.ofp-modal-backdrop') || select.classList.contains('ofp-native-select')) return;
 
             var wrapper = document.createElement('div');
             wrapper.className = 'ofp-custom-select-wrapper';

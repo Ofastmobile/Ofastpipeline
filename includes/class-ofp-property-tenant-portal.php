@@ -291,10 +291,59 @@ class OFP_Property_Tenant_Portal {
                             <strong><?php echo esc_html( OFP_Property_Rent::period_label( $lease->rent_period, (int) $lease->custom_days ) ); ?></strong>
                         </div>
                         <div>
-                            <small>Cycle Rent</small>
-                            <strong style="color:var(--accent-blue);">NGN <?php echo esc_html( number_format( (float) $lease->rent_amount, 2 ) ); ?></strong>
+                            <small>Tenancy Cycle</small>
+                            <strong>Cycle #<?php echo esc_html( (int) ( $lease->cycle_number ?: 1 ) ); ?> <?php echo (int) ( $lease->cycle_number ?: 1 ) > 1 ? '<span style="font-size:11px; font-weight:normal; color:#10b981;">(Renewal)</span>' : '<span style="font-size:11px; font-weight:normal; color:var(--text-muted);">(Move-in)</span>'; ?></strong>
                         </div>
                     </div>
+
+                    <?php
+                    $has_move_in_fees = ( (float) ( $lease->legal_fee ?? 0 ) > 0 )
+                        || ( (float) ( $lease->agency_fee ?? 0 ) > 0 )
+                        || ( (float) ( $lease->caution_fee ?? 0 ) > 0 )
+                        || ( (float) ( $lease->service_charge ?? 0 ) > 0 );
+                    ?>
+
+                    <?php if ( $has_move_in_fees || (float) ( $lease->total_initial_package ?? 0 ) > 0 ) : ?>
+                        <div style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:10px; padding:16px; margin:20px 0;">
+                            <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:12px;">
+                                Financial Breakdown &amp; Package Schedule
+                            </div>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; font-size:13px;">
+                                <div>
+                                    <span style="color:var(--text-muted); display:block; font-size:11px;">Base Recurring Rent</span>
+                                    <strong style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $lease->rent_amount, 2 ) ); ?></strong>
+                                </div>
+                                <?php if ( (float) ( $lease->legal_fee ?? 0 ) > 0 ) : ?>
+                                    <div>
+                                        <span style="color:var(--text-muted); display:block; font-size:11px;">Legal &amp; Agreement Fee <small>(One-off)</small></span>
+                                        <strong style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $lease->legal_fee, 2 ) ); ?></strong>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ( (float) ( $lease->agency_fee ?? 0 ) > 0 ) : ?>
+                                    <div>
+                                        <span style="color:var(--text-muted); display:block; font-size:11px;">Agency Fee <small>(One-off)</small></span>
+                                        <strong style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $lease->agency_fee, 2 ) ); ?></strong>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ( (float) ( $lease->caution_fee ?? 0 ) > 0 ) : ?>
+                                    <div>
+                                        <span style="color:var(--text-muted); display:block; font-size:11px;">Caution Deposit <small>(Refundable)</small></span>
+                                        <strong style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $lease->caution_fee, 2 ) ); ?></strong>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ( (float) ( $lease->service_charge ?? 0 ) > 0 ) : ?>
+                                    <div>
+                                        <span style="color:var(--text-muted); display:block; font-size:11px;">Service Charge <?php echo ! empty( $lease->is_service_charge_recurring ) ? '<small>(Recurring)</small>' : '<small>(One-off)</small>'; ?></span>
+                                        <strong style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $lease->service_charge, 2 ) ); ?></strong>
+                                    </div>
+                                <?php endif; ?>
+                                <div style="border-top:1px dashed var(--border-color); padding-top:8px; grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-weight:600; font-size:13px;">Total Package Due:</span>
+                                    <strong style="font-size:16px; color:var(--accent-blue);">NGN <?php echo esc_html( number_format( (float) ( $lease->total_initial_package ?: $lease->rent_amount ), 2 ) ); ?></strong>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
                     <?php if ( ! $lease->accepted_at ) : ?>
                         <h3 style="font-size:16px; margin: 24px 0 8px;">Lease Terms &amp; Conditions</h3>

@@ -83,13 +83,14 @@ class OFP_Property_Lease_Payment {
     }
 
     /** Landlord-side cash logging is immediately verified and auditable. */
-    public static function record_cash_payment( int $client_id, int $lease_id, float $amount, string $reference = '', string $note = '' ) {
+    public static function record_cash_payment( int $client_id, int $lease_id, float $amount, string $reference = '', string $note = '', string $payer_name = '' ) {
         global $wpdb;
         if ( ! OFP_Property_Rent::can_manage( $client_id ) ) return new WP_Error( 'rent_plan_required', 'Rent management is available on the Gold plan.' );
         $lease = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}ofp_property_leases WHERE id = %d AND client_id = %d LIMIT 1", $lease_id, $client_id ) );
         if ( ! $lease ) return new WP_Error( 'lease_not_found', 'Lease not found for this client.' );
         return self::create( [
             'lease_id' => $lease_id, 'payment_method' => 'cash', 'amount' => $amount, 'status' => 'successful',
+            'payer_name' => $payer_name ?: null,
             'payer_reference' => $reference, 'note' => $note,
         ] );
     }

@@ -51,7 +51,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_property
 
         if ( ! $property ) {
             $error = 'Property not found or you do not have access to it.';
-        } elseif ( $property->listing_type !== 'sale' ) {
+        } elseif ( ! OFP_Property_CPT::is_sale_like( (string) $property->listing_type ) ) {
             $error = 'Installment purchase offers can only be created for properties listed for sale.';
         } elseif ( ! $buyer_name || ! $buyer_phone ) {
             $error = 'Buyer name and phone are required.';
@@ -115,7 +115,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_property
 $properties = $wpdb->get_results( $wpdb->prepare(
     "SELECT pr.id, pr.title, pr.price, pr.location_text, pr.listing_type FROM {$p}ofp_properties pr
      LEFT JOIN {$p}postmeta pm_status ON pm_status.post_id = pr.wp_post_id AND pm_status.meta_key = 'ofp_status'
-     WHERE pr.client_id = %d AND pr.listing_type = 'sale' AND ( pr.status = 'live' OR pm_status.meta_value = 'live' )
+     WHERE pr.client_id = %d AND pr.listing_type IN ('sale','land') AND ( pr.status = 'live' OR pm_status.meta_value = 'live' )
      ORDER BY pr.created_at DESC",
     $client->id
 ) );
@@ -205,7 +205,7 @@ $my_purchases = $wpdb->get_results( $wpdb->prepare(
                             <select name="property_id" required class="ofp-select" style="width:100%;">
                                 <option value="" hidden>— Select property —</option>
                                 <?php foreach ( $properties as $property ) : ?>
-                                    <?php if ( $property->listing_type !== 'sale' ) continue; ?>
+                                    <?php if ( ! OFP_Property_CPT::is_sale_like( (string) $property->listing_type ) ) continue; ?>
                                     <option value="<?php echo esc_attr( $property->id ); ?>">
                                         <?php echo esc_html( $property->title . ' — NGN ' . number_format( (float) $property->price, 0 ) ); ?>
                                     </option>

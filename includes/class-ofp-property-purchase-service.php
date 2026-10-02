@@ -28,7 +28,7 @@ class OFP_Property_Purchase_Service {
         ) );
 
         if ( ! $property ) return new WP_Error( 'property_not_found', 'Property not found.' );
-        if ( 'sale' !== $property->listing_type ) return new WP_Error( 'property_not_for_sale', 'Only sale properties can have installment purchases.' );
+        if ( ! OFP_Property_CPT::is_sale_like( (string) $property->listing_type ) ) return new WP_Error( 'property_not_for_sale', 'Only sale or land properties can have installment purchases.' );
 
         $buyer_name         = sanitize_text_field( $data['buyer_name'] ?? '' );
         $buyer_phone        = OFP_Security::sanitize_phone( $data['buyer_phone'] ?? '' );

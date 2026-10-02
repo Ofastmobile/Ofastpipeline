@@ -155,6 +155,19 @@ class OFP_Activator {
         if ( empty( $team_member_id_exists ) ) {
             $wpdb->query( "ALTER TABLE {$p}ofp_activity_logs ADD COLUMN team_member_id BIGINT UNSIGNED DEFAULT NULL AFTER admin_id" );
         }
+
+        // Email Branding and Custom Template fields on ofp_clients
+        $email_branding_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'email_brand_color'"
+        );
+        if ( empty( $email_branding_exists ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_brand_color VARCHAR(20) DEFAULT '#0f172a' AFTER logo_url" );
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_header_text VARCHAR(150) DEFAULT NULL AFTER email_brand_color" );
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_header_tagline VARCHAR(255) DEFAULT NULL AFTER email_header_text" );
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_footer_text TEXT DEFAULT NULL AFTER email_header_tagline" );
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_template_mode VARCHAR(20) DEFAULT 'visual' AFTER email_footer_text" );
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_custom_html MEDIUMTEXT DEFAULT NULL AFTER email_template_mode" );
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -205,6 +218,12 @@ class OFP_Activator {
             onboarding_source      VARCHAR(20)     NOT NULL DEFAULT 'manual',
             business_category      VARCHAR(50)              DEFAULT NULL,
             logo_url               VARCHAR(255)             DEFAULT NULL,
+            email_brand_color      VARCHAR(20)              DEFAULT '#0f172a',
+            email_header_text      VARCHAR(150)             DEFAULT NULL,
+            email_header_tagline   VARCHAR(255)             DEFAULT NULL,
+            email_footer_text      TEXT                     DEFAULT NULL,
+            email_template_mode    VARCHAR(20)              DEFAULT 'visual',
+            email_custom_html      MEDIUMTEXT               DEFAULT NULL,
             trashed_at             DATETIME                 DEFAULT NULL,
             subscription_expires   DATE                     DEFAULT NULL,
             setup_fee_paid         TINYINT(1)      NOT NULL DEFAULT 0,

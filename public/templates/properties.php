@@ -106,10 +106,16 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
             $description   = sanitize_textarea_field( $_POST['description'] ?? '' );
             $price         = (float) $_POST['price'];
             $price_period  = sanitize_text_field( $_POST['price_period'] ?? 'year' );
-            $listing_type  = in_array( $_POST['listing_type'] ?? '', [ 'sale', 'rent', 'shortlet', 'commercial' ], true ) ? $_POST['listing_type'] : 'sale';
+            $listing_type  = in_array( $_POST['listing_type'] ?? '', OFP_Property_CPT::LISTING_TYPES, true ) ? $_POST['listing_type'] : 'sale';
             $property_type = sanitize_text_field( $_POST['property_type'] ?? 'apartment' );
             $bedrooms      = (int) ( $_POST['bedrooms'] ?? 0 );
             $bathrooms     = (int) ( $_POST['bathrooms'] ?? 0 );
+            if ( $listing_type === 'land' ) {
+                // Land has no rooms and always uses the Land property type.
+                $property_type = 'land';
+                $bedrooms      = 0;
+                $bathrooms     = 0;
+            }
             $location_text = sanitize_text_field( $_POST['location_text'] ?? '' );
             $status        = in_array( $_POST['status'] ?? '', [ 'live', 'pending_upload', 'taken', 'expired' ], true )
                 ? $_POST['status'] : 'pending_upload';
@@ -136,7 +142,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
             } else {
                 update_post_meta( $post_id, 'ofp_client_id', $client->id );
                 update_post_meta( $post_id, 'ofp_price', $price );
-                if ( $listing_type === 'sale' ) {
+                if ( OFP_Property_CPT::is_sale_like( $listing_type ) ) {
                     $price_period = 'sales';
                 } elseif ( $price_period === 'one-time' ) {
                     $price_period = 'sales';
@@ -156,6 +162,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                 $title_doc     = sanitize_text_field( $_POST['title_document'] ?? '' );
                 $condition_val = sanitize_text_field( $_POST['condition'] ?? '' );
                 $furnishing    = sanitize_text_field( $_POST['furnishing'] ?? '' );
+                if ( $listing_type === 'land' ) {
+                    $parking    = 0;
+                    $furnishing = '';
+                }
                 $video_url     = esc_url_raw( $_POST['video_url'] ?? '' );
                 $amenities     = json_encode( array_map( 'sanitize_text_field', (array) ( $_POST['amenities'] ?? [] ) ) );
 
@@ -369,6 +379,7 @@ if ( isset( $_GET['edit'] ) ) {
                                         <option value="rent" <?php selected( $current_ltype, 'rent' ); ?>>For Rent</option>
                                         <option value="shortlet" <?php selected( $current_ltype, 'shortlet' ); ?>>Short Let</option>
                                         <option value="commercial" <?php selected( $current_ltype, 'commercial' ); ?>>Commercial</option>
+                                        <option value="land" <?php selected( $current_ltype, 'land' ); ?>>Land</option>
                                     </select>
                                 </div>
 
@@ -652,6 +663,27 @@ if ( isset( $_GET['edit'] ) ) {
             </div>
         </div>
     </div>
+<script>
+(function(){
+    var form = document.querySelector('select[name="listing_type"]');
+    if (!form) return;
+    function field(name){ var e = document.querySelector('[name="' + name + '"]'); return e ? e.closest('.ofp-field') : null; }
+    function sync(){
+        var land = form.value === 'land';
+        ['bedrooms','bathrooms','parking','furnishing'].forEach(function(n){
+            var f = field(n); if (f) f.style.display = land ? 'none' : '';
+        });
+        var pt = document.querySelector('select[name="property_type"]');
+        var pp = document.querySelector('select[name="price_period"]');
+        if (land) {
+            if (pt) pt.value = 'land';
+            if (pp) pp.value = 'sales';
+        }
+    }
+    form.addEventListener('change', sync);
+    sync();
+})();
+</script>
 <?php wp_footer(); ?>
 </body>
 </html>

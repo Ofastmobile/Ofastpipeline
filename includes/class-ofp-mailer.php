@@ -183,6 +183,227 @@ class OFP_Mailer {
         return self::send( $to, 'User', $subject, $body_html );
     }
 
+    /**
+     * Send an email on behalf of a specific client (broadcasts or lead messages).
+     *
+     * @param string $to
+     * @param string $subject
+     * @param string $body_html
+     * @param int    $client_id
+     * @return bool
+     */
+    public static function send_client_email(
+        string $to,
+        string $subject,
+        string $body_html,
+        int $client_id
+    ): bool {
+        if ( empty( $to ) || ! is_email( $to ) ) {
+            return false;
+        }
+
+        global $wpdb;
+        $client = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
+            $client_id
+        ) );
+
+        $from_name  = $client ? ( $client->business_name ?: $client->owner_name ) : get_option( 'ofp_smtp_from_name', 'OFast Pipeline' );
+        $from_email = get_option( 'ofp_smtp_from_email', get_option( 'admin_email' ) );
+
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            "From: {$from_name} <{$from_email}>",
+        ];
+
+        if ( $client && ! empty( $client->email ) && is_email( $client->email ) ) {
+            $headers[] = "Reply-To: {$from_name} <{$client->email}>";
+        }
+
+        $full_html = self::wrap_in_client_template( $client, $subject, $body_html );
+
+        $sent = wp_mail( $to, $subject, $full_html, $headers );
+
+        if ( ! $sent ) {
+            error_log( "[OFP_Mailer] send_client_email failed for client #{$client_id} to {$to}" );
+        }
+
+        return (bool) $sent;
+    }
+
+    /**
+     * Wrap client broadcast/communication emails in the client's custom brand shell.
+     * Supports both 'visual' mode and 'custom_html' mode.
+     *
+     * @param  object|null $client
+     * @param  string      $subject
+     * @param  string      $body_html
+     * @return string
+     */
+    public static function wrap_in_client_template( $client, string $subject, string $body_html ): string {
+        if ( ! $client ) {
+            return self::wrap_in_template( 'Valued Contact', $subject, $body_html );
+        }
+
+        $mode = $client->email_template_mode ?? 'visual';
+
+        // 1. Custom HTML Mode
+        if ( $mode === 'custom_html' && ! empty( $client->email_custom_html ) ) {
+            $tpl = $client->email_custom_html;
+            $search = [
+                '{email_content}', '{{content}}', '{{body}}',
+                '{subject}', '{{subject}}',
+                '{business_name}', '{{business_name}}',
+                '{owner_name}', '{{owner_name}}',
+                '{client_phone}', '{{phone}}',
+                '{client_email}', '{{email}}',
+                '{year}', '{{year}}'
+            ];
+            $replace = [
+                $body_html, $body_html, $body_html,
+                esc_html( $subject ), esc_html( $subject ),
+                esc_html( $client->business_name ?: $client->owner_name ), esc_html( $client->business_name ?: $client->owner_name ),
+                esc_html( $client->owner_name ), esc_html( $client->owner_name ),
+                esc_html( $client->phone ?: '' ), esc_html( $client->phone ?: '' ),
+                esc_html( $client->email ?: '' ), esc_html( $client->email ?: '' ),
+                gmdate( 'Y' ), gmdate( 'Y' )
+            ];
+            $html = str_replace( $search, $replace, $tpl );
+
+            // If user forgot to put {email_content} in their custom HTML, append it safely
+            if ( strpos( $tpl, '{email_content}' ) === false && strpos( $tpl, '{{content}}' ) === false && strpos( $tpl, '{{body}}' ) === false ) {
+                $html .= '<div style="padding:20px;">' . $body_html . '</div>';
+            }
+            return $html;
+        }
+
+        // 2. Visual Brand Customizer Mode
+        $brand_color = ! empty( $client->email_brand_color ) ? sanitize_hex_color( $client->email_brand_color ) : '#0f172a';
+        if ( ! $brand_color ) {
+            $brand_color = '#0f172a';
+        }
+
+        $header_text = ! empty( $client->email_header_text ) ? $client->email_header_text : ( $client->business_name ?: $client->owner_name );
+        $tagline     = ! empty( $client->email_header_tagline ) ? $client->email_header_tagline : '';
+        $logo_url    = ! empty( $client->logo_url ) ? esc_url( $client->logo_url ) : '';
+        $year        = gmdate( 'Y' );
+
+        $footer_text = ! empty( $client->email_footer_text ) ? nl2br( esc_html( $client->email_footer_text ) ) : (
+            'Sent by <strong>' . esc_html( $client->business_name ?: $client->owner_name ) . '</strong>' .
+            ( ! empty( $client->phone ) ? ' &bull; Tel: ' . esc_html( $client->phone ) : '' ) .
+            ( ! empty( $client->email ) ? ' &bull; <a href="mailto:' . esc_attr( $client->email ) . '" style="color:#64748b;text-decoration:none;">' . esc_html( $client->email ) . '</a>' : '' ) .
+            '<br>&copy; ' . $year . ' ' . esc_html( $client->business_name ?: $client->owner_name ) . '. All rights reserved.'
+        );
+
+        // Header logo/text rendering
+        $header_content = '';
+        if ( $logo_url ) {
+            $header_content .= '<img src="' . $logo_url . '" alt="' . esc_attr( $header_text ) . '" style="max-height:48px; max-width:220px; height:auto; margin-bottom:12px; display:block;">';
+        }
+        $header_content .= '<h1 style="margin:0;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;line-height:1.3;">' . esc_html( $header_text ) . '</h1>';
+        if ( $tagline ) {
+            $header_content .= '<p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.8);line-height:1.4;">' . esc_html( $tagline ) . '</p>';
+        }
+
+        return '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>' . esc_html( $subject ) . '</title>
+    <!--[if mso]>
+    <noscript>
+        <xml><o:OfficeDocumentSettings>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+        </o:OfficeDocumentSettings></xml>
+    </noscript>
+    <![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
+        ' . esc_html( wp_strip_all_tags( $subject ) ) . '
+        &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:32px 16px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;margin:0 auto;">
+                    <!-- Branded Header -->
+                    <tr>
+                        <td style="background-color:' . esc_attr( $brand_color ) . ';border-radius:12px 12px 0 0;padding:32px 36px;">
+                            ' . $header_content . '
+                        </td>
+                    </tr>
+                    <!-- Message Body -->
+                    <tr>
+                        <td style="background-color:#ffffff;padding:36px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;color:#1e293b;font-size:15px;line-height:1.65;">
+                            ' . $body_html . '
+                        </td>
+                    </tr>
+                    <!-- Branded Footer -->
+                    <tr>
+                        <td style="background-color:#f8fafc;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:none;padding:24px 36px;text-align:center;">
+                            <div style="color:#64748b;font-size:12px;line-height:1.7;">
+                                ' . $footer_text . '
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>';
+    }
+
+    /**
+     * Return a clean boilerplate custom HTML wrapper for clients who prefer coding HTML.
+     */
+    public static function get_default_custom_html_boilerplate( $client = null ): string {
+        $name = $client ? ( $client->business_name ?: $client->owner_name ) : '{{business_name}}';
+        $logo = ( $client && ! empty( $client->logo_url ) ) ? $client->logo_url : '';
+        $logo_tag = $logo ? '<img src="' . esc_url( $logo ) . '" alt="' . esc_attr( $name ) . '" style="max-height:48px;margin-bottom:12px;display:block;">' : '';
+
+        return '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;padding:30px 15px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background:#0f172a;padding:25px 30px;color:#ffffff;">
+                            ' . $logo_tag . '
+                            <h2 style="margin:0;font-size:20px;font-weight:700;">' . esc_html( $name ) . '</h2>
+                        </td>
+                    </tr>
+                    <!-- Main Body Content Placeholder -->
+                    <tr>
+                        <td style="padding:30px;color:#334155;font-size:15px;line-height:1.6;">
+                            {email_content}
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background:#f1f5f9;padding:20px 30px;text-align:center;color:#64748b;font-size:12px;border-top:1px solid #e2e8f0;">
+                            <p style="margin:0;">&copy; {year} ' . esc_html( $name ) . '. All rights reserved.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>';
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // SYSTEM EMAILS
     // ─────────────────────────────────────────────────────────────────────────
@@ -216,7 +437,7 @@ class OFP_Mailer {
         $login_url = home_url( '/login' );
 
         $body = '
-            <h2>Welcome to OFast Pipeline, ' . esc_html( $client->owner_name ) . '! 🎉</h2>
+            <h2>Welcome to OFast Pipeline, ' . esc_html( $client->owner_name ) . '!</h2>
             <p>Your client account has been created and is ready to use.
                Here are your login details — please keep them safe.</p>
 

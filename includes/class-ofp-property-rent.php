@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Property_Rent {
 
-    const SCHEMA_VERSION = '1.0.3';
+    const SCHEMA_VERSION = '1.0.4';
 
     /** Rent periods selectable by a landlord when setting up a property. */
     const STANDARD_PERIODS = [ 'monthly', 'quarterly', 'biannual', 'yearly', 'shortlet', 'custom' ];
@@ -65,34 +65,42 @@ class OFP_Property_Rent {
         ) {$charset_collate};" );
 
         dbDelta( "CREATE TABLE {$p}ofp_property_leases (
-            id                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            client_id             BIGINT UNSIGNED NOT NULL,
-            property_id           BIGINT UNSIGNED NOT NULL,
-            tenant_id             BIGINT UNSIGNED NOT NULL,
-            rent_option_id        BIGINT UNSIGNED NULL,
-            rent_period           VARCHAR(20) NOT NULL,
-            custom_days           INT UNSIGNED NULL,
-            rent_amount           DECIMAL(14,2) NOT NULL,
-            amount_paid           DECIMAL(14,2) NOT NULL DEFAULT 0.00,
-            balance               DECIMAL(14,2) NOT NULL,
-            start_date            DATE NULL,
-            end_date              DATE NULL,
-            terms_text            LONGTEXT NULL,
-            terms_accepted_at     DATETIME NULL,
-            terms_accepted_ip     VARCHAR(45) NULL,
-            offer_token           VARCHAR(64) NULL,
-            offer_token_hash      CHAR(64) NOT NULL,
-            offer_sent_at         DATETIME NULL,
-            offer_expires_at      DATETIME NULL,
-            accepted_at           DATETIME NULL,
-            status                VARCHAR(20) NOT NULL DEFAULT 'pending_offer',
-            last_reminder_at      DATETIME NULL,
-            va_account_number     VARCHAR(30) NULL,
-            va_bank_name          VARCHAR(100) NULL,
-            va_bank_code          VARCHAR(30) NULL,
-            va_customer_code      VARCHAR(100) NULL,
-            created_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at            DATETIME NULL,
+            id                          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            client_id                   BIGINT UNSIGNED NOT NULL,
+            property_id                 BIGINT UNSIGNED NOT NULL,
+            tenant_id                   BIGINT UNSIGNED NOT NULL,
+            rent_option_id              BIGINT UNSIGNED NULL,
+            rent_period                 VARCHAR(20) NOT NULL,
+            custom_days                 INT UNSIGNED NULL,
+            rent_amount                 DECIMAL(14,2) NOT NULL,
+            legal_fee                   DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+            agency_fee                  DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+            caution_fee                 DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+            service_charge              DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+            is_service_charge_recurring TINYINT(1) NOT NULL DEFAULT 0,
+            total_initial_package       DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+            cycle_number                INT UNSIGNED NOT NULL DEFAULT 1,
+            renewal_rent_amount         DECIMAL(14,2) NULL,
+            amount_paid                 DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+            balance                     DECIMAL(14,2) NOT NULL,
+            start_date                  DATE NULL,
+            end_date                    DATE NULL,
+            terms_text                  LONGTEXT NULL,
+            terms_accepted_at           DATETIME NULL,
+            terms_accepted_ip           VARCHAR(45) NULL,
+            offer_token                 VARCHAR(64) NULL,
+            offer_token_hash            CHAR(64) NOT NULL,
+            offer_sent_at               DATETIME NULL,
+            offer_expires_at            DATETIME NULL,
+            accepted_at                 DATETIME NULL,
+            status                      VARCHAR(20) NOT NULL DEFAULT 'pending_offer',
+            last_reminder_at            DATETIME NULL,
+            va_account_number           VARCHAR(30) NULL,
+            va_bank_name                VARCHAR(100) NULL,
+            va_bank_code                VARCHAR(30) NULL,
+            va_customer_code            VARCHAR(100) NULL,
+            created_at                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at                  DATETIME NULL,
             PRIMARY KEY (id),
             UNIQUE KEY offer_token_hash (offer_token_hash),
             KEY property_status (property_id, status),
@@ -126,10 +134,55 @@ class OFP_Property_Rent {
             KEY created_at (created_at)
         ) {$charset_collate};" );
 
-        // Ensure offer_token column exists if table was created in 1.0.2
-        $cols = (array) $wpdb->get_col( "DESCRIBE {$p}ofp_property_leases" );
-        if ( ! in_array( 'offer_token', $cols, true ) ) {
+        dbDelta( "CREATE TABLE {$p}ofp_property_rent_revisions (
+            id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            client_id          BIGINT UNSIGNED NOT NULL,
+            property_id        BIGINT UNSIGNED NOT NULL,
+            lease_id           BIGINT UNSIGNED NOT NULL,
+            tenant_id          BIGINT UNSIGNED NOT NULL,
+            old_amount         DECIMAL(14,2) NOT NULL,
+            new_amount         DECIMAL(14,2) NOT NULL,
+            difference         DECIMAL(14,2) NOT NULL,
+            percentage_change  DECIMAL(6,2) NOT NULL DEFAULT 0.00,
+            effective_date     DATE NOT NULL,
+            notice_date        DATE NULL,
+            reason             TEXT NULL,
+            created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY client_id (client_id),
+            KEY lease_id (lease_id),
+            KEY property_id (property_id),
+            KEY tenant_id (tenant_id)
+        ) {$charset_collate};" );
+
+        // Ensure columns exist on ofp_property_leases for existing installations
+        $lease_cols = (array) $wpdb->get_col( "DESCRIBE {$p}ofp_property_leases" );
+        if ( ! in_array( 'offer_token', $lease_cols, true ) ) {
             $wpdb->query( "ALTER TABLE {$p}ofp_property_leases ADD COLUMN `offer_token` VARCHAR(64) NULL AFTER `terms_accepted_ip`" );
+        }
+        if ( ! in_array( 'legal_fee', $lease_cols, true ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_property_leases ADD COLUMN `legal_fee` DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER `rent_amount`" );
+        }
+        if ( ! in_array( 'agency_fee', $lease_cols, true ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_property_leases ADD COLUMN `agency_fee` DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER `legal_fee`" );
+        }
+        if ( ! in_array( 'caution_fee', $lease_cols, true ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_property_leases ADD COLUMN `caution_fee` DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER `agency_fee`" );
+        }
+        if ( ! in_array( 'service_charge', $lease_cols, true ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_property_leases ADD COLUMN `service_charge` DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER `caution_fee`" );
+        }
+        if ( ! in_array( 'is_service_charge_recurring', $lease_cols, true ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_property_leases ADD COLUMN `is_service_charge_recurring` TINYINT(1) NOT NULL DEFAULT 0 AFTER `service_charge`" );
+        }
+        if ( ! in_array( 'total_initial_package', $lease_cols, true ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_property_leases ADD COLUMN `total_initial_package` DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER `is_service_charge_recurring`" );
+        }
+        if ( ! in_array( 'cycle_number', $lease_cols, true ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_property_leases ADD COLUMN `cycle_number` INT UNSIGNED NOT NULL DEFAULT 1 AFTER `total_initial_package`" );
+        }
+        if ( ! in_array( 'renewal_rent_amount', $lease_cols, true ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_property_leases ADD COLUMN `renewal_rent_amount` DECIMAL(14,2) NULL AFTER `cycle_number`" );
         }
 
         update_option( 'ofp_property_rent_schema_version', self::SCHEMA_VERSION, false );
@@ -268,7 +321,11 @@ class OFP_Property_Rent {
         if ( ! self::can_manage( $client_id ) ) return new WP_Error( 'rent_plan_required', 'Rent management is available on the Gold plan.' );
         $property = self::owned_property( $property_id, $client_id );
         if ( is_wp_error( $property ) ) return $property;
-        if ( self::property_is_occupied( $property_id ) ) return new WP_Error( 'property_occupied', 'This property already has an active lease.' );
+
+        $is_renewal = ! empty( $data['is_renewal'] );
+        if ( ! $is_renewal && self::property_is_occupied( $property_id ) ) {
+            return new WP_Error( 'property_occupied', 'This property already has an active lease. To extend or renew tenancy, use the Renew Lease action.' );
+        }
 
         $tenant = $wpdb->get_row( $wpdb->prepare(
             "SELECT id FROM {$wpdb->prefix}ofp_property_tenants WHERE id = %d AND client_id = %d AND status = 'active' LIMIT 1",
@@ -286,22 +343,55 @@ class OFP_Property_Rent {
 
         $expires_at = ! empty( $data['offer_expires_at'] ) ? sanitize_text_field( $data['offer_expires_at'] ) : gmdate( 'Y-m-d H:i:s', time() + ( 7 * DAY_IN_SECONDS ) );
         $token = bin2hex( random_bytes( 32 ) );
-        $amount = (float) $option->amount;
+        
+        $base_rent = isset( $data['custom_rent_amount'] ) && (float) $data['custom_rent_amount'] > 0
+            ? round( (float) $data['custom_rent_amount'], 2 )
+            : (float) $option->amount;
+
+        $cycle_number = max( 1, (int) ( $data['cycle_number'] ?? 1 ) );
+
+        // Move-in package breakdown (Nigerian real estate market standard)
+        $legal_fee     = round( max( 0, (float) ( $data['legal_fee'] ?? 0 ) ), 2 );
+        $agency_fee    = round( max( 0, (float) ( $data['agency_fee'] ?? 0 ) ), 2 );
+        $caution_fee   = round( max( 0, (float) ( $data['caution_fee'] ?? 0 ) ), 2 );
+        $service_chg   = round( max( 0, (float) ( $data['service_charge'] ?? 0 ) ), 2 );
+        $svc_recurring = ! empty( $data['is_service_charge_recurring'] ) ? 1 : 0;
+
+        // If this is a subsequent renewal (cycle 2+), one-off move-in fees are not charged
+        if ( $cycle_number > 1 && empty( $data['force_move_in_fees'] ) ) {
+            $legal_fee   = 0.00;
+            $agency_fee  = 0.00;
+            $caution_fee = 0.00;
+            if ( ! $svc_recurring ) {
+                $service_chg = 0.00;
+            }
+        }
+
+        $total_initial_package = round( $base_rent + $legal_fee + $agency_fee + $caution_fee + $service_chg, 2 );
+
         $ok = $wpdb->insert( "{$wpdb->prefix}ofp_property_leases", [
-            'client_id'        => $client_id,
-            'property_id'      => $property_id,
-            'tenant_id'        => $tenant_id,
-            'rent_option_id'   => $option_id,
-            'rent_period'      => $option->period,
-            'custom_days'      => $option->custom_days,
-            'rent_amount'      => $amount,
-            'balance'          => $amount,
-            'terms_text'       => sanitize_textarea_field( $data['terms_text'] ?? '' ) ?: null,
-            'offer_token'      => $token,
-            'offer_token_hash' => hash( 'sha256', $token ),
-            'offer_sent_at'    => current_time( 'mysql' ),
-            'offer_expires_at' => $expires_at,
-            'created_at'       => current_time( 'mysql' ),
+            'client_id'                   => $client_id,
+            'property_id'                 => $property_id,
+            'tenant_id'                   => $tenant_id,
+            'rent_option_id'              => $option_id,
+            'rent_period'                 => $option->period,
+            'custom_days'                 => $option->custom_days,
+            'rent_amount'                 => $base_rent,
+            'legal_fee'                   => $legal_fee,
+            'agency_fee'                  => $agency_fee,
+            'caution_fee'                 => $caution_fee,
+            'service_charge'              => $service_chg,
+            'is_service_charge_recurring' => $svc_recurring,
+            'total_initial_package'       => $total_initial_package,
+            'cycle_number'                => $cycle_number,
+            'renewal_rent_amount'         => null,
+            'balance'                     => $total_initial_package,
+            'terms_text'                  => sanitize_textarea_field( $data['terms_text'] ?? '' ) ?: null,
+            'offer_token'                 => $token,
+            'offer_token_hash'            => hash( 'sha256', $token ),
+            'offer_sent_at'               => current_time( 'mysql' ),
+            'offer_expires_at'            => $expires_at,
+            'created_at'                  => current_time( 'mysql' ),
         ] );
         if ( ! $ok ) return new WP_Error( 'lease_offer_create_failed', 'Unable to create lease offer.' );
         return [ 'lease_id' => (int) $wpdb->insert_id, 'offer_token' => $token ];
@@ -352,7 +442,25 @@ class OFP_Property_Rent {
         if ( ! $lease ) return new WP_Error( 'lease_not_found', 'Lease not found.' );
         if ( $lease->status === 'active' ) return true;
         if ( $lease->status !== 'pending_offer' || ! $lease->accepted_at ) return new WP_Error( 'lease_not_accepted', 'The tenant must accept the lease before it can be activated.' );
-        if ( self::property_is_occupied( (int) $lease->property_id ) ) return new WP_Error( 'property_occupied', 'This property already has an active lease.' );
+
+        // If another lease is active on this property, check if it's the prior cycle of the same tenant (renewal)
+        $existing_active = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id, tenant_id FROM {$wpdb->prefix}ofp_property_leases WHERE property_id = %d AND status = 'active' AND id != %d LIMIT 1",
+            (int) $lease->property_id,
+            $lease_id
+        ) );
+
+        if ( $existing_active ) {
+            if ( (int) $existing_active->tenant_id === (int) $lease->tenant_id ) {
+                // Prior cycle completed & renewed: mark previous lease as renewed
+                $wpdb->update( "{$wpdb->prefix}ofp_property_leases", [
+                    'status'     => 'renewed',
+                    'updated_at' => current_time( 'mysql' ),
+                ], [ 'id' => (int) $existing_active->id ] );
+            } else {
+                return new WP_Error( 'property_occupied', 'This property already has an active lease for another tenant.' );
+            }
+        }
 
         $start = $start_date ?: current_time( 'Y-m-d' );
         $end = self::calculate_end_date( $start, (string) $lease->rent_period, (int) $lease->custom_days );
@@ -374,5 +482,150 @@ class OFP_Property_Rent {
             default     => '+1 month',
         };
         return $date->modify( $spec )->modify( '-1 day' )->format( 'Y-m-d' );
+    }
+
+    /**
+     * Log a future rent increment / revision into the audit trail and set renewal rent on lease.
+     */
+    public static function log_rent_revision( int $client_id, int $lease_id, float $new_amount, string $effective_date, string $notice_date = '', string $reason = '' ) {
+        global $wpdb;
+        $lease = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}ofp_property_leases WHERE id = %d AND client_id = %d LIMIT 1",
+            $lease_id,
+            $client_id
+        ) );
+        if ( ! $lease ) return new WP_Error( 'lease_not_found', 'Lease not found.' );
+
+        $new_amount = round( max( 0.01, $new_amount ), 2 );
+        $old_amount = (float) $lease->rent_amount;
+        $difference = round( $new_amount - $old_amount, 2 );
+        $percentage = $old_amount > 0 ? round( ( $difference / $old_amount ) * 100, 2 ) : 0.00;
+
+        $notice_date = ! empty( $notice_date ) ? sanitize_text_field( $notice_date ) : current_time( 'Y-m-d' );
+        $effective_date = sanitize_text_field( $effective_date );
+        if ( empty( $effective_date ) ) {
+            $effective_date = ! empty( $lease->end_date ) ? $lease->end_date : current_time( 'Y-m-d' );
+        }
+
+        $reason = sanitize_textarea_field( $reason );
+
+        // 1. Insert revision audit record
+        $inserted = $wpdb->insert( "{$wpdb->prefix}ofp_property_rent_revisions", [
+            'client_id'         => $client_id,
+            'property_id'       => (int) $lease->property_id,
+            'lease_id'          => $lease_id,
+            'tenant_id'         => (int) $lease->tenant_id,
+            'old_amount'        => $old_amount,
+            'new_amount'        => $new_amount,
+            'difference'        => $difference,
+            'percentage_change' => $percentage,
+            'effective_date'    => $effective_date,
+            'notice_date'       => $notice_date,
+            'reason'            => $reason ?: null,
+            'created_at'        => current_time( 'mysql' ),
+        ] );
+
+        if ( ! $inserted ) {
+            return new WP_Error( 'revision_log_failed', 'Unable to record rent revision.' );
+        }
+
+        // 2. Set renewal_rent_amount on the lease record
+        $wpdb->update( "{$wpdb->prefix}ofp_property_leases", [
+            'renewal_rent_amount' => $new_amount,
+            'updated_at'          => current_time( 'mysql' ),
+        ], [ 'id' => $lease_id ] );
+
+        return (int) $wpdb->insert_id;
+    }
+
+    /**
+     * Get rent revision audit log for a client, lease, or property.
+     */
+    public static function get_rent_revisions( int $client_id, int $lease_id = 0, int $property_id = 0 ): array {
+        global $wpdb;
+        $where = 'r.client_id = %d';
+        $args  = [ $client_id ];
+        if ( $lease_id ) {
+            $where .= ' AND r.lease_id = %d';
+            $args[] = $lease_id;
+        }
+        if ( $property_id ) {
+            $where .= ' AND r.property_id = %d';
+            $args[] = $property_id;
+        }
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT r.*, t.full_name AS tenant_name, t.phone AS tenant_phone, pr.title AS property_title
+             FROM {$wpdb->prefix}ofp_property_rent_revisions r
+             JOIN {$wpdb->prefix}ofp_property_tenants t ON t.id = r.tenant_id
+             LEFT JOIN {$wpdb->prefix}ofp_properties pr ON pr.id = r.property_id
+             WHERE {$where}
+             ORDER BY r.created_at DESC",
+            ...$args
+        ) );
+    }
+
+    /**
+     * Renew an existing lease into the next cycle.
+     * Move-in one-off fees (agreement/legal, agency, caution) are strictly 0.00.
+     * Only base recurring rent + recurring service charge (if enabled) are billed.
+     */
+    public static function renew_lease( int $client_id, int $current_lease_id, array $data = [] ) {
+        global $wpdb;
+        $current = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}ofp_property_leases WHERE id = %d AND client_id = %d LIMIT 1",
+            $current_lease_id,
+            $client_id
+        ) );
+        if ( ! $current ) return new WP_Error( 'lease_not_found', 'Current lease not found.' );
+
+        // Next rent amount: explicit override, or renewal_rent_amount from revision, or current rent_amount
+        $next_amount = isset( $data['rent_amount'] ) && (float) $data['rent_amount'] > 0
+            ? round( (float) $data['rent_amount'], 2 )
+            : ( (float) $current->renewal_rent_amount > 0 ? (float) $current->renewal_rent_amount : (float) $current->rent_amount );
+
+        $option_id = ! empty( $data['rent_option_id'] ) ? (int) $data['rent_option_id'] : (int) $current->rent_option_id;
+        $cycle_number = (int) $current->cycle_number + 1;
+
+        // Service charge recurrence:
+        $svc_charge = ! empty( $current->is_service_charge_recurring ) ? (float) $current->service_charge : 0.00;
+        if ( isset( $data['service_charge'] ) ) {
+            $svc_charge = round( max( 0, (float) $data['service_charge'] ), 2 );
+        }
+
+        $terms = ! empty( $data['terms_text'] ) ? sanitize_textarea_field( $data['terms_text'] ) : $current->terms_text;
+        $expires = ! empty( $data['offer_expires_at'] ) ? sanitize_text_field( $data['offer_expires_at'] ) : gmdate( 'Y-m-d H:i:s', time() + ( 14 * DAY_IN_SECONDS ) );
+
+        $token = bin2hex( random_bytes( 32 ) );
+        $total_package = round( $next_amount + $svc_charge, 2 );
+
+        $ok = $wpdb->insert( "{$wpdb->prefix}ofp_property_leases", [
+            'client_id'                   => $client_id,
+            'property_id'                 => (int) $current->property_id,
+            'tenant_id'                   => (int) $current->tenant_id,
+            'rent_option_id'              => $option_id ?: null,
+            'rent_period'                 => $data['rent_period'] ?? $current->rent_period,
+            'custom_days'                 => isset( $data['custom_days'] ) ? (int) $data['custom_days'] : $current->custom_days,
+            'rent_amount'                 => $next_amount,
+            'legal_fee'                   => 0.00, // Move-in fees are NEVER re-charged on renewal
+            'agency_fee'                  => 0.00,
+            'caution_fee'                 => 0.00,
+            'service_charge'              => $svc_charge,
+            'is_service_charge_recurring' => ! empty( $current->is_service_charge_recurring ) ? 1 : 0,
+            'total_initial_package'       => $total_package,
+            'cycle_number'                => $cycle_number,
+            'renewal_rent_amount'         => null,
+            'balance'                     => $total_package,
+            'terms_text'                  => $terms,
+            'offer_token'                 => $token,
+            'offer_token_hash'            => hash( 'sha256', $token ),
+            'offer_sent_at'               => current_time( 'mysql' ),
+            'offer_expires_at'            => $expires,
+            'created_at'                  => current_time( 'mysql' ),
+        ] );
+
+        if ( ! $ok ) return new WP_Error( 'lease_renewal_failed', 'Unable to generate renewal lease offer.' );
+
+        $new_lease_id = (int) $wpdb->insert_id;
+        return [ 'lease_id' => $new_lease_id, 'offer_token' => $token, 'cycle_number' => $cycle_number, 'amount' => $next_amount ];
     }
 }

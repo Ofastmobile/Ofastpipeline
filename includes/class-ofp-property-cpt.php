@@ -264,6 +264,7 @@ class OFP_Property_CPT {
                     <option value="rent" <?php selected( $meta['ofp_listing_type'], 'rent' ); ?>>For Rent</option>
                     <option value="shortlet" <?php selected( $meta['ofp_listing_type'], 'shortlet' ); ?>>Short Let</option>
                     <option value="commercial" <?php selected( $meta['ofp_listing_type'], 'commercial' ); ?>>Commercial</option>
+                    <option value="land" <?php selected( $meta['ofp_listing_type'], 'land' ); ?>>Land</option>
                 </select>
             </div>
 
@@ -319,6 +320,24 @@ class OFP_Property_CPT {
                 <label>Area (SQM)</label>
                 <input type="number" name="ofp_area_sqm" value="<?php echo esc_attr( $meta['ofp_area_sqm'] ); ?>" min="0">
             </div>
+
+            <script>
+            (function(){
+                var lt = document.querySelector('select[name="ofp_listing_type"]');
+                var pt = document.querySelector('select[name="ofp_property_type"]');
+                if (!lt) return;
+                function wrap(n){ var e = document.querySelector('[name="' + n + '"]'); return e ? e.closest('.ofp-meta-field') : null; }
+                function sync(){
+                    var land = lt.value === 'land';
+                    ['ofp_bedrooms','ofp_bathrooms','ofp_parking'].forEach(function(n){
+                        var w = wrap(n); if (w) w.style.display = land ? 'none' : '';
+                    });
+                    if (land && pt) pt.value = 'land';
+                }
+                lt.addEventListener('change', sync);
+                sync();
+            })();
+            </script>
 
             <div class="ofp-meta-field">
                 <label>Title Document</label>
@@ -470,7 +489,7 @@ class OFP_Property_CPT {
                 // Save listing type from Quick Edit.
                 if ( isset( $_POST['ofp_listing_type'] ) ) {
                     $listing_type = sanitize_text_field( wp_unslash( $_POST['ofp_listing_type'] ) );
-                    if ( in_array( $listing_type, [ 'sale', 'rent' ], true ) ) {
+                    if ( in_array( $listing_type, self::LISTING_TYPES, true ) ) {
                         update_post_meta( $post_id, 'ofp_listing_type', $listing_type );
                     }
                 }
@@ -486,7 +505,7 @@ class OFP_Property_CPT {
 
                 // Enforce: sale listing type must have 'sales' price period.
                 $current_lt = get_post_meta( $post_id, 'ofp_listing_type', true );
-                if ( $current_lt === 'sale' ) {
+                if ( self::is_sale_like( (string) $current_lt ) ) {
                     update_post_meta( $post_id, 'ofp_price_period', 'sales' );
                 }
 
@@ -536,8 +555,16 @@ class OFP_Property_CPT {
 
         // Enforce: sale listing type must have 'sales' price period.
         $listing_type = sanitize_text_field( wp_unslash( $_POST['ofp_listing_type'] ?? '' ) );
-        if ( $listing_type === 'sale' ) {
+        if ( self::is_sale_like( $listing_type ) ) {
             update_post_meta( $post_id, 'ofp_price_period', 'sales' );
+        }
+
+        // Land listings always use the Land property type and have no rooms or parking.
+        if ( $listing_type === 'land' ) {
+            update_post_meta( $post_id, 'ofp_property_type', 'land' );
+            update_post_meta( $post_id, 'ofp_bedrooms', 0 );
+            update_post_meta( $post_id, 'ofp_bathrooms', 0 );
+            update_post_meta( $post_id, 'ofp_parking', 0 );
         }
 
         // Lock client_id if property has commerce activity.
@@ -821,7 +848,7 @@ class OFP_Property_CPT {
 
             case 'ofp_list_type':
                 $lt = get_post_meta( $post_id, 'ofp_listing_type', true );
-                $lt_colors = [ 'sale' => '#2563eb', 'rent' => '#8b5cf6' ];
+                $lt_colors = [ 'sale' => '#2563eb', 'rent' => '#8b5cf6', 'shortlet' => '#d97706', 'commercial' => '#7c3aed', 'land' => '#4d7c0f' ];
                 $lt_color  = $lt_colors[ $lt ] ?? '#9ca3af';
                 echo '<span style="color:' . esc_attr( $lt_color ) . ';font-weight:600;" data-listing-type="' . esc_attr( $lt ) . '">'
                     . esc_html( ucfirst( $lt ?: '—' ) )
@@ -877,6 +904,9 @@ class OFP_Property_CPT {
                     <select name="ofp_listing_type">
                         <option value="sale">For Sale</option>
                         <option value="rent">For Rent</option>
+                        <option value="shortlet">Short Let</option>
+                        <option value="commercial">Commercial</option>
+                        <option value="land">Land</option>
                     </select>
                 </label>
                 <label class="inline-edit-group">
@@ -917,7 +947,7 @@ class OFP_Property_CPT {
 
                 // Auto-set price period when listing type changes.
                 editRow.find('select[name="ofp_listing_type"]').off('change.ofpPeriod').on('change.ofpPeriod', function(){
-                    if ($(this).val() === 'sale') {
+                    if ($(this).val() === 'sale' || $(this).val() === 'land') {
                         editRow.find('select[name="ofp_price_period"]').val('sales');
                     } else {
                         var curPeriod = editRow.find('select[name="ofp_price_period"]').val();
@@ -1042,6 +1072,18 @@ class OFP_Property_CPT {
             update_option( "ofp_listing_cap_{$plan}", $cap );
         }
         return true;
+    }
+
+    /** Every allowed listing type value. */
+    const LISTING_TYPES = [ 'sale', 'rent', 'shortlet', 'commercial', 'land' ];
+
+    /**
+     * Listing types that are bought (one time or by installment) rather
+     * than rented. They all use the 'sales' price period and can go
+     * through offers and installment purchases.
+     */
+    public static function is_sale_like( string $listing_type ): bool {
+        return in_array( $listing_type, [ 'sale', 'land' ], true );
     }
 
     public static function count_for_client( int $client_id ): int {

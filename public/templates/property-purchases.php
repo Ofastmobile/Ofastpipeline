@@ -43,7 +43,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_client_p
         $allowed_methods = [ 'bank_transfer', 'bank_deposit', 'cash', 'virtual_account', 'checkout', 'other' ];
 
         $property = $wpdb->get_row( $wpdb->prepare(
-            "SELECT * FROM {$p}ofp_properties WHERE id = %d AND listing_type = 'sale' LIMIT 1",
+            "SELECT * FROM {$p}ofp_properties WHERE id = %d AND listing_type IN ('sale','land') LIMIT 1",
             $property_id
         ) );
 
@@ -145,7 +145,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_client_p
 $my_properties = $wpdb->get_results( $wpdb->prepare(
     "SELECT pr.id, pr.title, pr.price FROM {$p}ofp_properties pr
      LEFT JOIN {$p}postmeta pm_status ON pm_status.post_id = pr.wp_post_id AND pm_status.meta_key = 'ofp_status'
-     WHERE pr.client_id = %d AND pr.listing_type = 'sale' AND ( pr.status = 'live' OR pm_status.meta_value = 'live' )
+     WHERE pr.client_id = %d AND pr.listing_type IN ('sale','land') AND ( pr.status = 'live' OR pm_status.meta_value = 'live' )
      ORDER BY title ASC",
     (int) $client->id
 ) );

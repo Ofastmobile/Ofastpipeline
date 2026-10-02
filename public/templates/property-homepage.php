@@ -990,10 +990,11 @@
                         'location'      => get_post_meta( $p_id, 'ofp_location_text', true ) ?: 'Lekki Phase 1, Lagos',
                         'listing_type'  => get_post_meta( $p_id, 'ofp_listing_type', true ) ?: 'sale',
                         'prop_type'     => get_post_meta( $p_id, 'ofp_property_type', true ) ?: 'Detached Duplex',
-                        'beds'          => get_post_meta( $p_id, 'ofp_bedrooms', true ) ?: '5',
-                        'baths'         => get_post_meta( $p_id, 'ofp_bathrooms', true ) ?: '6',
-                        'parking'       => get_post_meta( $p_id, 'ofp_parking', true ) ?: '4',
-                        'sqm'           => get_post_meta( $p_id, 'ofp_area_sqm', true ) ?: '650',
+                        'beds'          => get_post_meta( $p_id, 'ofp_bedrooms', true ) ?: '',
+                        'baths'         => get_post_meta( $p_id, 'ofp_bathrooms', true ) ?: '',
+                        'parking'       => get_post_meta( $p_id, 'ofp_parking', true ) ?: '',
+                        'sqm'           => get_post_meta( $p_id, 'ofp_area_sqm', true ) ?: '',
+                        'title_doc'     => get_post_meta( $p_id, 'ofp_title_document', true ),
                         'is_verified'   => true,
                         'is_featured'   => true,
                         'agent_name'    => $ag_name,
@@ -1087,7 +1088,7 @@
                     <div class="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none">
                         <div class="flex items-center gap-1.5">
                             <span class="bg-[#00875A] text-white text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">
-                                <?php echo esc_html( $card['listing_type'] === 'rent' ? 'FOR RENT' : ( $card['listing_type'] === 'shortlet' ? 'SHORT LET' : 'FOR SALE' ) ); ?>
+                                <?php echo esc_html( [ 'rent' => 'FOR RENT', 'shortlet' => 'SHORT LET', 'commercial' => 'COMMERCIAL', 'land' => 'LAND' ][ $card['listing_type'] ] ?? 'FOR SALE' ); ?>
                             </span>
                             <?php if ( ! empty( $card['is_featured'] ) ) : ?>
                                 <span class="bg-slate-900/40 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-0.5 rounded-full border border-white/20">Featured</span>
@@ -1131,6 +1132,19 @@
                             </a>
                         </h3>
 
+<?php if ( $card['listing_type'] === 'land' ) : ?>
+                        <!-- Land specs: plot size and title document -->
+                        <div class="grid grid-cols-2 gap-2 py-3 border-y border-slate-100 dark:border-white/5 mb-4">
+                            <div class="leading-none">
+                                <span class="text-[13px] font-bold text-slate-900 dark:text-white block"><?php echo esc_html( $card['sqm'] ? number_format_i18n( (float) $card['sqm'] ) . ' SQM' : '-' ); ?></span>
+                                <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Plot Size</span>
+                            </div>
+                            <div class="leading-none">
+                                <span class="text-[13px] font-bold text-slate-900 dark:text-white block"><?php echo esc_html( $card['title_doc'] ?: '-' ); ?></span>
+                                <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Title</span>
+                            </div>
+                        </div>
+<?php else : ?>
                         <!-- 4 Specs: Beds, Baths, Parking, SQM -->
                         <div class="grid grid-cols-4 gap-2 py-3 border-y border-slate-100 dark:border-white/5 mb-4">
                             <div class="flex items-start gap-1.5">
@@ -1170,6 +1184,7 @@
                                 </div>
                             </div>
                         </div>
+<?php endif; ?>
                     </div>
 
                     <!-- Card Footer: Owner link & Details button only -->
