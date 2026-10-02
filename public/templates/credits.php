@@ -101,7 +101,7 @@ $transactions = $wpdb->get_results(
                 <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px;">
                     <div style="font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Plan</div>
                     <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">
-                        <?php echo esc_html( strtoupper( $client->plan ?: '—' ) ); ?>
+                        <?php echo esc_html( strtoupper( OFP_Subscription::client_plan( $client->id ) ) ); ?>
                     </div>
                 </div>
 
@@ -113,26 +113,10 @@ $transactions = $wpdb->get_results(
                 </div>
             </div>
 
-            <?php if ( $client->virtual_account_number ) : ?>
-                <div style="margin-top: 24px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 12px; padding: 16px;">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <svg width="16" height="16" fill="none" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 16 16 12 12 8"></polyline><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                        <span style="font-size: 12px; font-weight: 700; color: var(--accent-green); text-transform: uppercase; letter-spacing: 0.05em;">Renewal Account</span>
-                    </div>
-                    <div style="font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; font-family: monospace;">
-                        <?php echo esc_html( $client->virtual_account_number ); ?>
-                    </div>
-                    <div style="font-size: 13px; color: var(--text-main); margin-bottom: 6px;">
-                        <?php echo esc_html( $client->virtual_bank_name ); ?>
-                    </div>
-                    <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
-                        Transfer funds directly here to renew.
-                    </div>
-                </div>
-            <?php endif; ?>
+
         </div>
 
-        <?php if ( OFP_Subscription::has_active( 'crm', $client->id ) ) : ?>
+        <?php if ( OFP_Subscription::has_platform_access( $client->id ) ) : ?>
         <!-- Credit Balances -->
         <div class="ofp-card">
             <div class="ofp-card-header" style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
@@ -177,12 +161,6 @@ $transactions = $wpdb->get_results(
                 </div>
             </div>
 
-            <div style="margin-top: 24px; display: flex; align-items: flex-start; gap: 10px; font-size: 12px; color: var(--text-muted); background: var(--bg-body); padding: 12px; border-radius: 8px;">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; margin-top:1px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                <div style="line-height: 1.4;">
-                    Top-up via the <strong>Funding</strong> tab. Balances are updated within the hour. Self-serve coming soon.
-                </div>
-            </div>
         </div>
         <?php else : ?>
             <div></div> <!-- Empty column to preserve grid if no CRM plan -->
@@ -202,7 +180,7 @@ $transactions = $wpdb->get_results(
             <div class="ofp-table-wrap ofp-table-responsive">
                 <table class="ofp-table">
                     <thead>
-                        <tr><th>Type</th><th>Plan</th><th>Amount</th><th>Status</th><th>Period</th><th>Date</th></tr>
+                        <tr><th>Type</th><th>Plan</th><th>Amount</th><th>Status</th><th>Period</th><th>Payment Ref</th><th>Date</th></tr>
                     </thead>
                     <tbody>
                         <?php foreach ( $subscriptions as $sub ) : ?>
@@ -222,6 +200,11 @@ $transactions = $wpdb->get_results(
                                 </td>
                                 <td style="font-size:12px;color:#9ca3af;">
                                     <?php echo $sub->period_start ? esc_html( $sub->period_start . ' → ' . $sub->period_end ) : '—'; ?>
+                                </td>
+                                <td>
+                                    <code style="font-size:12px; color:var(--text-main); background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px;">
+                                        <?php echo esc_html( $sub->payment_ref ?? '—' ); ?>
+                                    </code>
                                 </td>
                                 <td style="font-size:12px;color:#9ca3af;">
                                     <?php echo $sub->paid_at ? esc_html( gmdate( 'M j, Y', strtotime( $sub->paid_at ) ) ) : '—'; ?>

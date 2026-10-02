@@ -4,7 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
-if ( ! $client || ! OFP_Subscription::has_active( 'listing', $client->id ) ) {
+if ( ! $client ) {
     wp_safe_redirect( home_url( '/dashboard' ) );
     exit;
 }

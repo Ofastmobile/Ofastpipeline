@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="en"
+    x-data="{ darkMode: false, mobileMenu: false, filterTab: 'all', megaMenuOpen: false, viewMode: 'grid', verifiedOnly: true, sortBy: 'featured', filterOpen: false }"
+    :class="{ 'dark': darkMode }">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Marketplace | Bofast Homes</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        body,
+        .font-system {
+            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
+
+    <!-- Mega Menu Backdrop Overlay -->
+    <div x-show="megaMenuOpen" class="fixed inset-0 bg-slate-900/20 backdrop-blur-md z-40"
+        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="display: none;"
+        @click="megaMenuOpen = false"></div>
+
+    <!-- Top Navigation -->
+    <header x-data="{ scrolledDown: false, lastScroll: 0 }" @scroll.window="
+                if (!megaMenuOpen) {
+                    const current = window.pageYOffset;
+                    if (current > lastScroll && current > 50) scrolledDown = true;
+                    else if (current < lastScroll) scrolledDown = false;
+                    lastScroll = current;
+                }
+            "
+        class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-transform duration-300"
+        :class="scrolledDown ? '-translate-y-full' : 'translate-y-0'">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="flex justify-between items-center h-16 transition-all duration-300">
+                <!-- Left: Logo & Hamburger -->
+                <div class="flex items-center gap-3 sm:gap-5">
+                    <!-- Logo (No icon, Uppercase, Small font) -->
+                    <a href="index.html" class="flex items-center">
+                        <span
+                            class="text-[13px] sm:text-sm font-black tracking-[0.25em] text-slate-900 dark:text-white uppercase transition-colors">
+                            BOFAST HOMES
+                        </span>
+                    </a>
+
+                    <!-- Mega Menu Hamburger Button (Reduced size) -->
+                    <button @click="megaMenuOpen = !megaMenuOpen"
+                        class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 transition-colors flex items-center justify-center cursor-pointer border border-slate-200 dark:border-slate-700">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path x-show="!megaMenuOpen" stroke-linecap="round" stroke-linejoin="round"
+                                stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"></path>
+                            <path x-show="megaMenuOpen" style="display: none;" stroke-linecap="round"
+                                stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Right: Action Button -->
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <button @click="darkMode = !darkMode"
+                        class="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer">
+                        <svg x-show="!darkMode" class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                            </path>
+                        </svg>
+                        <svg x-show="darkMode" class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24" style="display: none;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                            </path>
+                        </svg>
+                    </button>
+                    <!-- Post Property Button -->
+                    <button
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap uppercase">
+                        Post Property
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mega Menu Dropdown (Boxed, not full width) -->
+            <div x-show="megaMenuOpen" style="display: none;" @click.away="megaMenuOpen = false"
+                class="absolute top-full left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 mt-2 z-[100] bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden font-sans"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 -translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-4">
+
+                <!-- Main Content Area -->
+                <div class="p-5 sm:p-8 grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
+                    <!-- Image Cards Area (Takes 3 columns) -->
+                    <div class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                        <!-- Card 1: Properties -->
+                        <a href="marketplace.html"
+                            class="group relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
+                            <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80"
+                                alt="Properties"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
+                            </div>
+                            <div
+                                class="absolute bottom-4 left-4 text-white font-black text-lg sm:text-xl uppercase tracking-wide group-hover:text-blue-400 transition-colors">
+                                PROPERTIES</div>
+                        </a>
+
+                        <!-- Card 2: Off-Plan -->
+                        <a href="#"
+                            class="group relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
+                            <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=600&q=80"
+                                alt="Off-Plan"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
+                            </div>
+                            <div
+                                class="absolute bottom-4 left-4 text-white font-black text-lg sm:text-xl uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
+                                OFF-PLAN</div>
+                        </a>
+
+                        <!-- Card 3: Map -->
+                        <a href="#"
+                            class="group relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-blue-50 dark:bg-blue-900/20">
+                            <div class="absolute inset-0 bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors z-10"
+                                style="background-image: radial-gradient(circle, #3B82F6 1px, transparent 1px); background-size: 20px 20px;">
+                            </div>
+                            <div
+                                class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20">
+                            </div>
+                            <div
+                                class="absolute bottom-4 left-4 text-white font-black text-lg sm:text-xl uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
+                                MAP SEARCH</div>
+                        </a>
+
+                        <!-- Card 4: Agents -->
+                        <a href="#"
+                            class="group relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
+                            <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80"
+                                alt="Agents"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
+                            </div>
+                            <div
+                                class="absolute bottom-4 left-4 text-white font-black text-lg sm:text-xl uppercase tracking-wide group-hover:text-blue-400 transition-colors">
+                                OUR AGENTS</div>
+                        </a>
+                    </div>
+
+                    <!-- Side Links (Takes 1 column) -->
+                    <div
+                        class="flex flex-col justify-between h-full pt-4 lg:pt-0 lg:pl-8 lg:border-l border-slate-200 dark:border-slate-800">
+                        <ul class="space-y-4">
+                            <li><a href="#"
+                                    class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-[11px] sm:text-sm tracking-widest transition-colors uppercase flex items-center gap-2"><span
+                                        class="w-2 h-2 rounded-full bg-blue-500"></span> BECOME A PARTNER</a></li>
+                            <li><a href="#"
+                                    class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-[11px] sm:text-sm tracking-widest transition-colors uppercase flex items-center gap-2"><span
+                                        class="w-2 h-2 rounded-full bg-blue-500"></span> DEVELOPERS HUB</a></li>
+                            <li><a href="#"
+                                    class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-[11px] sm:text-sm tracking-widest transition-colors uppercase flex items-center gap-2"><span
+                                        class="w-2 h-2 rounded-full bg-blue-500"></span> CAREERS</a></li>
+                        </ul>
+                        <div class="mt-8 lg:mt-0 pt-4 border-t border-slate-200 dark:border-slate-800 lg:border-none">
+                            <a href="#"
+                                class="text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 text-[10px] sm:text-xs font-bold tracking-widest transition-colors uppercase">PRIVACY
+                                POLICY</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Banner Section with Clear Background Photo -->
+    <div class="relative overflow-hidden bg-slate-900 border-b border-slate-800 pt-12 pb-10 sm:pt-16 sm:pb-12">
+        <!-- Background Image with Clean, Low-Opacity Overlay -->
+        <div class="absolute inset-0 z-0 pointer-events-none">
+            <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=85"
+                alt="Luxury Real Estate Marketplace" class="w-full h-full object-cover object-center opacity-90">
+            <!-- Low-opacity tint overlay for text legibility without obscuring the image -->
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/45 to-slate-950/55"></div>
+        </div>
+
+        <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
+
+            <div
+                class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white mb-5 bg-slate-900/80 border border-white/20 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-lg">
+                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Verified Direct Listings</span>
+                <span class="text-white/40">|</span>
+                <span class="text-slate-300 text-[11px] font-medium lowercase">0% brokerage markup</span>
+            </div>
+
+            <h1
+                class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white mb-4 leading-[1.15] drop-shadow-md">
+                Nigeria's Premier Real Estate <br class="hidden sm:block">
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-blue-500">
+                    Marketplace
+                </span>
+            </h1>
+            <p class="text-slate-300 mb-8 max-w-2xl text-sm sm:text-base leading-relaxed drop-shadow-sm font-medium">
+                Discover luxury duplexes, serviced shortlet apartments, prime commercial buildings, and verified title
+                lands across Lagos, Abuja, and Port Harcourt.
+            </p>
+
+            <!-- Advanced Filter Bar -->
+            <div
+                class="bg-white/95 dark:bg-[#0B132B]/95 backdrop-blur-xl rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col gap-4 text-slate-900 dark:text-white">
+
+                <!-- Row 1: Tabs + Search + Mobile Toggle -->
+                <div
+                    class="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                    <div class="flex overflow-x-auto hide-scrollbar gap-2 w-full lg:w-auto">
+                        <button @click="filterTab = 'all'; verifiedOnly = false"
+                            :class="filterTab === 'all' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                            class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors cursor-pointer">
+                            All Listings
+                        </button>
+                        <button @click="filterTab = 'sale'"
+                            :class="filterTab === 'sale' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                            class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors cursor-pointer">
+                            For Sale
+                        </button>
+                        <button @click="filterTab = 'rent'"
+                            :class="filterTab === 'rent' ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                            class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors cursor-pointer">
+                            For Rent
+                        </button>
+                        <button @click="filterTab = 'shortlet'"
+                            :class="filterTab === 'shortlet' ? 'bg-amber-600 text-white' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                            class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors cursor-pointer">
+                            Short Lets
+                        </button>
+                        <button @click="filterTab = 'commercial'"
+                            :class="filterTab === 'commercial' ? 'bg-purple-600 text-white' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                            class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors cursor-pointer">
+                            Commercial
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2 w-full lg:w-auto">
+                        <div class="w-full lg:w-80 relative flex-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                            </div>
+                            <input type="text" placeholder="Search location, estate, title..."
+                                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                        </div>
+                        <!-- Mobile Filter Toggle -->
+                        <button @click="filterOpen = !filterOpen"
+                            class="lg:hidden flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 text-sm font-semibold transition-colors shrink-0 cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z">
+                                </path>
+                            </svg>
+                            Filters
+                            <svg :class="filterOpen ? 'rotate-180' : ''" class="w-3.5 h-3.5 transition-transform"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Row 2: Detailed Filters (always visible on desktop, collapsible on mobile) -->
+                <div :class="filterOpen ? 'flex' : 'hidden lg:flex'" class="flex-col lg:flex-row gap-4 items-end">
+                    <div class="w-full lg:w-1/4">
+                        <label
+                            class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Location</label>
+                        <select
+                            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer">
+                            <option>All Locations</option>
+                            <option>Lekki Phase 1</option>
+                            <option>Ikoyi</option>
+                            <option>Victoria Island</option>
+                            <option>Maitama</option>
+                        </select>
+                    </div>
+                    <div class="w-full lg:w-1/4">
+                        <label
+                            class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Property
+                            Type</label>
+                        <select
+                            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer">
+                            <option>All Types</option>
+                            <option>Detached Duplex</option>
+                            <option>Terrace Duplex</option>
+                            <option>Apartment</option>
+                        </select>
+                    </div>
+                    <div class="w-full lg:w-1/4">
+                        <label
+                            class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Bedrooms</label>
+                        <select
+                            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer">
+                            <option>Any Bedrooms</option>
+                            <option>1+</option>
+                            <option>2+</option>
+                            <option>4+</option>
+                        </select>
+                    </div>
+                    <div class="w-full lg:w-1/4">
+                        <label
+                            class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Price
+                            Cap</label>
+                        <select
+                            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer">
+                            <option>Any Price</option>
+                            <option>Under &#8358;50M</option>
+                            <option>Under &#8358;200M</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-4 w-full lg:w-auto">
+                        <label class="flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                            <input type="checkbox" x-model="verifiedOnly"
+                                class="w-4 h-4 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500">
+                            <span class="text-sm font-bold text-slate-700 dark:text-slate-300">Verified Only</span>
+                        </label>
+
+                        <!-- View Toggle: hidden on mobile -->
+                        <div
+                            class="hidden sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0 border border-slate-200 dark:border-slate-700/60">
+                            <button type="button" @click="viewMode = 'grid'"
+                                :class="viewMode === 'grid' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'"
+                                class="p-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-xs"
+                                title="Grid View">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
+                                    </path>
+                                </svg>
+                                <span class="hidden sm:inline">Grid</span>
+                            </button>
+                            <button type="button" @click="viewMode = 'list'"
+                                :class="viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'"
+                                class="p-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-xs"
+                                title="List View">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 6h16M4 12h16M4 18h16"></path>
+                                </svg>
+                                <span class="hidden sm:inline">List</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Filters Row -->
+            <div class="flex items-center gap-3 mt-4 text-sm flex-wrap">
+                <span class="text-slate-300 font-semibold text-xs uppercase tracking-wider">Active:</span>
+                <span
+                    class="inline-flex items-center gap-1.5 bg-blue-950/80 text-blue-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-blue-500/30 backdrop-blur-sm shadow-sm">
+                    <span>Purpose: <span x-text="filterTab" class="uppercase font-bold text-white"></span></span>
+                    <button @click="filterTab = 'all'"
+                        class="hover:text-white transition-colors cursor-pointer text-sm">&times;</button>
+                </span>
+                <span x-show="verifiedOnly"
+                    class="inline-flex items-center gap-1.5 bg-emerald-950/80 text-emerald-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-emerald-500/30 backdrop-blur-sm shadow-sm">
+                    <span>Verified Only</span>
+                    <button @click="verifiedOnly = false"
+                        class="hover:text-white transition-colors cursor-pointer text-sm">&times;</button>
+                </span>
+                <button @click="filterTab = 'all'; verifiedOnly = false; sortBy = 'featured'"
+                    class="text-rose-400 hover:text-rose-300 text-xs font-bold transition-colors cursor-pointer">Clear
+                    all</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Listings Grid -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div class="flex justify-between items-center mb-6">
+            <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">Showing <span
+                    class="text-slate-900 dark:text-white font-bold">120</span> verified listings</p>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-500">Sort by:</span>
+                <select x-model="sortBy"
+                    class="bg-transparent border-none text-sm font-bold text-slate-900 dark:text-white focus:ring-0 cursor-pointer">
+                    <option value="featured">Featured First</option>
+                    <option value="price_asc">Price: Low to High</option>
+                    <option value="price_desc">Price: High to Low</option>
+                    <option value="newest">Newest</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- On mobile always show grid; on desktop respect viewMode -->
+        <div
+            :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'grid grid-cols-1 gap-6'">
+
+            <!-- Property 1 (For Sale) -->
+            <div
+                class="bg-[#0F1423] rounded-2xl overflow-hidden border border-[#1C2438] hover:border-white/15 transition-all group flex relative"
+                :class="viewMode === 'grid' ? 'flex-col' : 'flex-col sm:flex-row'"
+                x-show="(filterTab === 'all' || filterTab === 'sale') && (!verifiedOnly || true)">
+                <div :class="viewMode === 'grid' ? 'relative h-56 w-full overflow-hidden shrink-0' : 'relative h-60 sm:h-auto sm:w-80 md:w-96 shrink-0 overflow-hidden'">
+                    <a href="property-details.html?id=1" class="block w-full h-full">
+                        <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80"
+                            alt="Duplex in Lekki"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </a>
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none">
+                    </div>
+                    <!-- Top Tags Row -->
+                    <div class="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                        <div class="flex items-center gap-1.5">
+                            <span
+                                class="bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">FOR
+                                SALE</span>
+                            <span
+                                class="bg-white/10 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/20">Featured</span>
+                        </div>
+                        <span
+                            class="bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+                            </svg>
+                            Verified
+                        </span>
+                    </div>
+                    <!-- Bottom price + type -->
+                    <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+                        <div class="text-white font-black text-xl drop-shadow-md">&#8358;450 Million</div>
+                        <div
+                            class="bg-black/50 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/10">
+                            Detached Duplex</div>
+                    </div>
+                </div>
+                <div class="p-5 flex-1 flex flex-col justify-between gap-3 min-w-0">
+                    <div class="flex flex-col gap-2">
+                        <div class="text-[11px] text-blue-400 flex items-center gap-1 font-medium">
+                            <svg class="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                            </svg>
+                            Admiralty Way, Lekki Phase 1, Lagos
+                        </div>
+                        <a href="property-details.html?id=1"
+                            class="font-system text-[16px] font-bold text-white leading-snug hover:text-blue-400 transition-colors line-clamp-2">
+                            Ultra-Luxury 5-Bedroom Fully Detached Duplex with Cinema &amp; Pool
+                        </a>
+                        <p x-show="viewMode === 'list'" class="hidden sm:block text-xs text-slate-400 leading-relaxed line-clamp-2 mt-1">
+                            Featuring state-of-the-art home automation, private 8-seater cinema, Olympic swimming pool, fully fitted Italian kitchen, and 2-room BQ within a 24/7 secured access estate.
+                        </p>
+                    </div>
+                    <!-- Stats -->
+                    <div class="grid grid-cols-4 gap-1 py-3 border-y border-white/5">
+                        <div class="flex flex-col items-center gap-0.5">
+                            <div class="flex items-center gap-1 text-slate-300">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z"></path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">5</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Beds</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">6</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Baths</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h11l4 4v8a2 2 0 01-2 2h-3"></path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">4</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Parking</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">650</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">SQM</span>
+                        </div>
+                    </div>
+                    <!-- Agent + Actions -->
+                    <div class="flex items-center justify-between pt-1">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
+                                alt="Agent" class="w-8 h-8 rounded-full object-cover border border-white/10">
+                            <div>
+                                <p class="text-[12px] font-bold text-white">Tunde Adeleke</p>
+                                <p class="text-[10px] text-slate-500">Apex Capital Realty</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <a href="https://wa.me/2348000000000" target="_blank"
+                                class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-colors cursor-pointer" title="WhatsApp">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z">
+                                    </path>
+                                </svg>
+                            </a>
+                            <button
+                                class="w-8 h-8 rounded-lg bg-slate-700/60 border border-white/10 text-slate-300 hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer" title="Call Broker">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
+                                    </path>
+                                </svg>
+                            </button>
+                            <a href="property-details.html?id=1"
+                                class="flex items-center gap-1 text-[12px] font-bold bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer">
+                                <span>Details</span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                    </path>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Property 2 (For Rent) -->
+            <div
+                class="bg-[#0F1423] rounded-2xl overflow-hidden border border-[#1C2438] hover:border-white/15 transition-all group flex relative"
+                :class="viewMode === 'grid' ? 'flex-col' : 'flex-col sm:flex-row'"
+                x-show="(filterTab === 'all' || filterTab === 'rent') && (!verifiedOnly || true)">
+                <div :class="viewMode === 'grid' ? 'relative h-56 w-full overflow-hidden shrink-0' : 'relative h-60 sm:h-auto sm:w-80 md:w-96 shrink-0 overflow-hidden'">
+                    <a href="property-details.html?id=4" class="block w-full h-full">
+                        <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80"
+                            alt="Apartment in VI"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </a>
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none">
+                    </div>
+                    <!-- Top Tags Row -->
+                    <div class="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                        <div class="flex items-center gap-1.5">
+                            <span
+                                class="bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">FOR
+                                RENT</span>
+                            <span
+                                class="bg-white/10 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/20">Featured</span>
+                        </div>
+                        <span
+                            class="bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+                            </svg>
+                            Verified
+                        </span>
+                    </div>
+                    <!-- Bottom price + type -->
+                    <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+                        <div class="text-white font-black text-xl drop-shadow-md">&#8358;15 Million <span class="text-xs font-normal text-slate-300">/ yr</span></div>
+                        <div
+                            class="bg-black/50 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/10">
+                            Serviced Apartment</div>
+                    </div>
+                </div>
+                <div class="p-5 flex-1 flex flex-col justify-between gap-3 min-w-0">
+                    <div class="flex flex-col gap-2">
+                        <div class="text-[11px] text-blue-400 flex items-center gap-1 font-medium">
+                            <svg class="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                            </svg>
+                            Victoria Island, Lagos
+                        </div>
+                        <a href="property-details.html?id=4"
+                            class="font-system text-[16px] font-bold text-white leading-snug hover:text-blue-400 transition-colors line-clamp-2">
+                            Designer 3-Bedroom Serviced Apartment with Pool &amp; Gym
+                        </a>
+                        <p x-show="viewMode === 'list'" class="hidden sm:block text-xs text-slate-400 leading-relaxed line-clamp-2 mt-1">
+                            Modern waterfront development with 24-hour backup diesel generator, treated water plant, underground car parking, and integrated facility maintenance services.
+                        </p>
+                    </div>
+                    <!-- Stats -->
+                    <div class="grid grid-cols-4 gap-1 py-3 border-y border-white/5">
+                        <div class="flex flex-col items-center gap-0.5">
+                            <div class="flex items-center gap-1 text-slate-300">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z"></path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">3</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Beds</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">3</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Baths</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h11l4 4v8a2 2 0 01-2 2h-3"></path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">2</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Parking</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">200</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">SQM</span>
+                        </div>
+                    </div>
+                    <!-- Agent + Actions -->
+                    <div class="flex items-center justify-between pt-1">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=100&q=80"
+                                alt="Agent" class="w-8 h-8 rounded-full object-cover border border-white/10">
+                            <div>
+                                <p class="text-[12px] font-bold text-white">Folake Balogun</p>
+                                <p class="text-[10px] text-slate-500">Eko Luxury Rentals</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <a href="https://wa.me/2348000000000" target="_blank"
+                                class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-colors cursor-pointer" title="WhatsApp">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z">
+                                    </path>
+                                </svg>
+                            </a>
+                            <button
+                                class="w-8 h-8 rounded-lg bg-slate-700/60 border border-white/10 text-slate-300 hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer" title="Call Broker">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
+                                    </path>
+                                </svg>
+                            </button>
+                            <a href="property-details.html?id=4"
+                                class="flex items-center gap-1 text-[12px] font-bold bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer">
+                                <span>Details</span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                    </path>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Property 3 (For Sale) -->
+            <div
+                class="bg-[#0F1423] rounded-2xl overflow-hidden border border-[#1C2438] hover:border-white/15 transition-all group flex relative"
+                :class="viewMode === 'grid' ? 'flex-col' : 'flex-col sm:flex-row'"
+                x-show="(filterTab === 'all' || filterTab === 'sale') && (!verifiedOnly || true)">
+                <div :class="viewMode === 'grid' ? 'relative h-56 w-full overflow-hidden shrink-0' : 'relative h-60 sm:h-auto sm:w-80 md:w-96 shrink-0 overflow-hidden'">
+                    <a href="property-details.html?id=2" class="block w-full h-full">
+                        <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80"
+                            alt="Duplex in Abuja"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </a>
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none">
+                    </div>
+                    <!-- Top Tags Row -->
+                    <div class="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                        <div class="flex items-center gap-1.5">
+                            <span
+                                class="bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">FOR
+                                SALE</span>
+                            <span
+                                class="bg-white/10 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/20">Featured</span>
+                        </div>
+                        <span
+                            class="bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+                            </svg>
+                            Verified
+                        </span>
+                    </div>
+                    <!-- Bottom price + type -->
+                    <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+                        <div class="text-white font-black text-xl drop-shadow-md">&#8358;580 Million</div>
+                        <div
+                            class="bg-black/50 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/10">
+                            Semi-Detached</div>
+                    </div>
+                </div>
+                <div class="p-5 flex-1 flex flex-col justify-between gap-3 min-w-0">
+                    <div class="flex flex-col gap-2">
+                        <div class="text-[11px] text-blue-400 flex items-center gap-1 font-medium">
+                            <svg class="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                            </svg>
+                            Maitama District, Abuja, FCT
+                        </div>
+                        <a href="property-details.html?id=2"
+                            class="font-system text-[16px] font-bold text-white leading-snug hover:text-blue-400 transition-colors line-clamp-2">
+                            Modern 4-Bedroom Semi-Detached House in Diplomatic Zone
+                        </a>
+                        <p x-show="viewMode === 'list'" class="hidden sm:block text-xs text-slate-400 leading-relaxed line-clamp-2 mt-1">
+                            Situated on an exclusive diplomatic street, boasting grand marble foyer, solar hybrid inverter system, multi-car underground garage, and private landscaped courtyard.
+                        </p>
+                    </div>
+                    <!-- Stats -->
+                    <div class="grid grid-cols-4 gap-1 py-3 border-y border-white/5">
+                        <div class="flex flex-col items-center gap-0.5">
+                            <div class="flex items-center gap-1 text-slate-300">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z"></path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">4</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Beds</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">5</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Baths</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h11l4 4v8a2 2 0 01-2 2h-3"></path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">3</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Parking</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">520</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">SQM</span>
+                        </div>
+                    </div>
+                    <!-- Agent + Actions -->
+                    <div class="flex items-center justify-between pt-1">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80"
+                                alt="Agent" class="w-8 h-8 rounded-full object-cover border border-white/10">
+                            <div>
+                                <p class="text-[12px] font-bold text-white">Ibrahim Danjuma</p>
+                                <p class="text-[10px] text-slate-500">Capital Peak Prime</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <a href="https://wa.me/2348000000000" target="_blank"
+                                class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-colors cursor-pointer" title="WhatsApp">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z">
+                                    </path>
+                                </svg>
+                            </a>
+                            <button
+                                class="w-8 h-8 rounded-lg bg-slate-700/60 border border-white/10 text-slate-300 hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer" title="Call Broker">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
+                                    </path>
+                                </svg>
+                            </button>
+                            <a href="property-details.html?id=2"
+                                class="flex items-center gap-1 text-[12px] font-bold bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer">
+                                <span>Details</span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                    </path>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Property 4 (For Sale) -->
+            <div
+                class="bg-[#0F1423] rounded-2xl overflow-hidden border border-[#1C2438] hover:border-white/15 transition-all group flex relative"
+                :class="viewMode === 'grid' ? 'flex-col' : 'flex-col sm:flex-row'"
+                x-show="(filterTab === 'all' || filterTab === 'sale') && (!verifiedOnly || true)">
+                <div :class="viewMode === 'grid' ? 'relative h-56 w-full overflow-hidden shrink-0' : 'relative h-60 sm:h-auto sm:w-80 md:w-96 shrink-0 overflow-hidden'">
+                    <a href="property-details.html?id=3" class="block w-full h-full">
+                        <img src="https://images.unsplash.com/photo-1613490901509-34b8c56fa689?auto=format&fit=crop&w=800&q=80"
+                            alt="Duplex in Ikeja"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </a>
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none">
+                    </div>
+                    <!-- Top Tags Row -->
+                    <div class="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                        <div class="flex items-center gap-1.5">
+                            <span
+                                class="bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">FOR
+                                SALE</span>
+                            <span
+                                class="bg-white/10 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/20">Featured</span>
+                        </div>
+                        <span
+                            class="bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+                            </svg>
+                            Verified
+                        </span>
+                    </div>
+                    <!-- Bottom price + type -->
+                    <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+                        <div class="text-white font-black text-xl drop-shadow-md">&#8358;220 Million</div>
+                        <div
+                            class="bg-black/50 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/10">
+                            Terraced Duplex</div>
+                    </div>
+                </div>
+                <div class="p-5 flex-1 flex flex-col justify-between gap-3 min-w-0">
+                    <div class="flex flex-col gap-2">
+                        <div class="text-[11px] text-blue-400 flex items-center gap-1 font-medium">
+                            <svg class="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                            </svg>
+                            Ikeja GRA, Lagos Mainland
+                        </div>
+                        <a href="property-details.html?id=3"
+                            class="font-system text-[16px] font-bold text-white leading-snug hover:text-blue-400 transition-colors line-clamp-2">
+                            Contemporary 4-Bedroom Terrace Duplex with BQ in Gated Estate
+                        </a>
+                        <p x-show="viewMode === 'list'" class="hidden sm:block text-xs text-slate-400 leading-relaxed line-clamp-2 mt-1">
+                            Exceptional Ikeja GRA enclave with biometric security access, children's recreation park, private rooftop terrace lounge, and central backup generator.
+                        </p>
+                    </div>
+                    <!-- Stats -->
+                    <div class="grid grid-cols-4 gap-1 py-3 border-y border-white/5">
+                        <div class="flex flex-col items-center gap-0.5">
+                            <div class="flex items-center gap-1 text-slate-300">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z"></path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">4</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Beds</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">4</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Baths</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h11l4 4v8a2 2 0 01-2 2h-3"></path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">3</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Parking</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">340</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">SQM</span>
+                        </div>
+                    </div>
+                    <!-- Agent + Actions -->
+                    <div class="flex items-center justify-between pt-1">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80"
+                                alt="Agent" class="w-8 h-8 rounded-full object-cover border border-white/10">
+                            <div>
+                                <p class="text-[12px] font-bold text-white">Babatunde Fash</p>
+                                <p class="text-[10px] text-slate-500">Mainland Premier Realty</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <a href="https://wa.me/2348000000000" target="_blank"
+                                class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-colors cursor-pointer" title="WhatsApp">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z">
+                                    </path>
+                                </svg>
+                            </a>
+                            <button
+                                class="w-8 h-8 rounded-lg bg-slate-700/60 border border-white/10 text-slate-300 hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer" title="Call Broker">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
+                                    </path>
+                                </svg>
+                            </button>
+                            <a href="property-details.html?id=3"
+                                class="flex items-center gap-1 text-[12px] font-bold bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer">
+                                <span>Details</span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                    </path>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Property 5 (Short Lets) -->
+            <div
+                class="bg-[#0F1423] rounded-2xl overflow-hidden border border-[#1C2438] hover:border-white/15 transition-all group flex relative"
+                :class="viewMode === 'grid' ? 'flex-col' : 'flex-col sm:flex-row'"
+                x-show="(filterTab === 'all' || filterTab === 'shortlet') && (!verifiedOnly || true)">
+                <div :class="viewMode === 'grid' ? 'relative h-56 w-full overflow-hidden shrink-0' : 'relative h-60 sm:h-auto sm:w-80 md:w-96 shrink-0 overflow-hidden'">
+                    <a href="property-details.html?id=1" class="block w-full h-full">
+                        <img src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=800&q=80"
+                            alt="Penthouse Banana Island"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </a>
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none">
+                    </div>
+                    <!-- Top Tags Row -->
+                    <div class="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                        <div class="flex items-center gap-1.5">
+                            <span
+                                class="bg-amber-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">SHORT
+                                LET</span>
+                            <span
+                                class="bg-white/10 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/20">Featured</span>
+                        </div>
+                        <span
+                            class="bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+                            </svg>
+                            Verified
+                        </span>
+                    </div>
+                    <!-- Bottom price + type -->
+                    <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+                        <div class="text-white font-black text-xl drop-shadow-md">&#8358;350,000 <span class="text-xs font-normal text-slate-300">/ night</span></div>
+                        <div
+                            class="bg-black/50 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/10">
+                            Luxury Penthouse</div>
+                    </div>
+                </div>
+                <div class="p-5 flex-1 flex flex-col justify-between gap-3 min-w-0">
+                    <div class="flex flex-col gap-2">
+                        <div class="text-[11px] text-blue-400 flex items-center gap-1 font-medium">
+                            <svg class="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                            </svg>
+                            Banana Island, Ikoyi, Lagos
+                        </div>
+                        <a href="property-details.html?id=1"
+                            class="font-system text-[16px] font-bold text-white leading-snug hover:text-blue-400 transition-colors line-clamp-2">
+                            Ultra-Luxury 3-Bedroom Waterfront Penthouse with Infinity Pool
+                        </a>
+                        <p x-show="viewMode === 'list'" class="hidden sm:block text-xs text-slate-400 leading-relaxed line-clamp-2 mt-1">
+                            High-end holiday stay offering panoramic Lagos lagoon views, private plunge pool, chef services, high-speed Starlink fiber Wi-Fi, and 24/7 dedicated security concierge.
+                        </p>
+                    </div>
+                    <!-- Stats -->
+                    <div class="grid grid-cols-4 gap-1 py-3 border-y border-white/5">
+                        <div class="flex flex-col items-center gap-0.5">
+                            <div class="flex items-center gap-1 text-slate-300">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z"></path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">3</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Beds</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">4</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Baths</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h11l4 4v8a2 2 0 01-2 2h-3"></path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">2</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Parking</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">280</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">SQM</span>
+                        </div>
+                    </div>
+                    <!-- Agent + Actions -->
+                    <div class="flex items-center justify-between pt-1">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80"
+                                alt="Agent" class="w-8 h-8 rounded-full object-cover border border-white/10">
+                            <div>
+                                <p class="text-[12px] font-bold text-white">Chioma Nwosu</p>
+                                <p class="text-[10px] text-slate-500">Island Prestige Stays</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <a href="https://wa.me/2348000000000" target="_blank"
+                                class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-colors cursor-pointer" title="WhatsApp">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z">
+                                    </path>
+                                </svg>
+                            </a>
+                            <button
+                                class="w-8 h-8 rounded-lg bg-slate-700/60 border border-white/10 text-slate-300 hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer" title="Call Broker">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
+                                    </path>
+                                </svg>
+                            </button>
+                            <a href="property-details.html?id=1"
+                                class="flex items-center gap-1 text-[12px] font-bold bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer">
+                                <span>Details</span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                    </path>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Property 6 (Commercial) -->
+            <div
+                class="bg-[#0F1423] rounded-2xl overflow-hidden border border-[#1C2438] hover:border-white/15 transition-all group flex relative"
+                :class="viewMode === 'grid' ? 'flex-col' : 'flex-col sm:flex-row'"
+                x-show="(filterTab === 'all' || filterTab === 'commercial') && (!verifiedOnly || true)">
+                <div :class="viewMode === 'grid' ? 'relative h-56 w-full overflow-hidden shrink-0' : 'relative h-60 sm:h-auto sm:w-80 md:w-96 shrink-0 overflow-hidden'">
+                    <a href="property-details.html?id=3" class="block w-full h-full">
+                        <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80"
+                            alt="Commercial in VI"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </a>
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none">
+                    </div>
+                    <!-- Top Tags Row -->
+                    <div class="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                        <div class="flex items-center gap-1.5">
+                            <span
+                                class="bg-purple-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">COMMERCIAL</span>
+                            <span
+                                class="bg-white/10 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/20">Featured</span>
+                        </div>
+                        <span
+                            class="bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+                            </svg>
+                            Verified
+                        </span>
+                    </div>
+                    <!-- Bottom price + type -->
+                    <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+                        <div class="text-white font-black text-xl drop-shadow-md">&#8358;85,000 <span class="text-xs font-normal text-slate-300">/ SQM / yr</span></div>
+                        <div
+                            class="bg-black/50 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/10">
+                            Office High-Rise</div>
+                    </div>
+                </div>
+                <div class="p-5 flex-1 flex flex-col justify-between gap-3 min-w-0">
+                    <div class="flex flex-col gap-2">
+                        <div class="text-[11px] text-blue-400 flex items-center gap-1 font-medium">
+                            <svg class="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                            </svg>
+                            Adeola Odeku, Victoria Island, Lagos
+                        </div>
+                        <a href="property-details.html?id=3"
+                            class="font-system text-[16px] font-bold text-white leading-snug hover:text-blue-400 transition-colors line-clamp-2">
+                            Grade-A Commercial High-Rise Open-Plan Floor with Dedicated Bays
+                        </a>
+                        <p x-show="viewMode === 'list'" class="hidden sm:block text-xs text-slate-400 leading-relaxed line-clamp-2 mt-1">
+                            Prime corporate headquarters space offering high-speed elevators, raised access flooring, dedicated central chillers, dual 1,000kVA transformers, and fire suppression systems.
+                        </p>
+                    </div>
+                    <!-- Stats -->
+                    <div class="grid grid-cols-4 gap-1 py-3 border-y border-white/5">
+                        <div class="flex flex-col items-center gap-0.5">
+                            <div class="flex items-center gap-1 text-slate-300">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">Open</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Layout</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">8</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Toilets</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h11l4 4v8a2 2 0 01-2 2h-3"></path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">12</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">Parking</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-0.5 border-l border-white/5">
+                            <div class="flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4">
+                                    </path>
+                                </svg>
+                                <span class="text-[13px] font-bold text-white">850</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 uppercase">SQM</span>
+                        </div>
+                    </div>
+                    <!-- Agent + Actions -->
+                    <div class="flex items-center justify-between pt-1">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80"
+                                alt="Agent" class="w-8 h-8 rounded-full object-cover border border-white/10">
+                            <div>
+                                <p class="text-[12px] font-bold text-white">Deji Alabi</p>
+                                <p class="text-[10px] text-slate-500">Corporate Asset Advisors</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <a href="https://wa.me/2348000000000" target="_blank"
+                                class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-colors cursor-pointer" title="WhatsApp">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z">
+                                    </path>
+                                </svg>
+                            </a>
+                            <button
+                                class="w-8 h-8 rounded-lg bg-slate-700/60 border border-white/10 text-slate-300 hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer" title="Call Broker">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
+                                    </path>
+                                </svg>
+                            </button>
+                            <a href="property-details.html?id=3"
+                                class="flex items-center gap-1 text-[12px] font-bold bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer">
+                                <span>Details</span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                    </path>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-12 flex justify-center">
+            <div
+                class="inline-flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <button
+                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    disabled><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                        </path>
+                    </svg></button>
+                <button
+                    class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-sm">1</button>
+                <button
+                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-sm">2</button>
+                <button
+                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-sm">3</button>
+                <span class="w-8 h-8 flex items-center justify-center text-slate-400">...</span>
+                <button
+                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-sm">12</button>
+                <button
+                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"><svg
+                        class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg></button>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- 13. Footer -->
+    <footer class="bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 mt-16"
+        style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Noto Sans',Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol','Noto Color Emoji';font-size:12px;font-weight:400">
+        <!-- Glass Divider -->
+        <div class="border-t border-slate-200 dark:border-slate-800"></div>
+        <!-- Top Subscription Area -->
+        <div class="border-b border-slate-200 dark:border-slate-800 py-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div>
+                    <h3 style="font-size:16px;font-weight:700" class="text-slate-900 dark:text-white mb-2">Get
+                        Off-Market Real Estate Alerts & Price Drops</h3>
+                    <p class="text-slate-500 dark:text-slate-400">Join over 24,000 verified investors and homebuyers
+                        receiving
+                        weekly curated deals in Nigeria.</p>
+                </div>
+                <form class="flex w-full md:w-auto gap-4">
+                    <input type="email" placeholder="Enter your email address"
+                        class="w-full md:w-72 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        style="font-size:12px">
+                    <button type="button"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-lg transition-colors cursor-pointer whitespace-nowrap flex items-center gap-2">
+                        Subscribe <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main Footer Links -->
+        <div class="py-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr] gap-8 lg:gap-10">
+                    <!-- Column 1 -->
+                    <div>
+                        <a href="index.html" class="flex items-center gap-2 mb-6">
+                            <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                                    </path>
+                                </svg>
+                            </div>
+                            <span style="font-size:16px;font-weight:700"
+                                class="tracking-tight text-slate-900 dark:text-white">Bofast Homes</span>
+                        </a>
+                        <p class="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+                            Nigeria's leading verified real estate marketplace and integrated broker CRM portal. Fast,
+                            transparent property acquisitions.
+                        </p>
+                        <div class="space-y-3 text-slate-500 dark:text-slate-400 text-[12px]">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z">
+                                    </path>
+                                </svg>
+                                <span>Plot 14 Admiralty Way, Lekki Phase 1, Lagos</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <svg class="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
+                                    </path>
+                                </svg>
+                                <span>+234 (01) 888 4000</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <svg class="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                                <span>support@propertyportal.ng</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Column 2 -->
+                    <div>
+                        <h4 style="font-weight:700"
+                            class="text-slate-900 dark:text-white mb-6 uppercase tracking-wider">TOP LOCATIONS</h4>
+                        <ul class="space-y-3 text-slate-500 dark:text-slate-400 text-[12px]">
+                            <li><a href="#"
+                                    class="hover:text-slate-900 dark:hover:text-white transition-colors">Properties in
+                                    Lekki Phase 1</a>
+                            </li>
+                            <li><a href="#"
+                                    class="hover:text-slate-900 dark:hover:text-white transition-colors">Properties in
+                                    Ikoyi</a></li>
+                            <li><a href="#"
+                                    class="hover:text-slate-900 dark:hover:text-white transition-colors">Properties in
+                                    Victoria Island</a>
+                            </li>
+                            <li><a href="#"
+                                    class="hover:text-slate-900 dark:hover:text-white transition-colors">Properties in
+                                    Maitama Abuja</a>
+                            </li>
+                            <li><a href="#"
+                                    class="hover:text-slate-900 dark:hover:text-white transition-colors">Properties in
+                                    Ikeja GRA</a></li>
+                            <li><a href="#"
+                                    class="hover:text-slate-900 dark:hover:text-white transition-colors">Properties in
+                                    Banana Island</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <!-- Column 3 -->
+                    <div>
+                        <h4 style="font-weight:700"
+                            class="text-slate-900 dark:text-white mb-6 uppercase tracking-wider">POPULAR CATEGORIES</h4>
+                        <ul class="space-y-3 text-slate-500 dark:text-slate-400 text-[12px]">
+                            <li><a href="#" class="hover:text-slate-900 dark:hover:text-white transition-colors">Houses
+                                    for Sale in Lekki</a></li>
+                            <li><a href="#" class="hover:text-slate-900 dark:hover:text-white transition-colors">Flats &
+                                    Apartments for Rent</a>
+                            </li>
+                            <li><a href="#"
+                                    class="hover:text-slate-900 dark:hover:text-white transition-colors">Serviced Luxury
+                                    Short Lets</a>
+                            </li>
+                            <li><a href="#" class="hover:text-slate-900 dark:hover:text-white transition-colors">Prime
+                                    Residential Lands (C of
+                                    O)</a></li>
+                            <li><a href="#" class="hover:text-slate-900 dark:hover:text-white transition-colors">Grade-A
+                                    Commercial Offices</a>
+                            </li>
+                            <li><a href="#"
+                                    class="hover:text-slate-900 dark:hover:text-white transition-colors">Distressed /
+                                    Below-Market
+                                    Deals</a></li>
+                        </ul>
+                    </div>
+                    <!-- Column 4 -->
+                    <div>
+                        <h4 style="font-weight:700"
+                            class="text-slate-900 dark:text-white mb-6 uppercase tracking-wider">CRM PORTAL & AGENTS
+                        </h4>
+                        <ul class="space-y-3 text-slate-500 dark:text-slate-400 text-[12px]">
+                            <li><a href="#" class="hover:text-slate-900 dark:hover:text-white transition-colors">Agent /
+                                    Broker CRM Login</a></li>
+                            <li><a href="#"
+                                    class="hover:text-slate-900 dark:hover:text-white transition-colors">Developer
+                                    Project Showcases</a>
+                            </li>
+                            <li><a href="#" class="hover:text-slate-900 dark:hover:text-white transition-colors">Land
+                                    Title Verification
+                                    Service</a></li>
+                            <li><a href="#"
+                                    class="hover:text-slate-900 dark:hover:text-white transition-colors">Inspection
+                                    Scheduling API</a>
+                            </li>
+                            <li><a href="#"
+                                    class="hover:text-slate-900 dark:hover:text-white transition-colors">Mortgage &
+                                    Financing
+                                    Calculators</a></li>
+                            <li><a href="#"
+                                    class="hover:text-slate-900 dark:hover:text-white transition-colors">WordPress
+                                    Plugin Integration
+                                    Docs</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="border-t border-slate-200 dark:border-slate-800 py-6">
+            <div
+                class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-slate-500 dark:text-slate-500">
+                <div class="flex items-center gap-2 text-emerald-500">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>All listings strictly verified against state land registry archives.</span>
+                </div>
+                <p>&copy; 2026 Bofast Homes. Nigeria's most trusted verified property marketplace. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>

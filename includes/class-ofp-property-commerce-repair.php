@@ -100,23 +100,18 @@ class OFP_Property_Commerce_Repair {
     public static function replace_admin_pages(): void {
         if ( ! current_user_can( 'manage_options' ) ) return;
         $parent = 'edit.php?post_type=ofp_property';
-        remove_submenu_page( $parent, 'ofp-property-create-offer' );
-        add_submenu_page( $parent, 'Create Installment Offer', 'Create Offer', 'manage_options', 'ofp-property-create-offer', [ __CLASS__, 'render_create_offer' ] );
-        remove_submenu_page( $parent, 'ofp-property-purchases' );
-        add_submenu_page( $parent, 'Property Purchases', 'Purchases', 'manage_options', 'ofp-property-purchases', [ __CLASS__, 'render_completed_purchases' ] );
-        remove_submenu_page( $parent, 'ofp-property-add-purchase' );
-        add_submenu_page( $parent, 'Add Outright Purchase', 'Add Purchase', 'manage_options', 'ofp-property-add-purchase', [ __CLASS__, 'render_add_purchase' ] );
+        // Removed double table hooks for purchases
     }
 
     private static function sale_properties( bool $exclude_committed = true ): array {
         global $wpdb;
         $p = $wpdb->prefix;
         $exclude = $exclude_committed ? " AND NOT EXISTS (SELECT 1 FROM {$p}ofp_property_purchases pu WHERE pu.property_id = pr.id AND pu.status IN ('active','completed'))" : '';
-        return $wpdb->get_results( "SELECT pr.id, pr.title, pr.price, pr.listing_type, pr.client_id, pr.owner_type, pr.owner_id, c.business_name FROM {$p}ofp_properties pr LEFT JOIN {$p}ofp_clients c ON c.id = pr.client_id WHERE pr.listing_type = 'sale' AND pr.status = 'live' {$exclude} ORDER BY pr.title ASC" );
+        return $wpdb->get_results( "SELECT pr.id, pr.title, pr.price, pr.listing_type, pr.client_id, pr.owner_type, pr.owner_id, c.business_name FROM {$p}ofp_properties pr LEFT JOIN {$p}ofp_clients c ON c.id = pr.client_id WHERE pr.listing_type IN ('sale','land') AND pr.status = 'live' {$exclude} ORDER BY pr.title ASC" );
     }
 
     public static function render_create_offer(): void {
-        $properties = self::sale_properties( true );
+        $properties = self::sale_properties( false );
         $error = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
         $created = isset( $_GET['created'] ) && '1' === $_GET['created'];
         $offer_url = isset( $_GET['offer_url'] ) ? rawurldecode( wp_unslash( $_GET['offer_url'] ) ) : '';
@@ -126,14 +121,10 @@ class OFP_Property_Commerce_Repair {
         <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php wp_nonce_field( 'ofp_create_property_offer' ); ?><input type="hidden" name="action" value="ofp_create_property_offer"><table class="form-table"><tr><th>Property</th><td><select name="property_id" required style="min-width:520px"><option value="">Select property</option><?php foreach ( $properties as $property ) : ?><option value="<?php echo esc_attr( $property->id ); ?>"><?php echo esc_html( $property->title . ' — ₦' . number_format( (float) $property->price, 0 ) . ' — ' . ( $property->business_name ?: 'OFast Pipeline / Admin' ) ); ?></option><?php endforeach; ?></select><?php if ( empty( $properties ) ) : ?><p class="description">No eligible live sale properties are currently available.</p><?php endif; ?></td></tr><tr><th>Buyer name</th><td><input class="regular-text" name="buyer_name" required></td></tr><tr><th>Buyer phone</th><td><input class="regular-text" name="buyer_phone" required></td></tr><tr><th>Buyer email</th><td><input type="email" class="regular-text" name="buyer_email"></td></tr><tr><th>Initial payment</th><td><input type="number" step="0.01" min="0" name="initial_payment" required></td></tr><tr><th>Payment frequency</th><td><select name="frequency"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select></td></tr><tr><th>Installment amount</th><td><input type="number" step="0.01" min="0" name="installment_amount" required></td></tr><tr><th>Number of installments</th><td><input type="number" min="1" name="installment_count" required></td></tr><tr><th>Payment starts</th><td><input type="date" name="payment_start_date" required></td></tr><tr><th>First due date</th><td><input type="date" name="first_due_date" required></td></tr><tr><th>Grace period</th><td><input type="number" min="0" max="365" value="7" name="grace_period_days"> days</td></tr><tr><th>Offer expires</th><td><input type="date" name="offer_expires"></td></tr><tr><th>Terms / agreement</th><td><textarea class="large-text" rows="10" name="terms_text"></textarea></td></tr></table><?php submit_button( 'Create Offer', 'primary', 'submit', true, empty( $properties ) ? [ 'disabled' => 'disabled' ] : [] ); ?></form></div><?php
     }
 
-    public static function render_completed_purchases(): void {
-        global $wpdb; $p = $wpdb->prefix;
-        $purchases = $wpdb->get_results( "SELECT pu.*, pr.title AS property_title, c.business_name FROM {$p}ofp_property_purchases pu LEFT JOIN {$p}ofp_properties pr ON pr.id=pu.property_id LEFT JOIN {$p}ofp_clients c ON c.id=pu.client_id WHERE pu.status='completed' AND pu.balance<=0.01 ORDER BY pu.created_at DESC, pu.id DESC LIMIT 250" );
-        ?><div class="wrap"><h1>Property Purchases</h1><p>Completed property purchases only. Installment buyers remain in the active payment plan until their balance reaches zero.</p><div style="overflow-x:auto"><table class="widefat striped" style="min-width:1200px"><thead><tr><th>ID</th><th>Buyer</th><th>Property</th><th>Owner</th><th>Total</th><th>Paid</th><th>Balance</th><th>Payment Method</th><th>Status</th><th>Completed</th></tr></thead><tbody><?php if(empty($purchases)): ?><tr><td colspan="10">No completed property purchases yet.</td></tr><?php else: foreach($purchases as $purchase): ?><tr><td>#<?php echo esc_html($purchase->id); ?></td><td><strong><?php echo esc_html($purchase->buyer_name); ?></strong><br><small><?php echo esc_html($purchase->buyer_phone); ?></small></td><td><?php echo esc_html($purchase->property_title ?: '—'); ?></td><td><?php echo esc_html($purchase->business_name ?: 'OFast Pipeline / Admin'); ?></td><td>₦<?php echo esc_html(number_format((float)$purchase->total_price,2)); ?></td><td>₦<?php echo esc_html(number_format((float)$purchase->amount_paid,2)); ?></td><td>₦<?php echo esc_html(number_format((float)$purchase->balance,2)); ?></td><td><?php echo esc_html(ucfirst(str_replace('_',' ',$purchase->payment_method ?: '—'))); ?></td><td><?php echo esc_html(ucfirst($purchase->status)); ?></td><td><?php echo esc_html($purchase->updated_at ?: $purchase->created_at); ?></td></tr><?php endforeach; endif; ?></tbody></table></div></div><?php
-    }
+    // Removed render_completed_purchases() to avoid duplicate tables
 
     public static function render_add_purchase(): void {
-        $properties = self::sale_properties( true );
+        $properties = self::sale_properties( false );
         $error = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
         $created = absint( $_GET['created'] ?? 0 );
         ?><div class="wrap"><h1>Add Outright Purchase</h1><p>Use this screen only when the buyer has already paid the property in full. Installment buyers must use the offer and payment-plan flow.</p><?php if($created): ?><div class="notice notice-success"><p>Completed purchase <strong>#<?php echo esc_html($created); ?></strong> recorded.</p></div><?php endif; ?><?php if($error): ?><div class="notice notice-error"><p><?php echo esc_html($error); ?></p></div><?php endif; ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><?php wp_nonce_field('ofp_create_outright_purchase'); ?><input type="hidden" name="action" value="ofp_create_outright_purchase"><table class="form-table"><tr><th>Property</th><td><select name="property_id" required style="min-width:520px"><option value="">Select live sale property</option><?php foreach($properties as $property): ?><option value="<?php echo esc_attr($property->id); ?>"><?php echo esc_html($property->title.' — ₦'.number_format((float)$property->price,0).' — '.($property->business_name ?: 'OFast Pipeline / Admin')); ?></option><?php endforeach; ?></select></td></tr><tr><th>Buyer name</th><td><input class="regular-text" name="buyer_name" required></td></tr><tr><th>Buyer phone</th><td><input class="regular-text" name="buyer_phone" required></td></tr><tr><th>Buyer email</th><td><input class="regular-text" type="email" name="buyer_email"></td></tr><tr><th>Amount paid</th><td><input type="number" step="0.01" min="0.01" name="amount_paid" required></td></tr><tr><th>Payment method</th><td><select name="payment_method" required><option value="bank_transfer">Bank Transfer</option><option value="bank_deposit">Bank Deposit</option><option value="pos">POS</option><option value="cash">Cash</option><option value="other">Other</option></select></td></tr><tr><th>Payment reference</th><td><input class="regular-text" name="payment_reference"></td></tr><tr><th>Note</th><td><textarea class="large-text" rows="4" name="note"></textarea></td></tr></table><?php submit_button('Record Completed Purchase','primary'); ?></form></div><?php
@@ -145,7 +136,7 @@ class OFP_Property_Commerce_Repair {
         global $wpdb; $p = $wpdb->prefix;
         $property_id=absint($_POST['property_id']??0); $buyer_name=sanitize_text_field(wp_unslash($_POST['buyer_name']??'')); $buyer_phone=OFP_Security::sanitize_phone($_POST['buyer_phone']??''); $buyer_email=sanitize_email(wp_unslash($_POST['buyer_email']??'')); $amount=max(0,(float)($_POST['amount_paid']??0)); $method=sanitize_key($_POST['payment_method']??''); $reference=sanitize_text_field(wp_unslash($_POST['payment_reference']??'')); $note=sanitize_textarea_field(wp_unslash($_POST['note']??''));
         $allowed=['bank_transfer','bank_deposit','pos','cash','other']; $property=$wpdb->get_row($wpdb->prepare("SELECT * FROM {$p}ofp_properties WHERE id=%d LIMIT 1",$property_id)); $occupied=$property?(int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$p}ofp_property_purchases WHERE property_id=%d AND status IN ('active','completed')",$property_id)):0; $error='';
-        if(!$property)$error='Property not found.'; elseif('sale'!==$property->listing_type||'live'!==$property->status)$error='Only live sale properties can be recorded as outright purchases.'; elseif($occupied)$error='This property already has an active or completed purchase.'; elseif(!$buyer_name||!$buyer_phone)$error='Buyer name and phone are required.'; elseif($buyer_email&&!is_email($buyer_email))$error='Buyer email is invalid.'; elseif($amount<=0)$error='Amount paid must be greater than zero.'; elseif(abs($amount-(float)$property->price)>0.01)$error='Amount paid must equal the full property price.'; elseif(!in_array($method,$allowed,true))$error='Invalid payment method.';
+        if(!$property)$error='Property not found.'; elseif(! OFP_Property_CPT::is_sale_like( (string) $property->listing_type )||'live'!==$property->status)$error='Only live sale properties can be recorded as outright purchases.'; elseif($occupied)$error='This property already has an active or completed purchase.'; elseif(!$buyer_name||!$buyer_phone)$error='Buyer name and phone are required.'; elseif($buyer_email&&!is_email($buyer_email))$error='Buyer email is invalid.'; elseif($amount<=0)$error='Amount paid must be greater than zero.'; elseif(abs($amount-(float)$property->price)>0.01)$error='Amount paid must equal the full property price.'; elseif(!in_array($method,$allowed,true))$error='Invalid payment method.';
         if($error){wp_safe_redirect(add_query_arg('error',rawurlencode($error),admin_url('edit.php?post_type=ofp_property&page=ofp-property-add-purchase')));exit;}
         $owner_id=!empty($property->client_id)?(int)$property->client_id:null;
         $ok=$wpdb->insert("{$p}ofp_property_purchases",['property_id'=>$property_id,'client_id'=>$owner_id,'buyer_name'=>$buyer_name,'buyer_phone'=>$buyer_phone,'buyer_email'=>$buyer_email?:null,'total_price'=>(float)$property->price,'amount_paid'=>$amount,'balance'=>0,'initial_payment'=>$amount,'installment_amount'=>0,'installment_count'=>0,'payment_owner_type'=>$owner_id?'client':'platform','payment_owner_id'=>$owner_id,'payment_method'=>'manual','status'=>'active','created_at'=>current_time('mysql'),'updated_at'=>current_time('mysql')]);
@@ -161,7 +152,13 @@ class OFP_Property_Commerce_Repair {
     public static function offer_created_notification(int $offer_id,string $raw_token,string $offer_url):void{
         global $wpdb; $p=$wpdb->prefix; $offer=$wpdb->get_row($wpdb->prepare("SELECT o.*,p.title AS property_title,c.sms_provider FROM {$p}ofp_property_offers o LEFT JOIN {$p}ofp_properties p ON p.id=o.property_id LEFT JOIN {$p}ofp_clients c ON c.id=o.client_id WHERE o.id=%d LIMIT 1",$offer_id)); if(!$offer)return;
         $message=sprintf('Your installment offer for %s is ready. Review and accept or decline it here: %s',$offer->property_title?:'the property',$offer_url);
-        if(!empty($offer->buyer_email))OFP_Mailer::send($offer->buyer_email,$offer->buyer_name?:'there','Your property installment offer',sprintf('<p>Hello %s,</p><p>Your installment offer for <strong>%s</strong> is ready.</p><p><a href="%s">Review the offer</a></p>',esc_html($offer->buyer_name?:'there'),esc_html($offer->property_title?:'the property'),esc_url($offer_url)));
+        if(!empty($offer->buyer_email)){
+            $message_html = sprintf('<p>Hello %s,</p><p>An installment payment plan has been created for the property: <strong>%s</strong>.</p>', esc_html($offer->buyer_name?:'there'), esc_html($offer->property_title?:'the property'));
+            $message_html .= sprintf('<p>Total Price: NGN %s<br>Initial Payment: NGN %s</p>', number_format((float)$offer->total_price, 2), number_format((float)$offer->initial_payment, 2));
+            $message_html .= sprintf('<p>Please review and accept the offer here:<br><a href="%s">Accept Installment Offer</a></p>', esc_url($offer_url));
+            $message_html .= '<p>If you have any questions, please contact us.</p>';
+            OFP_Mailer::send($offer->buyer_email, $offer->buyer_name?:'there', 'Property Installment Offer - ' . ($offer->property_title?:''), $message_html);
+        }
         if(!empty($offer->sms_provider)&&!empty($offer->buyer_phone)&&!empty($offer->client_id)&&class_exists('OFP_Credit')&&OFP_Credit::has_balance((int)$offer->client_id,'sms',6.99)){ $sms=new OFP_SMS($offer->sms_provider,(int)$offer->client_id); $sent=$sms->send($offer->buyer_phone,$message); if(!empty($sent['success']))OFP_Credit::deduct((int)$offer->client_id,'sms',6.99); }
         if(!empty($offer->client_id)&&class_exists('OFP_Notification'))OFP_Notification::create((int)$offer->client_id,'property_offer_created','Installment offer created',sprintf('An installment offer has been created for %s and sent to %s.', $offer->property_title?:'a property',$offer->buyer_name));
     }
@@ -176,7 +173,21 @@ class OFP_Property_Commerce_Repair {
     }
 
     public static function client_listing_actions(): void {
-        if(!is_page()||!class_exists('OFP_Auth')||!OFP_Auth::is_client_logged_in())return; $client=OFP_Auth::current_client(); if(!$client||!OFP_Subscription::has_active('listing',$client->id))return; global $wpdb; $rows=$wpdb->get_results($wpdb->prepare("SELECT title,status,wp_post_id FROM {$wpdb->prefix}ofp_properties WHERE client_id=%d ORDER BY created_at DESC",(int)$client->id)); if(empty($rows))return; $payload=[]; foreach($rows as $row)$payload[]=['title'=>(string)$row->title,'status'=>(string)$row->status,'url'=>$row->wp_post_id?get_permalink((int)$row->wp_post_id):'']; ?>
+        if ( ! is_page() || ! class_exists( 'OFP_Auth' ) ) return;
+        $client = OFP_Auth::current_client();
+        if ( ! $client || ! class_exists( 'OFP_Subscription' ) || ! OFP_Subscription::has_platform_access( $client->id ) ) return;
+        global $wpdb;
+        $rows = $wpdb->get_results( $wpdb->prepare( "SELECT title,status,wp_post_id FROM {$wpdb->prefix}ofp_properties WHERE client_id=%d ORDER BY created_at DESC", (int) $client->id ) );
+        if ( empty( $rows ) ) return;
+        $payload = [];
+        foreach ( $rows as $row ) {
+            $payload[] = [
+                'title'  => (string) $row->title,
+                'status' => (string) $row->status,
+                'url'    => $row->wp_post_id ? get_permalink( (int) $row->wp_post_id ) : '',
+            ];
+        }
+        ?>
         <script>(function(){var p=<?php echo wp_json_encode($payload); ?>,h=document.querySelectorAll('.ofp-container h3');p.forEach(function(x){for(var i=0;i<h.length;i++){if(h[i].textContent.trim()!==x.title.trim())continue;var b=h[i].parentNode;if(!b||b.querySelector('.ofp-client-property-action'))break;var a=document.createElement('div');a.className='ofp-client-property-action';a.style.cssText='display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap;';if(x.status==='live'&&x.url){var l=document.createElement('a');l.href=x.url;l.textContent='View Listing';l.style.cssText='display:inline-block;text-decoration:none;padding:8px 12px;border-radius:7px;background:#2563eb;color:#fff;';a.appendChild(l);}else if(x.status==='pending_upload'){var s=document.createElement('span');s.textContent='Awaiting admin publishing';s.style.color='#b45309';a.appendChild(s);}var m=document.createElement('span');m.textContent='Managed by OFast Pipeline';m.style.cssText='font-size:12px;color:#64748b;';a.appendChild(m);b.appendChild(a);break;}});})();</script>
         <?php
     }

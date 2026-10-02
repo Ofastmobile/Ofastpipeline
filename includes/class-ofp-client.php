@@ -11,15 +11,14 @@
  *  4.  Create the credit record in wp_ofp_credits (starts at zero balance)
  *  5.  Create subscriptions based on what was requested (crm / listing / both)
  *      — OFP_Subscription::create() handles this, including pipeline_config for CRM
- *  6.  Create a Monnify virtual account for subscription payments
- *  7.  Send the welcome email with login credentials + virtual account details
+ *  6.  Send the welcome email with login credentials
  *
  * TWO ONBOARDING PATHS (v2.1):
  *  - Manual  : Admin creates client via wp-admin form. Status goes straight to 'active'.
  *  - Self-serve: Client signs up via /signup. Status starts as 'pending_review'.
  *                Admin must approve before the account activates (fraud gate).
  *
- * Depends on: OFP_Security, OFP_Subscription, OFP_Monnify, OFP_Mailer, OFP_Credit.
+ * Depends on: OFP_Security, OFP_Subscription, OFP_Mailer, OFP_Credit.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -89,8 +88,8 @@ class OFP_Client {
         // ── 2. Prepare data ───────────────────────────────────────────────────
         $temp_password      = self::generate_temp_password();
         $onboarding_source  = $data['onboarding_source'] ?? 'manual';
-        $plan               = sanitize_text_field( $data['plan'] ?? 'starter' );
-        $subscriptions      = $data['subscriptions'] ?? [ 'crm' ]; // default to CRM only
+        $plan               = sanitize_text_field( $data['plan'] ?? 'free' );
+        $subscriptions      = $data['subscriptions'] ?? [ 'crm', 'listing' ];
         $phone              = OFP_Security::sanitize_phone( $data['phone'] );
         $business_phone     = OFP_Security::sanitize_phone( $data['business_phone'] ?? $data['phone'] );
         $whatsapp_number    = OFP_Security::sanitize_phone( $data['whatsapp_number'] ?? $data['phone'] );
@@ -168,37 +167,7 @@ class OFP_Client {
             }
         }
 
-        // ── 6. Create virtual account via configured payment gateway ─────────
-        // OFP_Payment is a provider-agnostic interface built in Phase 6.
-        // It supports any Nigerian gateway that offers dedicated virtual accounts
-        // (Monnify, Paystack, Flutterwave, Providus, etc.).
-        // The active provider is configured in wp-admin → OFast Pipeline → Settings.
-        //
-        // Guard: if OFP_Payment is not built yet (Phase 6), skip gracefully.
-        // The virtual account will be created when Phase 6 is deployed.
-        if ( class_exists( 'OFP_Payment' ) ) {
-            $account = OFP_Payment::create_virtual_account(
-                [
-                    'business_name' => $data['business_name'],
-                    'owner_name'    => $data['owner_name'],
-                    'email'         => $email,
-                ],
-                $client_id
-            );
-
-            if ( $account ) {
-                $wpdb->update(
-                    $wpdb->prefix . 'ofp_clients',
-                    [
-                        'virtual_account_number' => sanitize_text_field( $account->account_number ?? '' ),
-                        'virtual_bank_name'      => sanitize_text_field( $account->bank_name ?? '' ),
-                    ],
-                    [ 'id' => $client_id ]
-                );
-            }
-        }
-
-        // ── 7. Send welcome email ─────────────────────────────────────────────
+        // ── 6. Send welcome email ─────────────────────────────────────────────
         // Pass the plaintext temp password — it's only used here to email the
         // client. The hash is already stored in the DB above.
         OFP_Mailer::send_welcome_email( $client_id, $temp_password );
@@ -357,7 +326,18 @@ class OFP_Client {
      * @return bool
      */
     public static function update_status( int $id, string $status ): bool {
-        return self::update( $id, [ 'status' => sanitize_text_field( $status ) ] );
+        $status = sanitize_text_field( $status );
+        $before = self::get( $id );
+        $ok = self::update( $id, [ 'status' => $status ] );
+
+        if ( $ok && class_exists( 'OFP_Logger' ) && ( ! $before || $before->status !== $status ) ) {
+            OFP_Logger::log( 'Client status changed to ' . $status, $id, [
+                'previous_status' => $before->status ?? null,
+                'new_status'      => $status,
+            ] );
+        }
+
+        return $ok;
     }
 
     /**
@@ -384,6 +364,9 @@ class OFP_Client {
 
         if ( $updated ) {
             OFP_Mailer::send_approval_notification( $client );
+            if ( class_exists( 'OFP_Logger' ) ) {
+                OFP_Logger::log( 'Client approved', $id, [ 'previous_status' => 'pending_review' ] );
+            }
         }
 
         return $updated;
@@ -530,6 +513,10 @@ class OFP_Client {
             "DELETE FROM {$p}ofp_pipeline_configs WHERE client_id = %d",
             "DELETE FROM {$p}ofp_archives WHERE client_id = %d",
             "DELETE FROM {$p}ofp_client_sessions WHERE client_id = %d",
+            "DELETE lp FROM {$p}ofp_property_lease_payments lp INNER JOIN {$p}ofp_property_leases l ON l.id = lp.lease_id WHERE l.client_id = %d",
+            "DELETE FROM {$p}ofp_property_leases WHERE client_id = %d",
+            "DELETE FROM {$p}ofp_property_rent_options WHERE client_id = %d",
+            "DELETE FROM {$p}ofp_property_tenants WHERE client_id = %d",
             "DELETE FROM {$p}ofp_properties WHERE client_id = %d",
             "DELETE FROM {$p}ofp_property_inquiries WHERE client_id = %d",
         ];
@@ -598,6 +585,38 @@ class OFP_Client {
             $wpdb->prepare(
                 "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1",
                 sanitize_email( $email )
+            )
+        );
+    }
+
+    /**
+     * Check whether a given subdomain slug is already registered.
+     *
+     * @param  string $subdomain  Subdomain to check.
+     * @param  int    $exclude_id Optional client ID to exclude from check.
+     * @return bool               True if the subdomain is taken.
+     */
+    public static function subdomain_exists( string $subdomain, int $exclude_id = 0 ): bool {
+        global $wpdb;
+        $slug = sanitize_title( $subdomain );
+        if ( empty( $slug ) ) {
+            return false;
+        }
+
+        if ( $exclude_id > 0 ) {
+            return (bool) $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE subdomain = %s AND id != %d LIMIT 1",
+                    $slug,
+                    $exclude_id
+                )
+            );
+        }
+
+        return (bool) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE subdomain = %s LIMIT 1",
+                $slug
             )
         );
     }

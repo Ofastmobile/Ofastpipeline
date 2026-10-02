@@ -90,4 +90,58 @@ class OFP_Property_Payment_Context {
         do_action( 'ofp_property_payment_processed', (int) $purchase->id, (int) $installment->id, $amount, $allocation, $gateway, $reference );
         return true;
     }
+
+    /**
+     * Handles a deposit into a buyer's dedicated virtual account. Unlike
+     * checkout, bank transfers carry no reference we control, so we match
+     * purely by the Paystack customer_code saved against the purchase when
+     * its VA was created. One VA serves every installment on that purchase,
+     * so this can fire many times over the purchase's lifetime.
+     */
+    public static function process_verified_va_payment( string $customer_code, float $amount, string $gateway, string $provider_reference = '' ): bool {
+        if ( $amount <= 0 || ! $customer_code ) return false;
+
+        global $wpdb;
+        $p = $wpdb->prefix;
+
+        $purchase = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p}ofp_property_purchases WHERE va_customer_code = %s LIMIT 1", $customer_code ) );
+        if ( ! $purchase ) {
+            error_log( '[OFP_Property_Payment_Context] VA deposit with unmatched customer_code: ' . $customer_code );
+            return false;
+        }
+
+        if ( $provider_reference ) {
+            $existing = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$p}ofp_property_payments WHERE gateway = %s AND gateway_reference = %s LIMIT 1", sanitize_key( $gateway ), sanitize_text_field( $provider_reference ) ) );
+            if ( $existing ) return true; // Already processed, webhook retry.
+        }
+
+        // The oldest unpaid installment at the moment of deposit, purely so
+        // the notification hook has something to point at; allocate_payment()
+        // below is what actually decides where the money goes.
+        $installment_id = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$p}ofp_property_installments WHERE purchase_id = %d AND status != 'paid' ORDER BY installment_no ASC LIMIT 1",
+            (int) $purchase->id
+        ) );
+
+        $payment_id = OFP_Property_Payment_Record::create([
+            'purchase_id'       => (int) $purchase->id,
+            'payment_method'    => 'virtual_account',
+            'gateway'           => $gateway,
+            'gateway_reference' => $provider_reference,
+            'amount'            => $amount,
+            'status'            => 'successful',
+            'payer_name'        => $purchase->buyer_name,
+            'payer_reference'   => $provider_reference,
+        ]);
+
+        if ( is_wp_error( $payment_id ) ) {
+            error_log( '[OFP_Property_Payment_Context] Could not record VA payment for customer ' . $customer_code );
+            return false;
+        }
+
+        $allocation = OFP_Property_Commerce::allocate_payment( (int) $payment_id );
+
+        do_action( 'ofp_property_payment_processed', (int) $purchase->id, $installment_id, $amount, $allocation, $gateway, $provider_reference );
+        return true;
+    }
 }

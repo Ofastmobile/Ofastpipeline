@@ -9,6 +9,10 @@ OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
 
+if ( ! OFP_Auth::has_permission( 'view_reports' ) ) {
+    wp_die( 'You do not have permission to view reports.', 'Access Denied', [ 'response' => 403 ] );
+}
+
 global $wpdb;
 $p = $wpdb->prefix;
 
@@ -89,7 +93,6 @@ $comms_last_month = (int) $wpdb->get_var(
     <title>Reports — OFast Pipeline</title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="ofp-portal-body">
 
@@ -262,7 +265,7 @@ $comms_last_month = (int) $wpdb->get_var(
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const ctx = document.getElementById('monthlyPerformanceChart');
-    if (ctx) {
+    if (ctx && typeof ofpClientData !== 'undefined') {
         // Gradient for Leads
         const ctx2d = ctx.getContext('2d');
         const gradientLeads = ctx2d.createLinearGradient(0, 0, 0, 300);
@@ -274,67 +277,79 @@ document.addEventListener('DOMContentLoaded', function() {
         gradientConv.addColorStop(0, 'rgba(16, 185, 129, 1)');
         gradientConv.addColorStop(1, 'rgba(16, 185, 129, 0.4)');
 
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                datasets: [
-                    {
-                        label: 'Leads Generated',
-                        data: [120, 150, 180, 220, 210, 250, 280, 290, 310, 340, 380, 420],
-                        backgroundColor: gradientLeads,
-                        borderRadius: 6,
-                        barPercentage: 0.6,
-                        categoryPercentage: 0.8
+        const body = new URLSearchParams();
+        body.append('action', 'ofp_reports_chart_data');
+        body.append('nonce', ofpClientData.nonce);
+
+        fetch(ofpClientData.ajaxurl, { method: 'POST', credentials: 'same-origin', body: body })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (!res.success) return;
+                const monthly = res.data.monthly || [];
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: monthly.map(function(m) { return m.label; }),
+                        datasets: [
+                            {
+                                label: 'Leads Generated',
+                                data: monthly.map(function(m) { return m.total; }),
+                                backgroundColor: gradientLeads,
+                                borderRadius: 6,
+                                barPercentage: 0.6,
+                                categoryPercentage: 0.8
+                            },
+                            {
+                                label: 'Conversions',
+                                data: monthly.map(function(m) { return m.converted; }),
+                                backgroundColor: gradientConv,
+                                borderRadius: 6,
+                                barPercentage: 0.6,
+                                categoryPercentage: 0.8
+                            }
+                        ]
                     },
-                    {
-                        label: 'Conversions',
-                        data: [40, 55, 60, 85, 80, 95, 110, 115, 125, 140, 160, 185],
-                        backgroundColor: gradientConv,
-                        borderRadius: 6,
-                        barPercentage: 0.6,
-                        categoryPercentage: 0.8
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                    color: '#9ca3af',
+                                    usePointStyle: true,
+                                    boxWidth: 8
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: '#1f2937',
+                                titleColor: '#f9fafb',
+                                bodyColor: '#d1d5db',
+                                padding: 12,
+                                cornerRadius: 8,
+                                displayColors: true
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false, drawBorder: false },
+                                ticks: { color: '#9ca3af', font: { size: 12 } }
+                            },
+                            y: {
+                                grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+                                ticks: { color: '#9ca3af', font: { size: 12 }, padding: 10, precision: 0 }
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index',
+                        },
                     }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        align: 'end',
-                        labels: {
-                            color: '#9ca3af',
-                            usePointStyle: true,
-                            boxWidth: 8
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: '#1f2937',
-                        titleColor: '#f9fafb',
-                        bodyColor: '#d1d5db',
-                        padding: 12,
-                        cornerRadius: 8,
-                        displayColors: true
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: { display: false, drawBorder: false },
-                        ticks: { color: '#9ca3af', font: { size: 12 } }
-                    },
-                    y: {
-                        grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
-                        ticks: { color: '#9ca3af', font: { size: 12 }, padding: 10 }
-                    }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index',
-                },
-            }
-        });
+                });
+            })
+            .catch(function(err) { console.error('OFP reports chart error:', err); });
     }
 });
 </script>

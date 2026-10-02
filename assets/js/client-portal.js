@@ -256,20 +256,11 @@
     function initThemeToggle() {
         var btn = document.getElementById('ofp-theme-toggle');
         if ( ! btn ) return;
-        
-        var currentTheme = localStorage.getItem('ofp_theme') || 'dark';
-        if ( currentTheme === 'light' ) {
-            document.documentElement.setAttribute('data-theme', 'light');
-        }
 
-        btn.addEventListener('click', function () {
-            var isLight = document.documentElement.getAttribute('data-theme') === 'light';
-            if ( isLight ) {
-                document.documentElement.removeAttribute('data-theme');
-                localStorage.setItem('ofp_theme', 'dark');
-            } else {
-                document.documentElement.setAttribute('data-theme', 'light');
-                localStorage.setItem('ofp_theme', 'light');
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            if ( typeof window.ofpToggleTheme === 'function' ) {
+                window.ofpToggleTheme();
             }
         });
     }
@@ -296,7 +287,7 @@
     function initOfpCustomSelects() {
         var selects = document.querySelectorAll('.ofp-select');
         selects.forEach(function(select) {
-            if (select.closest('.ofp-custom-select-wrapper')) return;
+            if (select.closest('.ofp-custom-select-wrapper') || select.closest('.ofp-modal') || select.closest('.ofp-modal-backdrop') || select.classList.contains('ofp-native-select')) return;
 
             var wrapper = document.createElement('div');
             wrapper.className = 'ofp-custom-select-wrapper';

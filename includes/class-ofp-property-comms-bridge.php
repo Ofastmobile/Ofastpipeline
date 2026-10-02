@@ -16,16 +16,27 @@ class OFP_Property_Comms_Bridge {
         $row = $wpdb->get_row( $wpdb->prepare( "SELECT pu.*, pr.title AS property_title, c.sms_provider FROM {$p}ofp_property_purchases pu LEFT JOIN {$p}ofp_properties pr ON pr.id=pu.property_id LEFT JOIN {$p}ofp_clients c ON c.id=pu.client_id WHERE pu.id=%d LIMIT 1", $purchase_id ) );
         if ( ! $row ) return;
 
+        $payment_link = class_exists( 'OFP_Property_Checkout' ) ? OFP_Property_Checkout::payment_link( $purchase_id ) : '';
+
+        // Give the buyer a dedicated account number for this purchase, so
+        // any installment (or the full balance) can be paid by bank
+        // transfer, matched back automatically via webhook.
+        $va = class_exists( 'OFP_Property_Commerce' ) ? OFP_Property_Commerce::ensure_virtual_account( $purchase_id ) : null;
+
+        $va_html = $va ? sprintf( '<p>Or pay by bank transfer, anytime, any installment:<br>Account Number: <strong>%s</strong><br>Bank: <strong>%s</strong></p>', esc_html( $va->account_number ), esc_html( $va->bank_name ) ) : '';
+        $va_sms  = $va ? sprintf( ' Or transfer to %s (%s), any installment.', $va->account_number, $va->bank_name ) : '';
+
         if ( ! empty( $row->buyer_email ) ) {
             OFP_Mailer::send(
                 $row->buyer_email,
                 $row->buyer_name ?: 'there',
                 'Purchase recorded — ' . ( $row->property_title ?: 'Property' ),
-                sprintf( '<p>Hello %s,</p><p>Your purchase of <strong>%s</strong> has been recorded.</p><p>Total: <strong>₦%s</strong><br>Balance: <strong>₦%s</strong></p>', esc_html( $row->buyer_name ?: 'there' ), esc_html( $row->property_title ?: 'the property' ), number_format( (float) $row->total_price, 2 ), number_format( (float) $row->balance, 2 ) )
+                sprintf( '<p>Hello %s,</p><p>Your purchase of <strong>%s</strong> has been recorded.</p><p>Total: <strong>₦%s</strong><br>Balance: <strong>₦%s</strong></p>%s%s', esc_html( $row->buyer_name ?: 'there' ), esc_html( $row->property_title ?: 'the property' ), number_format( (float) $row->total_price, 2 ), number_format( (float) $row->balance, 2 ), $payment_link ? sprintf( '<p><a href="%s" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;">Pay Now</a></p>', esc_url( $payment_link ) ) : '', $va_html )
             );
         }
 
-        self::sms( $row, sprintf( 'Purchase recorded for %s. Total N%s. Balance N%s. Ref #%d.', $row->property_title ?: 'property', number_format( (float) $row->total_price, 2 ), number_format( (float) $row->balance, 2 ), $purchase_id ) );
+        self::sms( $row, sprintf( 'Purchase recorded for %s. Total N%s. Balance N%s. Pay: %s%s', $row->property_title ?: 'property', number_format( (float) $row->total_price, 2 ), number_format( (float) $row->balance, 2 ), $payment_link ?: ( 'Ref #' . $purchase_id ), $va_sms ) );
+
 
         if ( class_exists( 'OFP_Notification' ) && $row->client_id ) {
             OFP_Notification::create( (int) $row->client_id, 'property_purchase_created', 'Property purchase created', sprintf( '%s has accepted an installment purchase for %s.', $row->buyer_name ?: 'A buyer', $row->property_title ?: 'a property' ) );

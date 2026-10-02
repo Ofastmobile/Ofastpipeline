@@ -1,7 +1,8 @@
 <?php
 /**
  * Property manual payment flow.
- * Buyer-facing receipt submission + client/admin verification.
+ * Buyer-facing receipt submission only. Verification (admin + client) is
+ * handled canonically by OFP_Property_Payment_Records — see that class.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -14,22 +15,14 @@ class OFP_Property_Manual_Payment {
         add_action( 'init', [ __CLASS__, 'register_routes' ] );
         add_filter( 'query_vars', [ __CLASS__, 'register_query_vars' ] );
         add_action( 'template_redirect', [ __CLASS__, 'handle_public_route' ] );
-        add_action( 'admin_menu', [ __CLASS__, 'register_admin_menu' ] );
-        add_action( 'admin_post_ofp_verify_property_payment', [ __CLASS__, 'handle_admin_verify' ] );
-        add_action( 'admin_post_ofp_reject_property_payment', [ __CLASS__, 'handle_admin_reject' ] );
-        add_action( 'wp_ajax_ofp_client_verify_property_payment', [ __CLASS__, 'handle_client_verify' ] );
-        add_action( 'wp_ajax_ofp_client_reject_property_payment', [ __CLASS__, 'handle_client_reject' ] );
-        add_action( 'wp_footer', [ __CLASS__, 'inject_client_verification_nav' ], 998 );
     }
 
     public static function register_routes(): void {
         add_rewrite_rule( '^property-pay/?$', 'index.php?ofp_manual_payment=1', 'top' );
-        add_rewrite_rule( '^property-payment-verification/?$', 'index.php?ofp_property_payment_verification=1', 'top' );
     }
 
     public static function register_query_vars( array $vars ): array {
         $vars[] = 'ofp_manual_payment';
-        $vars[] = 'ofp_property_payment_verification';
         return $vars;
     }
 
@@ -58,10 +51,6 @@ class OFP_Property_Manual_Payment {
     public static function handle_public_route(): void {
         if ( get_query_var( 'ofp_manual_payment' ) ) {
             self::render_public_form();
-            exit;
-        }
-        if ( get_query_var( 'ofp_property_payment_verification' ) ) {
-            self::render_client_verification_page();
             exit;
         }
     }
@@ -137,7 +126,7 @@ class OFP_Property_Manual_Payment {
         <?php
     }
 
-    private static function store_receipt( array $file ) {
+    public static function store_receipt( array $file ) {
         if ( empty( $file['tmp_name'] ) || ! is_uploaded_file( $file['tmp_name'] ) ) return new WP_Error( 'receipt_invalid', 'Invalid receipt upload.' );
         if ( (int) $file['size'] > self::MAX_RECEIPT_SIZE ) return new WP_Error( 'receipt_too_large', 'Receipt must be 5 MB or smaller.' );
         $check = wp_check_filetype_and_ext( $file['tmp_name'], sanitize_file_name( $file['name'] ), [ 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'pdf' => 'application/pdf' ] );
@@ -151,77 +140,8 @@ class OFP_Property_Manual_Payment {
         return [ 'path' => $destination, 'mime' => $check['type'], 'size' => (int) $file['size'] ];
     }
 
-    private static function delete_receipt( string $path ): void {
+    public static function delete_receipt( string $path ): void {
         if ( $path && is_file( $path ) ) @unlink( $path );
-    }
-
-    private static function can_manage_client_payment( int $payment_id, $client ): bool {
-        global $wpdb;
-        $p = $wpdb->prefix;
-        return (bool) $wpdb->get_var( $wpdb->prepare(
-            "SELECT py.id FROM {$p}ofp_property_payments py INNER JOIN {$p}ofp_property_purchases pu ON pu.id = py.purchase_id WHERE py.id = %d AND pu.client_id = %d LIMIT 1",
-            $payment_id,
-            (int) $client->id
-        ) );
-    }
-
-    public static function register_admin_menu(): void {
-        if ( ! current_user_can( 'manage_options' ) ) return;
-        add_submenu_page( 'edit.php?post_type=ofp_property', 'Property Payments', 'Payments', 'manage_options', 'ofp-property-payments', [ __CLASS__, 'render_admin_payments' ] );
-    }
-
-    public static function render_admin_payments(): void {
-        global $wpdb;
-        $p = $wpdb->prefix;
-        $payments = $wpdb->get_results( "SELECT py.*, pu.buyer_name, pu.buyer_phone, pu.client_id, pr.title AS property_title, c.business_name FROM {$p}ofp_property_payments py INNER JOIN {$p}ofp_property_purchases pu ON pu.id=py.purchase_id LEFT JOIN {$p}ofp_properties pr ON pr.id=pu.property_id LEFT JOIN {$p}ofp_clients c ON c.id=pu.client_id ORDER BY py.created_at DESC, py.id DESC LIMIT 250" );
-        ?><div class="wrap"><h1>Property Payments</h1><p>Review property payment records. Only pending manual payments may be verified or rejected.</p><div style="overflow-x:auto;"><table class="widefat striped" style="min-width:1300px"><thead><tr><th>ID</th><th>Buyer</th><th>Property</th><th>Owner</th><th>Amount</th><th>Method</th><th>Gateway</th><th>Reference</th><th>Status</th><th>Receipt</th><th>Date</th><th>Action</th></tr></thead><tbody><?php foreach ( $payments as $payment ) : ?><tr><td>#<?php echo esc_html( $payment->id ); ?></td><td><?php echo esc_html( $payment->buyer_name ); ?><br><small><?php echo esc_html( $payment->buyer_phone ); ?></small></td><td><?php echo esc_html( $payment->property_title ); ?></td><td><?php echo esc_html( $payment->business_name ?: 'Platform' ); ?></td><td>NGN <?php echo esc_html( number_format( (float) $payment->amount, 2 ) ); ?></td><td><?php echo esc_html( ucfirst( $payment->payment_method ) ); ?></td><td><?php echo esc_html( $payment->gateway ?: '—' ); ?></td><td><code><?php echo esc_html( $payment->gateway_reference ?: ( $payment->payer_reference ?: '—' ) ); ?></code></td><td><?php echo esc_html( ucfirst( str_replace( '_', ' ', $payment->status ) ) ); ?></td><td><?php echo $payment->receipt_path ? '<span title="Private stored receipt">Available</span>' : '—'; ?></td><td><?php echo esc_html( $payment->created_at ); ?></td><td><?php if ( 'pending_verification' === $payment->status ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline"><?php wp_nonce_field( 'ofp_verify_payment_' . $payment->id ); ?><input type="hidden" name="action" value="ofp_verify_property_payment"><input type="hidden" name="payment_id" value="<?php echo esc_attr( $payment->id ); ?>"><button class="button button-primary" type="submit">Verify</button></form> <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline"><?php wp_nonce_field( 'ofp_reject_payment_' . $payment->id ); ?><input type="hidden" name="action" value="ofp_reject_property_payment"><input type="hidden" name="payment_id" value="<?php echo esc_attr( $payment->id ); ?>"><button class="button" type="submit">Reject</button></form><?php else : ?>—<?php endif; ?></td></tr><?php endforeach; if ( empty( $payments ) ) : ?><tr><td colspan="12">No property payments yet.</td></tr><?php endif; ?></tbody></table></div></div><?php
-    }
-
-    public static function handle_admin_verify(): void {
-        if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Access denied.' );
-        $id = absint( $_POST['payment_id'] ?? 0 );
-        check_admin_referer( 'ofp_verify_payment_' . $id );
-        OFP_Property_Payment_Record::success( $id, get_current_user_id() );
-        wp_safe_redirect( wp_get_referer() ?: admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-payments' ) );
-        exit;
-    }
-
-    public static function handle_admin_reject(): void {
-        if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Access denied.' );
-        $id = absint( $_POST['payment_id'] ?? 0 );
-        check_admin_referer( 'ofp_reject_payment_' . $id );
-        OFP_Property_Payment_Record::reject( $id, get_current_user_id(), 'Rejected from property payment review.' );
-        wp_safe_redirect( wp_get_referer() ?: admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-payments' ) );
-        exit;
-    }
-
-    private static function render_client_verification_page(): void {
-        OFP_Auth::require_client_login();
-        $client = OFP_Auth::current_client();
-        if ( ! $client || ! OFP_Subscription::has_active( 'listing', $client->id ) ) { wp_safe_redirect( home_url( '/dashboard' ) ); exit; }
-        global $wpdb;
-        $p = $wpdb->prefix;
-        $payments = $wpdb->get_results( $wpdb->prepare( "SELECT py.*, pu.buyer_name, pr.title AS property_title FROM {$p}ofp_property_payments py INNER JOIN {$p}ofp_property_purchases pu ON pu.id=py.purchase_id LEFT JOIN {$p}ofp_properties pr ON pr.id=pu.property_id WHERE pu.client_id=%d ORDER BY py.created_at DESC, py.id DESC LIMIT 250", (int) $client->id ) );
-        ?><!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Payment Verification</title><?php wp_head(); ?><link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>"></head><body class="ofp-portal-body"><?php include OFP_PATH . 'public/templates/partials/nav.php'; ?><div class="ofp-container"><div style="padding-bottom:60px"><h1 style="font-size:22px;font-weight:700;margin:0 0 24px">Payment Verification</h1><div class="ofp-card"><p class="ofp-hint">Review manual payments submitted by buyers for your properties.</p><div style="overflow-x:auto"><table class="widefat striped" style="min-width:1100px"><thead><tr><th>ID</th><th>Buyer</th><th>Property</th><th>Amount</th><th>Reference</th><th>Status</th><th>Receipt</th><th>Action</th></tr></thead><tbody><?php foreach ( $payments as $payment ) : ?><tr><td>#<?php echo esc_html( $payment->id ); ?></td><td><?php echo esc_html( $payment->buyer_name ); ?></td><td><?php echo esc_html( $payment->property_title ); ?></td><td>NGN <?php echo esc_html( number_format( (float) $payment->amount, 2 ) ); ?></td><td><?php echo esc_html( $payment->payer_reference ?: '—' ); ?></td><td><?php echo esc_html( ucfirst( str_replace( '_', ' ', $payment->status ) ) ); ?></td><td><?php echo $payment->receipt_path ? 'Available' : '—'; ?></td><td><?php if ( 'pending_verification' === $payment->status ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" style="display:inline"><input type="hidden" name="action" value="ofp_client_verify_property_payment"><input type="hidden" name="payment_id" value="<?php echo esc_attr( $payment->id ); ?>"><input type="hidden" name="nonce" value="<?php echo esc_attr( wp_create_nonce( 'ofp_client_payment_' . $payment->id ) ); ?>"><button class="button button-primary" type="submit">Verify</button></form> <form method="post" action="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" style="display:inline"><input type="hidden" name="action" value="ofp_client_reject_property_payment"><input type="hidden" name="payment_id" value="<?php echo esc_attr( $payment->id ); ?>"><input type="hidden" name="nonce" value="<?php echo esc_attr( wp_create_nonce( 'ofp_client_payment_' . $payment->id ) ); ?>"><button class="button" type="submit">Reject</button></form><?php else : ?>—<?php endif; ?></td></tr><?php endforeach; if ( empty( $payments ) ) : ?><tr><td colspan="8">No property payments yet.</td></tr><?php endif; ?></tbody></table></div></div></div></div><?php wp_footer(); ?></body></html><?php
-    }
-
-    private static function handle_client_action( int $payment_id, bool $approve ): void {
-        check_ajax_referer( 'ofp_client_payment_' . $payment_id, 'nonce' );
-        OFP_Auth::require_client_login();
-        $client = OFP_Auth::current_client();
-        if ( ! $client || ! OFP_Subscription::has_active( 'listing', $client->id ) || ! self::can_manage_client_payment( $payment_id, $client ) ) wp_send_json_error( 'Unauthorized', 403 );
-        $result = $approve ? OFP_Property_Payment_Record::success( $payment_id, 0 ) : OFP_Property_Payment_Record::reject( $payment_id, 0, 'Rejected by property client.' );
-        wp_send_json_success( [ 'result' => $result ] );
-    }
-
-    public static function handle_client_verify(): void { self::handle_client_action( absint( $_POST['payment_id'] ?? 0 ), true ); }
-    public static function handle_client_reject(): void { self::handle_client_action( absint( $_POST['payment_id'] ?? 0 ), false ); }
-
-    public static function inject_client_verification_nav(): void {
-        if ( is_admin() ) return;
-        $client = OFP_Auth::current_client();
-        if ( ! $client || ! OFP_Subscription::has_active( 'listing', $client->id ) ) return;
-        ?><script>(function(){function add(){var list=document.querySelector('.ofp-sidebar-nav ul');if(!list||list.querySelector('[data-ofp-nav-marker="payment-verification"]'))return;var items=list.querySelectorAll(':scope>li');var source=items[0];if(!source)return;var li=source.cloneNode(true),a=li.querySelector('a');if(!a)return;a.href=<?php echo wp_json_encode( home_url('/property-payment-verification/') ); ?>;a.removeAttribute('aria-disabled');a.classList.remove('locked');a.setAttribute('data-ofp-nav-marker','payment-verification');var icon=a.querySelector('.ofp-nav-icon');if(icon)icon.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>';var label=a.querySelector('.ofp-nav-label');if(label)label.textContent='Payment Verification';list.appendChild(li)}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',add);else add()})();</script><?php
     }
 }
 

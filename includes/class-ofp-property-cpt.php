@@ -170,16 +170,23 @@ class OFP_Property_CPT {
         wp_nonce_field( 'ofp_property_meta', 'ofp_property_nonce' );
 
         $meta = [
-            'ofp_client_id'     => get_post_meta( $post->ID, 'ofp_client_id',     true ),
-            'ofp_listing_type'  => get_post_meta( $post->ID, 'ofp_listing_type',  true ),
-            'ofp_property_type' => get_post_meta( $post->ID, 'ofp_property_type', true ),
-            'ofp_price'         => get_post_meta( $post->ID, 'ofp_price',         true ),
-            'ofp_price_period'  => get_post_meta( $post->ID, 'ofp_price_period',  true ),
-            'ofp_bedrooms'      => get_post_meta( $post->ID, 'ofp_bedrooms',      true ),
-            'ofp_bathrooms'     => get_post_meta( $post->ID, 'ofp_bathrooms',     true ),
-            'ofp_location_text' => get_post_meta( $post->ID, 'ofp_location_text', true ),
-            'ofp_is_featured'   => get_post_meta( $post->ID, 'ofp_is_featured',   true ),
-            'ofp_status'        => get_post_meta( $post->ID, 'ofp_status',        true ),
+            'ofp_client_id'      => get_post_meta( $post->ID, 'ofp_client_id',     true ),
+            'ofp_listing_type'   => get_post_meta( $post->ID, 'ofp_listing_type',  true ),
+            'ofp_property_type'  => get_post_meta( $post->ID, 'ofp_property_type', true ),
+            'ofp_price'          => get_post_meta( $post->ID, 'ofp_price',         true ),
+            'ofp_price_period'   => get_post_meta( $post->ID, 'ofp_price_period',  true ),
+            'ofp_bedrooms'       => get_post_meta( $post->ID, 'ofp_bedrooms',      true ),
+            'ofp_bathrooms'      => get_post_meta( $post->ID, 'ofp_bathrooms',     true ),
+            'ofp_parking'        => get_post_meta( $post->ID, 'ofp_parking',        true ),
+            'ofp_area_sqm'       => get_post_meta( $post->ID, 'ofp_area_sqm',       true ),
+            'ofp_title_document' => get_post_meta( $post->ID, 'ofp_title_document', true ),
+            'ofp_condition'      => get_post_meta( $post->ID, 'ofp_condition',      true ),
+            'ofp_furnishing'     => get_post_meta( $post->ID, 'ofp_furnishing',     true ),
+            'ofp_video_url'      => get_post_meta( $post->ID, 'ofp_video_url',      true ),
+            'ofp_amenities'      => json_decode( get_post_meta( $post->ID, 'ofp_amenities', true ) ?: '[]', true ) ?: [],
+            'ofp_location_text'  => get_post_meta( $post->ID, 'ofp_location_text',  true ),
+            'ofp_is_featured'    => get_post_meta( $post->ID, 'ofp_is_featured',   true ),
+            'ofp_status'         => get_post_meta( $post->ID, 'ofp_status',        true ),
         ];
 
         // Get all active clients for the dropdown.
@@ -197,19 +204,57 @@ class OFP_Property_CPT {
             .ofp-meta-field select { padding:6px 10px; border:1px solid #ddd; border-radius:4px; font-size:13px; }
         </style>
 
+        <?php
+        // Check if property has commerce activity (purchases, offers, or payment records).
+        $has_commerce = false;
+        $existing_prop = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}ofp_properties WHERE wp_post_id = %d LIMIT 1",
+            $post->ID
+        ) );
+        if ( $existing_prop ) {
+            $prop_id = (int) $existing_prop->id;
+            $has_commerce = (bool) $wpdb->get_var( $wpdb->prepare(
+                "SELECT 1 FROM {$wpdb->prefix}ofp_property_purchases WHERE property_id = %d LIMIT 1",
+                $prop_id
+            ) );
+            if ( ! $has_commerce ) {
+                $has_commerce = (bool) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT 1 FROM {$wpdb->prefix}ofp_property_offers WHERE property_id = %d LIMIT 1",
+                    $prop_id
+                ) );
+            }
+        }
+        ?>
         <div class="ofp-meta-grid">
             <div class="ofp-meta-field" style="grid-column:1/-1;">
                 <label>Client (Property Owner / Agent)</label>
-                <select name="ofp_client_id">
-                    <option value="">— Select Client —</option>
-                    <option value="0" data-ofp-platform="1" <?php selected( $meta['ofp_client_id'], '0' ); ?>>Admin (Internal)</option>
-                    <?php foreach ( $clients as $c ) : ?>
-                        <option value="<?php echo esc_attr( $c->id ); ?>"
-                            <?php selected( $meta['ofp_client_id'], $c->id ); ?>>
-                            <?php echo esc_html( $c->business_name . ' (' . $c->owner_name . ')' ); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                <?php if ( $has_commerce ) : ?>
+                    <input type="hidden" name="ofp_client_id" value="<?php echo esc_attr( $meta['ofp_client_id'] ); ?>">
+                    <select disabled style="opacity:0.7;">
+                        <?php if ( (string) $meta['ofp_client_id'] === '0' ) : ?>
+                            <option selected>Admin (Internal)</option>
+                        <?php else :
+                            $owner_name = $wpdb->get_var( $wpdb->prepare(
+                                "SELECT CONCAT(business_name, ' (', owner_name, ')') FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
+                                $meta['ofp_client_id']
+                            ) );
+                        ?>
+                            <option selected><?php echo esc_html( $owner_name ?: 'Client #' . $meta['ofp_client_id'] ); ?></option>
+                        <?php endif; ?>
+                    </select>
+                    <p style="color:#ef4444;font-size:11px;margin:4px 0 0;">Owner cannot be changed — this property has active purchases or offers.</p>
+                <?php else : ?>
+                    <select name="ofp_client_id">
+                        <option value="">— Select Client —</option>
+                        <option value="0" data-ofp-platform="1" <?php selected( $meta['ofp_client_id'], '0' ); ?>>Admin (Internal)</option>
+                        <?php foreach ( $clients as $c ) : ?>
+                            <option value="<?php echo esc_attr( $c->id ); ?>"
+                                <?php selected( $meta['ofp_client_id'], $c->id ); ?>>
+                                <?php echo esc_html( $c->business_name . ' (' . $c->owner_name . ')' ); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                <?php endif; ?>
             </div>
 
             <div class="ofp-meta-field">
@@ -217,6 +262,9 @@ class OFP_Property_CPT {
                 <select name="ofp_listing_type">
                     <option value="sale" <?php selected( $meta['ofp_listing_type'], 'sale' ); ?>>For Sale</option>
                     <option value="rent" <?php selected( $meta['ofp_listing_type'], 'rent' ); ?>>For Rent</option>
+                    <option value="shortlet" <?php selected( $meta['ofp_listing_type'], 'shortlet' ); ?>>Short Let</option>
+                    <option value="commercial" <?php selected( $meta['ofp_listing_type'], 'commercial' ); ?>>Commercial</option>
+                    <option value="land" <?php selected( $meta['ofp_listing_type'], 'land' ); ?>>Land</option>
                 </select>
             </div>
 
@@ -224,7 +272,7 @@ class OFP_Property_CPT {
                 <label>Property Type</label>
                 <select name="ofp_property_type">
                     <?php
-                    $types = [ 'apartment' => 'Apartment', 'duplex' => 'Duplex', 'bungalow' => 'Bungalow',
+                    $types = [ 'apartment' => 'Apartment', 'duplex' => 'Duplex', 'semi-detached' => 'Semi-Detached', 'bungalow' => 'Bungalow',
                                'terrace'   => 'Terrace', 'land' => 'Land', 'office' => 'Office',
                                'shop'      => 'Shop', 'warehouse' => 'Warehouse', 'other' => 'Other' ];
                     foreach ( $types as $val => $label ) :
@@ -243,11 +291,13 @@ class OFP_Property_CPT {
             </div>
 
             <div class="ofp-meta-field">
-                <label>Price Period (for rent)</label>
+                <label>Price Period</label>
+                <?php $pp = $meta['ofp_price_period']; if ( $pp === 'one-time' ) $pp = 'sales'; ?>
                 <select name="ofp_price_period">
-                    <option value="year"     <?php selected( $meta['ofp_price_period'], 'year' ); ?>>Per Year</option>
-                    <option value="month"    <?php selected( $meta['ofp_price_period'], 'month' ); ?>>Per Month</option>
-                    <option value="one-time" <?php selected( $meta['ofp_price_period'], 'one-time' ); ?>>One-Time (Sale)</option>
+                    <option value="sales"  <?php selected( $pp, 'sales' ); ?>>Sales</option>
+                    <option value="year"   <?php selected( $pp, 'year' ); ?>>Per Year (Rent)</option>
+                    <option value="2years" <?php selected( $pp, '2years' ); ?>>Per 2 Years (Rent)</option>
+                    <option value="month"  <?php selected( $pp, 'month' ); ?>>Per Month (Rent)</option>
                 </select>
             </div>
 
@@ -259,6 +309,115 @@ class OFP_Property_CPT {
             <div class="ofp-meta-field">
                 <label>Bathrooms</label>
                 <input type="number" name="ofp_bathrooms" value="<?php echo esc_attr( $meta['ofp_bathrooms'] ); ?>" min="0" max="20">
+            </div>
+
+            <div class="ofp-meta-field">
+                <label>Parking Spaces</label>
+                <input type="number" name="ofp_parking" value="<?php echo esc_attr( $meta['ofp_parking'] ); ?>" min="0" max="50">
+            </div>
+
+            <div class="ofp-meta-field">
+                <label>Area (SQM)</label>
+                <input type="number" name="ofp_area_sqm" value="<?php echo esc_attr( $meta['ofp_area_sqm'] ); ?>" min="0">
+            </div>
+
+            <script>
+            (function(){
+                var lt = document.querySelector('select[name="ofp_listing_type"]');
+                var pt = document.querySelector('select[name="ofp_property_type"]');
+                if (!lt) return;
+                function wrap(n){ var e = document.querySelector('[name="' + n + '"]'); return e ? e.closest('.ofp-meta-field') : null; }
+                function sync(){
+                    var land = lt.value === 'land';
+                    ['ofp_bedrooms','ofp_bathrooms','ofp_parking'].forEach(function(n){
+                        var w = wrap(n); if (w) w.style.display = land ? 'none' : '';
+                    });
+                    if (land && pt) pt.value = 'land';
+                }
+                lt.addEventListener('change', sync);
+                sync();
+            })();
+            </script>
+
+            <div class="ofp-meta-field">
+                <label>Title Document</label>
+                <select name="ofp_title_document">
+                    <option value="">-- Select Title --</option>
+                    <?php
+                    $docs = [
+                        'C of O'               => 'Certificate of Occupancy (C of O)',
+                        'Governor\'s Consent'  => 'Governor\'s Consent',
+                        'Gazette'              => 'Gazette',
+                        'Deed of Assignment'   => 'Deed of Assignment',
+                        'R of O'               => 'Right of Occupancy (R of O)',
+                        'Excision'             => 'Excision',
+                        'Court Judgment'       => 'Court Judgment',
+                        'Other'                => 'Other',
+                    ];
+                    foreach ( $docs as $val => $lbl ) :
+                    ?>
+                        <option value="<?php echo esc_attr( $val ); ?>" <?php selected( $meta['ofp_title_document'], $val ); ?>><?php echo esc_html( $lbl ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="ofp-meta-field">
+                <label>Condition</label>
+                <select name="ofp_condition">
+                    <option value="">-- Select Condition --</option>
+                    <?php
+                    $conditions = [ 'Newly Built', 'Fairly Used', 'Renovation Needed', 'Under Construction', 'Off-Plan' ];
+                    foreach ( $conditions as $c ) :
+                    ?>
+                        <option value="<?php echo esc_attr( $c ); ?>" <?php selected( $meta['ofp_condition'], $c ); ?>><?php echo esc_html( $c ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="ofp-meta-field">
+                <label>Furnishing</label>
+                <select name="ofp_furnishing">
+                    <option value="">-- Select Furnishing --</option>
+                    <?php
+                    $furnishings = [ 'Furnished', 'Semi-Furnished', 'Unfurnished' ];
+                    foreach ( $furnishings as $f ) :
+                    ?>
+                        <option value="<?php echo esc_attr( $f ); ?>" <?php selected( $meta['ofp_furnishing'], $f ); ?>><?php echo esc_html( $f ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="ofp-meta-field" style="grid-column:1/-1;">
+                <label>Video Tour Walkthrough URL (YouTube, Vimeo, or MP4 link)</label>
+                <input type="url" name="ofp_video_url" value="<?php echo esc_attr( $meta['ofp_video_url'] ); ?>" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+
+            <div class="ofp-meta-field" style="grid-column:1/-1;">
+                <label>Amenities &amp; Features</label>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:8px; margin-top:4px;">
+                    <?php
+                    $all_amenities = [
+                        'swimming_pool'   => 'Swimming Pool',
+                        'smart_home'      => 'Smart Home Automation',
+                        'power_247'       => '24/7 Electricity',
+                        'cctv_security'   => 'CCTV & Uniformed Security',
+                        'gym'             => 'Gym / Fitness Center',
+                        'elevator'        => 'Elevator / Lift',
+                        'playground'      => 'Children Play Area',
+                        'bq'              => 'Boys Quarters (BQ)',
+                        'water_treatment' => 'Water Treatment Plant',
+                        'fitted_kitchen'  => 'Fully Fitted Kitchen',
+                    ];
+                    $selected_amenities = is_array( $meta['ofp_amenities'] ) ? $meta['ofp_amenities'] : [];
+                    foreach ( $all_amenities as $key => $label ) :
+                    ?>
+                        <label style="display:flex; align-items:center; gap:6px; font-weight:normal; font-size:12px; cursor:pointer;">
+                            <input type="checkbox" name="ofp_amenities[]" value="<?php echo esc_attr( $key ); ?>"
+                                <?php checked( in_array( $key, $selected_amenities, true ) ); ?>>
+                            <?php echo esc_html( $label ); ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
             </div>
 
             <div class="ofp-meta-field" style="grid-column:1/-1;">
@@ -281,12 +440,9 @@ class OFP_Property_CPT {
                 $client_id = (int) $meta['ofp_client_id'];
                 $can_feature = true;
                 if ( $client_id ) {
-                    $plan = get_user_meta( $client_id, 'listing_plan', true ) ?: 'free';
-                    if ( class_exists('OFP_Subscription') ) {
-                        $sub_plan = OFP_Subscription::get_active_listing_plan( $client_id );
-                        if ( $sub_plan ) {
-                            $plan = $sub_plan;
-                        }
+                    $plan = 'free';
+                    if ( class_exists( 'OFP_Subscription' ) ) {
+                        $plan = OFP_Subscription::client_plan( $client_id );
                     }
                     if ( $plan === 'free' ) {
                         $can_feature = false;
@@ -333,9 +489,24 @@ class OFP_Property_CPT {
                 // Save listing type from Quick Edit.
                 if ( isset( $_POST['ofp_listing_type'] ) ) {
                     $listing_type = sanitize_text_field( wp_unslash( $_POST['ofp_listing_type'] ) );
-                    if ( in_array( $listing_type, [ 'sale', 'rent' ], true ) ) {
+                    if ( in_array( $listing_type, self::LISTING_TYPES, true ) ) {
                         update_post_meta( $post_id, 'ofp_listing_type', $listing_type );
                     }
+                }
+
+                // Save price period from Quick Edit.
+                if ( isset( $_POST['ofp_price_period'] ) ) {
+                    $price_period = sanitize_text_field( wp_unslash( $_POST['ofp_price_period'] ) );
+                    if ( $price_period === 'one-time' ) $price_period = 'sales';
+                    if ( in_array( $price_period, [ 'sales', 'year', '2years', 'month' ], true ) ) {
+                        update_post_meta( $post_id, 'ofp_price_period', $price_period );
+                    }
+                }
+
+                // Enforce: sale listing type must have 'sales' price period.
+                $current_lt = get_post_meta( $post_id, 'ofp_listing_type', true );
+                if ( self::is_sale_like( (string) $current_lt ) ) {
+                    update_post_meta( $post_id, 'ofp_price_period', 'sales' );
                 }
 
                 $client_id = absint( get_post_meta( $post_id, 'ofp_client_id', true ) );
@@ -348,45 +519,97 @@ class OFP_Property_CPT {
         if ( ! current_user_can( 'edit_post', $post_id ) ) return;
 
         $fields = [
-            'ofp_client_id'     => 'absint',
-            'ofp_listing_type'  => 'sanitize_text_field',
-            'ofp_property_type' => 'sanitize_text_field',
-            'ofp_price'         => 'floatval',
-            'ofp_price_period'  => 'sanitize_text_field',
-            'ofp_bedrooms'      => 'absint',
-            'ofp_bathrooms'     => 'absint',
-            'ofp_location_text' => 'sanitize_text_field',
-            'ofp_status'        => 'sanitize_text_field',
+            'ofp_client_id'      => 'absint',
+            'ofp_listing_type'   => 'sanitize_text_field',
+            'ofp_property_type'  => 'sanitize_text_field',
+            'ofp_price'          => 'floatval',
+            'ofp_price_period'   => 'sanitize_text_field',
+            'ofp_bedrooms'       => 'absint',
+            'ofp_bathrooms'      => 'absint',
+            'ofp_parking'        => 'absint',
+            'ofp_area_sqm'       => 'absint',
+            'ofp_title_document' => 'sanitize_text_field',
+            'ofp_condition'      => 'sanitize_text_field',
+            'ofp_furnishing'     => 'sanitize_text_field',
+            'ofp_video_url'      => 'esc_url_raw',
+            'ofp_location_text'  => 'sanitize_text_field',
+            'ofp_status'         => 'sanitize_text_field',
         ];
 
         foreach ( $fields as $key => $sanitizer ) {
             $value = isset( $_POST[ $key ] )
                 ? $sanitizer( wp_unslash( $_POST[ $key ] ) )
                 : '';
+            // Normalize legacy one-time → sales.
+            if ( $key === 'ofp_price_period' && $value === 'one-time' ) {
+                $value = 'sales';
+            }
             update_post_meta( $post_id, $key, $value );
+        }
+
+        // Save amenities array
+        $amenities = isset( $_POST['ofp_amenities'] ) && is_array( $_POST['ofp_amenities'] )
+            ? array_map( 'sanitize_text_field', wp_unslash( $_POST['ofp_amenities'] ) )
+            : [];
+        update_post_meta( $post_id, 'ofp_amenities', json_encode( array_values( $amenities ) ) );
+
+        // Enforce: sale listing type must have 'sales' price period.
+        $listing_type = sanitize_text_field( wp_unslash( $_POST['ofp_listing_type'] ?? '' ) );
+        if ( self::is_sale_like( $listing_type ) ) {
+            update_post_meta( $post_id, 'ofp_price_period', 'sales' );
+        }
+
+        // Land listings always use the Land property type and have no rooms or parking.
+        if ( $listing_type === 'land' ) {
+            update_post_meta( $post_id, 'ofp_property_type', 'land' );
+            update_post_meta( $post_id, 'ofp_bedrooms', 0 );
+            update_post_meta( $post_id, 'ofp_bathrooms', 0 );
+            update_post_meta( $post_id, 'ofp_parking', 0 );
+        }
+
+        // Lock client_id if property has commerce activity.
+        $client_id = absint( $_POST['ofp_client_id'] ?? 0 );
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $existing_prop = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id, client_id FROM {$p}ofp_properties WHERE wp_post_id = %d LIMIT 1",
+            $post_id
+        ) );
+        if ( $existing_prop ) {
+            $has_commerce = (bool) $wpdb->get_var( $wpdb->prepare(
+                "SELECT 1 FROM {$p}ofp_property_purchases WHERE property_id = %d LIMIT 1",
+                (int) $existing_prop->id
+            ) );
+            if ( ! $has_commerce ) {
+                $has_commerce = (bool) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT 1 FROM {$p}ofp_property_offers WHERE property_id = %d LIMIT 1",
+                    (int) $existing_prop->id
+                ) );
+            }
+            if ( $has_commerce ) {
+                // Keep existing owner — ignore submitted client_id.
+                $client_id = (int) $existing_prop->client_id;
+                update_post_meta( $post_id, 'ofp_client_id', $client_id );
+            }
         }
 
         // Checkbox — absent means unchecked.
         // If client is on free plan, force to 0.
-        $client_id = absint( $_POST['ofp_client_id'] ?? 0 );
         $is_featured = isset( $_POST['ofp_is_featured'] ) ? '1' : '0';
         
         if ( $client_id ) {
             $plan = 'free';
-            if ( class_exists('OFP_Subscription') ) {
-                $plan = OFP_Subscription::get_active_listing_plan( $client_id ) ?: 'free';
+            if ( class_exists( 'OFP_Subscription' ) ) {
+                $plan = OFP_Subscription::client_plan( $client_id );
             }
             if ( $plan === 'free' ) {
-                $is_featured = '0'; // Enforce restriction on save.
+                $is_featured = '0';
             }
         }
         update_post_meta( $post_id, 'ofp_is_featured', $is_featured );
 
         // Sync back to ofp_properties table if a client is assigned (or admin).
-        $client_id = isset( $_POST['ofp_client_id'] ) ? absint( $_POST['ofp_client_id'] ) : null;
-        if ( $client_id !== null ) {
-            self::sync_to_plugin_table( $post_id, $client_id );
-        }
+        self::sync_to_plugin_table( $post_id, $client_id );
 
         // Sync ofp_status to WP post_status
         $ofp_status = $_POST['ofp_status'] ?? 'pending_upload';
@@ -625,7 +848,7 @@ class OFP_Property_CPT {
 
             case 'ofp_list_type':
                 $lt = get_post_meta( $post_id, 'ofp_listing_type', true );
-                $lt_colors = [ 'sale' => '#2563eb', 'rent' => '#8b5cf6' ];
+                $lt_colors = [ 'sale' => '#2563eb', 'rent' => '#8b5cf6', 'shortlet' => '#d97706', 'commercial' => '#7c3aed', 'land' => '#4d7c0f' ];
                 $lt_color  = $lt_colors[ $lt ] ?? '#9ca3af';
                 echo '<span style="color:' . esc_attr( $lt_color ) . ';font-weight:600;" data-listing-type="' . esc_attr( $lt ) . '">'
                     . esc_html( ucfirst( $lt ?: '—' ) )
@@ -639,9 +862,13 @@ class OFP_Property_CPT {
             case 'ofp_price':
                 $price  = (float) get_post_meta( $post_id, 'ofp_price',        true );
                 $period = get_post_meta( $post_id, 'ofp_price_period', true );
+                if ( $period === 'one-time' ) $period = 'sales';
+                $period_labels = [ 'sales' => '', 'year' => 'year', '2years' => '2 years', 'month' => 'month' ];
+                $period_display = $period_labels[ $period ] ?? $period;
                 echo $price
-                    ? '₦' . esc_html( number_format( $price, 0 ) ) . ( $period ? ' / ' . esc_html( $period ) : '' )
+                    ? '₦' . esc_html( number_format( $price, 0 ) ) . ( $period_display ? ' / ' . esc_html( $period_display ) : '' )
                     : '—';
+                echo ' <span style="display:none;" data-price-period="' . esc_attr( $period ?: 'sales' ) . '"></span>';
                 break;
 
             case 'ofp_status':
@@ -677,6 +904,18 @@ class OFP_Property_CPT {
                     <select name="ofp_listing_type">
                         <option value="sale">For Sale</option>
                         <option value="rent">For Rent</option>
+                        <option value="shortlet">Short Let</option>
+                        <option value="commercial">Commercial</option>
+                        <option value="land">Land</option>
+                    </select>
+                </label>
+                <label class="inline-edit-group">
+                    <span class="title">Price Period</span>
+                    <select name="ofp_price_period">
+                        <option value="sales">Sales</option>
+                        <option value="year">Per Year (Rent)</option>
+                        <option value="2years">Per 2 Years (Rent)</option>
+                        <option value="month">Per Month (Rent)</option>
                     </select>
                 </label>
             </div>
@@ -700,8 +939,23 @@ class OFP_Property_CPT {
                 if (typeof id === 'object') id = this.getId(id);
                 var row = $('#post-' + id);
                 var listingType = row.find('.column-ofp_list_type span[data-listing-type]').data('listing-type') || 'sale';
+                var pricePeriod = row.find('.column-ofp_price span[data-price-period]').data('price-period') || 'sales';
+                if (pricePeriod === 'one-time') pricePeriod = 'sales';
                 var editRow = $('#edit-' + id);
                 editRow.find('select[name="ofp_listing_type"]').val(listingType);
+                editRow.find('select[name="ofp_price_period"]').val(pricePeriod);
+
+                // Auto-set price period when listing type changes.
+                editRow.find('select[name="ofp_listing_type"]').off('change.ofpPeriod').on('change.ofpPeriod', function(){
+                    if ($(this).val() === 'sale' || $(this).val() === 'land') {
+                        editRow.find('select[name="ofp_price_period"]').val('sales');
+                    } else {
+                        var curPeriod = editRow.find('select[name="ofp_price_period"]').val();
+                        if (curPeriod === 'sales') {
+                            editRow.find('select[name="ofp_price_period"]').val('year');
+                        }
+                    }
+                });
             };
         })(jQuery);
         </script>
@@ -719,18 +973,34 @@ class OFP_Property_CPT {
         if ( is_front_page() && OFP_Host_Router::current_zone() === 'property' ) {
             $theme_override = locate_template( 'archive-ofp_property.php' );
             if ( $theme_override ) return $theme_override;
+            if ( file_exists( OFP_PATH . 'public/templates/property-marketplace.php' ) ) {
+                return OFP_PATH . 'public/templates/property-marketplace.php';
+            }
             return OFP_PATH . 'public/templates/property-archive.php';
+        }
+
+        // Main site front page: load modern property-homepage.php
+        if ( ( is_front_page() || is_home() ) && OFP_Host_Router::current_zone() !== 'app' ) {
+            if ( file_exists( OFP_PATH . 'public/templates/property-homepage.php' ) ) {
+                return OFP_PATH . 'public/templates/property-homepage.php';
+            }
         }
 
         if ( is_post_type_archive( 'ofp_property' ) && OFP_Host_Router::current_zone() !== 'app' ) {
             $theme_override = locate_template( 'archive-ofp_property.php' );
             if ( $theme_override ) return $theme_override;
+            if ( file_exists( OFP_PATH . 'public/templates/property-marketplace.php' ) ) {
+                return OFP_PATH . 'public/templates/property-marketplace.php';
+            }
             return OFP_PATH . 'public/templates/property-archive.php';
         }
 
         if ( is_singular( 'ofp_property' ) ) {
             $theme_override = locate_template( 'single-ofp_property.php' );
             if ( $theme_override ) return $theme_override;
+            if ( file_exists( OFP_PATH . 'public/templates/property-single-detail.php' ) ) {
+                return OFP_PATH . 'public/templates/property-single-detail.php';
+            }
             return OFP_PATH . 'public/templates/property-single.php';
         }
 
@@ -804,12 +1074,25 @@ class OFP_Property_CPT {
         return true;
     }
 
+    /** Every allowed listing type value. */
+    const LISTING_TYPES = [ 'sale', 'rent', 'shortlet', 'commercial', 'land' ];
+
+    /**
+     * Listing types that are bought (one time or by installment) rather
+     * than rented. They all use the 'sales' price period and can go
+     * through offers and installment purchases.
+     */
+    public static function is_sale_like( string $listing_type ): bool {
+        return in_array( $listing_type, [ 'sale', 'land' ], true );
+    }
+
     public static function count_for_client( int $client_id ): int {
         $query = new WP_Query( [
             'post_type'      => 'ofp_property',
             'post_status'    => [ 'publish', 'pending', 'draft' ],
             'meta_key'       => 'ofp_client_id',
             'meta_value'     => $client_id,
+            'ofp_include_occupied' => true,
             'posts_per_page' => -1,
             'fields'         => 'ids',
             'no_found_rows'  => true,
@@ -818,10 +1101,8 @@ class OFP_Property_CPT {
     }
 
     public static function can_add_property( int $client_id ): bool {
-        $plan = OFP_Subscription::get_active_listing_plan( $client_id );
-        if ( ! $plan ) return false;
-
-        $cap = self::get_plan_cap( $plan );
+        $plan = OFP_Subscription::client_plan( $client_id );
+        $cap  = self::get_plan_cap( $plan );
         return self::count_for_client( $client_id ) < $cap;
     }
 
@@ -831,6 +1112,7 @@ class OFP_Property_CPT {
             'post_status'    => [ 'publish', 'pending', 'draft' ],
             'meta_key'       => 'ofp_client_id',
             'meta_value'     => $client_id,
+            'ofp_include_occupied' => true,
             'posts_per_page' => -1,
             'orderby'        => 'date',
             'order'          => 'DESC',

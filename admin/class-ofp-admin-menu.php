@@ -57,6 +57,8 @@ class OFP_Admin_Menu {
         add_action( 'admin_init', [ $this, 'handle_save_company_bank' ] ); // Phase 17
         add_action( 'admin_post_ofp_retry_trigger',  [ $this, 'handle_retry_trigger' ] );
         add_action( 'admin_post_ofp_cancel_trigger',  [ $this, 'handle_cancel_trigger' ] );
+        add_action( 'admin_post_ofp_send_broadcast',  [ $this, 'handle_send_broadcast' ] );
+        add_action( 'admin_post_ofp_save_universal_template',  [ $this, 'handle_save_universal_template' ] );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -91,6 +93,7 @@ class OFP_Admin_Menu {
         // ── Submenus (all admins) ─────────────────────────────────────────────
         add_submenu_page( 'ofp-overview', 'Overview',        'Overview',        'read', 'ofp-overview',        [ $this, 'render_overview' ] );
         add_submenu_page( 'ofp-overview', 'Clients',         'Clients',         'read', 'ofp-clients',         [ $this, 'render_clients' ] );
+        add_submenu_page( 'ofp-overview', 'Team Members',    'Team Members',    'read', 'ofp-team',            [ $this, 'render_team' ] );
         add_submenu_page( 'ofp-overview', 'Leads',           'Leads',           'read', 'ofp-leads',           [ $this, 'render_leads' ] );
         add_submenu_page( 'ofp-overview', 'Trigger Queue',   'Trigger Queue',   'read', 'ofp-triggers',        [ $this, 'render_triggers' ] );
         add_submenu_page( 'ofp-overview', 'Communications',  'Communications',  'read', 'ofp-communications',  [ $this, 'render_communications' ] );
@@ -99,6 +102,7 @@ class OFP_Admin_Menu {
         add_submenu_page( 'ofp-overview', 'Funding Requests', 'Funding Requests', 'read', 'ofp-funding-requests', [ $this, 'render_funding_requests' ] ); // Phase 17
         add_submenu_page( 'ofp-overview', 'Send Notification', 'Send Notification', 'manage_options', 'ofp-send-notification', [ $this, 'render_send_notification' ] ); // Phase 17b
         add_submenu_page( 'ofp-overview', 'Activity Logs',   'Activity Logs',   'read', 'ofp-activity-logs',   [ $this, 'render_activity_logs' ] ); // Phase 21
+        add_submenu_page( 'ofp-overview', 'Rent Oversight',  'Rent Oversight',  'read', 'ofp-rent-oversight',  [ $this, 'render_rent_oversight' ] );
 
         // ── Super admin only ──────────────────────────────────────────────────
         if ( $is_super ) {
@@ -132,6 +136,7 @@ class OFP_Admin_Menu {
             'ofast-pipeline_page_ofp-funding-requests',
             'ofast-pipeline_page_ofp-send-notification',
             'ofast-pipeline_page_ofp-activity-logs',
+            'ofast-pipeline_page_ofp-rent-oversight',
         ];
 
         if ( ! in_array( $hook, $ofp_pages, true ) ) {
@@ -165,12 +170,14 @@ class OFP_Admin_Menu {
 
     public function render_overview():       void { $this->load_view( 'overview' ); }
     public function render_clients():        void { $this->load_view( 'clients-list' ); }
+    public function render_team():           void { $this->load_view( 'team-list' ); }
     public function render_leads():          void { $this->load_view( 'leads-list' ); }
     public function render_triggers():       void { $this->load_view( 'triggers-list' ); }
-    public function render_communications(): void { $this->load_view( 'communications-log' ); }
+    public function render_communications(): void { $this->load_view( 'communications' ); }
     public function render_billing():        void { $this->load_view( 'billing' ); }
     public function render_reports():        void { $this->load_view( 'reports' ); }
     public function render_activity_logs():  void { $this->load_view( 'activity-logs' ); }
+    public function render_rent_oversight(): void { $this->load_view( 'rent-oversight' ); }
 
     public function render_settings(): void {
         if ( ! OFP_Auth::is_super_admin() ) {
@@ -225,10 +232,7 @@ class OFP_Admin_Menu {
 
         $this->require_admin_post( 'ofp_add_client' );
 
-        $subscriptions = [];
-        if ( ! empty( $_POST['want_crm'] ) )     $subscriptions[] = 'crm';
-        if ( ! empty( $_POST['want_listing'] ) )  $subscriptions[] = 'listing';
-        if ( empty( $subscriptions ) )            $subscriptions   = [ 'crm' ];
+        $subscriptions = [ 'crm', 'listing' ];
 
         $client_id = OFP_Client::create( [
             'business_name'     => sanitize_text_field( wp_unslash( $_POST['business_name']     ?? '' ) ),
@@ -238,8 +242,8 @@ class OFP_Admin_Menu {
             'business_phone'    => sanitize_text_field( wp_unslash( $_POST['business_phone']    ?? '' ) ),
             'whatsapp_number'   => sanitize_text_field( wp_unslash( $_POST['whatsapp_number']   ?? '' ) ),
             'subdomain'         => sanitize_title(      wp_unslash( $_POST['subdomain']         ?? '' ) ),
-            'business_category' => sanitize_text_field( wp_unslash( $_POST['business_category'] ?? '' ) ),
-            'plan'              => sanitize_text_field( wp_unslash( $_POST['plan']              ?? 'starter' ) ),
+            'business_category' => 'property',
+            'plan'              => sanitize_text_field( wp_unslash( $_POST['plan']              ?? 'free' ) ),
             'listing_plan'      => sanitize_text_field( wp_unslash( $_POST['listing_plan']      ?? 'free' ) ),
             'subscriptions'     => $subscriptions,
             'onboarding_source' => 'manual',
@@ -553,9 +557,7 @@ class OFP_Admin_Menu {
             'ofp_default_followup_2'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_2']  ?? '' ) ),
             'ofp_default_followup_3'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_3']  ?? '' ) ),
             // Payment gateway
-            'ofp_payment_provider'       => sanitize_text_field( wp_unslash( $_POST['ofp_payment_provider']       ?? 'monnify' ) ),
-            'ofp_monnify_base_url'       => esc_url_raw(          wp_unslash( $_POST['ofp_monnify_base_url']       ?? '' ) ),
-            'ofp_monnify_contract_code'  => sanitize_text_field( wp_unslash( $_POST['ofp_monnify_contract_code']  ?? '' ) ),
+            'ofp_payment_provider'       => 'paystack',
             // SMTP mode + fields
             'ofp_smtp_mode'        => $smtp_mode,
             'ofp_smtp_host'        => sanitize_text_field( wp_unslash( $_POST['ofp_smtp_host']        ?? '' ) ),
@@ -570,6 +572,9 @@ class OFP_Admin_Menu {
             'ofp_at_phone_number'  => sanitize_text_field( wp_unslash( $_POST['ofp_at_phone_number']  ?? '' ) ),
             // BulkSMS Nigeria
             'ofp_bsmsn_sender_id'  => sanitize_text_field( wp_unslash( $_POST['ofp_bsmsn_sender_id']  ?? '' ) ),
+            // SmartSMSSolutions
+            'ofp_smartsms_sender_id' => sanitize_text_field( wp_unslash( $_POST['ofp_smartsms_sender_id'] ?? '' ) ),
+            'ofp_smartsms_routing'   => sanitize_text_field( wp_unslash( $_POST['ofp_smartsms_routing']   ?? '3' ) ),
             // Cloudflare Turnstile
             'ofp_turnstile_site_key' => sanitize_text_field( wp_unslash( $_POST['ofp_turnstile_site_key'] ?? '' ) ),
         ];
@@ -581,11 +586,8 @@ class OFP_Admin_Menu {
             'ofp_smtp_password'           => [ 'raw' => $_POST['ofp_smtp_password']           ?? '', 'label' => 'SMTP Password' ],
             'ofp_at_api_key'              => [ 'raw' => $_POST['ofp_at_api_key']              ?? '', 'label' => 'AT API Key' ],
             'ofp_bsmsn_api_key'           => [ 'raw' => $_POST['ofp_bsmsn_api_key']           ?? '', 'label' => 'BulkSMS API Key' ],
-            'ofp_monnify_api_key'         => [ 'raw' => $_POST['ofp_monnify_api_key']         ?? '', 'label' => 'Monnify API Key' ],
-            'ofp_monnify_secret_key'      => [ 'raw' => $_POST['ofp_monnify_secret_key']      ?? '', 'label' => 'Monnify Secret Key' ],
+            'ofp_smartsms_api_key'        => [ 'raw' => $_POST['ofp_smartsms_api_key']        ?? '', 'label' => 'SmartSMS API Key' ],
             'ofp_paystack_secret_key'     => [ 'raw' => $_POST['ofp_paystack_secret_key']     ?? '', 'label' => 'Paystack Secret Key' ],
-            'ofp_flutterwave_secret_key'  => [ 'raw' => $_POST['ofp_flutterwave_secret_key']  ?? '', 'label' => 'Flutterwave Secret Key' ],
-            'ofp_flutterwave_secret_hash' => [ 'raw' => $_POST['ofp_flutterwave_secret_hash'] ?? '', 'label' => 'Flutterwave Hash' ],
             'ofp_turnstile_secret'        => [ 'raw' => $_POST['ofp_turnstile_secret']        ?? '', 'label' => 'Turnstile Secret' ],
         ];
 
@@ -736,8 +738,9 @@ class OFP_Admin_Menu {
             'business_phone'    => sanitize_text_field( wp_unslash( $_POST['business_phone']    ?? '' ) ),
             'whatsapp_number'   => sanitize_text_field( wp_unslash( $_POST['whatsapp_number']   ?? '' ) ),
             'subdomain'         => sanitize_title(      wp_unslash( $_POST['subdomain']         ?? '' ) ),
-            'business_category' => sanitize_text_field( wp_unslash( $_POST['business_category'] ?? '' ) ),
+            'business_category' => 'property',
             'plan'              => sanitize_text_field( wp_unslash( $_POST['plan']              ?? '' ) ),
+            'sms_provider'      => sanitize_text_field( wp_unslash( $_POST['sms_provider']      ?? 'africastalking' ) ),
         ] );
 
         $new_listing_plan = sanitize_text_field( wp_unslash( $_POST['listing_plan'] ?? '' ) );
@@ -833,10 +836,18 @@ class OFP_Admin_Menu {
             exit;
         }
 
-        $token = OFP_Auth::generate_admin_preview_token( $client_id );
-        $url   = add_query_arg( 'admin_preview', $token, home_url( '/login' ) );
+        // Issue a client session directly (bypass login/OTP entirely).
+        OFP_Auth::issue_session( $client_id, 'client' );
 
-        wp_safe_redirect( $url );
+        // Log the preview for audit trail.
+        $admin = OFP_Auth::current_admin();
+        error_log( sprintf(
+            '[OFP_Auth] Admin preview: %s (admin #%d) previewed client #%d (%s) at %s',
+            $admin->email ?? 'unknown', $admin->id ?? 0, $client_id, $client->business_name, current_time( 'mysql' )
+        ) );
+
+        // Redirect straight to the client dashboard.
+        wp_redirect( home_url( '/dashboard?preview=1' ) );
         exit;
     }
 
@@ -1073,7 +1084,13 @@ class OFP_Admin_Menu {
             ) );
 
             if ( $request && $request->status === 'pending' ) {
-                // Route approval based on what the payment was for (Phase 17b fix).
+                // Route approval based on what the payment was for.
+                // Bug fix: the client form saves channel as 'plan_silver' /
+                // 'plan_gold', but this used to check for 'crm_plan' /
+                // 'listing_plan' which never matched anything — so approving
+                // a manual plan payment silently did nothing to the client's
+                // actual plan or subscription, only marked the request row
+                // 'approved'.
                 if ( in_array( $request->channel, [ 'sms', 'voice' ], true ) ) {
                     // SMS or Voice credit top-up.
                     OFP_Credit::topup(
@@ -1082,19 +1099,14 @@ class OFP_Admin_Menu {
                         $request->amount,
                         'manual_funding_' . $request_id
                     );
-                } elseif ( $request->channel === 'crm_plan' ) {
-                    // CRM plan payment — activate or extend the subscription.
-                    OFP_Subscription::activate_from_manual_payment(
-                        $request->client_id,
-                        'crm',
-                        $request->amount
-                    );
-                } elseif ( $request->channel === 'listing_plan' ) {
-                    // Listing plan payment — activate or extend the listing subscription.
+                } elseif ( strpos( $request->channel, 'plan_' ) === 0 ) {
+                    // Plan payment — e.g. 'plan_silver' or 'plan_gold'.
+                    $plan = substr( $request->channel, strlen( 'plan_' ) );
                     OFP_Subscription::activate_from_manual_payment(
                         $request->client_id,
                         'listing',
-                        $request->amount
+                        $request->amount,
+                        $plan
                     );
                 }
 
@@ -1109,16 +1121,31 @@ class OFP_Admin_Menu {
                     [ 'id' => $request_id ]
                 );
 
-                // Notify the client.
+                // Notify the client, with wording that matches what actually happened.
+                if ( strpos( $request->channel, 'plan_' ) === 0 ) {
+                    $plan_label = ucfirst( substr( $request->channel, strlen( 'plan_' ) ) );
+                    $notify_message = 'Your manual payment of NGN ' . number_format( $request->amount, 2 ) .
+                        ' has been approved. Your ' . $plan_label . ' plan is now active.';
+                } else {
+                    $notify_message = 'Your manual funding of NGN ' . number_format( $request->amount, 2 ) .
+                        ' has been approved and credited to your ' . ucfirst( $request->channel ) . ' balance.';
+                }
+
                 OFP_Notification::create(
                     $request->client_id,
                     'manual_funding_approved',
                     'Funding approved',
-                    'Your manual funding of NGN ' . number_format( $request->amount, 2 ) .
-                    ' has been approved and credited to your ' . ucfirst( $request->channel ) . ' balance.'
+                    $notify_message
                 );
 
                 echo '<div class="notice notice-success"><p>Funding request approved and client credited.</p></div>';
+
+                if ( class_exists( 'OFP_Logger' ) ) {
+                    OFP_Logger::log( 'Manual funding approved', $request->client_id, [
+                        'channel' => $request->channel,
+                        'amount'  => $request->amount,
+                    ] );
+                }
             }
         }
 
@@ -1154,6 +1181,13 @@ class OFP_Admin_Menu {
                 );
 
                 echo '<div class="notice notice-error"><p>Funding request rejected.</p></div>';
+
+                if ( class_exists( 'OFP_Logger' ) ) {
+                    OFP_Logger::log( 'Manual funding rejected', $request->client_id, [
+                        'channel' => $request->channel,
+                        'amount'  => $request->amount,
+                    ] );
+                }
             }
         }
 
@@ -1332,5 +1366,86 @@ class OFP_Admin_Menu {
             </form>
         </div>
         <?php
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COMMUNICATIONS (SUPER ADMIN)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function handle_save_universal_template(): void {
+        if ( ! OFP_Auth::is_super_admin() ) {
+            wp_die( 'Access denied.' );
+        }
+
+        check_admin_referer( 'ofp_save_universal_template' );
+
+        $template = wp_unslash( $_POST['ofp_universal_email_template'] ?? '' );
+        update_option( 'ofp_universal_email_template', $template );
+
+        wp_redirect( add_query_arg( [ 'page' => 'ofp-communications', 'tab' => 'templates', 'updated' => '1' ], admin_url( 'admin.php' ) ) );
+        exit;
+    }
+
+    public function handle_send_broadcast(): void {
+        if ( ! OFP_Auth::is_super_admin() ) {
+            wp_die( 'Access denied.' );
+        }
+
+        check_admin_referer( 'ofp_send_broadcast' );
+
+        $channel    = sanitize_text_field( $_POST['channel'] ?? '' );
+        $recipients = sanitize_textarea_field( $_POST['recipients'] ?? '' );
+        $subject    = sanitize_text_field( $_POST['subject'] ?? '' );
+        $message    = wp_kses_post( wp_unslash( $_POST['message'] ?? '' ) );
+
+        if ( empty( $channel ) || empty( $recipients ) || empty( $message ) ) {
+            wp_die( 'Missing required fields.' );
+        }
+
+        $list = array_map( 'trim', explode( ',', $recipients ) );
+        $list = array_filter( $list );
+        
+        $success = 0;
+        $failed  = 0;
+
+        foreach ( $list as $recipient ) {
+            if ( $channel === 'email' ) {
+                if ( ! is_email( $recipient ) ) {
+                    $failed++;
+                    continue;
+                }
+                
+                // Wrap with universal template
+                $wrapper = get_option( 'ofp_universal_email_template', '' );
+                $html_body = $message;
+                if ( ! empty( $wrapper ) && strpos( $wrapper, '{email_body}' ) !== false ) {
+                    $html_body = str_replace( '{email_body}', $message, $wrapper );
+                }
+
+                $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+                $sent = wp_mail( $recipient, $subject, $html_body, $headers );
+
+                if ( $sent ) $success++; else $failed++;
+
+                if ( class_exists( 'OFP_Logger' ) ) {
+                    global $wpdb;
+                    $client_id = $wpdb->get_var( $wpdb->prepare(
+                        "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1",
+                        $recipient
+                    ) );
+                    OFP_Logger::log( $sent ? 'Broadcast email sent' : 'Broadcast email failed', $client_id ? (int) $client_id : null, [
+                        'to'      => $recipient,
+                        'subject' => $subject,
+                    ] );
+                }
+            } elseif ( $channel === 'sms' ) {
+                // Use the built-in OFP_SMS class with smartsmssolutions (or default)
+                $result = OFP_SMS::send_manual( null, $recipient, $message );
+                if ( $result ) $success++; else $failed++;
+            }
+        }
+
+        wp_redirect( add_query_arg( [ 'page' => 'ofp-communications', 'tab' => 'send', 'sent' => $success, 'failed' => $failed ], admin_url( 'admin.php' ) ) );
+        exit;
     }
 }

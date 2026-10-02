@@ -28,7 +28,8 @@
  * EMAIL METHODS:
  *  - send()                      Core send — all other methods route through this.
  *  - send_welcome_email()        New client onboarded (manual or self-serve).
- *  - send_subscription_reminder() 7-day and 3-day expiry warnings.
+ *  - send_subscription_reminder() daily expiry warnings for the 7-day renewal window.
+ *  - send_free_plan_nudge() daily upgrade nudge for free-plan clients.
  *  - send_payment_confirmed()    Payment received, subscription renewed.
  *  - send_low_credit_warning()   SMS or voice balance below 20%.
  *  - send_approval_notification() Self-serve signup approved by admin.
@@ -154,7 +155,253 @@ class OFP_Mailer {
             error_log( "[OFP_Mailer] wp_mail() failed for: {$to} | Subject: {$subject}" );
         }
 
+        if ( class_exists( 'OFP_Logger' ) ) {
+            global $wpdb;
+            $client_id = $wpdb->get_var( $wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1",
+                $to
+            ) );
+
+            OFP_Logger::log( $sent ? 'Email sent' : 'Email failed', $client_id ? (int) $client_id : null, [
+                'to'      => $to,
+                'subject' => $subject,
+            ] );
+        }
+
         return $sent;
+    }
+
+    /**
+     * Send a system email directly, usually for OTPs or system alerts.
+     *
+     * @param string $to
+     * @param string $subject
+     * @param string $body_html
+     * @return bool
+     */
+    public static function send_system_email( string $to, string $subject, string $body_html ): bool {
+        return self::send( $to, 'User', $subject, $body_html );
+    }
+
+    /**
+     * Send an email on behalf of a specific client (broadcasts or lead messages).
+     *
+     * @param string $to
+     * @param string $subject
+     * @param string $body_html
+     * @param int    $client_id
+     * @return bool
+     */
+    public static function send_client_email(
+        string $to,
+        string $subject,
+        string $body_html,
+        int $client_id
+    ): bool {
+        if ( empty( $to ) || ! is_email( $to ) ) {
+            return false;
+        }
+
+        global $wpdb;
+        $client = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
+            $client_id
+        ) );
+
+        $from_name  = $client ? ( $client->business_name ?: $client->owner_name ) : get_option( 'ofp_smtp_from_name', 'OFast Pipeline' );
+        $from_email = get_option( 'ofp_smtp_from_email', get_option( 'admin_email' ) );
+
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            "From: {$from_name} <{$from_email}>",
+        ];
+
+        if ( $client && ! empty( $client->email ) && is_email( $client->email ) ) {
+            $headers[] = "Reply-To: {$from_name} <{$client->email}>";
+        }
+
+        $full_html = self::wrap_in_client_template( $client, $subject, $body_html );
+
+        $sent = wp_mail( $to, $subject, $full_html, $headers );
+
+        if ( ! $sent ) {
+            error_log( "[OFP_Mailer] send_client_email failed for client #{$client_id} to {$to}" );
+        }
+
+        return (bool) $sent;
+    }
+
+    /**
+     * Wrap client broadcast/communication emails in the client's custom brand shell.
+     * Supports both 'visual' mode and 'custom_html' mode.
+     *
+     * @param  object|null $client
+     * @param  string      $subject
+     * @param  string      $body_html
+     * @return string
+     */
+    public static function wrap_in_client_template( $client, string $subject, string $body_html ): string {
+        if ( ! $client ) {
+            return self::wrap_in_template( 'Valued Contact', $subject, $body_html );
+        }
+
+        $mode = $client->email_template_mode ?? 'visual';
+
+        // 1. Custom HTML Mode
+        if ( $mode === 'custom_html' && ! empty( $client->email_custom_html ) ) {
+            $tpl = $client->email_custom_html;
+            $search = [
+                '{email_content}', '{{content}}', '{{body}}',
+                '{subject}', '{{subject}}',
+                '{business_name}', '{{business_name}}',
+                '{owner_name}', '{{owner_name}}',
+                '{client_phone}', '{{phone}}',
+                '{client_email}', '{{email}}',
+                '{year}', '{{year}}'
+            ];
+            $replace = [
+                $body_html, $body_html, $body_html,
+                esc_html( $subject ), esc_html( $subject ),
+                esc_html( $client->business_name ?: $client->owner_name ), esc_html( $client->business_name ?: $client->owner_name ),
+                esc_html( $client->owner_name ), esc_html( $client->owner_name ),
+                esc_html( $client->phone ?: '' ), esc_html( $client->phone ?: '' ),
+                esc_html( $client->email ?: '' ), esc_html( $client->email ?: '' ),
+                gmdate( 'Y' ), gmdate( 'Y' )
+            ];
+            $html = str_replace( $search, $replace, $tpl );
+
+            // If user forgot to put {email_content} in their custom HTML, append it safely
+            if ( strpos( $tpl, '{email_content}' ) === false && strpos( $tpl, '{{content}}' ) === false && strpos( $tpl, '{{body}}' ) === false ) {
+                $html .= '<div style="padding:20px;">' . $body_html . '</div>';
+            }
+            return $html;
+        }
+
+        // 2. Visual Brand Customizer Mode
+        $brand_color = ! empty( $client->email_brand_color ) ? sanitize_hex_color( $client->email_brand_color ) : '#0f172a';
+        if ( ! $brand_color ) {
+            $brand_color = '#0f172a';
+        }
+
+        $header_text = ! empty( $client->email_header_text ) ? $client->email_header_text : ( $client->business_name ?: $client->owner_name );
+        $tagline     = ! empty( $client->email_header_tagline ) ? $client->email_header_tagline : '';
+        $logo_url    = ! empty( $client->logo_url ) ? esc_url( $client->logo_url ) : '';
+        $year        = gmdate( 'Y' );
+
+        $footer_text = ! empty( $client->email_footer_text ) ? nl2br( esc_html( $client->email_footer_text ) ) : (
+            'Sent by <strong>' . esc_html( $client->business_name ?: $client->owner_name ) . '</strong>' .
+            ( ! empty( $client->phone ) ? ' &bull; Tel: ' . esc_html( $client->phone ) : '' ) .
+            ( ! empty( $client->email ) ? ' &bull; <a href="mailto:' . esc_attr( $client->email ) . '" style="color:#64748b;text-decoration:none;">' . esc_html( $client->email ) . '</a>' : '' ) .
+            '<br>&copy; ' . $year . ' ' . esc_html( $client->business_name ?: $client->owner_name ) . '. All rights reserved.'
+        );
+
+        // Header logo/text rendering
+        $header_content = '';
+        if ( $logo_url ) {
+            $header_content .= '<img src="' . $logo_url . '" alt="' . esc_attr( $header_text ) . '" style="max-height:48px; max-width:220px; height:auto; margin-bottom:12px; display:block;">';
+        }
+        $header_content .= '<h1 style="margin:0;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;line-height:1.3;">' . esc_html( $header_text ) . '</h1>';
+        if ( $tagline ) {
+            $header_content .= '<p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.8);line-height:1.4;">' . esc_html( $tagline ) . '</p>';
+        }
+
+        return '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>' . esc_html( $subject ) . '</title>
+    <!--[if mso]>
+    <noscript>
+        <xml><o:OfficeDocumentSettings>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+        </o:OfficeDocumentSettings></xml>
+    </noscript>
+    <![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
+        ' . esc_html( wp_strip_all_tags( $subject ) ) . '
+        &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:32px 16px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;margin:0 auto;">
+                    <!-- Branded Header -->
+                    <tr>
+                        <td style="background-color:' . esc_attr( $brand_color ) . ';border-radius:12px 12px 0 0;padding:32px 36px;">
+                            ' . $header_content . '
+                        </td>
+                    </tr>
+                    <!-- Message Body -->
+                    <tr>
+                        <td style="background-color:#ffffff;padding:36px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;color:#1e293b;font-size:15px;line-height:1.65;">
+                            ' . $body_html . '
+                        </td>
+                    </tr>
+                    <!-- Branded Footer -->
+                    <tr>
+                        <td style="background-color:#f8fafc;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:none;padding:24px 36px;text-align:center;">
+                            <div style="color:#64748b;font-size:12px;line-height:1.7;">
+                                ' . $footer_text . '
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>';
+    }
+
+    /**
+     * Return a clean boilerplate custom HTML wrapper for clients who prefer coding HTML.
+     */
+    public static function get_default_custom_html_boilerplate( $client = null ): string {
+        $name = $client ? ( $client->business_name ?: $client->owner_name ) : '{{business_name}}';
+        $logo = ( $client && ! empty( $client->logo_url ) ) ? $client->logo_url : '';
+        $logo_tag = $logo ? '<img src="' . esc_url( $logo ) . '" alt="' . esc_attr( $name ) . '" style="max-height:48px;margin-bottom:12px;display:block;">' : '';
+
+        return '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;padding:30px 15px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background:#0f172a;padding:25px 30px;color:#ffffff;">
+                            ' . $logo_tag . '
+                            <h2 style="margin:0;font-size:20px;font-weight:700;">' . esc_html( $name ) . '</h2>
+                        </td>
+                    </tr>
+                    <!-- Main Body Content Placeholder -->
+                    <tr>
+                        <td style="padding:30px;color:#334155;font-size:15px;line-height:1.6;">
+                            {email_content}
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background:#f1f5f9;padding:20px 30px;text-align:center;color:#64748b;font-size:12px;border-top:1px solid #e2e8f0;">
+                            <p style="margin:0;">&copy; {year} ' . esc_html( $name ) . '. All rights reserved.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>';
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -190,7 +437,7 @@ class OFP_Mailer {
         $login_url = home_url( '/login' );
 
         $body = '
-            <h2>Welcome to OFast Pipeline, ' . esc_html( $client->owner_name ) . '! 🎉</h2>
+            <h2>Welcome to OFast Pipeline, ' . esc_html( $client->owner_name ) . '!</h2>
             <p>Your client account has been created and is ready to use.
                Here are your login details — please keep them safe.</p>
 
@@ -213,32 +460,10 @@ class OFP_Mailer {
             <p>⚠️ <strong>Please change your password</strong> after your first login
                via My Account → Change Password.</p>
 
-            <h3 style="margin-top:28px;">Activate Your Subscription</h3>
-            <p>Transfer your subscription fee to your dedicated virtual account below.
-               Your pipeline activates automatically once payment is confirmed —
-               no manual intervention needed.</p>
-
-            <div style="background:#f0fdf4;border-radius:8px;padding:20px 24px;
-                        margin:16px 0;border-left:4px solid #16a34a;">
-                <p style="margin:0 0 10px;">
-                    <strong>Bank:</strong>
-                    ' . esc_html( $client->virtual_bank_name ?: 'Being set up — check back shortly' ) . '
-                </p>
-                <p style="margin:0;">
-                    <strong>Account Number:</strong>
-                    ' . esc_html( $client->virtual_account_number ?: '—' ) . '
-                </p>
-            </div>
-
-            <p style="color:#6b7280;font-size:14px;">
-                This is a dedicated virtual account for your business only.
-                Every payment is automatically tracked and applied to your account.
-            </p>
-
             <h3 style="margin-top:28px;">What Happens Next?</h3>
             <ol style="padding-left:20px;line-height:2.2;">
                 <li>Log in to your dashboard at the URL above</li>
-                <li>Make your first subscription payment to the account above</li>
+                <li>Follow the onboarding steps to activate your subscription</li>
                 <li>Your lead pipeline activates automatically</li>
                 <li>Leads start flowing in as your ads run</li>
             </ol>
@@ -259,7 +484,7 @@ class OFP_Mailer {
     /**
      * Send a subscription expiry reminder email.
      *
-     * Called by OFP_Subscription::run_daily_check() at 7 days and 3 days
+     * Called by OFP_Subscription::run_daily_check() once a day for every
      * before subscription_expires date.
      *
      * @param  object $client    Full wp_ofp_clients row.
@@ -270,10 +495,10 @@ class OFP_Mailer {
 
         $urgent  = $days_left <= 3;
         $prefix  = $urgent ? '⚠️ Urgent: ' : '';
-        $day_str = $days_left === 1 ? '1 day' : "{$days_left} days";
+        $day_str = $days_left <= 0 ? 'today' : ( $days_left === 1 ? '1 day' : "{$days_left} days" );
 
         $body = '
-            <h2>' . $prefix . 'Your subscription expires in ' . esc_html( $day_str ) . '</h2>
+            <h2>' . $prefix . ( $days_left <= 0 ? 'Your subscription expires today' : 'Your subscription expires in ' . esc_html( $day_str ) ) . '</h2>
 
             <p>Hi ' . esc_html( $client->owner_name ) . ',</p>
 
@@ -281,34 +506,31 @@ class OFP_Mailer {
                <strong>' . esc_html( $client->business_name ) . '</strong>
                expires on <strong>' . esc_html( $client->subscription_expires ) . '</strong>.</p>
 
-            <p>To keep your lead pipeline running without interruption, please renew
-               before the expiry date by transferring your subscription fee to your
-               dedicated virtual account:</p>
+            <p>To keep your listings running without interruption, please renew
+               before the expiry date. Click below to renew instantly via secure
+               checkout, card or bank transfer:</p>
 
-            <div style="background:#fef3c7;border-radius:8px;padding:20px 24px;
-                        margin:20px 0;border-left:4px solid #f59e0b;">
-                <p style="margin:0 0 10px;">
-                    <strong>Bank:</strong> ' . esc_html( $client->virtual_bank_name ) . '
-                </p>
-                <p style="margin:0;">
-                    <strong>Account Number:</strong>
-                    ' . esc_html( $client->virtual_account_number ) . '
-                </p>
-            </div>
+            <p>
+                <a href="' . esc_url( home_url( '/funding' ) ) . '"
+                   style="display:inline-block;background:#1a73e8;color:#fff;
+                          padding:12px 28px;border-radius:8px;text-decoration:none;
+                          font-weight:600;margin:12px 0;">
+                    Renew Now
+                </a>
+            </p>
 
             ' . ( $urgent ? '
             <p style="color:#dc2626;font-weight:600;">
-                ⚠️ Your pipeline will enter a 5-day grace period after expiry,
-                then be suspended if payment is not received.
+                ⚠️ Once your subscription expires, your plan drops to Free immediately —
+                no grace period. Renew now to keep your current plan and listings editable.
             </p>' : '
-            <p>Your pipeline will continue running during a 5-day grace period
-               after expiry, giving you time to renew without interruption.</p>' ) . '
+            <p>Renew before the expiry date to keep your current plan active without
+               any interruption. There is no grace period — your plan drops to Free
+               the moment it expires.</p>' ) . '
 
             <p>
                 <a href="' . esc_url( home_url( '/credits' ) ) . '"
-                   style="display:inline-block;background:#1a73e8;color:#fff;
-                          padding:12px 28px;border-radius:8px;text-decoration:none;
-                          font-weight:600;margin-top:8px;">
+                   style="color:#1a73e8;text-decoration:none;font-weight:600;">
                     View My Account
                 </a>
             </p>
@@ -317,7 +539,64 @@ class OFP_Mailer {
         self::send(
             $client->email,
             $client->owner_name,
-            $prefix . "Your OFast Pipeline subscription expires in {$day_str}",
+            $prefix . ( $days_left <= 0 ? 'Your OFast Pipeline subscription expires today' : "Your OFast Pipeline subscription expires in {$day_str}" ),
+            $body
+        );
+    }
+
+    /**
+     * Daily upgrade nudge for a client currently on the free plan.
+     * Called once a day (per client) from OFP_Subscription::send_free_plan_nudges().
+     *
+     * Keeps the tone encouraging rather than pushy — this goes out every
+     * day, so a heavy-handed "act now or else" message would get old fast
+     * and could feel like spam.
+     *
+     * @param  object $client  Full wp_ofp_clients row.
+     * @return void
+     */
+    public static function send_free_plan_nudge( object $client ): void {
+        if ( ! class_exists( 'OFP_Property_CPT' ) ) {
+            return;
+        }
+
+        $silver_price = number_format( OFP_Property_CPT::get_plan_price( 'silver' ), 0 );
+        $gold_price   = number_format( OFP_Property_CPT::get_plan_price( 'gold' ), 0 );
+
+        $body = '
+            <h2>Get more out of your listings</h2>
+
+            <p>Hi ' . esc_html( $client->owner_name ) . ',</p>
+
+            <p>You\'re currently on the <strong>Free</strong> plan for
+               <strong>' . esc_html( $client->business_name ) . '</strong>.
+               Upgrading unlocks a lot more:</p>
+
+            <ul style="line-height:1.9;">
+                <li>List more properties, with priority placement</li>
+                <li>Editable installment plans for buyers (Gold)</li>
+                <li>Add your team — Silver and Gold include team member seats</li>
+                <li>Full email templates and follow-up automation</li>
+            </ul>
+
+            <p>
+                <a href="' . esc_url( home_url( '/funding' ) ) . '"
+                   style="display:inline-block;background:#1a73e8;color:#fff;
+                          padding:12px 28px;border-radius:8px;text-decoration:none;
+                          font-weight:600;margin:12px 0;">
+                    Upgrade Now
+                </a>
+            </p>
+
+            <p style="color:#6b7280;font-size:13px;">
+                Silver is NGN ' . esc_html( $silver_price ) . '/month, Gold is NGN ' . esc_html( $gold_price ) . '/month.
+            </p>
+        ';
+
+        self::send(
+            $client->email,
+            $client->owner_name,
+            'Get more out of your ' . get_bloginfo( 'name' ) . ' listings',
             $body
         );
     }

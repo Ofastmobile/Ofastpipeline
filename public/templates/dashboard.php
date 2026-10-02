@@ -9,8 +9,6 @@ OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
 
-$has_crm     = OFP_Subscription::has_active( 'crm',     $client->id );
-$has_listing = OFP_Subscription::has_active( 'listing', $client->id );
 
 // Stats
 $stats   = OFP_Lead::get_stats( $client->id );
@@ -61,7 +59,7 @@ $status_badges = [
                 elseif ($hour < 18) { $greeting = 'Good afternoon'; }
             ?>
             <h1><?php echo esc_html( $greeting . ', ' . explode(' ', trim($client->owner_name))[0] ); ?>!</h1>
-            <p>Here's what's happening with your business today</p>
+            <p>Here's what's happening with your agency today</p>
         </div>
         <div class="ofp-greeting-right">
             <button class="ofp-icon-btn" title="Refresh Dashboard" onclick="window.location.reload();">
@@ -87,12 +85,6 @@ $status_badges = [
             <?php else : ?>
                 ⏳ Your account is <strong>pending review</strong>. We will notify you once approved.
             <?php endif; ?>
-            <?php if ( $client->virtual_account_number ) : ?>
-                <div style="margin-top:8px;">
-                    Pay to: <strong><?php echo esc_html( $client->virtual_bank_name ); ?></strong>
-                    — <strong><?php echo esc_html( $client->virtual_account_number ); ?></strong>
-                </div>
-            <?php endif; ?>
         </div>
     <?php elseif ( OFP_Subscription::has_unpaid( $client->id ) ) :
         $underpaid_count = count( OFP_Subscription::get_underpaid_for_client( $client->id ) );
@@ -110,13 +102,45 @@ $status_badges = [
         </div>
     <?php endif; ?>
 
-    <?php if ( $has_crm ) : ?>
+    <?php $ofp_current_user = OFP_Auth::current_user(); ?>
+    <?php if ( empty( $ofp_current_user->is_team_member ) && OFP_Subscription::client_plan( $client->id ) === 'free' ) : ?>
+        <div class="ofp-alert ofp-alert-info" id="ofp-free-plan-banner" style="display:none;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+            <span>
+                ✨ You're on the <strong>Free</strong> plan. Upgrade to unlock more listings with priority
+                placement, team member seats, full email templates, and (on Gold) editable installment plans
+                for buyers.
+            </span>
+            <span style="display:flex;gap:10px;align-items:center;white-space:nowrap;">
+                <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>"
+                   style="display:inline-block;background:var(--btn-primary);color:#fff;padding:8px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;">
+                    See Plans →
+                </a>
+                <button type="button" id="ofp-free-plan-banner-dismiss"
+                        style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1;padding:0 4px;"
+                        title="Dismiss for today" aria-label="Dismiss">&times;</button>
+            </span>
+        </div>
+        <script>
+            (function() {
+                var key = 'ofp_free_plan_banner_dismissed_until';
+                var until = parseInt(localStorage.getItem(key) || '0', 10);
+                var banner = document.getElementById('ofp-free-plan-banner');
+                if (Date.now() > until) {
+                    banner.style.display = 'flex';
+                }
+                document.getElementById('ofp-free-plan-banner-dismiss').addEventListener('click', function() {
+                    banner.style.display = 'none';
+                    localStorage.setItem(key, String(Date.now() + 24 * 60 * 60 * 1000));
+                });
+            })();
+        </script>
+    <?php endif; ?>
 
-        <!-- 4 Stats Cards matched to image -->
+
         <div class="ofp-stats-grid">
             <div class="ofp-stat-card">
                 <div class="ofp-stat-header">
-                    <span class="ofp-stat-title">Leads Today</span>
+                    <span class="ofp-stat-title">Prospects Today</span>
                     <div class="ofp-stat-icon blue">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
                     </div>
@@ -159,65 +183,98 @@ $status_badges = [
             </div>
         </div>
 
-        <!-- 2 Charts Placeholders -->
+        <!-- 2 Charts (real data via AJAX) -->
         <div class="ofp-grid-2">
             <div class="ofp-card">
                 <div class="ofp-card-header">
-                    <span class="ofp-card-title">Lead Volume Trend</span>
-                    <a href="#" class="ofp-card-link">Live Data (7 days)</a>
+                    <span class="ofp-card-title">Prospect Volume Trend</span>
+                    <span class="ofp-card-link">Live Data (7 days)</span>
                 </div>
-                <div class="ofp-chart-placeholder">
-                    <div class="ofp-bar orange" style="height:30%"></div>
-                    <div class="ofp-bar orange" style="height:50%"></div>
-                    <div class="ofp-bar orange" style="height:20%"></div>
-                    <div class="ofp-bar orange" style="height:70%"></div>
-                    <div class="ofp-bar orange" style="height:40%"></div>
-                    <div class="ofp-bar orange" style="height:60%"></div>
-                    <div class="ofp-bar orange" style="height:10%"></div>
-                </div>
-                <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:11px;color:var(--text-muted);text-align:center;">
-                    <?php for($i=6; $i>=0; $i--): ?>
-                        <div style="flex:1;">
-                            <div><?php echo date('M d', strtotime("-$i days")); ?></div>
-                            <div style="font-weight:600;margin-top:2px;color:var(--text-main);"><?php echo rand(2,15); ?></div>
-                        </div>
-                    <?php endfor; ?>
+                <div style="position:relative;height:220px;">
+                    <canvas id="ofp-chart-leads"></canvas>
                 </div>
             </div>
 
             <div class="ofp-card">
                 <div class="ofp-card-header">
                     <span class="ofp-card-title">Conversion Trend</span>
-                    <a href="#" class="ofp-card-link">Live Data (6 months)</a>
+                    <span class="ofp-card-link">Live Data (6 months)</span>
                 </div>
-                <div class="ofp-chart-placeholder">
-                    <div class="ofp-bar blue" style="height:15%"></div>
-                    <div class="ofp-bar blue" style="height:25%"></div>
-                    <div class="ofp-bar blue" style="height:45%"></div>
-                    <div class="ofp-bar blue" style="height:60%"></div>
-                    <div class="ofp-bar blue" style="height:80%"></div>
-                    <div class="ofp-bar blue" style="height:95%"></div>
-                </div>
-                <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:11px;color:var(--text-muted);text-align:center;">
-                    <?php for($i=5; $i>=0; $i--): ?>
-                        <div style="flex:1;">
-                            <div><?php echo date('M Y', strtotime("-$i months")); ?></div>
-                            <div style="font-weight:600;margin-top:2px;color:var(--text-main);"><?php echo rand(10,50); ?>%</div>
-                        </div>
-                    <?php endfor; ?>
+                <div style="position:relative;height:220px;">
+                    <canvas id="ofp-chart-conversion"></canvas>
                 </div>
             </div>
         </div>
+
+        <script>
+        (function() {
+            if ( typeof ofpClientData === 'undefined' || typeof Chart === 'undefined' ) return;
+
+            var body = new URLSearchParams();
+            body.append('action', 'ofp_dashboard_chart_data');
+            body.append('nonce', ofpClientData.nonce);
+
+            fetch(ofpClientData.ajaxurl, { method: 'POST', credentials: 'same-origin', body: body })
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (!res.success) return;
+
+                    var daily = res.data.daily;
+                    var monthly = res.data.monthly;
+
+                    new Chart(document.getElementById('ofp-chart-leads'), {
+                        type: 'bar',
+                        data: {
+                            labels: daily.map(function(d) { return d.label; }),
+                            datasets: [{
+                                label: 'Leads',
+                                data: daily.map(function(d) { return d.count; }),
+                                backgroundColor: '#f97316',
+                                borderRadius: 6,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                        }
+                    });
+
+                    new Chart(document.getElementById('ofp-chart-conversion'), {
+                        type: 'line',
+                        data: {
+                            labels: monthly.map(function(m) { return m.label; }),
+                            datasets: [{
+                                label: 'Conversion %',
+                                data: monthly.map(function(m) { return m.rate; }),
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59,130,246,0.15)',
+                                fill: true,
+                                tension: 0.3,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + '%'; } } } }
+                        }
+                    });
+                })
+                .catch(function(err) { console.error('OFP chart data error:', err); });
+        })();
+        </script>
 
         <!-- 2 Tables -->
         <div class="ofp-grid-2">
             <div class="ofp-card">
                 <div class="ofp-card-header">
-                    <span class="ofp-card-title">Recent Leads</span>
+                    <span class="ofp-card-title">Recent Prospects</span>
                     <a href="<?php echo esc_url( home_url( '/leads' ) ); ?>" class="ofp-card-link">Live Data</a>
                 </div>
                 <?php if ( empty( $recent_leads ) ) : ?>
-                    <div class="ofp-empty">No recent leads found</div>
+                    <div class="ofp-empty">No recent prospects found</div>
                 <?php else : ?>
                     <div class="ofp-table-responsive">
                         <table class="ofp-table">
@@ -282,20 +339,6 @@ $status_badges = [
             </div>
         </div>
 
-    <?php else : ?>
-
-        <!-- Upgrade CTA for non-CRM clients -->
-        <div class="ofp-card" style="text-align:center;padding:64px 32px;">
-            <div style="font-size:48px;margin-bottom:16px;">🚀</div>
-            <h2 style="font-size:24px;color:var(--text-main);margin-bottom:12px;">Activate Lead Automation</h2>
-            <p style="color:var(--text-muted);margin-bottom:32px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.6;">
-                Upgrade to a CRM plan to get automated SMS follow-ups, voice calls, and IVR — all running on autopilot so you never miss a lead.
-            </p>
-            <a href="mailto:<?php echo esc_attr( get_option( 'admin_email' ) ); ?>?subject=Upgrade Request"
-               class="ofp-btn-accent">Contact Us to Upgrade</a>
-        </div>
-
-    <?php endif; ?>
 
     <!-- Referral / Upgrade Banner matching design -->
     <div class="ofp-referral-banner">
@@ -304,8 +347,8 @@ $status_badges = [
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
             </div>
             <div class="ofp-banner-text">
-                <h3>Refer Businesses & Earn Credits</h3>
-                <p>Invite other businesses and earn a commission in SMS credits anytime they top up.</p>
+                <h3>Refer Agents & Earn Credits</h3>
+                <p>Invite other agents and earn a commission in SMS credits anytime they top up.</p>
             </div>
         </div>
         <a href="#" class="ofp-btn-accent">Get Your Referral Link</a>

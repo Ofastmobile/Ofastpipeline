@@ -13,7 +13,7 @@ $per_page      = 50;
 $current_page  = max( 1, absint( $_GET['paged'] ?? 1 ) );
 $offset        = ( $current_page - 1 ) * $per_page;
 
-$where = [ "s.type = 'crm'" ];
+$where = [ '1=1' ];
 $args  = [];
 if ( $filter_client ) { $where[] = 's.client_id = %d'; $args[] = $filter_client; }
 $where_sql = implode( ' AND ', $where );
@@ -35,16 +35,16 @@ $subscriptions = $wpdb->get_results(
 );
 
 $total_revenue = (float) $wpdb->get_var(
-    "SELECT COALESCE(SUM(amount),0) FROM {$p}ofp_subscriptions WHERE type = 'crm' AND status = 'paid'"
+    "SELECT COALESCE(SUM(amount),0) FROM {$p}ofp_subscriptions WHERE status = 'paid'"
 );
 $revenue_month = (float) $wpdb->get_var(
     "SELECT COALESCE(SUM(amount),0) FROM {$p}ofp_subscriptions
-     WHERE type = 'crm' AND status = 'paid'
+     WHERE status = 'paid'
      AND MONTH(paid_at) = MONTH(NOW())
      AND YEAR(paid_at) = YEAR(NOW())"
 );
 $pending_count = (int) $wpdb->get_var(
-    "SELECT COUNT(*) FROM {$p}ofp_subscriptions WHERE type = 'crm' AND status = 'pending'"
+    "SELECT COUNT(*) FROM {$p}ofp_subscriptions WHERE status = 'pending'"
 );
 $clients     = OFP_Client::all();
 $total_pages = max( 1, (int) ceil( $total / $per_page ) );
@@ -52,11 +52,11 @@ $total_pages = max( 1, (int) ceil( $total / $per_page ) );
 include OFP_PATH . 'admin/views/partials/header.php';
 ?>
 
-<h2>CRM Billing & Payments</h2>
-<p>CRM subscription billing only. Property listing billing is now managed under <strong>Properties → Billing</strong>.</p>
+<h2>Billing & Payments</h2>
+<p>Unified subscription billing for all clients.</p>
 
 <div class="ofp-stats-grid">
-    <div class="ofp-stat-card"><span class="ofp-stat-number">₦<?php echo esc_html( number_format( $total_revenue, 0 ) ); ?></span><span class="ofp-stat-label">CRM Revenue</span></div>
+    <div class="ofp-stat-card"><span class="ofp-stat-number">₦<?php echo esc_html( number_format( $total_revenue, 0 ) ); ?></span><span class="ofp-stat-label">Total Revenue</span></div>
     <div class="ofp-stat-card"><span class="ofp-stat-number ofp-accent">₦<?php echo esc_html( number_format( $revenue_month, 0 ) ); ?></span><span class="ofp-stat-label">This Month</span></div>
     <div class="ofp-stat-card"><span class="ofp-stat-number"><?php echo esc_html( $pending_count ); ?></span><span class="ofp-stat-label">Pending Payments</span></div>
 </div>
@@ -65,7 +65,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <form method="GET" action="" class="ofp-filter-form">
         <input type="hidden" name="page" value="ofp-billing">
         <select name="client_id" onchange="this.form.submit()">
-            <option value="">All CRM Clients</option>
+            <option value="">All Clients</option>
             <?php foreach ( $clients as $c ) : ?>
                 <option value="<?php echo esc_attr( $c->id ); ?>" <?php selected( $filter_client, $c->id ); ?>><?php echo esc_html( $c->business_name ); ?></option>
             <?php endforeach; ?>
@@ -78,7 +78,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
 <div class="ofp-section">
     <?php if ( empty( $subscriptions ) ) : ?>
-        <p>No CRM payment records found.</p>
+        <p>No payment records found.</p>
     <?php else : ?>
         <div style="overflow-x:auto;">
             <table class="widefat ofp-table" style="min-width:1050px;">
@@ -101,6 +101,9 @@ include OFP_PATH . 'admin/views/partials/header.php';
                             if ( $sub->status === 'underpaid' && ! empty( $sub->expected_amount ) ) {
                                 $shortfall = max( 0, (float) $sub->expected_amount - (float) $sub->amount );
                                 echo '<div style="font-size:11px;color:#dc2626;margin-top:4px;">Expected ₦' . esc_html( number_format( (float) $sub->expected_amount, 0 ) ) . ' — short ₦' . esc_html( number_format( $shortfall, 0 ) ) . '</div>';
+                            } elseif ( $sub->status === 'paid' && ! empty( $sub->expected_amount ) && (float) $sub->amount > (float) $sub->expected_amount + 1 ) {
+                                $excess = (float) $sub->amount - (float) $sub->expected_amount;
+                                echo '<div style="font-size:11px;color:#b45309;margin-top:4px;">Expected ₦' . esc_html( number_format( (float) $sub->expected_amount, 0 ) ) . ' — overpaid by ₦' . esc_html( number_format( $excess, 0 ) ) . '</div>';
                             }
                             ?>
                         </td>
