@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Client portal: property installment offers and purchases.
  */
@@ -145,15 +145,7 @@ $my_purchases = $wpdb->get_results( $wpdb->prepare(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Property Sales', $client ?? null ) ); ?></title>
-    <!-- Dark theme script to avoid FOUC -->
-    <script>
-        (function() {
-            var currentTheme = localStorage.getItem('ofp_theme') || 'dark';
-            if (currentTheme === 'light') { document.documentElement.setAttribute('data-theme', 'light'); }
-        })();
-    </script>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
     <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
 </head>
 <body class="ofp-portal-body">

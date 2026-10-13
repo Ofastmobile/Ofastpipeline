@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Phase 23: Facebook Meta Pixel Injection
 add_action( 'wp_head', function() {
     $post_id = get_the_ID();
@@ -233,65 +233,6 @@ if ( empty( $gallery_urls ) ) {
             }
         };
     </script>
-    <style>
-        body,
-        .font-system,
-        .font-sans {
-            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
-        }
-
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        [x-cloak] {
-            display: none !important;
-        }
-
-        /* Custom Mortgage Range Slider */
-        .mortgage-range {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 100%;
-            height: 8px;
-            border-radius: 9999px;
-            outline: none;
-            cursor: pointer;
-        }
-
-        .mortgage-range::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: #2563eb;
-            border: 3px solid #ffffff;
-            box-shadow: 0 0 10px rgba(37, 99, 235, 0.7);
-            cursor: pointer;
-            transition: transform 0.15s ease, background-color 0.15s ease;
-        }
-
-        .mortgage-range::-webkit-slider-thumb:hover {
-            transform: scale(1.15);
-            background: #1d4ed8;
-        }
-
-        .mortgage-range::-moz-range-thumb {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: #2563eb;
-            border: 3px solid #ffffff;
-            box-shadow: 0 0 10px rgba(37, 99, 235, 0.7);
-            cursor: pointer;
-        }
-    </style>
     <?php wp_head(); ?>
     <script>
         if (typeof tailwind !== 'undefined') {

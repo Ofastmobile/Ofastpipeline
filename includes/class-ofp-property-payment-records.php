@@ -130,13 +130,6 @@ class OFP_Property_Payment_Records {
         <!doctype html><html lang="en"><head>
             <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
             <title>Property Payments — <?php echo esc_html( OFP_Brand::name() ); ?></title>
-            <!-- Dark theme script to avoid FOUC -->
-            <script>
-                (function() {
-                    var currentTheme = localStorage.getItem('ofp_theme') || 'dark';
-                    if (currentTheme === 'light') { document.documentElement.setAttribute('data-theme', 'light'); }
-                })();
-            </script>
             <?php wp_head(); ?>
             <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
             <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>

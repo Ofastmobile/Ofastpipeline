@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Template: /my-listing
  * Client's property listing management page (v2.1).
@@ -35,7 +35,6 @@ $status_badges = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'My Listing', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
 <body class="ofp-portal-body">
 

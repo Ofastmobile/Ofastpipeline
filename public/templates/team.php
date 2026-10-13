@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Template: /team
  * Client's Team Management Page.
@@ -39,37 +39,7 @@ $free_plan     = ( $plan === 'free' );
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Team', $client ?? null ) ); ?></title>
-    <!-- Dark theme script to avoid FOUC -->
-    <script>
-        (function() {
-            var currentTheme = localStorage.getItem('ofp_theme') || 'dark';
-            if (currentTheme === 'light') { document.documentElement.setAttribute('data-theme', 'light'); }
-        })();
-    </script>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
-    <style>
-        .ofp-team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .ofp-team-table { width: 100%; border-collapse: collapse; background: var(--bg-card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); }
-        .ofp-team-table th, .ofp-team-table td { padding: 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
-        .ofp-team-table th { font-weight: 600; color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .ofp-team-table tr:last-child td { border-bottom: none; }
-        .ofp-badge-pending { background: #fef08a; color: #854d0e; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-        .ofp-badge-active { background: #bbf7d0; color: #166534; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-        
-        .ofp-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
-        .ofp-modal.active { display: flex; }
-        .ofp-modal-content { background: var(--bg-card); width: 100%; max-width: 500px; border-radius: 12px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid var(--border-color); }
-        .ofp-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .ofp-modal-title { font-size: 18px; font-weight: 700; color: var(--text-main); }
-        .ofp-modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
-        .ofp-form-group { margin-bottom: 16px; }
-        .ofp-form-group label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--text-main); }
-        .ofp-form-group input, .ofp-form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-main); }
-        
-        .ofp-permissions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-        .ofp-permission-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-main); }
-    </style>
 </head>
 <body class="ofp-portal-body">
 

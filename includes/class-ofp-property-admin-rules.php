@@ -78,7 +78,7 @@ class OFP_Property_Admin_Rules {
             if (!platform) {
                 platform = document.createElement('option');
                 platform.value = '0';
-                platform.textContent = 'OFast Pipeline / Admin (Platform)';
+                platform.textContent = <?php echo wp_json_encode( OFP_Brand::name() . ' / Admin (Platform)' ); ?>;
                 platform.setAttribute('data-ofp-platform', '1');
                 select.insertBefore(platform, select.options[1] || null);
             }
@@ -116,14 +116,14 @@ class OFP_Property_Admin_Rules {
                 select.form.addEventListener('submit', function (event) {
                     if (select.value === '') {
                         event.preventDefault();
-                        alert('Please select a property owner: a client with an active listing plan, or OFast Pipeline / Admin (Platform).');
+                        alert(<?php echo wp_json_encode( 'Please select a property owner: a client with an active listing plan, or ' . OFP_Brand::name() . ' / Admin (Platform).' ); ?>);
                         select.focus();
                     }
 
                     var expired = select.options[select.selectedIndex] && select.options[select.selectedIndex].getAttribute('data-ofp-expired-owner') === '1';
                     if (expired) {
                         event.preventDefault();
-                        alert('This client’s listing plan is expired or inactive. Select an active client or OFast Pipeline / Admin (Platform).');
+                        alert(<?php echo wp_json_encode( 'This client’s listing plan is expired or inactive. Select an active client or ' . OFP_Brand::name() . ' / Admin (Platform).' ); ?>);
                         select.focus();
                     }
                 });

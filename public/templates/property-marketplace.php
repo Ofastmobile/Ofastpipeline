@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $current_listing_type = sanitize_text_field( $_GET['listing_type'] ?? 'all' );
 $current_sort         = sanitize_text_field( $_GET['sort'] ?? 'featured' );
 $current_verified     = ! empty( $_GET['verified'] );
@@ -189,29 +189,6 @@ $marketplace_query = new WP_Query( $args );
             }
         };
     </script>
-    <style>
-        body,
-        .font-system,
-        .font-sans {
-            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
-        }
-
-        /* Hero background: white overlay on light mode, dark overlay on dark mode */
-        .hero-bg {
-            background-image: 
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.65) 40%, rgba(255, 255, 255, 0.95) 85%, #ffffff 100%),
-                url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=85');
-            background-size: cover;
-            background-position: center;
-            background-attachment: scroll !important;
-        }
-
-        html.dark .hero-bg {
-            background-image: 
-                linear-gradient(to bottom, rgba(11, 17, 32, 0.5) 0%, rgba(11, 17, 32, 0.8) 50%, rgba(2, 6, 23, 0.95) 100%),
-                url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=85');
-        }
-    </style>
     <?php wp_head(); ?>
     <script>
         if (typeof tailwind !== 'undefined') {

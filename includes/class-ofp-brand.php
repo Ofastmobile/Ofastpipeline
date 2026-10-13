@@ -57,8 +57,10 @@ class OFP_Brand {
 	}
 
 	/** Replaces the built in product name in a text with the right name. */
-	public static function apply_name( string $text, string $name ): string {
-		return str_ireplace( [ 'OFast Pipeline', 'Ofast Pipeline' ], $name, $text );
+	public static function apply_name( string $text, ?string $name = null ): string {
+		$target  = $name ?: self::name();
+		$pattern = '/\b(?:OFast\s*Pipeline|OFastPipeline|Bofast\s*World|BofastWorld|Bofast\s*Homes|BofastHomes|Bofast)\b/iu';
+		return (string) preg_replace( $pattern, $target, $text );
 	}
 
 	// ------------------------------------------------------------------ mode
@@ -162,30 +164,40 @@ class OFP_Brand {
 			$logo = self::logo_img( $c, 32, 120 );
 			return '<span style="display:flex;align-items:center;gap:10px;">' . $logo . '<span>' . esc_html( $c->business_name ) . '</span></span>';
 		}
-		return '⚡ <span>' . esc_html( self::name() ) . '</span>';
+		return '<span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;margin-right:8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></span><span>' . esc_html( self::name() ) . '</span>';
 	}
 
 	/** Header logo on the public marketplace and single property page. */
-	public static function public_logo_html( string $fallback_text ): string {
+	public static function public_logo_html( string $fallback_text = '' ): string {
 		if ( self::is_solo_host() ) {
 			return self::logo_img( OFP_White_Label::current_client(), 36, 160 );
 		}
-		return esc_html( $fallback_text );
+		$name = self::name();
+		if ( $fallback_text !== '' && ctype_upper( str_replace( ' ', '', $fallback_text ) ) ) {
+			return esc_html( strtoupper( $name ) );
+		}
+		return esc_html( $name );
 	}
 
-	public static function public_name_text( string $fallback ): string {
-		return self::is_solo_host() ? '' : $fallback;
+	public static function public_name_text( string $fallback = '' ): string {
+		if ( self::is_solo_host() ) {
+			return '';
+		}
+		return self::name();
 	}
 
-	public static function public_page_title( string $page, string $fallback_suffix ): string {
-		return self::is_solo_host() ? $page : $page . ' | ' . $fallback_suffix;
+	public static function public_page_title( string $page, string $fallback_suffix = '' ): string {
+		if ( self::is_solo_host() ) {
+			return $page;
+		}
+		return $page . ' | ' . self::name();
 	}
 
 	public static function public_copyright(): string {
 		if ( self::is_solo_host() ) {
 			return '&copy; ' . gmdate( 'Y' ) . '. All rights reserved.';
 		}
-		return '&copy; 2026 Bofast Homes. Nigeria\'s most trusted verified property marketplace. All rights reserved.';
+		return '&copy; ' . gmdate( 'Y' ) . ' ' . esc_html( self::name() ) . '. Nigeria\'s most trusted verified property marketplace. All rights reserved.';
 	}
 
 	/** Support line under the login box on a solo domain. */

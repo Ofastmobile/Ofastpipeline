@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Template: /properties (client portal) — "My Properties" dashboard.
  *
@@ -288,7 +288,6 @@ if ( isset( $_GET['edit'] ) ) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'My Properties', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
 <body class="ofp-portal-body">
     <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
@@ -592,16 +591,6 @@ if ( isset( $_GET['edit'] ) ) {
                     <?php if ( empty( $my_properties ) ) : ?>
                         <p class="ofp-hint">You haven't added any properties yet.</p>
                     <?php else : ?>
-                        <style>
-                            .property-title-link {
-                                color: #ffffff;
-                                text-decoration: none;
-                                transition: color 0.2s ease;
-                            }
-                            .property-title-link:hover {
-                                color: #3b82f6;
-                            }
-                        </style>
                         <div class="ofp-table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; white-space: nowrap; min-width: 800px;">
                                 <thead>

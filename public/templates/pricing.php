@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Template: /pricing
  * Client Plans & Pricing page.
@@ -22,116 +22,7 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Plans & Pricing', $client ?? null ) ); ?></title>
-    <!-- Dark theme script to avoid FOUC -->
-    <script>
-        (function() {
-            var currentTheme = localStorage.getItem('ofp_theme') || 'dark';
-            if (currentTheme === 'light') { document.documentElement.setAttribute('data-theme', 'light'); }
-        })();
-    </script>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
-    <style>
-        .ofp-pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 24px;
-            margin-top: 32px;
-        }
-        .ofp-pricing-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 32px;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .ofp-pricing-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
-            border-color: var(--accent-blue);
-        }
-        .ofp-pricing-header {
-            margin-bottom: 24px;
-            text-align: center;
-        }
-        .ofp-pricing-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-main);
-            margin-bottom: 8px;
-        }
-        .ofp-pricing-price {
-            font-size: 36px;
-            font-weight: 700;
-            color: var(--text-main);
-            margin-bottom: 8px;
-        }
-        .ofp-pricing-price span {
-            font-size: 16px;
-            font-weight: 400;
-            color: var(--text-muted);
-        }
-        .ofp-pricing-desc {
-            font-size: 14px;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
-        .ofp-pricing-features {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 32px 0;
-            flex: 1;
-        }
-        .ofp-pricing-features li {
-            font-size: 14px;
-            color: var(--text-main);
-            margin-bottom: 16px;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-        }
-        .ofp-pricing-features li svg {
-            width: 18px;
-            height: 18px;
-            color: var(--accent-green);
-            flex-shrink: 0;
-            margin-top: 2px;
-        }
-        .ofp-pricing-action {
-            text-align: center;
-            margin-top: auto;
-        }
-        .ofp-pricing-action .ofp-btn-accent {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            font-size: 15px;
-            text-align: center;
-        }
-        .ofp-active-badge {
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--accent-green);
-            color: #fff;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .ofp-pricing-card.is-active {
-            border-color: var(--accent-green);
-        }
-        .ofp-pricing-card.is-active:hover {
-            border-color: var(--accent-green);
-        }
-    </style>
 </head>
 <body class="ofp-portal-body">
 

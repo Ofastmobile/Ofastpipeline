@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Template: /api-settings
  * Client API Settings and Webhook Credentials.
@@ -16,15 +16,7 @@ OFP_Auth::require_active_subscription( $client );
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'API Settings', $client ?? null ) ); ?></title>
-    <!-- Dark theme script to avoid FOUC -->
-    <script>
-        (function() {
-            var currentTheme = localStorage.getItem('ofp_theme') || 'dark';
-            if (currentTheme === 'light') { document.documentElement.setAttribute('data-theme', 'light'); }
-        })();
-    </script>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
 <body class="ofp-portal-body">
 

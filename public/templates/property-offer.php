@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Secure buyer installment offer page.
  * Buyers do not need an OFastpipeline account.
@@ -97,9 +97,6 @@ $status_message = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( $offer ? 'Installment Offer — ' . $offer->property_title : 'Installment Offer' ); ?></title>
     <?php wp_head(); ?>
-    <style>
-        .ofp-offer-wrap{max-width:900px;margin:40px auto;padding:0 20px;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#0f172a}.ofp-offer-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,.06)}.ofp-offer-image{width:100%;height:280px;object-fit:cover;background:#f1f5f9}.ofp-offer-body{padding:28px}.ofp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.ofp-stat{border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#f8fafc}.ofp-stat span{display:block;font-size:12px;color:#64748b;margin-bottom:4px}.ofp-stat strong{font-size:17px}.ofp-terms{border:1px solid #e5e7eb;border-radius:10px;padding:18px;background:#fff;max-height:320px;overflow:auto;white-space:normal}.ofp-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.ofp-btn{border:0;border-radius:8px;padding:12px 18px;font-weight:600;cursor:pointer}.ofp-btn-primary{background:#1a73e8;color:#fff}.ofp-btn-danger{background:#ef4444;color:#fff}.ofp-alert{padding:14px 16px;border-radius:9px;margin-bottom:18px}.ofp-alert-error{background:#fef2f2;color:#991b1b}.ofp-alert-success{background:#ecfdf5;color:#065f46}.ofp-muted{color:#64748b}.ofp-check{display:flex;gap:9px;align-items:flex-start;margin-top:16px;font-size:14px}.ofp-check input{margin-top:3px}
-    </style>
 </head>
 <body>
 <div class="ofp-offer-wrap">

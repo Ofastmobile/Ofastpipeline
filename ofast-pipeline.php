@@ -137,6 +137,19 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Property_Receipt_Generator::init();
 } );
 
+// ── Frontend Admin Bar Control ─────────────────────────────────────────────
+add_action( 'init', function (): void {
+    if ( ! is_admin() && '1' === (string) get_option( 'ofp_hide_admin_bar', '1' ) ) {
+        add_filter( 'show_admin_bar', '__return_false' );
+    }
+}, 1 );
+
+add_action( 'wp_head', function (): void {
+    if ( ! is_admin() && '1' === (string) get_option( 'ofp_hide_admin_bar', '1' ) ) {
+        echo '<style id="ofp-hide-admin-bar">#wpadminbar{display:none!important;}html{margin-top:0!important;}* html body{margin-top:0!important;}body.admin-bar header{top:0!important;}</style>' . "\n";
+    }
+}, 1 );
+
 add_action( 'init', function (): void {
     if ( get_option( 'ofp_flush_rewrite_rules' ) ) {
         flush_rewrite_rules();

@@ -74,29 +74,6 @@
             }
         };
     </script>
-    <style>
-        body,
-        .font-system,
-        .font-sans {
-            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
-        }
-
-        /* Hero background: white overlay on light mode, dark overlay on dark mode */
-        .hero-bg {
-            background-image: 
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.65) 40%, rgba(255, 255, 255, 0.95) 85%, #ffffff 100%),
-                url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=2000&q=80');
-            background-size: cover;
-            background-position: center;
-            background-attachment: scroll !important;
-        }
-
-        html.dark .hero-bg {
-            background-image: 
-                linear-gradient(to bottom, rgba(11, 17, 32, 0.5) 0%, rgba(11, 17, 32, 0.8) 50%, rgba(2, 6, 23, 0.95) 100%),
-                url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=2000&q=80');
-        }
-    </style>
     <?php wp_head(); ?>
     <script>
         if (typeof tailwind !== 'undefined') {
@@ -142,7 +119,7 @@
                     <a href="<?php echo esc_url( home_url('/') ); ?>" class="flex items-center">
                         <span
                             class="text-[13px] sm:text-sm font-black tracking-[0.25em] uppercase transition-colors text-slate-900 dark:text-white drop-shadow-sm">
-                            BOFAST HOMES
+                            <?php echo OFP_Brand::public_logo_html( 'BOFAST HOMES' ); ?>
                         </span>
                     </a>
 
@@ -1294,7 +1271,7 @@
             class="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-8 border-b border-slate-200 dark:border-slate-800 pb-4">
             <div>
                 <div class="text-xs uppercase font-extrabold text-blue-600 dark:text-blue-500 tracking-wider mb-1">
-                    Bofast Home Location</div>
+                    <?php echo esc_html( OFP_Brand::name() ); ?> Location</div>
                 <h2 class="text-2xl sm:text-[30px] font-black font-system text-slate-950 dark:text-white leading-[36px] tracking-tight">Explore
                     High-Growth Neighborhoods</h2>
             </div>
@@ -1516,77 +1493,241 @@
         </div>
     </section>
 
-    <!-- 9. Testimonials -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 mb-24 md:mb-28 overflow-hidden" x-data="{}">
-        <div class="mb-8 border-b border-slate-200 dark:border-slate-800 pb-4">
-            <div class="text-xs uppercase font-extrabold text-blue-600 dark:text-blue-500 tracking-wider mb-1">Reviews
+    <!-- 9. Verified Client Proof & Polaroid Milestone Reel -->
+    <section class="w-full mb-24 md:mb-28 px-[10px] box-border">
+        <div class="ofp-polaroid-section">
+            
+            <!-- Ambient Logo Star Watermark in Background -->
+            <div class="ofp-polaroid-star-bg" aria-hidden="true">
+                <svg class="ofp-star-watermark" style="top: -80px; left: -40px; width: 360px; height: 360px; transform: rotate(15deg);" viewBox="0 0 100 100" fill="currentColor">
+                    <path d="M50 0 C50 28 72 50 100 50 C72 50 50 72 50 100 C50 72 28 50 0 50 C28 50 50 28 50 0 Z"/>
+                </svg>
+                <svg class="ofp-star-watermark" style="bottom: -100px; right: 8%; width: 440px; height: 440px; transform: rotate(-25deg);" viewBox="0 0 100 100" fill="currentColor">
+                    <path d="M50 0 C50 28 72 50 100 50 C72 50 50 72 50 100 C50 72 28 50 0 50 C28 50 50 28 50 0 Z"/>
+                </svg>
+                <svg class="ofp-star-watermark" style="top: 15%; right: 28%; width: 240px; height: 240px; transform: rotate(38deg); opacity: 0.04;" viewBox="0 0 100 100" fill="currentColor">
+                    <path d="M50 0 C50 28 72 50 100 50 C72 50 50 72 50 100 C50 72 28 50 0 50 C28 50 50 28 50 0 Z"/>
+                </svg>
+                <svg class="ofp-star-watermark" style="bottom: 10%; left: 35%; width: 200px; height: 200px; transform: rotate(-10deg); opacity: 0.035;" viewBox="0 0 100 100" fill="currentColor">
+                    <path d="M50 0 C50 28 72 50 100 50 C72 50 50 72 50 100 C50 72 28 50 0 50 C28 50 50 28 50 0 Z"/>
+                </svg>
             </div>
-            <h2 class="text-[30px] font-extrabold font-system text-white leading-[36px] tracking-tight">Client
-                Testimonials & Verified
-                Stories</h2>
-        </div>
 
-        <div class="flex gap-6 overflow-x-auto hide-scrollbar pb-4 snap-x">
-            <div
-                class="min-w-[300px] md:min-w-[400px] snap-center bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex text-amber-400">â˜…â˜…â˜…â˜…â˜…</div>
-                    <span
-                        class="text-[10px] font-bold uppercase bg-emerald-50 text-emerald-600 px-2 py-1 rounded">Verified
-                        Buyer</span>
+            <!-- Section Header -->
+            <div class="ofp-polaroid-header">
+                <div class="ofp-polaroid-pill">
+                    <span>&#10022;</span>
+                    <span>Verified Proof of Impact &amp; Closures</span>
                 </div>
-                <p class="text-slate-600 dark:text-slate-300 text-sm italic mb-6">"Got my C of O verified easily. Their
-                    escrow system made me feel safe buying from London."</p>
-                <div class="flex items-center gap-3">
-                    <div
-                        class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700">
-                        JB</div>
-                    <div>
-                        <h4 class="font-bold text-sm text-slate-900 dark:text-white">Jide Bankole</h4>
-                        <p class="text-[10px] text-slate-500">Purchased in Lekki Phase 1</p>
+                <h2 class="ofp-polaroid-title">
+                    Real People. Real Keys. Real Handovers.
+                </h2>
+                <p class="ofp-polaroid-subtitle">
+                    Over &#8358;120B+ in verified transactions, title allocations, and seamless diaspora handovers across Nigeria.
+                </p>
+            </div>
+
+            <!-- Infinite Polaroid Marquee Track (Smooth scroll, pause on hover, straighten on hover) -->
+            <div class="ofp-polaroid-marquee-container">
+                <div class="ofp-polaroid-track">
+
+                    <!-- SET 1 -->
+                    <!-- Card 1 -->
+                    <div class="ofp-polaroid-card tilt-1" title="Click to view details">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=600&q=80" alt="Lekki Phase 1 Key Handover" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Lekki Phase 1 Key Handover</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Verified Buyer Handover</span>
+                        </div>
                     </div>
+
+                    <!-- Card 2 -->
+                    <div class="ofp-polaroid-card tilt-2" title="Click to view details">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80" alt="C of O & Deed Allocation" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">C of O &amp; Deed Allocation</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Governor's Consent Cleared</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="ofp-polaroid-card tilt-3" title="Click to view details">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=600&q=80" alt="Epe Green Valley Inspection" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Epe Green Valley Inspection</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Weekend Investor Tour</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="ofp-polaroid-card tilt-4" title="Click to view details">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=600&q=80" alt="Victoria Island Move-In" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Victoria Island Move-In</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Luxury Apartment Handover</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 5 -->
+                    <div class="ofp-polaroid-card tilt-5" title="Click to view details">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=600&q=80" alt="Ikoyi Title Verification" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Ikoyi Title Verification</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Deed &amp; Survey Vetted</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 6 -->
+                    <div class="ofp-polaroid-card tilt-6" title="Click to view details">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=600&q=80" alt="Diaspora Escrow Closing" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Diaspora Escrow Closing</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>London to Lagos Purchase</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 7 -->
+                    <div class="ofp-polaroid-card tilt-7" title="Click to view details">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=600&q=80" alt="Ajah Duplex Allocation" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Ajah Duplex Allocation</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Family Home Delivered</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 8 -->
+                    <div class="ofp-polaroid-card tilt-8" title="Click to view details">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=600&q=80" alt="Havencrest Deal Milestone" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Havencrest Deal Milestone</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>100% Commission Disbursed</span>
+                        </div>
+                    </div>
+
+                    <!-- SET 2 (Duplicate for Seamless Infinite Marquee Loop) -->
+                    <!-- Card 1 -->
+                    <div class="ofp-polaroid-card tilt-1" aria-hidden="true">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=600&q=80" alt="Lekki Phase 1 Key Handover" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Lekki Phase 1 Key Handover</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Verified Buyer Handover</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="ofp-polaroid-card tilt-2" aria-hidden="true">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80" alt="C of O & Deed Allocation" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">C of O &amp; Deed Allocation</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Governor's Consent Cleared</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="ofp-polaroid-card tilt-3" aria-hidden="true">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=600&q=80" alt="Epe Green Valley Inspection" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Epe Green Valley Inspection</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Weekend Investor Tour</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="ofp-polaroid-card tilt-4" aria-hidden="true">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=600&q=80" alt="Victoria Island Move-In" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Victoria Island Move-In</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Luxury Apartment Handover</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 5 -->
+                    <div class="ofp-polaroid-card tilt-5" aria-hidden="true">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=600&q=80" alt="Ikoyi Title Verification" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Ikoyi Title Verification</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Deed &amp; Survey Vetted</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 6 -->
+                    <div class="ofp-polaroid-card tilt-6" aria-hidden="true">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=600&q=80" alt="Diaspora Escrow Closing" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Diaspora Escrow Closing</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>London to Lagos Purchase</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 7 -->
+                    <div class="ofp-polaroid-card tilt-7" aria-hidden="true">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=600&q=80" alt="Ajah Duplex Allocation" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Ajah Duplex Allocation</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Family Home Delivered</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 8 -->
+                    <div class="ofp-polaroid-card tilt-8" aria-hidden="true">
+                        <div class="ofp-polaroid-photo-wrap">
+                            <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=600&q=80" alt="Havencrest Deal Milestone" loading="lazy">
+                        </div>
+                        <span class="ofp-polaroid-caption">Havencrest Deal Milestone</span>
+                        <div class="ofp-polaroid-meta">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>100% Commission Disbursed</span>
+                        </div>
+                    </div>
+
                 </div>
             </div>
-            <div
-                class="min-w-[300px] md:min-w-[400px] snap-center bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex text-amber-400">â˜…â˜…â˜…â˜…â˜…</div>
-                    <span
-                        class="text-[10px] font-bold uppercase bg-emerald-50 text-emerald-600 px-2 py-1 rounded">Verified
-                        Tenant</span>
-                </div>
-                <p class="text-slate-600 dark:text-slate-300 text-sm italic mb-6">"Smooth shortlet booking process.
-                    Property was exactly as seen in the 4K video tour."</p>
-                <div class="flex items-center gap-3">
-                    <div
-                        class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-700">
-                        AM</div>
-                    <div>
-                        <h4 class="font-bold text-sm text-slate-900 dark:text-white">Amina Mohammed</h4>
-                        <p class="text-[10px] text-slate-500">Rented in Victoria Island</p>
-                    </div>
-                </div>
-            </div>
-            <div
-                class="min-w-[300px] md:min-w-[400px] snap-center bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex text-amber-400">â˜…â˜…â˜…â˜…â˜…</div>
-                    <span
-                        class="text-[10px] font-bold uppercase bg-emerald-50 text-emerald-600 px-2 py-1 rounded">Verified
-                        Developer</span>
-                </div>
-                <p class="text-slate-600 dark:text-slate-300 text-sm italic mb-6">"Bofast Homes CRM brought me 3 serious
-                    diaspora buyers in one week. The platform is unmatched."</p>
-                <div class="flex items-center gap-3">
-                    <div
-                        class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center font-bold text-amber-700">
-                        CEO</div>
-                    <div>
-                        <h4 class="font-bold text-sm text-slate-900 dark:text-white">Chidi E. Properties</h4>
-                        <p class="text-[10px] text-slate-500">Developer in Ikoyi</p>
-                    </div>
-                </div>
-            </div>
+
         </div>
     </section>
 
@@ -1992,7 +2133,7 @@
                                 </svg>
                             </div>
                             <span style="font-size:16px;font-weight:700"
-                                class="tracking-tight text-slate-900 dark:text-white">Bofast Homes</span>
+                                class="tracking-tight text-slate-900 dark:text-white"><?php echo esc_html( OFP_Brand::public_name_text( 'Bofast Homes' ) ); ?></span>
                         </a>
                         <p class="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
                             Nigeria's leading verified real estate marketplace and integrated broker CRM portal. Fast,
@@ -2127,7 +2268,7 @@
                     </svg>
                     <span>All listings strictly verified against state land registry archives.</span>
                 </div>
-                <p>&copy; 2026 Bofast Homes. Nigeria's most trusted verified property marketplace. All rights reserved.</p>
+                <p><?php echo OFP_Brand::public_copyright(); ?></p>
             </div>
         </div>
     </footer>

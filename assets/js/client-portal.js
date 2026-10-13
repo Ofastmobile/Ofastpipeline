@@ -253,15 +253,52 @@
     }
 
     // ── Theme Toggle ─────────────────────────────────────────────────────────
+    var isThemeToggling = false;
+
+    function togglePortalTheme() {
+        if ( isThemeToggling ) return;
+        isThemeToggling = true;
+        setTimeout(function () { isThemeToggling = false; }, 200);
+
+        var PORTAL_KEY = 'ofp_portal_theme';
+        var html = document.documentElement;
+        var currentlyDark = html.classList.contains('dark') || html.getAttribute('data-theme') === 'dark';
+        var makeDark = !currentlyDark;
+
+        if ( makeDark ) {
+            html.classList.add('dark');
+            html.classList.remove('light');
+            html.setAttribute('data-theme', 'dark');
+            try { localStorage.setItem(PORTAL_KEY, 'dark'); } catch (e) {}
+        } else {
+            html.classList.remove('dark');
+            html.classList.add('light');
+            html.setAttribute('data-theme', 'light');
+            try { localStorage.setItem(PORTAL_KEY, 'light'); } catch (e) {}
+        }
+
+        window.dispatchEvent(new CustomEvent('ofp-theme-changed', {
+            detail: { dark: makeDark, theme: makeDark ? 'dark' : 'light' }
+        }));
+    }
+
+    window.ofpToggleTheme = togglePortalTheme;
+    window.toggleDark = togglePortalTheme;
+
     function initThemeToggle() {
         var btn = document.getElementById('ofp-theme-toggle');
         if ( ! btn ) return;
 
+        if ( btn._ofpThemeBound ) return;
+        btn._ofpThemeBound = true;
+
+        if ( btn.hasAttribute('onclick') ) {
+            btn.removeAttribute('onclick');
+        }
+
         btn.addEventListener('click', function (e) {
             e.preventDefault();
-            if ( typeof window.ofpToggleTheme === 'function' ) {
-                window.ofpToggleTheme();
-            }
+            togglePortalTheme();
         });
     }
 

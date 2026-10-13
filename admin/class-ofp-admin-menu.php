@@ -123,23 +123,15 @@ class OFP_Admin_Menu {
      */
     public function enqueue_assets( string $hook ): void {
 
-        $ofp_pages = [
-            'toplevel_page_ofp-overview',
-            'ofast-pipeline_page_ofp-clients',
-            'ofast-pipeline_page_ofp-leads',
-            'ofast-pipeline_page_ofp-triggers',
-            'ofast-pipeline_page_ofp-communications',
-            'ofast-pipeline_page_ofp-billing',
-            'ofast-pipeline_page_ofp-reports',
-            'ofast-pipeline_page_ofp-settings',
-            'ofast-pipeline_page_ofp-admins',
-            'ofast-pipeline_page_ofp-funding-requests',
-            'ofast-pipeline_page_ofp-send-notification',
-            'ofast-pipeline_page_ofp-activity-logs',
-            'ofast-pipeline_page_ofp-rent-oversight',
-        ];
+        // WordPress derives the hook prefix from the parent menu's display title,
+        // which is now dynamic (OFP_Brand::name()). We match by the stable slug
+        // suffix instead so CSS/JS always loads regardless of the platform name.
+        $is_ofp_page = (
+            $hook === 'toplevel_page_ofp-overview'
+            || str_contains( $hook, '_page_ofp-' )
+        );
 
-        if ( ! in_array( $hook, $ofp_pages, true ) ) {
+        if ( ! $is_ofp_page ) {
             return;
         }
 
@@ -599,6 +591,7 @@ class OFP_Admin_Menu {
             'ofp_crm_base_domain'     => sanitize_text_field( wp_unslash( $_POST['ofp_crm_base_domain']     ?? '' ) ),
             'ofp_use_app_host'        => empty( $_POST['ofp_use_app_host'] ) ? '0' : '1',
             'ofp_online_buyer_payments' => empty( $_POST['ofp_online_buyer_payments'] ) ? '0' : '1',
+            'ofp_hide_admin_bar'      => empty( $_POST['ofp_hide_admin_bar'] ) ? '0' : '1',
             'ofp_global_pixel_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_global_pixel_id']     ?? '' ) ),
             'ofp_app_name'            => sanitize_text_field( wp_unslash( $_POST['ofp_app_name']            ?? '' ) ),
             // Default pipeline messages
@@ -645,6 +638,47 @@ class OFP_Admin_Menu {
             update_option( $key, $value );
         }
 
+        // ── Company Bank Account (Phase 17) ───────────────────────────────
+        if ( isset( $_POST['company_bank_name'] ) ) {
+            update_option( 'ofp_company_bank_name',    sanitize_text_field( wp_unslash( $_POST['company_bank_name'] ?? '' ) ) );
+            update_option( 'ofp_company_account_no',   sanitize_text_field( wp_unslash( $_POST['company_account_no'] ?? '' ) ) );
+            update_option( 'ofp_company_account_name', sanitize_text_field( wp_unslash( $_POST['company_account_name'] ?? '' ) ) );
+        }
+
+        // ── Listing Plans (Phase 14) ───────────────────────────────────────
+        if ( isset( $_POST['listing_price_free'] ) || isset( $_POST['listing_price_silver'] ) || isset( $_POST['listing_price_gold'] ) ) {
+            $listing_prices = [];
+            $listing_caps   = [];
+            foreach ( OFP_Property_CPT::PLAN_KEYS as $plan ) {
+                if ( isset( $_POST[ "listing_price_{$plan}" ] ) ) {
+                    $listing_prices[ $plan ] = (float) $_POST[ "listing_price_{$plan}" ];
+                }
+                if ( isset( $_POST[ "listing_cap_{$plan}" ] ) ) {
+                    $listing_caps[ $plan ]   = (int) $_POST[ "listing_cap_{$plan}" ];
+                }
+            }
+            if ( ! empty( $listing_prices ) ) {
+                OFP_Property_CPT::save_plans( $listing_prices, $listing_caps );
+            }
+        }
+
+        // ── CRM Client Subscription Plans ──────────────────────────────────
+        if ( isset( $_POST['price_starter'] ) || isset( $_POST['price_growth'] ) || isset( $_POST['price_pro'] ) ) {
+            $sub_prices = [];
+            $sub_setups = [];
+            foreach ( OFP_Subscription::PLAN_KEYS as $sub_plan ) {
+                if ( isset( $_POST[ "price_{$sub_plan}" ] ) ) {
+                    $sub_prices[ $sub_plan ] = (float) $_POST[ "price_{$sub_plan}" ];
+                }
+                if ( isset( $_POST[ "setup_{$sub_plan}" ] ) ) {
+                    $sub_setups[ $sub_plan ] = (float) $_POST[ "setup_{$sub_plan}" ];
+                }
+            }
+            if ( ! empty( $sub_prices ) ) {
+                OFP_Subscription::save_pricing( $sub_prices, $sub_setups );
+            }
+        }
+
         $updated_keys = [];
 
         foreach ( $encrypted_fields as $key => $field ) {
@@ -661,8 +695,14 @@ class OFP_Admin_Menu {
             $msg .= ' Updated keys: ' . implode( ', ', $updated_keys ) . '.';
         }
 
+        $active_tab   = sanitize_key( wp_unslash( $_POST['ofp_active_tab'] ?? '' ) );
+        $redirect_url = admin_url( 'admin.php?page=ofp-settings' );
+        if ( ! empty( $active_tab ) ) {
+            $redirect_url .= '#' . $active_tab;
+        }
+
         $this->set_message( $msg, 'success' );
-        wp_safe_redirect( admin_url( 'admin.php?page=ofp-settings' ) );
+        wp_safe_redirect( $redirect_url );
         exit;
     }
 

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Template: /agent/[slug]
  * Public Agent Profile Page (Phase 23)
@@ -60,191 +60,7 @@ $properties = new WP_Query( [
     
     <?php wp_head(); ?>
 
-    <style>
-        :root {
-            --ofp-primary: #111827;
-            --ofp-primary-light: #374151;
-            --ofp-bg: #f9fafb;
-            --ofp-surface: #ffffff;
-            --ofp-text: #1f2937;
-            --ofp-text-light: #6b7280;
-            --ofp-accent: #2563eb;
-            --ofp-accent-hover: #1d4ed8;
-            --ofp-border: #e5e7eb;
-        }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-            background-color: var(--ofp-bg);
-            color: var(--ofp-text);
-            margin: 0;
-            padding: 0;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .agent-header {
-            background: #ffffff;
-            color: var(--ofp-primary);
-            padding: 60px 20px;
-            text-align: center;
-            border-bottom: 1px solid var(--ofp-border);
-        }
-
-        .agent-logo {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 1px solid var(--ofp-border);
-            margin-bottom: 20px;
-            background: #fff;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .agent-name {
-            font-size: 32px;
-            font-weight: 700;
-            margin: 0 0 12px;
-        }
-
-        .agent-bio {
-            max-width: 600px;
-            margin: 0 auto 30px;
-            font-size: 16px;
-            line-height: 1.6;
-            color: var(--ofp-text-light);
-        }
-
-        .agent-contact-actions {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .agent-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 24px;
-            border-radius: 100px;
-            font-weight: 600;
-            font-size: 14px;
-            text-decoration: none;
-            transition: transform 0.2s, opacity 0.2s;
-        }
-        .agent-btn:hover { transform: translateY(-2px); opacity: 0.9; }
-
-        .btn-call { background: var(--ofp-primary); color: white; }
-        .btn-whatsapp { background: #25D366; color: white; }
-
-        .properties-container {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-
-        .section-title {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 30px;
-            color: var(--ofp-primary);
-        }
-
-        .property-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 30px;
-        }
-
-        .property-card {
-            background: var(--ofp-surface);
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            border: 1px solid var(--ofp-border);
-            text-decoration: none;
-            color: inherit;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .property-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        .property-img {
-            width: 100%;
-            height: 220px;
-            object-fit: cover;
-            background: #e5e7eb;
-        }
-
-        .property-content {
-            padding: 20px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .property-price {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--ofp-accent);
-            margin: 0 0 8px;
-        }
-
-        .property-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin: 0 0 12px;
-            line-height: 1.4;
-        }
-
-        .property-meta {
-            display: flex;
-            gap: 16px;
-            color: var(--ofp-text-light);
-            font-size: 13px;
-            margin-top: auto;
-            padding-top: 16px;
-            border-top: 1px solid var(--ofp-border);
-        }
-
-        .meta-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .meta-item svg { width: 16px; height: 16px; }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            background: var(--ofp-surface);
-            border-radius: 16px;
-            border: 1px solid var(--ofp-border);
-        }
-    </style>
-
-    <!-- Phase 23 Meta Pixel -->
-    <?php if ( ! empty( $client->meta_pixel_id ) ) : ?>
-        <script>
-        !function(f,b,e,v,n,t,s)
-        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-        n.queue=[];t=b.createElement(e);t.async=!0;
-        t.src=v;s=b.getElementsByTagName(e)[0];
-        s.parentNode.insertBefore(t,s)}(window, document,'script',
-        'https://connect.facebook.net/en_US/fbevents.js');
-        fbq('init', '<?php echo esc_js( $client->meta_pixel_id ); ?>');
-        fbq('track', 'PageView');
-        </script>
-        <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=<?php echo esc_attr( $client->meta_pixel_id ); ?>&ev=PageView&noscript=1"/></noscript>
-    <?php endif; ?>
 </head>
 <body>
 
@@ -325,6 +141,23 @@ $properties = new WP_Query( [
         <?php endif; ?>
     </main>
 
-    <?php wp_footer(); ?>
+        <!-- Phase 23 Meta Pixel -->
+    <?php if ( ! empty( $client->meta_pixel_id ) ) : ?>
+        <script>
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '<?php echo esc_js( $client->meta_pixel_id ); ?>');
+        fbq('track', 'PageView');
+        </script>
+        <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=<?php echo esc_attr( $client->meta_pixel_id ); ?>&ev=PageView&noscript=1"/></noscript>
+    <?php endif; ?>
+
+<?php wp_footer(); ?>
 </body>
 </html>

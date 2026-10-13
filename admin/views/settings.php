@@ -1,472 +1,1588 @@
 <?php
 /**
- * Admin View: Settings (Super Admin Only)
+ * Admin View: Settings (Super Admin Only) — Redesigned Experience
  *
- * Displays all OFast Pipeline configuration sections with visual
- * status indicators for encrypted/sensitive fields.
+ * Modern, tabbed configuration dashboard for OFast Pipeline.
+ * Features:
+ * - High-precision colored SVG icon system (no emojis)
+ * - Real-time system health status bar
+ * - Intuitive sidebar navigation with persisted tabs
+ * - Interactive eyeball password toggles for sensitive credentials
+ * - One-click Webhook URL copy-to-clipboard
+ * - Click-to-insert placeholder chips for SMS/Voice templates
+ * - Live SMS character count & segment tracker
+ * - Interactive Bank Account card preview
+ * - Unified one-click saving with sticky action bar
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 if ( ! OFP_Auth::is_super_admin() ) wp_die( 'Access denied.' );
 
-$smtp_mode       = get_option( 'ofp_smtp_mode', 'default' );
+// ── State & Config Values ────────────────────────────────────────────────────
+$smtp_mode          = get_option( 'ofp_smtp_mode', 'default' );
+$crm_domain         = get_option( 'ofp_crm_base_domain', '' );
+$app_name           = get_option( 'ofp_app_name', '' );
+$use_app_host       = get_option( 'ofp_use_app_host', '1' );
+$online_payments    = get_option( 'ofp_online_buyer_payments', '0' );
+$hide_admin_bar     = get_option( 'ofp_hide_admin_bar', '1' );
+$pixel_id           = get_option( 'ofp_global_pixel_id', '' );
 
-// ── Helper: renders a configured / not-set badge ────────────────────────
-function ofp_key_badge( string $option_key ): void {
-    $val = get_option( $option_key, '' );
-    if ( ! empty( $val ) ) {
-        echo '<span class="ofp-badge ofp-badge-green ofp-key-badge">✓ Configured</span>';
-    } else {
-        echo '<span class="ofp-badge ofp-badge-red ofp-key-badge">✗ Not set</span>';
-    }
-}
+// SMTP
+$smtp_host          = get_option( 'ofp_smtp_host', '' );
+$smtp_port          = get_option( 'ofp_smtp_port', 587 );
+$smtp_user          = get_option( 'ofp_smtp_username', '' );
+$smtp_enc           = get_option( 'ofp_smtp_encryption', 'tls' );
+$smtp_from_email    = get_option( 'ofp_smtp_from_email', '' );
+$smtp_from_name     = get_option( 'ofp_smtp_from_name', '' );
+$has_smtp_pass      = ! empty( get_option( 'ofp_smtp_password', '' ) );
 
-// ── Helper: section status pill ─────────────────────────────────────────
-function ofp_section_status( array $required_keys ): void {
-    $all_set = true;
-    foreach ( $required_keys as $key ) {
-        if ( empty( get_option( $key, '' ) ) ) {
-            $all_set = false;
-            break;
-        }
-    }
-    if ( $all_set ) {
-        echo '<span class="ofp-section-status ofp-section-status--ok">Ready</span>';
-    } else {
-        echo '<span class="ofp-section-status ofp-section-status--missing">Needs Setup</span>';
-    }
-}
+// Paystack
+$has_paystack_key   = ! empty( get_option( 'ofp_paystack_secret_key', '' ) );
+$paystack_key_raw   = OFP_Security::decrypt( get_option( 'ofp_paystack_secret_key', '' ) );
+$paystack_is_live   = str_starts_with( $paystack_key_raw, 'sk_live_' );
+$paystack_is_test   = str_starts_with( $paystack_key_raw, 'sk_test_' );
+
+// SMS Providers
+$at_user            = get_option( 'ofp_at_username', '' );
+$has_at_key         = ! empty( get_option( 'ofp_at_api_key', '' ) );
+$at_sender          = get_option( 'ofp_at_sender_id', '' );
+$at_phone           = get_option( 'ofp_at_phone_number', '' );
+
+$has_bsmsn_key      = ! empty( get_option( 'ofp_bsmsn_api_key', '' ) );
+$bsmsn_sender       = get_option( 'ofp_bsmsn_sender_id', '' );
+
+$has_smartsms_key   = ! empty( get_option( 'ofp_smartsms_api_key', '' ) );
+$smartsms_sender    = get_option( 'ofp_smartsms_sender_id', '' );
+$smartsms_routing   = get_option( 'ofp_smartsms_routing', '3' );
+
+// Turnstile
+$turnstile_site     = get_option( 'ofp_turnstile_site_key', '' );
+$has_turnstile_sec  = ! empty( get_option( 'ofp_turnstile_secret', '' ) );
+
+// Bank Details
+$bank_name          = get_option( 'ofp_company_bank_name', '' );
+$bank_acc_no        = get_option( 'ofp_company_account_no', '' );
+$bank_acc_name      = get_option( 'ofp_company_account_name', '' );
+$has_bank_set       = ! empty( $bank_name ) && ! empty( $bank_acc_no );
+
+// Plans & Pricing
+$listing_prices     = OFP_Property_CPT::get_plan_prices();
+$listing_caps       = OFP_Property_CPT::get_plan_caps();
+$crm_prices         = OFP_Subscription::get_plan_prices();
+$crm_setups         = OFP_Subscription::get_setup_fees();
+
+// Encryption Vault Status
+$has_vault_key      = ! empty( get_option( 'ofp_encryption_key', '' ) );
 
 include OFP_PATH . 'admin/views/partials/header.php';
 ?>
 
-<div class="ofp-settings-page-header">
-    <h2>Settings</h2>
-    <p>Configure integrations and credentials. Sensitive fields (passwords, API keys) are stored encrypted.<br>
-       Leave a key field blank to keep its existing value.</p>
-</div>
+<div class="ofp-settings-wrap">
 
-<form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ofp-form">
-    <?php wp_nonce_field( 'ofp_save_settings' ); ?>
-    <input type="hidden" name="action" value="ofp_save_settings">
-
-    <!-- ── DOMAIN ROUTING (Phase 16) ───────────────────────────────────── -->
-    <div class="ofp-settings-section">
-        <div class="ofp-settings-section-header">
-            <h3>Domain Routing</h3>
-        </div>
-        <p class="ofp-hint">
-            Your base CRM domain. Phase 16 uses this to route
-            <code>app.yourdomain.com</code> (login/dashboard) and
-            <code>property.yourdomain.com</code> (public marketplace) automatically.
-            Enter just the bare domain — no <code>https://</code>, no trailing slash.
-        </p>
-        <div class="ofp-form-grid">
-            <div class="ofp-field">
-                <label>App Name</label>
-                <input type="text" name="ofp_app_name"
-                       value="<?php echo esc_attr( get_option( 'ofp_app_name', '' ) ); ?>"
-                       placeholder="<?php echo esc_attr( OFP_Brand::DEFAULT_NAME ); ?>">
-                <p class="ofp-hint" style="margin-top:6px;">The product name clients see on the login page, dashboard and browser tab. Leave empty to use <?php echo esc_html( OFP_Brand::DEFAULT_NAME ); ?>. Solo companies never see it.</p>
-            </div>
-
-            <div class="ofp-field">
-                <label>CRM Base Domain</label>
-                <input type="text" name="ofp_crm_base_domain"
-                       value="<?php echo esc_attr( get_option( 'ofp_crm_base_domain', '' ) ); ?>"
-                       placeholder="e.g. ofastpipeline.com">
-                <p class="ofp-hint" style="margin-top:6px;">Needed for client addresses like name.yourdomain.com. Each client address needs a DNS record (a wildcard * A record covers all of them) and a matching subdomain on your server.</p>
-            </div>
-
-            <div class="ofp-field">
-                <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;">
-                    <input type="checkbox" name="ofp_use_app_host" value="1" <?php checked( get_option( 'ofp_use_app_host', '1' ), '1' ); ?> style="margin-top:3px;">
-                    <span><strong>Use app.yourdomain for the dashboard.</strong> When on, dashboard links opened from your main site go to app.yourdomain. Turn it off if app.yourdomain is not set up in DNS and on your server. Clients on their own address are not affected.</span>
-                </label>
-            </div>
-
-            <div class="ofp-field">
-                <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;">
-                    <input type="checkbox" name="ofp_online_buyer_payments" value="1" <?php checked( get_option( 'ofp_online_buyer_payments', '0' ), '1' ); ?> style="margin-top:3px;">
-                    <span><strong>Allow online card payments for buyers and tenants (Paystack).</strong> Leave this off to have buyers and tenants pay by bank transfer into the property owner's account, with the owner approving each payment. Your own plan and credit payments are not affected.</span>
-                </label>
-            </div>
-            
-            <div class="ofp-field">
-                <label>Global Meta Pixel ID</label>
-                <input type="text" name="ofp_global_pixel_id"
-                       value="<?php echo esc_attr( get_option( 'ofp_global_pixel_id', '' ) ); ?>"
-                       placeholder="e.g. 1234567890">
-                <p class="ofp-hint" style="margin-top:6px;">Fires globally on your main website for your own retargeting.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- ── DEFAULT PIPELINE MESSAGES ─────────────────────────────────────── -->
-    <div class="ofp-settings-section">
-        <div class="ofp-settings-section-header">
-            <h3>Default Pipeline Messages</h3>
-        </div>
-        <p class="ofp-hint">
-            These are the default messages pre-filled when a new client is onboarded.
-            Each client can customise their own messages from their dashboard → Pipeline Settings.<br>
-            <strong>Placeholders:</strong> <code>{{name}}</code> <code>{{phone}}</code> <code>{{business_name}}</code>
-        </p>
-        <div class="ofp-form-grid">
-            <div class="ofp-field ofp-field-full">
-                <label>Instant SMS Message</label>
-                <textarea name="ofp_default_instant_sms" rows="3" placeholder="Hi {{name}}, thank you for your interest! We will be in touch shortly. - {{business_name}}"><?php echo esc_textarea( get_option( 'ofp_default_instant_sms', '' ) ); ?></textarea>
-                <p class="ofp-hint">Sent immediately when a lead submits the form. Keep under 160 characters for a single SMS.</p>
-            </div>
-            <div class="ofp-field ofp-field-full">
-                <label>Follow-up 1 Message (SMS — default 1 hour later)</label>
-                <textarea name="ofp_default_followup_1" rows="3" placeholder="Hi {{name}}, just checking in — did you get our message? We would love to help. - {{business_name}}"><?php echo esc_textarea( get_option( 'ofp_default_followup_1', '' ) ); ?></textarea>
-            </div>
-            <div class="ofp-field ofp-field-full">
-                <label>Follow-up 2 Message (Voice/IVR — default 24 hours later)</label>
-                <textarea name="ofp_default_followup_2" rows="3" placeholder="Hello, this is a message from {{business_name}}. You recently showed interest in our services. Press 1 to speak with us now. Press 2 for our WhatsApp contact. Press 3 for a callback later."><?php echo esc_textarea( get_option( 'ofp_default_followup_2', '' ) ); ?></textarea>
-                <p class="ofp-hint">This is read aloud during the IVR voice call. Write it as natural speech.</p>
-            </div>
-            <div class="ofp-field ofp-field-full">
-                <label>Follow-up 3 Message (SMS — default 72 hours later)</label>
-                <textarea name="ofp_default_followup_3" rows="3" placeholder="Hi {{name}}, we have been trying to reach you. We would love to show you how {{business_name}} can help. Call or message us anytime."><?php echo esc_textarea( get_option( 'ofp_default_followup_3', '' ) ); ?></textarea>
-            </div>
-        </div>
-    </div>
-
-    <!-- ── SMTP ───────────────────────────────────────────────────────────── -->
-    <div class="ofp-settings-section">
-        <div class="ofp-settings-section-header">
-            <h3>Email / SMTP</h3>
-            <?php
-            if ( $smtp_mode === 'custom' ) {
-                ofp_section_status( [ 'ofp_smtp_host', 'ofp_smtp_username', 'ofp_smtp_password', 'ofp_smtp_from_email' ] );
-            } else {
-                echo '<span class="ofp-section-status ofp-section-status--ok">Using WP Default</span>';
-            }
-            ?>
-        </div>
-
-        <div class="ofp-smtp-mode-toggle">
-            <label class="ofp-toggle-label">Email Delivery Mode</label>
-            <div class="ofp-toggle-buttons">
-                <label class="ofp-toggle-option <?php echo $smtp_mode !== 'custom' ? 'ofp-toggle-active' : ''; ?>">
-                    <input type="radio" name="ofp_smtp_mode" value="default"
-                           <?php checked( $smtp_mode !== 'custom', true ); ?>>
-                    <span class="ofp-toggle-btn">
-                        <strong>WordPress Default</strong>
-                        <small>Uses PHP mail() or another SMTP plugin</small>
+    <!-- ── Top Header & Global Actions ───────────────────────────────────── -->
+    <div class="ofp-settings-topbar">
+        <div class="ofp-topbar-left">
+            <div class="ofp-settings-title-row">
+                <h2 class="ofp-settings-title">Platform Settings</h2>
+                <span class="ofp-topbar-badge">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Super Admin Console
+                </span>
+                <?php if ( $has_vault_key ) : ?>
+                    <span class="ofp-pill ofp-pill-purple" title="AES-256-CBC Encryption Active at rest">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        AES-256 Encrypted
                     </span>
-                </label>
-                <label class="ofp-toggle-option <?php echo $smtp_mode === 'custom' ? 'ofp-toggle-active' : ''; ?>">
-                    <input type="radio" name="ofp_smtp_mode" value="custom"
-                           <?php checked( $smtp_mode, 'custom' ); ?>>
-                    <span class="ofp-toggle-btn">
-                        <strong>Custom SMTP</strong>
-                        <small>Configure your own SMTP server below</small>
-                    </span>
-                </label>
+                <?php endif; ?>
             </div>
+            <p class="ofp-settings-desc">Manage API credentials, communications relays, domain multi-tenancy, and pricing tiers.</p>
         </div>
-
-        <div id="ofp-smtp-fields" class="ofp-conditional-fields" style="<?php echo $smtp_mode !== 'custom' ? 'display:none;' : ''; ?>">
-            <div class="ofp-form-grid">
-                <div class="ofp-field">
-                    <label>SMTP Host</label>
-                    <input type="text" name="ofp_smtp_host"
-                           value="<?php echo esc_attr( get_option( 'ofp_smtp_host', '' ) ); ?>"
-                           placeholder="e.g. smtp-relay.brevo.com">
-                </div>
-                <div class="ofp-field">
-                    <label>SMTP Port</label>
-                    <input type="number" name="ofp_smtp_port"
-                           value="<?php echo esc_attr( get_option( 'ofp_smtp_port', 587 ) ); ?>">
-                </div>
-                <div class="ofp-field">
-                    <label>SMTP Username</label>
-                    <input type="text" name="ofp_smtp_username"
-                           value="<?php echo esc_attr( get_option( 'ofp_smtp_username', '' ) ); ?>">
-                </div>
-                <div class="ofp-field">
-                    <label>SMTP Password <?php ofp_key_badge( 'ofp_smtp_password' ); ?></label>
-                    <input type="password" name="ofp_smtp_password" placeholder="Leave blank to keep existing">
-                </div>
-                <div class="ofp-field">
-                    <label>Encryption</label>
-                    <select name="ofp_smtp_encryption">
-                        <option value="tls" <?php selected( get_option( 'ofp_smtp_encryption', 'tls' ), 'tls' ); ?>>TLS (recommended)</option>
-                        <option value="ssl" <?php selected( get_option( 'ofp_smtp_encryption', 'tls' ), 'ssl' ); ?>>SSL</option>
-                    </select>
-                </div>
-                <div class="ofp-field">
-                    <label>From Email</label>
-                    <input type="email" name="ofp_smtp_from_email"
-                           value="<?php echo esc_attr( get_option( 'ofp_smtp_from_email', '' ) ); ?>"
-                           placeholder="noreply@yourdomain.com">
-                </div>
-                <div class="ofp-field">
-                    <label>From Name</label>
-                    <input type="text" name="ofp_smtp_from_name"
-                           value="<?php echo esc_attr( get_option( 'ofp_smtp_from_name', '' ) ); ?>">
-                </div>
-            </div>
-        </div>
-
-        <div class="ofp-form-actions" style="border:0;padding:0;margin-top:12px;">
-            <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_test_email' ), 'ofp_test_email' ) ); ?>"
-               class="button"
-               onclick="return confirm('Send a test email to your admin address?');"
-            > Send Test Email to Me</a>
-        </div>
-    </div>
-
-    <!-- ── PAYMENT GATEWAY ────────────────────────────────────────────────── -->
-    <div class="ofp-settings-section">
-        <div class="ofp-settings-section-header">
-            <h3>Payment Gateway (Paystack)</h3>
-            <?php ofp_section_status( [ 'ofp_paystack_secret_key' ] ); ?>
-        </div>
-        <p class="ofp-hint">
-            Configure your Paystack credentials for payment processing and webhook verifications.
-        </p>
-
-        <div class="ofp-form-grid">
-            <div class="ofp-field">
-                <label>Paystack Secret Key <?php ofp_key_badge( 'ofp_paystack_secret_key' ); ?></label>
-                <input type="password" name="ofp_paystack_secret_key" placeholder="Leave blank to keep existing">
-                <p class="ofp-hint">Starts with sk_live_ (production) or sk_test_ (sandbox).</p>
-            </div>
-        </div>
-        <p class="ofp-hint">Webhook URL to configure in Paystack dashboard:
-            <code><?php echo esc_url( home_url( '/wp-json/ofp/v1/webhook/payment' ) ); ?></code>
-        </p>
-    </div>
-
-
-    <!-- ── Africa's Talking ───────────────────────────────────────────────── -->
-    <div class="ofp-settings-section">
-        <div class="ofp-settings-section-header">
-            <h3>Africa's Talking (SMS & Voice)</h3>
-            <?php ofp_section_status( [ 'ofp_at_username', 'ofp_at_api_key' ] ); ?>
-        </div>
-        <div class="ofp-form-grid">
-            <div class="ofp-field">
-                <label>AT Username</label>
-                <input type="text" name="ofp_at_username"
-                       value="<?php echo esc_attr( get_option( 'ofp_at_username', '' ) ); ?>">
-            </div>
-            <div class="ofp-field">
-                <label>AT API Key <?php ofp_key_badge( 'ofp_at_api_key' ); ?></label>
-                <input type="password" name="ofp_at_api_key" placeholder="Leave blank to keep existing">
-            </div>
-            <div class="ofp-field">
-                <label>Sender ID (SMS)</label>
-                <input type="text" name="ofp_at_sender_id"
-                       value="<?php echo esc_attr( get_option( 'ofp_at_sender_id', '' ) ); ?>"
-                       placeholder="e.g. OFastPipe">
-            </div>
-            <div class="ofp-field">
-                <label>AT Phone Number (Voice calls)</label>
-                <input type="text" name="ofp_at_phone_number"
-                       value="<?php echo esc_attr( get_option( 'ofp_at_phone_number', '' ) ); ?>"
-                       placeholder="e.g. +2348000000000">
-            </div>
-        </div>
-    </div>
-
-    <!-- ── BulkSMS Nigeria ────────────────────────────────────────────────── -->
-    <div class="ofp-settings-section">
-        <div class="ofp-settings-section-header">
-            <h3>BulkSMS Nigeria (Fallback SMS)</h3>
-            <?php ofp_section_status( [ 'ofp_bsmsn_api_key' ] ); ?>
-        </div>
-        <div class="ofp-form-grid">
-            <div class="ofp-field">
-                <label>BulkSMS API Key <?php ofp_key_badge( 'ofp_bsmsn_api_key' ); ?></label>
-                <input type="password" name="ofp_bsmsn_api_key" placeholder="Leave blank to keep existing">
-            </div>
-            <div class="ofp-field">
-                <label>Sender ID</label>
-                <input type="text" name="ofp_bsmsn_sender_id"
-                       value="<?php echo esc_attr( get_option( 'ofp_bsmsn_sender_id', '' ) ); ?>"
-                       placeholder="e.g. OFastPipe">
-            </div>
-        </div>
-    </div>
-
-    <!-- ── SmartSMSSolutions ──────────────────────────────────────────────── -->
-    <div class="ofp-settings-section">
-        <div class="ofp-settings-section-header">
-            <h3>SmartSMSSolutions (Nigerian SMS)</h3>
-            <?php ofp_section_status( [ 'ofp_smartsms_api_key' ] ); ?>
-        </div>
-        <div class="ofp-form-grid">
-            <div class="ofp-field">
-                <label>API Token <?php ofp_key_badge( 'ofp_smartsms_api_key' ); ?></label>
-                <input type="password" name="ofp_smartsms_api_key" placeholder="Leave blank to keep existing">
-            </div>
-            <div class="ofp-field">
-                <label>Sender ID</label>
-                <input type="text" name="ofp_smartsms_sender_id"
-                       value="<?php echo esc_attr( get_option( 'ofp_smartsms_sender_id', '' ) ); ?>"
-                       placeholder="e.g. OFastPipe">
-            </div>
-            <div class="ofp-field">
-                <label>Routing</label>
-                <select name="ofp_smartsms_routing">
-                    <option value="3" <?php selected( get_option( 'ofp_smartsms_routing', '3' ), '3' ); ?>>Corporate (DND bypass)</option>
-                    <option value="2" <?php selected( get_option( 'ofp_smartsms_routing', '3' ), '2' ); ?>>Standard</option>
-                    <option value="6" <?php selected( get_option( 'ofp_smartsms_routing', '3' ), '6' ); ?>>Refund</option>
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <!-- ── Cloudflare Turnstile ───────────────────────────────────────────── -->
-    <div class="ofp-settings-section">
-        <div class="ofp-settings-section-header">
-            <h3>Cloudflare Turnstile</h3>
-            <?php ofp_section_status( [ 'ofp_turnstile_site_key', 'ofp_turnstile_secret' ] ); ?>
-        </div>
-        <p class="ofp-hint">Bot protection on lead capture forms, /login, and /signup. Leave blank during local development — Turnstile is automatically bypassed when no secret key is set.</p>
-        <div class="ofp-form-grid">
-            <div class="ofp-field">
-                <label>Site Key (public)</label>
-                <input type="text" name="ofp_turnstile_site_key"
-                       value="<?php echo esc_attr( get_option( 'ofp_turnstile_site_key', '' ) ); ?>">
-            </div>
-            <div class="ofp-field">
-                <label>Secret Key <?php ofp_key_badge( 'ofp_turnstile_secret' ); ?></label>
-                <input type="password" name="ofp_turnstile_secret" placeholder="Leave blank to keep existing">
-            </div>
-        </div>
-    </div>
-
-    <div class="ofp-form-actions">
-        <button type="submit" class="button button-primary ofp-btn-primary">Save All Settings</button>
-    </div>
-
-</form>
-
-<div class="ofp-settings-section">
-    <h2>Company Bank Account</h2>
-    <p class="ofp-hint">
-        Shown to clients on their Account page as an alternative
-        transfer option for manual funding.
-    </p>
-
-    <form method="post" action="">
-        <?php wp_nonce_field( 'ofp_save_company_bank_action', 'ofp_company_bank_nonce' ); ?>
-        <table class="form-table" role="presentation">
-            <tr>
-                <th>Bank Name</th>
-                <td><input type="text" name="company_bank_name"
-                           value="<?php echo esc_attr( get_option( 'ofp_company_bank_name' ) ); ?>"
-                           style="width:300px;"></td>
-            </tr>
-            <tr>
-                <th>Account Number</th>
-                <td><input type="text" name="company_account_no"
-                           value="<?php echo esc_attr( get_option( 'ofp_company_account_no' ) ); ?>"
-                           style="width:300px;"></td>
-            </tr>
-            <tr>
-                <th>Account Name</th>
-                <td><input type="text" name="company_account_name"
-                           value="<?php echo esc_attr( get_option( 'ofp_company_account_name' ) ); ?>"
-                           style="width:300px;"></td>
-            </tr>
-        </table>
-        <p class="submit">
-            <button type="submit" name="ofp_save_company_bank" value="1" class="button button-primary">
-                Save Bank Details
+        <div class="ofp-topbar-actions">
+            <button type="button" class="ofp-btn-save-master" onclick="document.getElementById('ofp-master-settings-form').submit();">
+                <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                Save All Changes
             </button>
-        </p>
+        </div>
+    </div>
+
+    <!-- ── System Health Bar (Clean Color SVG Icons) ─────────────────────── -->
+    <div class="ofp-health-grid">
+        <!-- Email Health -->
+        <a href="#tab-email" class="ofp-health-card ofp-nav-trigger" data-target="tab-email">
+            <div class="ofp-icon-box ofp-icon-md icon-sky">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="20" height="16" x="2" y="4" rx="2"/>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                </svg>
+            </div>
+            <div class="ofp-health-meta">
+                <span class="ofp-health-label">Email Service</span>
+                <span class="ofp-health-status">
+                    <?php if ( $smtp_mode === 'custom' ) : ?>
+                        <span class="ofp-status-dot dot-green"></span> Custom SMTP
+                    <?php else : ?>
+                        <span class="ofp-status-dot dot-blue"></span> WP Default Mail
+                    <?php endif; ?>
+                </span>
+            </div>
+        </a>
+
+        <!-- Paystack Health -->
+        <a href="#tab-payments" class="ofp-health-card ofp-nav-trigger" data-target="tab-payments">
+            <div class="ofp-icon-box ofp-icon-md icon-emerald">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="20" height="14" x="2" y="5" rx="2"/>
+                    <line x1="2" x2="22" y1="10" y2="10"/>
+                </svg>
+            </div>
+            <div class="ofp-health-meta">
+                <span class="ofp-health-label">Paystack Gateway</span>
+                <span class="ofp-health-status">
+                    <?php if ( $paystack_is_live ) : ?>
+                        <span class="ofp-status-dot dot-green"></span> Live Active
+                    <?php elseif ( $paystack_is_test ) : ?>
+                        <span class="ofp-status-dot dot-yellow"></span> Sandbox / Test
+                    <?php elseif ( $has_paystack_key ) : ?>
+                        <span class="ofp-status-dot dot-green"></span> Configured
+                    <?php else : ?>
+                        <span class="ofp-status-dot dot-gray"></span> Needs Setup
+                    <?php endif; ?>
+                </span>
+            </div>
+        </a>
+
+        <!-- SMS Health -->
+        <a href="#tab-sms" class="ofp-health-card ofp-nav-trigger" data-target="tab-sms">
+            <div class="ofp-icon-box ofp-icon-md icon-violet">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+            </div>
+            <div class="ofp-health-meta">
+                <span class="ofp-health-label">SMS Relays</span>
+                <span class="ofp-health-status">
+                    <?php if ( $has_at_key ) : ?>
+                        <span class="ofp-status-dot dot-green"></span> Africa's Talking
+                    <?php elseif ( $has_smartsms_key ) : ?>
+                        <span class="ofp-status-dot dot-green"></span> SmartSMS
+                    <?php elseif ( $has_bsmsn_key ) : ?>
+                        <span class="ofp-status-dot dot-green"></span> BulkSMS NG
+                    <?php else : ?>
+                        <span class="ofp-status-dot dot-yellow"></span> None Active
+                    <?php endif; ?>
+                </span>
+            </div>
+        </a>
+
+        <!-- Anti-Bot Health -->
+        <a href="#tab-security" class="ofp-health-card ofp-nav-trigger" data-target="tab-security">
+            <div class="ofp-icon-box ofp-icon-md icon-rose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="m9 12 2 2 4-4"/>
+                </svg>
+            </div>
+            <div class="ofp-health-meta">
+                <span class="ofp-health-label">Bot Protection</span>
+                <span class="ofp-health-status">
+                    <?php if ( ! empty( $turnstile_site ) && $has_turnstile_sec ) : ?>
+                        <span class="ofp-status-dot dot-green"></span> Turnstile Active
+                    <?php else : ?>
+                        <span class="ofp-status-dot dot-blue"></span> Dev Bypass
+                    <?php endif; ?>
+                </span>
+            </div>
+        </a>
+
+        <!-- Bank Details -->
+        <a href="#tab-bank" class="ofp-health-card ofp-nav-trigger" data-target="tab-bank">
+            <div class="ofp-icon-box ofp-icon-md icon-teal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" x2="21" y1="22" y2="22"/>
+                    <line x1="6" x2="6" y1="18" y2="11"/>
+                    <line x1="10" x2="10" y1="18" y2="11"/>
+                    <line x1="14" x2="14" y1="18" y2="11"/>
+                    <line x1="18" x2="18" y1="18" y2="11"/>
+                    <polygon points="12 2 20 7 4 7"/>
+                </svg>
+            </div>
+            <div class="ofp-health-meta">
+                <span class="ofp-health-label">Company Bank</span>
+                <span class="ofp-health-status">
+                    <?php if ( $has_bank_set ) : ?>
+                        <span class="ofp-status-dot dot-green"></span> <?php echo esc_html( $bank_name ); ?>
+                    <?php else : ?>
+                        <span class="ofp-status-dot dot-gray"></span> Not Set
+                    <?php endif; ?>
+                </span>
+            </div>
+        </a>
+    </div>
+
+    <!-- ── Master Settings Form ─────────────────────────────────────────── -->
+    <form id="ofp-master-settings-form" method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+        <?php wp_nonce_field( 'ofp_save_settings' ); ?>
+        <input type="hidden" name="action" value="ofp_save_settings">
+        <input type="hidden" name="ofp_active_tab" id="ofp_active_tab" value="tab-general">
+
+        <div class="ofp-settings-layout">
+
+            <!-- ── Left Sidebar Navigation (Crisp Color SVGs) ─────────────── -->
+            <aside class="ofp-settings-nav">
+                <!-- Group: Core -->
+                <div class="ofp-nav-group">
+                    <span class="ofp-nav-group-title">Core Platform</span>
+                    
+                    <button type="button" class="ofp-nav-item is-active" data-tab="tab-general">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-blue">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="2" x2="22" y1="12" y2="12"/>
+                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                                </svg>
+                            </span>
+                            <span>General & Routing</span>
+                        </span>
+                        <span class="ofp-nav-pill">Domain</span>
+                    </button>
+
+                    <button type="button" class="ofp-nav-item" data-tab="tab-pipeline">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-indigo">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                            </span>
+                            <span>Message Templates</span>
+                        </span>
+                        <span class="ofp-nav-pill">Auto</span>
+                    </button>
+                </div>
+
+                <!-- Group: Integrations -->
+                <div class="ofp-nav-group">
+                    <span class="ofp-nav-group-title">Integrations & Relays</span>
+                    
+                    <button type="button" class="ofp-nav-item" data-tab="tab-email">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-sky">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="20" height="16" x="2" y="4" rx="2"/>
+                                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                                </svg>
+                            </span>
+                            <span>Email (SMTP)</span>
+                        </span>
+                        <span class="ofp-nav-pill"><?php echo $smtp_mode === 'custom' ? 'SMTP' : 'WP'; ?></span>
+                    </button>
+
+                    <button type="button" class="ofp-nav-item" data-tab="tab-payments">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-emerald">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="20" height="14" x="2" y="5" rx="2"/>
+                                    <line x1="2" x2="22" y1="10" y2="10"/>
+                                </svg>
+                            </span>
+                            <span>Payment Gateway</span>
+                        </span>
+                        <span class="ofp-nav-pill">Paystack</span>
+                    </button>
+
+                    <button type="button" class="ofp-nav-item" data-tab="tab-sms">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-violet">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4.93 4.93a10 10 0 0 1 14.14 0"/>
+                                    <path d="M7.76 7.76a6 6 0 0 1 8.48 0"/>
+                                    <circle cx="12" cy="12" r="2"/>
+                                    <line x1="12" x2="12" y1="14" y2="22"/>
+                                </svg>
+                            </span>
+                            <span>SMS & Voice</span>
+                        </span>
+                        <span class="ofp-nav-pill">3 Providers</span>
+                    </button>
+                </div>
+
+                <!-- Group: Commerce & Security -->
+                <div class="ofp-nav-group">
+                    <span class="ofp-nav-group-title">Commerce & Access</span>
+                    
+                    <button type="button" class="ofp-nav-item" data-tab="tab-pricing">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-amber">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
+                                    <circle cx="7" cy="7" r="1.5"/>
+                                </svg>
+                            </span>
+                            <span>Plans & Pricing</span>
+                        </span>
+                        <span class="ofp-nav-pill">Tiers</span>
+                    </button>
+
+                    <button type="button" class="ofp-nav-item" data-tab="tab-bank">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-teal">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="3" x2="21" y1="22" y2="22"/>
+                                    <line x1="6" x2="6" y1="18" y2="11"/>
+                                    <line x1="10" x2="10" y1="18" y2="11"/>
+                                    <line x1="14" x2="14" y1="18" y2="11"/>
+                                    <line x1="18" x2="18" y1="18" y2="11"/>
+                                    <polygon points="12 2 20 7 4 7"/>
+                                </svg>
+                            </span>
+                            <span>Company Bank</span>
+                        </span>
+                        <span class="ofp-nav-pill">Wire</span>
+                    </button>
+
+                    <button type="button" class="ofp-nav-item" data-tab="tab-security">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-rose">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                    <rect width="8" height="6" x="8" y="10" rx="1"/>
+                                </svg>
+                            </span>
+                            <span>Security & Anti-Bot</span>
+                        </span>
+                        <span class="ofp-nav-pill">Turnstile</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- ── Right Content Panels ──────────────────────────────────── -->
+            <main class="ofp-settings-panels">
+
+                <!-- ════════ TAB 1: GENERAL & ROUTING ════════ -->
+                <section id="tab-general" class="ofp-tab-pane is-active">
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-blue">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <line x1="2" x2="22" y1="12" y2="12"/>
+                                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Brand Identity & Core Routing</h3>
+                                    <p>Configure product branding, domain routing, and multi-tenant subdomains.</p>
+                                </div>
+                            </div>
+                            <span class="ofp-pill ofp-pill-ready">Active</span>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-field-grid">
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">Platform App Name</label>
+                                    </div>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_app_name"
+                                               value="<?php echo esc_attr( $app_name ); ?>"
+                                               placeholder="<?php echo esc_attr( OFP_Brand::DEFAULT_NAME ); ?>">
+                                    </div>
+                                    <p class="ofp-field-hint">Replaces <code>OFast Pipeline</code> and <code>Bofast World / Bofast Homes</code> everywhere across the marketplace, client portals, browser titles, emails, and notifications. Default: <code><?php echo esc_html( OFP_Brand::DEFAULT_NAME ); ?></code>.</p>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">CRM Base Domain</label>
+                                    </div>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_crm_base_domain"
+                                               value="<?php echo esc_attr( $crm_domain ); ?>"
+                                               placeholder="e.g. ofastpipeline.com">
+                                    </div>
+                                    <p class="ofp-field-hint">Bare domain (no https://). Used to route <code>app.yourdomain</code> and client custom domains like <code>tenant.yourdomain</code>.</p>
+                                </div>
+
+                                <div class="ofp-field-group ofp-field-full">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">Global Meta Pixel ID</label>
+                                    </div>
+                                    <div class="ofp-input-box" style="max-width: 380px;">
+                                        <input type="text" name="ofp_global_pixel_id"
+                                               value="<?php echo esc_attr( $pixel_id ); ?>"
+                                               placeholder="e.g. 123456789012345">
+                                    </div>
+                                    <p class="ofp-field-hint">Injected globally across the primary marketing website for retargeting and analytics tracking.</p>
+                                </div>
+                            </div>
+
+                            <hr style="border:0;border-top:1px solid var(--ofp-slate-100);margin:24px 0;">
+
+                            <h4 style="margin:0 0 16px;font-size:14px;font-weight:700;color:var(--ofp-slate-800);">Routing & Payment Switches</h4>
+
+                            <!-- Switch 1: app.yourdomain -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Dedicated App Subdomain Routing (app.yourdomain)</span>
+                                    <p class="ofp-switch-desc">When enabled, dashboard login and navigation links redirect to <code>app.yourdomain</code> instead of standard WordPress paths. Turn this off if DNS wildcard or app subdomain is not yet pointed.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_use_app_host" value="1" <?php checked( $use_app_host, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Switch 2: Paystack card payments for buyers/tenants -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Direct Card Payments for Buyers & Tenants (Paystack)</span>
+                                    <p class="ofp-switch-desc">Allows end-user buyers and tenants to complete payments directly via online card checkout. When disabled, customers must pay via bank transfer to the property owner's account with manual approval.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_online_buyer_payments" value="1" <?php checked( $online_payments, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Switch 3: Hide WP Admin Bar on Frontend -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Hide WordPress Admin Top Bar on Frontend</span>
+                                    <p class="ofp-switch-desc">Hides the black WordPress admin bar for logged-in users and administrators across the public frontend website and client portal. Keeps the layout clean and prevents header overlap.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_hide_admin_bar" value="1" <?php checked( $hide_admin_bar, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ════════ TAB 2: PIPELINE MESSAGE TEMPLATES ════════ -->
+                <section id="tab-pipeline" class="ofp-tab-pane">
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-indigo">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Default Automated Lead Messages</h3>
+                                    <p>Pre-configured messages copied to new client accounts upon signup. Clients can further customize these in their dashboard.</p>
+                                </div>
+                            </div>
+                            <span class="ofp-pill ofp-pill-info">Drip Automation</span>
+                        </div>
+                        <div class="ofp-card-body">
+
+                            <!-- Instant SMS -->
+                            <div class="ofp-field-group" style="margin-bottom: 24px;">
+                                <div class="ofp-field-label-row">
+                                    <label class="ofp-field-label">1. Instant Welcome SMS (Sent immediately upon lead capture)</label>
+                                    <div class="ofp-chips-container">
+                                        <span class="ofp-chips-label">Insert:</span>
+                                        <button type="button" class="ofp-chip" data-insert="{{name}}" data-target="ofp_instant_sms">+ {{name}}</button>
+                                        <button type="button" class="ofp-chip" data-insert="{{phone}}" data-target="ofp_instant_sms">+ {{phone}}</button>
+                                        <button type="button" class="ofp-chip" data-insert="{{business_name}}" data-target="ofp_instant_sms">+ {{business_name}}</button>
+                                    </div>
+                                </div>
+                                <textarea id="ofp_instant_sms" name="ofp_default_instant_sms" rows="3" class="ofp-sms-counter-input"
+                                          placeholder="Hi {{name}}, thank you for your interest! We will be in touch shortly. - {{business_name}}"><?php echo esc_textarea( get_option( 'ofp_default_instant_sms', '' ) ); ?></textarea>
+                                <div class="ofp-char-counter-bar">
+                                    <span class="ofp-field-hint">Sent immediately when an inquiry form is submitted.</span>
+                                    <span class="ofp-char-pill">0 chars (1 SMS)</span>
+                                </div>
+                            </div>
+
+                            <!-- Follow-up 1 -->
+                            <div class="ofp-field-group" style="margin-bottom: 24px;">
+                                <div class="ofp-field-label-row">
+                                    <label class="ofp-field-label">2. Follow-up 1 Message (SMS — 1 hour later)</label>
+                                    <div class="ofp-chips-container">
+                                        <span class="ofp-chips-label">Insert:</span>
+                                        <button type="button" class="ofp-chip" data-insert="{{name}}" data-target="ofp_followup_1">+ {{name}}</button>
+                                        <button type="button" class="ofp-chip" data-insert="{{phone}}" data-target="ofp_followup_1">+ {{phone}}</button>
+                                        <button type="button" class="ofp-chip" data-insert="{{business_name}}" data-target="ofp_followup_1">+ {{business_name}}</button>
+                                    </div>
+                                </div>
+                                <textarea id="ofp_followup_1" name="ofp_default_followup_1" rows="3" class="ofp-sms-counter-input"
+                                          placeholder="Hi {{name}}, just checking in — did you get our message? We would love to help. - {{business_name}}"><?php echo esc_textarea( get_option( 'ofp_default_followup_1', '' ) ); ?></textarea>
+                                <div class="ofp-char-counter-bar">
+                                    <span class="ofp-field-hint">Scheduled 1 hour after initial lead capture.</span>
+                                    <span class="ofp-char-pill">0 chars (1 SMS)</span>
+                                </div>
+                            </div>
+
+                            <!-- Follow-up 2 (IVR Voice) -->
+                            <div class="ofp-field-group" style="margin-bottom: 24px;">
+                                <div class="ofp-field-label-row">
+                                    <label class="ofp-field-label">3. Follow-up 2 Message (IVR Voice Call — 24 hours later)</label>
+                                    <div class="ofp-chips-container">
+                                        <span class="ofp-chips-label">Insert:</span>
+                                        <button type="button" class="ofp-chip" data-insert="{{name}}" data-target="ofp_followup_2">+ {{name}}</button>
+                                        <button type="button" class="ofp-chip" data-insert="{{business_name}}" data-target="ofp_followup_2">+ {{business_name}}</button>
+                                    </div>
+                                </div>
+                                <textarea id="ofp_followup_2" name="ofp_default_followup_2" rows="4"
+                                          placeholder="Hello, this is a message from {{business_name}}. You recently showed interest in our services. Press 1 to speak with us now. Press 2 for our WhatsApp contact. Press 3 for a callback later."><?php echo esc_textarea( get_option( 'ofp_default_followup_2', '' ) ); ?></textarea>
+                                <p class="ofp-field-hint">Spoken by Text-to-Speech during automated voice IVR outreach. Keep phrasing natural and clear.</p>
+                            </div>
+
+                            <!-- Follow-up 3 -->
+                            <div class="ofp-field-group">
+                                <div class="ofp-field-label-row">
+                                    <label class="ofp-field-label">4. Follow-up 3 Message (SMS — 72 hours later)</label>
+                                    <div class="ofp-chips-container">
+                                        <span class="ofp-chips-label">Insert:</span>
+                                        <button type="button" class="ofp-chip" data-insert="{{name}}" data-target="ofp_followup_3">+ {{name}}</button>
+                                        <button type="button" class="ofp-chip" data-insert="{{phone}}" data-target="ofp_followup_3">+ {{phone}}</button>
+                                        <button type="button" class="ofp-chip" data-insert="{{business_name}}" data-target="ofp_followup_3">+ {{business_name}}</button>
+                                    </div>
+                                </div>
+                                <textarea id="ofp_followup_3" name="ofp_default_followup_3" rows="3" class="ofp-sms-counter-input"
+                                          placeholder="Hi {{name}}, we have been trying to reach you. We would love to show you how {{business_name}} can help. Call or message us anytime."><?php echo esc_textarea( get_option( 'ofp_default_followup_3', '' ) ); ?></textarea>
+                                <div class="ofp-char-counter-bar">
+                                    <span class="ofp-field-hint">Final automated touchpoint for cold leads.</span>
+                                    <span class="ofp-char-pill">0 chars (1 SMS)</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ════════ TAB 3: EMAIL / SMTP ════════ -->
+                <section id="tab-email" class="ofp-tab-pane">
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-sky">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect width="20" height="16" x="2" y="4" rx="2"/>
+                                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Email Delivery & SMTP Relay</h3>
+                                    <p>Select your delivery engine. Custom SMTP is recommended for high deliverability.</p>
+                                </div>
+                            </div>
+                            <?php if ( $smtp_mode === 'custom' && $has_smtp_pass ) : ?>
+                                <span class="ofp-pill ofp-pill-ready">SMTP Configured</span>
+                            <?php else : ?>
+                                <span class="ofp-pill ofp-pill-info">Using WordPress Mail</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="ofp-card-body">
+
+                            <!-- Visual Delivery Mode Selector -->
+                            <div class="ofp-mode-grid">
+                                <label class="ofp-mode-card <?php echo $smtp_mode !== 'custom' ? 'is-active' : ''; ?>">
+                                    <input type="radio" name="ofp_smtp_mode" value="default" <?php checked( $smtp_mode !== 'custom', true ); ?>>
+                                    <div class="ofp-mode-text">
+                                        <strong>WordPress Default Mail</strong>
+                                        <small>Uses local PHP mail() or an existing SMTP plugin on this site.</small>
+                                    </div>
+                                </label>
+
+                                <label class="ofp-mode-card <?php echo $smtp_mode === 'custom' ? 'is-active' : ''; ?>">
+                                    <input type="radio" name="ofp_smtp_mode" value="custom" <?php checked( $smtp_mode, 'custom' ); ?>>
+                                    <div class="ofp-mode-text">
+                                        <strong>Dedicated Custom SMTP Relay</strong>
+                                        <small>Connect directly to Brevo, Sendgrid, Mailgun, or your custom mail server.</small>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Custom SMTP Fields -->
+                            <div id="ofp-smtp-credentials-panel" style="<?php echo $smtp_mode !== 'custom' ? 'display:none;' : ''; ?>">
+                                <div class="ofp-field-grid">
+                                    <div class="ofp-field-group">
+                                        <div class="ofp-field-label-row">
+                                            <label class="ofp-field-label">SMTP Host</label>
+                                        </div>
+                                        <div class="ofp-input-box">
+                                            <input type="text" name="ofp_smtp_host"
+                                                   value="<?php echo esc_attr( $smtp_host ); ?>"
+                                                   placeholder="smtp-relay.brevo.com">
+                                        </div>
+                                    </div>
+
+                                    <div class="ofp-field-group">
+                                        <div class="ofp-field-label-row">
+                                            <label class="ofp-field-label">SMTP Port</label>
+                                        </div>
+                                        <div class="ofp-input-box">
+                                            <input type="number" id="ofp_smtp_port" name="ofp_smtp_port"
+                                                   value="<?php echo esc_attr( $smtp_port ); ?>"
+                                                   placeholder="587">
+                                        </div>
+                                        <div class="ofp-port-presets">
+                                            <span class="ofp-chips-label">Presets:</span>
+                                            <button type="button" class="ofp-port-btn" onclick="document.getElementById('ofp_smtp_port').value=587;document.getElementById('ofp_smtp_enc').value='tls';">587 (TLS)</button>
+                                            <button type="button" class="ofp-port-btn" onclick="document.getElementById('ofp_smtp_port').value=465;document.getElementById('ofp_smtp_enc').value='ssl';">465 (SSL)</button>
+                                            <button type="button" class="ofp-port-btn" onclick="document.getElementById('ofp_smtp_port').value=25;document.getElementById('ofp_smtp_enc').value='tls';">25 (Standard)</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="ofp-field-group">
+                                        <div class="ofp-field-label-row">
+                                            <label class="ofp-field-label">Encryption Protocol</label>
+                                        </div>
+                                        <div class="ofp-input-box">
+                                            <select id="ofp_smtp_enc" name="ofp_smtp_encryption">
+                                                <option value="tls" <?php selected( $smtp_enc, 'tls' ); ?>>TLS (Recommended)</option>
+                                                <option value="ssl" <?php selected( $smtp_enc, 'ssl' ); ?>>SSL</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="ofp-field-group">
+                                        <div class="ofp-field-label-row">
+                                            <label class="ofp-field-label">SMTP Username</label>
+                                        </div>
+                                        <div class="ofp-input-box">
+                                            <input type="text" name="ofp_smtp_username"
+                                                   value="<?php echo esc_attr( $smtp_user ); ?>"
+                                                   placeholder="user@yourdomain.com">
+                                        </div>
+                                    </div>
+
+                                    <div class="ofp-field-group">
+                                        <div class="ofp-field-label-row">
+                                            <label class="ofp-field-label">SMTP Password</label>
+                                            <?php if ( $has_smtp_pass ) : ?>
+                                                <span class="ofp-badge-encrypted">✓ Encrypted in Vault</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="ofp-input-box has-action">
+                                            <input type="password" name="ofp_smtp_password" class="ofp-secret-input"
+                                                   placeholder="<?php echo $has_smtp_pass ? '•••••••••••••••• (Leave blank to keep existing)' : 'Enter SMTP password'; ?>">
+                                            <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide Password">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                            </button>
+                                        </div>
+                                        <p class="ofp-field-hint">Leave blank to retain current encrypted password.</p>
+                                    </div>
+
+                                    <div class="ofp-field-group">
+                                        <div class="ofp-field-label-row">
+                                            <label class="ofp-field-label">From Email Address</label>
+                                        </div>
+                                        <div class="ofp-input-box">
+                                            <input type="email" name="ofp_smtp_from_email"
+                                                   value="<?php echo esc_attr( $smtp_from_email ); ?>"
+                                                   placeholder="noreply@yourdomain.com">
+                                        </div>
+                                    </div>
+
+                                    <div class="ofp-field-group">
+                                        <div class="ofp-field-label-row">
+                                            <label class="ofp-field-label">From Display Name</label>
+                                        </div>
+                                        <div class="ofp-input-box">
+                                            <input type="text" name="ofp_smtp_from_name"
+                                                   value="<?php echo esc_attr( $smtp_from_name ); ?>"
+                                                   placeholder="<?php echo esc_attr( OFP_Brand::name() ); ?>">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Test Email Box -->
+                            <div class="ofp-test-email-card">
+                                <div class="ofp-test-email-info">
+                                    <div class="ofp-icon-box ofp-icon-sm icon-sky" style="margin-right:4px;">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="22" x2="11" y1="2" y2="13"/>
+                                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <strong style="font-size:14px;color:var(--ofp-slate-900);">Verify Email Configuration</strong>
+                                        <p style="margin:2px 0 0;font-size:12px;color:var(--ofp-slate-500);">Send a live test message to <code><?php echo esc_html( wp_get_current_user()->user_email ); ?></code> to confirm delivery.</p>
+                                    </div>
+                                </div>
+                                <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_test_email' ), 'ofp_test_email' ) ); ?>"
+                                   class="ofp-btn-test-email"
+                                   onclick="return confirm('Send an email test to <?php echo esc_js( wp_get_current_user()->user_email ); ?>?');">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                    Send Test Email
+                                </a>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ════════ TAB 4: PAYMENT GATEWAY (PAYSTACK) ════════ -->
+                <section id="tab-payments" class="ofp-tab-pane">
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-emerald">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect width="20" height="14" x="2" y="5" rx="2"/>
+                                        <line x1="2" x2="22" y1="10" y2="10"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Paystack Payment Gateway</h3>
+                                    <p>Primary gateway for client subscriptions, credit top-ups, and optional buyer/tenant checkouts.</p>
+                                </div>
+                            </div>
+                            <?php if ( $paystack_is_live ) : ?>
+                                <span class="ofp-pill ofp-pill-ready">Live Mode</span>
+                            <?php elseif ( $paystack_is_test ) : ?>
+                                <span class="ofp-pill ofp-pill-missing">Test / Sandbox Mode</span>
+                            <?php elseif ( $has_paystack_key ) : ?>
+                                <span class="ofp-pill ofp-pill-ready">Configured</span>
+                            <?php else : ?>
+                                <span class="ofp-pill ofp-pill-missing">Needs Setup</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="ofp-card-body">
+
+                            <div class="ofp-field-grid">
+                                <div class="ofp-field-group ofp-field-full">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">Paystack Secret Key</label>
+                                        <?php if ( $has_paystack_key ) : ?>
+                                            <span class="ofp-badge-encrypted">✓ Encrypted in Vault</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="ofp-input-box has-action">
+                                        <input type="password" name="ofp_paystack_secret_key" class="ofp-secret-input"
+                                               placeholder="<?php echo $has_paystack_key ? '•••••••••••••••• (Leave blank to keep existing)' : 'sk_live_... or sk_test_...'; ?>">
+                                        <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide Key">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        </button>
+                                    </div>
+                                    <p class="ofp-field-hint">Must begin with <code>sk_live_</code> (production) or <code>sk_test_</code> (development). Leave empty to retain existing stored key.</p>
+                                </div>
+                            </div>
+
+                            <hr style="border:0;border-top:1px solid var(--ofp-slate-100);margin:24px 0;">
+
+                            <!-- Webhook URL Box -->
+                            <div class="ofp-field-group">
+                                <div class="ofp-field-label-row">
+                                    <label class="ofp-field-label">Paystack Webhook Endpoint URL</label>
+                                    <span class="ofp-pill ofp-pill-info">Automatic Verification</span>
+                                </div>
+                                <div class="ofp-copy-input-wrap">
+                                    <code id="ofp-webhook-url"><?php echo esc_url( home_url( '/wp-json/ofp/v1/webhook/payment' ) ); ?></code>
+                                    <button type="button" class="ofp-copy-btn" data-clipboard-target="#ofp-webhook-url">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                        <span>Copy URL</span>
+                                    </button>
+                                </div>
+                                <p class="ofp-field-hint">Add this URL to your <strong>Paystack Dashboard → Settings → API & Webhooks → Webhook URL</strong> to enable automatic payment confirmation.</p>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ════════ TAB 5: SMS & VOICE PROVIDERS ════════ -->
+                <section id="tab-sms" class="ofp-tab-pane">
+                    
+                    <!-- Africa's Talking Card -->
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-amber">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4.93 4.93a10 10 0 0 1 14.14 0"/>
+                                        <path d="M7.76 7.76a6 6 0 0 1 8.48 0"/>
+                                        <circle cx="12" cy="12" r="2"/>
+                                        <line x1="12" x2="12" y1="14" y2="22"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Africa's Talking (Primary SMS & Voice IVR)</h3>
+                                    <p>High-volume pan-African gateway handling primary outbound SMS and automated voice calls.</p>
+                                </div>
+                            </div>
+                            <?php if ( $has_at_key ) : ?>
+                                <span class="ofp-pill ofp-pill-ready">Active Primary</span>
+                            <?php else : ?>
+                                <span class="ofp-pill ofp-pill-missing">Not Configured</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-field-grid">
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Username</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_at_username"
+                                               value="<?php echo esc_attr( $at_user ); ?>"
+                                               placeholder="e.g. sandbox or your_app_name">
+                                    </div>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">API Key</label>
+                                        <?php if ( $has_at_key ) : ?><span class="ofp-badge-encrypted">✓ Encrypted</span><?php endif; ?>
+                                    </div>
+                                    <div class="ofp-input-box has-action">
+                                        <input type="password" name="ofp_at_api_key" class="ofp-secret-input"
+                                               placeholder="<?php echo $has_at_key ? '••••••••••••••••' : 'Enter AT API Key'; ?>">
+                                        <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide Key">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Sender ID (SMS)</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_at_sender_id"
+                                               value="<?php echo esc_attr( $at_sender ); ?>"
+                                               placeholder="e.g. OFastPipe">
+                                    </div>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Virtual Phone Number (Voice Calls)</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_at_phone_number"
+                                               value="<?php echo esc_attr( $at_phone ); ?>"
+                                               placeholder="e.g. +2348000000000">
+                                    </div>
+                                    <p class="ofp-field-hint">Caller ID used when dialing automated IVR voice sequences.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SmartSMSSolutions Card -->
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-emerald">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>SmartSMSSolutions (Nigerian Corporate Route)</h3>
+                                    <p>Local Nigerian SMS relay featuring corporate DND bypass routing for guaranteed deliverability.</p>
+                                </div>
+                            </div>
+                            <?php if ( $has_smartsms_key ) : ?>
+                                <span class="ofp-pill ofp-pill-ready">Configured</span>
+                            <?php else : ?>
+                                <span class="ofp-pill ofp-pill-missing">Optional</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-field-grid">
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">API Token</label>
+                                        <?php if ( $has_smartsms_key ) : ?><span class="ofp-badge-encrypted">✓ Encrypted</span><?php endif; ?>
+                                    </div>
+                                    <div class="ofp-input-box has-action">
+                                        <input type="password" name="ofp_smartsms_api_key" class="ofp-secret-input"
+                                               placeholder="<?php echo $has_smartsms_key ? '••••••••••••••••' : 'Enter SmartSMS API token'; ?>">
+                                        <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide Token">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Sender ID</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_smartsms_sender_id"
+                                               value="<?php echo esc_attr( $smartsms_sender ); ?>"
+                                               placeholder="e.g. OFastPipe">
+                                    </div>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Delivery Routing Channel</label>
+                                    <div class="ofp-input-box">
+                                        <select name="ofp_smartsms_routing">
+                                            <option value="3" <?php selected( $smartsms_routing, '3' ); ?>>Corporate Route (DND Bypass — Recommended)</option>
+                                            <option value="2" <?php selected( $smartsms_routing, '2' ); ?>>Standard Route</option>
+                                            <option value="6" <?php selected( $smartsms_routing, '6' ); ?>>Refund Route</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BulkSMS Nigeria Card -->
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-slate">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                                        <path d="M21 3v5h-5"/>
+                                        <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                                        <path d="M3 21v-5h5"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>BulkSMS Nigeria (Secondary Fallback)</h3>
+                                    <p>Secondary fallback relay engaged automatically if the primary provider is unreachable.</p>
+                                </div>
+                            </div>
+                            <?php if ( $has_bsmsn_key ) : ?>
+                                <span class="ofp-pill ofp-pill-ready">Fallback Ready</span>
+                            <?php else : ?>
+                                <span class="ofp-pill ofp-pill-missing">Optional</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-field-grid">
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">BulkSMS API Key</label>
+                                        <?php if ( $has_bsmsn_key ) : ?><span class="ofp-badge-encrypted">✓ Encrypted</span><?php endif; ?>
+                                    </div>
+                                    <div class="ofp-input-box has-action">
+                                        <input type="password" name="ofp_bsmsn_api_key" class="ofp-secret-input"
+                                               placeholder="<?php echo $has_bsmsn_key ? '••••••••••••••••' : 'Enter BulkSMS API Key'; ?>">
+                                        <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide Key">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Sender ID</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_bsmsn_sender_id"
+                                               value="<?php echo esc_attr( $bsmsn_sender ); ?>"
+                                               placeholder="e.g. OFastPipe">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- ════════ TAB 6: PLANS & PRICING ════════ -->
+                <section id="tab-pricing" class="ofp-tab-pane">
+                    
+                    <!-- Property Marketplace Listing Plans -->
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-amber">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                        <polyline points="9 22 9 12 15 12 15 22"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Property Marketplace Listing Tiers</h3>
+                                    <p>Configure monthly pricing and maximum active property caps per tier (Free, Silver, Gold).</p>
+                                </div>
+                            </div>
+                            <span class="ofp-pill ofp-pill-ready">Live Across System</span>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-pricing-tier-grid">
+                                
+                                <!-- Free Tier -->
+                                <div class="ofp-tier-card">
+                                    <div class="ofp-tier-header">
+                                        <h4 class="ofp-tier-name">Free</h4>
+                                        <span class="ofp-tier-tag">Starter Tier</span>
+                                    </div>
+                                    <div class="ofp-tier-input-group">
+                                        <label>Monthly Price (NGN)</label>
+                                        <div class="ofp-currency-input-wrap">
+                                            <span class="ofp-currency-symbol">₦</span>
+                                            <input type="number" step="0.01" min="0"
+                                                   name="listing_price_free"
+                                                   value="<?php echo esc_attr( $listing_prices['free'] ?? 0 ); ?>">
+                                        </div>
+                                    </div>
+                                    <div class="ofp-tier-input-group">
+                                        <label>Active Property Cap</label>
+                                        <div class="ofp-input-box">
+                                            <input type="number" step="1" min="1"
+                                                   name="listing_cap_free"
+                                                   value="<?php echo esc_attr( $listing_caps['free'] ?? 1 ); ?>">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Silver Tier -->
+                                <div class="ofp-tier-card tier-popular">
+                                    <span class="ofp-tier-badge-top">Most Popular</span>
+                                    <div class="ofp-tier-header">
+                                        <h4 class="ofp-tier-name" style="color:var(--ofp-primary);">Silver</h4>
+                                        <span class="ofp-tier-tag" style="background:var(--ofp-primary-light);color:var(--ofp-primary);">Growth</span>
+                                    </div>
+                                    <div class="ofp-tier-input-group">
+                                        <label>Monthly Price (NGN)</label>
+                                        <div class="ofp-currency-input-wrap">
+                                            <span class="ofp-currency-symbol">₦</span>
+                                            <input type="number" step="0.01" min="0"
+                                                   name="listing_price_silver"
+                                                   value="<?php echo esc_attr( $listing_prices['silver'] ?? 5000 ); ?>">
+                                        </div>
+                                    </div>
+                                    <div class="ofp-tier-input-group">
+                                        <label>Active Property Cap</label>
+                                        <div class="ofp-input-box">
+                                            <input type="number" step="1" min="1"
+                                                   name="listing_cap_silver"
+                                                   value="<?php echo esc_attr( $listing_caps['silver'] ?? 10 ); ?>">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Gold Tier -->
+                                <div class="ofp-tier-card">
+                                    <div class="ofp-tier-header">
+                                        <h4 class="ofp-tier-name" style="color:#d97706;">Gold</h4>
+                                        <span class="ofp-tier-tag" style="background:#fef3c7;color:#b45309;">Enterprise</span>
+                                    </div>
+                                    <div class="ofp-tier-input-group">
+                                        <label>Monthly Price (NGN)</label>
+                                        <div class="ofp-currency-input-wrap">
+                                            <span class="ofp-currency-symbol">₦</span>
+                                            <input type="number" step="0.01" min="0"
+                                                   name="listing_price_gold"
+                                                   value="<?php echo esc_attr( $listing_prices['gold'] ?? 15000 ); ?>">
+                                        </div>
+                                    </div>
+                                    <div class="ofp-tier-input-group">
+                                        <label>Active Property Cap</label>
+                                        <div class="ofp-input-box">
+                                            <input type="number" step="1" min="1"
+                                                   name="listing_cap_gold"
+                                                   value="<?php echo esc_attr( $listing_caps['gold'] ?? 50 ); ?>">
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CRM Client Subscription Tiers -->
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-violet">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect width="20" height="14" x="2" y="7" rx="2" ry="2"/>
+                                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>CRM Client Subscription Plans</h3>
+                                    <p>Monthly recurring fees and one-time onboarding setup fees charged to CRM agency clients.</p>
+                                </div>
+                            </div>
+                            <span class="ofp-pill ofp-pill-info">Client Subscriptions</span>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-pricing-tier-grid">
+                                
+                                <!-- Starter CRM -->
+                                <div class="ofp-tier-card">
+                                    <div class="ofp-tier-header">
+                                        <h4 class="ofp-tier-name">Starter</h4>
+                                        <span class="ofp-tier-tag">Solo</span>
+                                    </div>
+                                    <div class="ofp-tier-input-group">
+                                        <label>Monthly Subscription (NGN)</label>
+                                        <div class="ofp-currency-input-wrap">
+                                            <span class="ofp-currency-symbol">₦</span>
+                                            <input type="number" step="0.01" min="0"
+                                                   name="price_starter"
+                                                   value="<?php echo esc_attr( $crm_prices['starter'] ?? 15000 ); ?>">
+                                        </div>
+                                    </div>
+                                    <div class="ofp-tier-input-group">
+                                        <label>One-time Setup Fee (NGN)</label>
+                                        <div class="ofp-currency-input-wrap">
+                                            <span class="ofp-currency-symbol">₦</span>
+                                            <input type="number" step="0.01" min="0"
+                                                   name="setup_starter"
+                                                   value="<?php echo esc_attr( $crm_setups['starter'] ?? 5000 ); ?>">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Growth CRM -->
+                                <div class="ofp-tier-card tier-popular">
+                                    <div class="ofp-tier-header">
+                                        <h4 class="ofp-tier-name" style="color:var(--ofp-primary);">Growth</h4>
+                                        <span class="ofp-tier-tag">Agencies</span>
+                                    </div>
+                                    <div class="ofp-tier-input-group">
+                                        <label>Monthly Subscription (NGN)</label>
+                                        <div class="ofp-currency-input-wrap">
+                                            <span class="ofp-currency-symbol">₦</span>
+                                            <input type="number" step="0.01" min="0"
+                                                   name="price_growth"
+                                                   value="<?php echo esc_attr( $crm_prices['growth'] ?? 35000 ); ?>">
+                                        </div>
+                                    </div>
+                                    <div class="ofp-tier-input-group">
+                                        <label>One-time Setup Fee (NGN)</label>
+                                        <div class="ofp-currency-input-wrap">
+                                            <span class="ofp-currency-symbol">₦</span>
+                                            <input type="number" step="0.01" min="0"
+                                                   name="setup_growth"
+                                                   value="<?php echo esc_attr( $crm_setups['growth'] ?? 10000 ); ?>">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pro CRM -->
+                                <div class="ofp-tier-card">
+                                    <div class="ofp-tier-header">
+                                        <h4 class="ofp-tier-name" style="color:#7e22ce;">Pro</h4>
+                                        <span class="ofp-tier-tag">Scale</span>
+                                    </div>
+                                    <div class="ofp-tier-input-group">
+                                        <label>Monthly Subscription (NGN)</label>
+                                        <div class="ofp-currency-input-wrap">
+                                            <span class="ofp-currency-symbol">₦</span>
+                                            <input type="number" step="0.01" min="0"
+                                                   name="price_pro"
+                                                   value="<?php echo esc_attr( $crm_prices['pro'] ?? 75000 ); ?>">
+                                        </div>
+                                    </div>
+                                    <div class="ofp-tier-input-group">
+                                        <label>One-time Setup Fee (NGN)</label>
+                                        <div class="ofp-currency-input-wrap">
+                                            <span class="ofp-currency-symbol">₦</span>
+                                            <input type="number" step="0.01" min="0"
+                                                   name="setup_pro"
+                                                   value="<?php echo esc_attr( $crm_setups['pro'] ?? 15000 ); ?>">
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- ════════ TAB 7: COMPANY BANK ACCOUNT ════════ -->
+                <section id="tab-bank" class="ofp-tab-pane">
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-teal">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="3" x2="21" y1="22" y2="22"/>
+                                        <line x1="6" x2="6" y1="18" y2="11"/>
+                                        <line x1="10" x2="10" y1="18" y2="11"/>
+                                        <line x1="14" x2="14" y1="18" y2="11"/>
+                                        <line x1="18" x2="18" y1="18" y2="11"/>
+                                        <polygon points="12 2 20 7 4 7"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Company Bank Wire Details</h3>
+                                    <p>Presented to clients and tenants as the official bank transfer option for manual account top-ups and offline funding.</p>
+                                </div>
+                            </div>
+                            <?php if ( $has_bank_set ) : ?>
+                                <span class="ofp-pill ofp-pill-ready">Active</span>
+                            <?php else : ?>
+                                <span class="ofp-pill ofp-pill-missing">Not Configured</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="ofp-card-body">
+                            
+                            <div class="ofp-bank-layout">
+                                <!-- Form Fields -->
+                                <div class="ofp-field-grid" style="grid-template-columns: 1fr;">
+                                    <div class="ofp-field-group">
+                                        <label class="ofp-field-label">Bank Institution Name</label>
+                                        <div class="ofp-input-box">
+                                            <input type="text" id="ofp_bank_name_input" name="company_bank_name"
+                                                   value="<?php echo esc_attr( $bank_name ); ?>"
+                                                   placeholder="e.g. Zenith Bank / GTBank / Access Bank">
+                                        </div>
+                                    </div>
+
+                                    <div class="ofp-field-group">
+                                        <label class="ofp-field-label">Account Number (NUBAN)</label>
+                                        <div class="ofp-input-box">
+                                            <input type="text" id="ofp_bank_acc_input" name="company_account_no"
+                                                   value="<?php echo esc_attr( $bank_acc_no ); ?>"
+                                                   placeholder="e.g. 1020304050">
+                                        </div>
+                                    </div>
+
+                                    <div class="ofp-field-group">
+                                        <label class="ofp-field-label">Account Beneficiary Name</label>
+                                        <div class="ofp-input-box">
+                                            <input type="text" id="ofp_bank_holder_input" name="company_account_name"
+                                                   value="<?php echo esc_attr( $bank_acc_name ); ?>"
+                                                   placeholder="e.g. OFast Technologies Ltd">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Live Interactive Debit/Bank Card Preview -->
+                                <div class="ofp-bank-preview">
+                                    <div class="ofp-bank-preview-top">
+                                        <div class="ofp-bank-chip"></div>
+                                        <span class="ofp-bank-preview-label" id="ofp-card-bank-name"><?php echo esc_html( $bank_name ?: 'BANK NAME' ); ?></span>
+                                    </div>
+                                    <div class="ofp-bank-preview-num" id="ofp-card-acc-no">
+                                        <?php echo esc_html( $bank_acc_no ?: '0000 0000 00' ); ?>
+                                    </div>
+                                    <div class="ofp-bank-preview-bottom">
+                                        <div class="ofp-bank-preview-field">
+                                            <span class="ofp-bank-preview-sub">Beneficiary</span>
+                                            <span class="ofp-bank-preview-val" id="ofp-card-holder-name"><?php echo esc_html( $bank_acc_name ?: 'OFFICIAL BENEFICIARY' ); ?></span>
+                                        </div>
+                                        <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.1);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:0.05em;color:#cbd5e1;">
+                                            <svg width="14" height="10" viewBox="0 0 18 12" fill="none"><rect width="6" height="12" fill="#008751"/><rect x="6" width="6" height="12" fill="#ffffff"/><rect x="12" width="6" height="12" fill="#008751"/></svg> NGN
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ════════ TAB 8: SECURITY & TURNSTILE ════════ -->
+                <section id="tab-security" class="ofp-tab-pane">
+                    
+                    <!-- Cloudflare Turnstile Card -->
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-rose">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                        <path d="m9 12 2 2 4-4"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Cloudflare Turnstile (Anti-Bot Protection)</h3>
+                                    <p>Frictionless CAPTCHA alternative protecting lead generation forms, registration (/signup), and login (/login).</p>
+                                </div>
+                            </div>
+                            <?php if ( ! empty( $turnstile_site ) && $has_turnstile_sec ) : ?>
+                                <span class="ofp-pill ofp-pill-ready">Active Protection</span>
+                            <?php else : ?>
+                                <span class="ofp-pill ofp-pill-missing">Bypassed (Dev Mode)</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-field-grid">
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Turnstile Site Key (Public)</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_turnstile_site_key"
+                                               value="<?php echo esc_attr( $turnstile_site ); ?>"
+                                               placeholder="0x4AAAAAA...">
+                                    </div>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">Turnstile Secret Key (Server Verification)</label>
+                                        <?php if ( $has_turnstile_sec ) : ?><span class="ofp-badge-encrypted">✓ Encrypted</span><?php endif; ?>
+                                    </div>
+                                    <div class="ofp-input-box has-action">
+                                        <input type="password" name="ofp_turnstile_secret" class="ofp-secret-input"
+                                               placeholder="<?php echo $has_turnstile_sec ? '••••••••••••••••' : '0x4AAAAAA...'; ?>">
+                                        <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide Key">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        </button>
+                                    </div>
+                                    <p class="ofp-field-hint">Leave blank in local development. When no secret key is set, Turnstile is automatically bypassed without errors.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security & Vault Specs Card -->
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-violet">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Platform Security & Encryption Vault</h3>
+                                    <p>Architecture specifications for data protection and credentials security at rest.</p>
+                                </div>
+                            </div>
+                            <span class="ofp-pill ofp-pill-purple">AES-256-CBC Active</span>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;">
+                                <div style="background:var(--ofp-slate-50);border:1px solid var(--ofp-slate-200);border-radius:8px;padding:16px;">
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                                        <span class="ofp-icon-box ofp-icon-sm icon-amber">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+                                        </span>
+                                        <strong style="font-size:13px;color:var(--ofp-slate-900);">Cipher Suite</strong>
+                                    </div>
+                                    <p style="margin:0;font-size:12px;color:var(--ofp-slate-600);line-height:1.5;">AES-256-CBC with randomized 16-byte initialization vectors (IV) generated uniquely for each installation.</p>
+                                </div>
+                                <div style="background:var(--ofp-slate-50);border:1px solid var(--ofp-slate-200);border-radius:8px;padding:16px;">
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                                        <span class="ofp-icon-box ofp-icon-sm icon-violet">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                        </span>
+                                        <strong style="font-size:13px;color:var(--ofp-slate-900);">Encrypted Fields</strong>
+                                    </div>
+                                    <p style="margin:0;font-size:12px;color:var(--ofp-slate-600);line-height:1.5;">SMTP passwords, Paystack secret keys, Africa's Talking API keys, BulkSMS & SmartSMS tokens, and Turnstile secrets.</p>
+                                </div>
+                                <div style="background:var(--ofp-slate-50);border:1px solid var(--ofp-slate-200);border-radius:8px;padding:16px;">
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                                        <span class="ofp-icon-box ofp-icon-sm icon-blue">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                        </span>
+                                        <strong style="font-size:13px;color:var(--ofp-slate-900);">Rate Limiting Engine</strong>
+                                    </div>
+                                    <p style="margin:0;font-size:12px;color:var(--ofp-slate-600);line-height:1.5;">Active on all public REST endpoints and lead capture webhooks to prevent brute-force attacks and credit draining.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
+
+            </main>
+        </div>
+
+        <!-- ── Sticky Floating Save Action Bar ──────────────────────────── -->
+        <div class="ofp-sticky-footer-bar">
+            <div class="ofp-sticky-left">
+                <span class="ofp-pulse-dot"></span>
+                <span>Settings Console Active</span>
+            </div>
+            <div class="ofp-sticky-right">
+                <button type="submit" class="ofp-btn-save-master">
+                    <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                    Save All Settings
+                </button>
+            </div>
+        </div>
+
     </form>
 </div>
 
-
-
+<!-- ── Settings Interactive Scripts ───────────────────────────────────────── -->
 <script>
-// ── Show/hide SMTP fields based on mode toggle ───────────────────────────
-function ofpSyncSmtpToggle() {
-    var selected = document.querySelector('input[name="ofp_smtp_mode"]:checked');
-    if ( ! selected ) return;
-    var fields = document.getElementById('ofp-smtp-fields');
-    var labels = document.querySelectorAll('.ofp-toggle-option');
-    labels.forEach(function(l) { l.classList.remove('ofp-toggle-active'); });
-    if ( selected.closest('.ofp-toggle-option') ) {
-        selected.closest('.ofp-toggle-option').classList.add('ofp-toggle-active');
+(function() {
+    'use strict';
+
+    // ── 1. Tab Switching & Hash Persistence ──────────────────────────────────
+    function switchTab(tabId) {
+        if ( ! tabId ) return;
+        tabId = tabId.replace(/^#/, '');
+
+        var targetPane = document.getElementById(tabId);
+        if ( ! targetPane ) return;
+
+        // Update nav items
+        document.querySelectorAll('.ofp-nav-item').forEach(function(btn) {
+            btn.classList.toggle('is-active', btn.getAttribute('data-tab') === tabId);
+        });
+
+        // Update panes
+        document.querySelectorAll('.ofp-tab-pane').forEach(function(pane) {
+            pane.classList.remove('is-active');
+        });
+        targetPane.classList.add('is-active');
+
+        // Update hidden field & URL hash
+        var activeTabInput = document.getElementById('ofp_active_tab');
+        if ( activeTabInput ) activeTabInput.value = tabId;
+
+        if ( history.replaceState ) {
+            history.replaceState(null, null, '#' + tabId);
+        } else {
+            location.hash = '#' + tabId;
+        }
+
+        // Scroll into view if requested from health card
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    fields.style.display = selected.value === 'custom' ? '' : 'none';
-}
 
-// Run on page load to ensure correct visual state.
-document.addEventListener('DOMContentLoaded', ofpSyncSmtpToggle);
-
-// Run on each radio change.
-document.querySelectorAll('input[name="ofp_smtp_mode"]').forEach(function(radio) {
-    radio.addEventListener('change', ofpSyncSmtpToggle);
-});
-
-
-
-<script>
-// ── Show/hide gateway credential fields based on selected provider ───────
-document.getElementById('ofp-payment-provider').addEventListener('change', function() {
-    document.querySelectorAll('.ofp-gateway-fields').forEach(function(el) {
-        el.style.display = 'none';
+    // Attach click to sidebar nav items
+    document.querySelectorAll('.ofp-nav-item').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            switchTab(this.getAttribute('data-tab'));
+        });
     });
-    var target = document.getElementById('ofp-fields-' + this.value);
-    if (target) target.style.display = '';
-});
+
+    // Attach click to top health cards
+    document.querySelectorAll('.ofp-nav-trigger').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            e.preventDefault();
+            switchTab(this.getAttribute('data-target'));
+        });
+    });
+
+    // Check initial hash on page load
+    window.addEventListener('DOMContentLoaded', function() {
+        var hash = location.hash ? location.hash.replace(/^#/, '') : '';
+        if ( hash && document.getElementById(hash) ) {
+            switchTab(hash);
+        }
+    });
+
+    // ── 2. Password Eyeball Show/Hide Toggle ─────────────────────────────────
+    document.querySelectorAll('.ofp-btn-toggle-pwd').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var input = this.closest('.ofp-input-box').querySelector('input');
+            if ( ! input ) return;
+
+            var isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+
+            this.innerHTML = isPassword
+                ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+                : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+        });
+    });
+
+    // ── 3. One-Click Copy to Clipboard ───────────────────────────────────────
+    document.querySelectorAll('.ofp-copy-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var targetSelector = this.getAttribute('data-clipboard-target');
+            var targetElem = document.querySelector(targetSelector);
+            if ( ! targetElem ) return;
+
+            var textToCopy = targetElem.innerText || targetElem.value;
+            navigator.clipboard.writeText(textToCopy).then(function() {
+                var originalHtml = btn.innerHTML;
+                btn.classList.add('is-copied');
+                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> <span>Copied!</span>';
+
+                setTimeout(function() {
+                    btn.classList.remove('is-copied');
+                    btn.innerHTML = originalHtml;
+                }, 2000);
+            });
+        });
+    });
+
+    // ── 4. Click-to-Insert Merge Tag Chips ───────────────────────────────────
+    document.querySelectorAll('.ofp-chip').forEach(function(chip) {
+        chip.addEventListener('click', function(e) {
+            e.preventDefault();
+            var tag = this.getAttribute('data-insert');
+            var targetId = this.getAttribute('data-target');
+            var textarea = document.getElementById(targetId);
+            if ( ! textarea || ! tag ) return;
+
+            var start = textarea.selectionStart;
+            var end = textarea.selectionEnd;
+            var text = textarea.value;
+
+            textarea.value = text.substring(0, start) + tag + text.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+            textarea.focus();
+
+            // Trigger character counter update
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+    });
+
+    // ── 5. Live SMS Character Counter ────────────────────────────────────────
+    function updateSmsCounters() {
+        document.querySelectorAll('.ofp-sms-counter-input').forEach(function(ta) {
+            var counterBar = ta.nextElementSibling;
+            if ( ! counterBar || ! counterBar.classList.contains('ofp-char-counter-bar') ) return;
+            var pill = counterBar.querySelector('.ofp-char-pill');
+            if ( ! pill ) return;
+
+            var count = ta.value.length;
+            var segments = Math.ceil(count / 160) || 1;
+            pill.textContent = count + ' chars (' + segments + ' SMS)';
+
+            pill.classList.toggle('is-multisms', count > 160);
+        });
+    }
+
+    document.querySelectorAll('.ofp-sms-counter-input').forEach(function(ta) {
+        ta.addEventListener('input', updateSmsCounters);
+    });
+    updateSmsCounters();
+
+    // ── 6. Live Bank Account Card Preview ────────────────────────────────────
+    function syncBankPreview() {
+        var bankNameInput   = document.getElementById('ofp_bank_name_input');
+        var bankAccInput    = document.getElementById('ofp_bank_acc_input');
+        var bankHolderInput = document.getElementById('ofp_bank_holder_input');
+
+        var cardBankName   = document.getElementById('ofp-card-bank-name');
+        var cardAccNo      = document.getElementById('ofp-card-acc-no');
+        var cardHolderName = document.getElementById('ofp-card-holder-name');
+
+        if ( bankNameInput && cardBankName ) {
+            bankNameInput.addEventListener('input', function() {
+                cardBankName.textContent = this.value.trim() ? this.value.toUpperCase() : 'BANK NAME';
+            });
+        }
+
+        if ( bankAccInput && cardAccNo ) {
+            bankAccInput.addEventListener('input', function() {
+                cardAccNo.textContent = this.value.trim() ? this.value : '0000 0000 00';
+            });
+        }
+
+        if ( bankHolderInput && cardHolderName ) {
+            bankHolderInput.addEventListener('input', function() {
+                cardHolderName.textContent = this.value.trim() ? this.value.toUpperCase() : 'OFFICIAL BENEFICIARY';
+            });
+        }
+    }
+    syncBankPreview();
+
+    // ── 7. SMTP Mode Visual Card Toggle ──────────────────────────────────────
+    function syncSmtpCards() {
+        var selected = document.querySelector('input[name="ofp_smtp_mode"]:checked');
+        if ( ! selected ) return;
+
+        var panel = document.getElementById('ofp-smtp-credentials-panel');
+        var cards = document.querySelectorAll('.ofp-mode-card');
+
+        cards.forEach(function(c) { c.classList.remove('is-active'); });
+        if ( selected.closest('.ofp-mode-card') ) {
+            selected.closest('.ofp-mode-card').classList.add('is-active');
+        }
+
+        if ( panel ) {
+            panel.style.display = selected.value === 'custom' ? '' : 'none';
+        }
+    }
+
+    document.querySelectorAll('input[name="ofp_smtp_mode"]').forEach(function(radio) {
+        radio.addEventListener('change', syncSmtpCards);
+    });
+
+})();
 </script>
-
-<div class="ofp-settings-section">
-    <h2>Plans &amp; Pricing</h2>
-    <p class="description">
-        Unified Free/Silver/Gold tiers — monthly price and
-        property cap per tier. Read live across the system.
-    </p>
-
-    <?php
-    $ofp_listing_prices = OFP_Property_CPT::get_plan_prices();
-    $ofp_listing_caps   = OFP_Property_CPT::get_plan_caps();
-    $ofp_listing_labels = [ 'free' => 'Free', 'silver' => 'Silver', 'gold' => 'Gold' ];
-    ?>
-
-    <form method="post" action="">
-        <?php wp_nonce_field( 'ofp_save_listing_plans_action', 'ofp_listing_plans_nonce' ); ?>
-
-        <table class="form-table" role="presentation">
-            <?php foreach ( OFP_Property_CPT::PLAN_KEYS as $ofp_lp ) : ?>
-                <tr>
-                    <th scope="row"><?php echo esc_html( $ofp_listing_labels[ $ofp_lp ] ); ?></th>
-                    <td>
-                        <label style="margin-right:24px;">
-                            Monthly price (NGN)
-                            <input type="number" step="0.01" min="0"
-                                   name="listing_price_<?php echo esc_attr( $ofp_lp ); ?>"
-                                   value="<?php echo esc_attr( $ofp_listing_prices[ $ofp_lp ] ); ?>"
-                                   style="width:140px;">
-                        </label>
-                        <label>
-                            Property cap
-                            <input type="number" step="1" min="1"
-                                   name="listing_cap_<?php echo esc_attr( $ofp_lp ); ?>"
-                                   value="<?php echo esc_attr( $ofp_listing_caps[ $ofp_lp ] ); ?>"
-                                   style="width:80px;">
-                        </label>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        </table>
-
-        <p class="submit">
-            <button type="submit" name="ofp_save_listing_plans" value="1" class="button button-primary">
-                Save Plans &amp; Pricing
-            </button>
-        </p>
-    </form>
-</div>
 
 <?php include OFP_PATH . 'admin/views/partials/footer.php'; ?>

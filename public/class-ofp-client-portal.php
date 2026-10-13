@@ -80,34 +80,131 @@ class OFP_Client_Portal {
     }
 
     public function enqueue_assets(): void {
-        $route = get_query_var( 'ofp_route', '' );
-        if ( empty( $route ) || ! array_key_exists( $route, $this->routes ) ) return;
+        $route      = get_query_var( 'ofp_route', '' );
+        $agent_slug = get_query_var( 'ofp_agent_slug', '' );
 
-        $deps = [];
-        if ( in_array( $route, [ 'dashboard', 'leads', 'reports' ], true ) ) {
-            wp_enqueue_script( 'ofp-chartjs', OFP_URL . 'assets/js/chart.min.js', [], OFP_VERSION, true );
-            $deps[] = 'ofp-chartjs';
+        // ── Agent profile (public /agent/[slug]) ─────────────────────────
+        if ( ! empty( $agent_slug ) ) {
+            wp_enqueue_style(
+                'ofp-agent-profile',
+                OFP_URL . 'assets/css/agent-profile.css',
+                [],
+                OFP_VERSION
+            );
+            return;
         }
 
-        wp_enqueue_script( 'ofp-client-portal', OFP_URL . 'assets/js/client-portal.js', $deps, OFP_VERSION, true );
+        // Not one of our routes — bail out.
+        if ( empty( $route ) || ! array_key_exists( $route, $this->routes ) ) {
+            return;
+        }
+
+        // ── Auth pages (login / signup / forgot-password / reset-password / team-invite) ──
+        $auth_routes = [ 'login', 'signup', 'forgot-password', 'reset-password', 'team-invite' ];
+        if ( in_array( $route, $auth_routes, true ) ) {
+            wp_enqueue_style(
+                'ofp-auth',
+                OFP_URL . 'assets/css/auth.css',
+                [],
+                OFP_VERSION
+            );
+
+            // Signup needs its own JS with the base-domain data localised in
+            if ( $route === 'signup' ) {
+                $base_domain = get_option( 'ofp_crm_base_domain' )
+                    ?: ( isset( $_SERVER['HTTP_HOST'] )
+                        ? preg_replace( '/:\d+$/', '', $_SERVER['HTTP_HOST'] )
+                        : 'ofastpipeline.com' );
+
+                wp_enqueue_script(
+                    'ofp-signup',
+                    OFP_URL . 'assets/js/signup.js',
+                    [],
+                    OFP_VERSION,
+                    true
+                );
+                wp_localize_script( 'ofp-signup', 'ofpSignupData', [
+                    'baseDomain' => $base_domain,
+                ] );
+            }
+            return;
+        }
+
+        // ── Authenticated portal pages ────────────────────────────────────
+        wp_enqueue_style(
+            'ofp-client-portal',
+            OFP_URL . 'assets/css/client-portal.css',
+            [],
+            OFP_VERSION
+        );
+
+        $js_deps = [];
+        if ( in_array( $route, [ 'dashboard', 'leads', 'reports' ], true ) ) {
+            wp_enqueue_script(
+                'ofp-chartjs',
+                OFP_URL . 'assets/js/chart.min.js',
+                [],
+                OFP_VERSION,
+                true
+            );
+            $js_deps[] = 'ofp-chartjs';
+        }
+
+        wp_enqueue_script(
+            'ofp-client-portal',
+            OFP_URL . 'assets/js/client-portal.js',
+            $js_deps,
+            OFP_VERSION,
+            true
+        );
         wp_localize_script( 'ofp-client-portal', 'ofpClientData', [
             'ajaxurl' => admin_url( 'admin-ajax.php' ),
-            'nonce' => wp_create_nonce( 'ofp_client_ajax' ),
+            'nonce'   => wp_create_nonce( 'ofp_client_ajax' ),
         ] );
     }
 
+
     /**
-     * Prevents FOUC (Flash of Unstyled Content) and ensures instant, synchronized theme
-     * rendering across all client portal and public property pages.
+     * Determines whether the current request is for a client portal page.
+     */
+    public function is_portal_page(): bool {
+        $route = get_query_var( 'ofp_route', '' );
+        if ( ! empty( $route ) && array_key_exists( $route, $this->routes ) ) {
+            return true;
+        }
+        if ( '1' === (string) get_query_var( 'ofp_property_sales', '' ) || '1' === (string) get_query_var( 'ofp_property_purchases', '' ) ) {
+            return true;
+        }
+        $path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+        $first_segment = explode( '/', $path )[0] ?? '';
+        if ( array_key_exists( $first_segment, $this->routes ) || in_array( $first_segment, [ 'property-sales', 'property-purchases', 'property-payments', 'tenants' ], true ) ) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Prevents FOUC (Flash of Unstyled Content) and ensures instant theme
+     * rendering on client portal pages.
+     *
+     * NOTE: The dashboard uses its OWN localStorage key ('ofp_portal_theme')
+     * so it is completely isolated from the public-site theme ('ofp_theme').
+     * Changing theme on the homepage never affects the portal, and vice-versa.
      */
     public function render_theme_head_script(): void {
+        if ( ! $this->is_portal_page() ) {
+            return;
+        }
+
         ?>
         <script id="ofp-theme-init">
         (function() {
             try {
-                var theme = localStorage.getItem('ofp_theme');
-                var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                var isDark = theme ? (theme === 'dark') : prefersDark;
+                // Portal uses its own key — independent of the public-site key ('ofp_theme').
+                var PORTAL_KEY = 'ofp_portal_theme';
+                var theme = localStorage.getItem(PORTAL_KEY);
+                // Default: dark. Portal defaults to dark unless explicitly toggled to light.
+                var isDark = theme ? (theme === 'dark') : true;
                 var html = document.documentElement;
                 if (isDark) {
                     html.classList.add('dark');
@@ -121,46 +218,38 @@ class OFP_Client_Portal {
             } catch(e) {}
         })();
 
-        if (typeof window.ofpToggleTheme !== 'function') {
+        (function() {
+            var isToggling = false;
             window.ofpToggleTheme = function() {
+                if (isToggling) return;
+                isToggling = true;
+                setTimeout(function() { isToggling = false; }, 200);
+
+                var PORTAL_KEY = 'ofp_portal_theme';
                 var html = document.documentElement;
-                var currentlyDark = html.classList.contains('dark') || html.getAttribute('data-theme') === 'dark' || (html.getAttribute('data-theme') !== 'light' && !html.classList.contains('light'));
+                var currentlyDark = html.classList.contains('dark') || html.getAttribute('data-theme') === 'dark';
                 var makeDark = !currentlyDark;
 
                 if (makeDark) {
                     html.classList.add('dark');
                     html.classList.remove('light');
                     html.setAttribute('data-theme', 'dark');
-                    try { localStorage.setItem('ofp_theme', 'dark'); } catch(e) {}
+                    try { localStorage.setItem(PORTAL_KEY, 'dark'); } catch(e) {}
                 } else {
                     html.classList.remove('dark');
                     html.classList.add('light');
                     html.setAttribute('data-theme', 'light');
-                    try { localStorage.setItem('ofp_theme', 'light'); } catch(e) {}
-                }
-
-                if (typeof tailwind !== 'undefined' && tailwind.config) {
-                    tailwind.config.darkMode = 'class';
-                }
-
-                if (window.Alpine) {
-                    document.querySelectorAll('[x-data]').forEach(function(el) {
-                        try {
-                            if (el._x_dataStack) {
-                                el._x_dataStack.forEach(function(s) {
-                                    if (typeof s.darkMode !== 'undefined') s.darkMode = makeDark;
-                                });
-                            }
-                        } catch(err) {}
-                    });
+                    try { localStorage.setItem(PORTAL_KEY, 'light'); } catch(e) {}
                 }
 
                 window.dispatchEvent(new CustomEvent('ofp-theme-changed', { detail: { dark: makeDark, theme: makeDark ? 'dark' : 'light' } }));
             };
-        }
+            window.toggleDark = window.ofpToggleTheme;
+        })();
         </script>
         <?php
     }
+
 
     public function ajax_fetch_leads(): void {
         check_ajax_referer( 'ofp_client_ajax', 'nonce' );
