@@ -21,10 +21,33 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 OFP_Auth::require_client_login();
 OFP_Auth::require_main_client_only();
+
+// Solo companies have no plan or funding to pay for.
+$ofp_funding_client = OFP_Auth::current_client();
+if ( $ofp_funding_client && OFP_Brand::hide_plan_prompts( $ofp_funding_client ) ) {
+    wp_safe_redirect( home_url( '/dashboard' ) );
+    exit;
+}
 $client = OFP_Auth::current_client();
 
 $success = '';
 $error   = '';
+
+// Back from Paystack: ask Paystack right now instead of waiting for its notification.
+$ofp_return_ref = sanitize_text_field( wp_unslash( $_GET['reference'] ?? ( $_GET['trxref'] ?? '' ) ) );
+if ( $ofp_return_ref && $client ) {
+    $own = ( OFP_Payment::reference_client_id( $ofp_return_ref ) === (int) $client->id );
+    if ( $own ) {
+        $state = OFP_Payment::settle_reference( $ofp_return_ref );
+        if ( $state === 'applied' ) {
+            $success = 'Payment confirmed. Your account has been updated.';
+            $_GET['topup_status'] = $_GET['sub_status'] = '';
+        } elseif ( $state === 'failed' ) {
+            $error = 'This payment was not completed, so nothing was charged. Please try again.';
+            $_GET['topup_status'] = $_GET['sub_status'] = '';
+        }
+    }
+}
 
 if ( isset( $_GET['topup_status'] ) && $_GET['topup_status'] === 'pending' ) {
     $success = 'Your top-up is being processed. Your credit balance will update automatically within a few minutes once payment is confirmed — you\'ll also get a notification here.';
@@ -112,7 +135,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_initiate_subscr
                 exit;
             }
 
-            if ( $override_amount === null && OFP_Subscription::client_plan( $client->id ) !== 'free'
+            if ( $override_amount === null && $sub_type === 'listing' && OFP_Subscription::would_lower_running_plan( $client->id, $sub_plan ) ) {
+                $error = 'Your current plan is still running. You can switch to a lower plan in the last 7 days before it ends.';
+            } elseif ( $override_amount === null && OFP_Subscription::client_plan( $client->id ) !== 'free'
                 && ! OFP_Subscription::in_renewal_window( $client->id ) ) {
                 $error = 'You can only renew or switch plans within 7 days of your subscription expiry date.';
             } else {
@@ -240,7 +265,7 @@ $listing_prices = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funding — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Funding', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
     <style>
@@ -615,6 +640,13 @@ $listing_prices = [
         $show_listing_card = false;
         $show_silver       = false;
         $show_gold         = false;
+    }
+
+    // A lower plan is never offered while a higher plan is still running.
+    if ( $has_active_paid_plan && ! OFP_Subscription::in_renewal_window_strict( $client->id ) ) {
+        if ( OFP_Subscription::plan_rank( 'silver' ) < OFP_Subscription::plan_rank( $current_plan ) ) {
+            $show_silver = false;
+        }
     }
 
     // Default selected plan for the dropdown

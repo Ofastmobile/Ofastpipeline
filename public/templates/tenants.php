@@ -174,6 +174,27 @@ if ( $can_rent && $_SERVER['REQUEST_METHOD'] === 'POST' ) {
         }
     }
 
+    // 4b. Approve or reject a rent payment the tenant sent by transfer
+    elseif ( $action === 'approve_payment' || $action === 'reject_payment' ) {
+        if ( ! wp_verify_nonce( $_POST['ofp_rent_nonce'] ?? '', 'ofp_rent_' . $action ) ) {
+            $error = 'Security check failed. Please refresh and try again.';
+        } else {
+            $pay_id = absint( $_POST['payment_id'] ?? 0 );
+            if ( $action === 'approve_payment' ) {
+                $done = OFP_Property_Tenant_Transfer::approve( $pay_id, (int) $client->id );
+            } else {
+                $why  = sanitize_text_field( wp_unslash( $_POST['reason'] ?? '' ) );
+                $done = OFP_Property_Tenant_Transfer::reject( $pay_id, (int) $client->id, $why );
+            }
+            if ( is_wp_error( $done ) ) {
+                $error = $done->get_error_message();
+            } else {
+                wp_safe_redirect( add_query_arg( [ 'success' => $action === 'approve_payment' ? 'payment_approved' : 'payment_rejected', 'tab' => 'payments' ], home_url( '/tenants' ) ) );
+                exit;
+            }
+        }
+    }
+
     // 5. Adjust Rent / Log Increment
     elseif ( $action === 'adjust_rent' ) {
         if ( ! wp_verify_nonce( $_POST['ofp_rent_nonce'] ?? '', 'ofp_rent_adjust_rent' ) ) {
@@ -249,6 +270,8 @@ if ( isset( $_GET['success'] ) ) {
     if ( $s === 'option_saved' ) $notice = 'Rent rate option saved successfully.';
     if ( $s === 'option_updated' ) $notice = 'Rent rate status updated.';
     if ( $s === 'payment_recorded' ) $notice = 'Cash payment successfully recorded and applied to lease balance.';
+    if ( $s === 'payment_approved' ) $notice = 'Payment approved. It was applied to the lease and the tenant was told.';
+    if ( $s === 'payment_rejected' ) $notice = 'Payment rejected. The tenant was told the reason.';
     if ( $s === 'rent_adjusted' ) $notice = 'Rent revision successfully recorded into audit log. Future renewals for this tenancy will reflect the updated rate.';
     if ( $s === 'lease_renewed' ) {
         $token = sanitize_text_field( wp_unslash( $_GET['token'] ?? '' ) );
@@ -368,7 +391,7 @@ if ( $can_rent ) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tenants & Leases — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Tenants & Leases', $client ?? null ) ); ?></title>
     <script>
         (function() {
             var currentTheme = localStorage.getItem('ofp_theme') || 'dark';
@@ -1084,7 +1107,7 @@ if ( $can_rent ) {
                                                 <?php if ( $p_row->status === 'successful' ) : ?>
                                                     <span class="ofp-badge" style="background:rgba(16, 185, 129, 0.15); color:#10b981;">Verified</span>
                                                 <?php else : ?>
-                                                    <span class="ofp-badge" style="background:rgba(245, 158, 11, 0.15); color:#f59e0b;"><?php echo esc_html( ucfirst( $p_row->status ) ); ?></span>
+                                                    <span class="ofp-badge" style="background:rgba(245, 158, 11, 0.15); color:#f59e0b;"><?php echo esc_html( [ 'pending_verification' => 'Pending approval', 'rejected' => 'Rejected', 'failed' => 'Failed', 'cancelled' => 'Cancelled' ][ $p_row->status ] ?? ucfirst( $p_row->status ) ); ?></span>
                                                 <?php endif; ?>
                                             </td>
                                             <td style="text-align:right;">
@@ -1095,7 +1118,28 @@ if ( $can_rent ) {
                                                         Receipt
                                                     </a>
                                                 <?php else : ?>
-                                                    <span style="color:var(--text-muted); font-size:12px;">—</span>
+                                                    <?php if ( $p_row->status === 'pending_verification' ) : ?>
+                                                        <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap; align-items:center;">
+                                                            <?php if ( ! empty( $p_row->proof_path ) ) : ?>
+                                                                <a href="<?php echo esc_url( OFP_Property_Tenant_Transfer::proof_url( (int) $p_row->id ) ); ?>" target="_blank" rel="noopener" style="font-size:12px;">View proof</a>
+                                                            <?php endif; ?>
+                                                            <form method="post" style="display:inline;">
+                                                                <input type="hidden" name="ofp_rent_action" value="approve_payment">
+                                                                <input type="hidden" name="payment_id" value="<?php echo (int) $p_row->id; ?>">
+                                                                <?php wp_nonce_field( 'ofp_rent_approve_payment', 'ofp_rent_nonce' ); ?>
+                                                                <button type="submit" class="ofp-btn ofp-btn-sm" style="background:#10b981; color:#fff;" onclick="return confirm('Approve this payment? Only do this after you see the money in your bank.');">Approve</button>
+                                                            </form>
+                                                            <form method="post" style="display:inline-flex; gap:4px;">
+                                                                <input type="hidden" name="ofp_rent_action" value="reject_payment">
+                                                                <input type="hidden" name="payment_id" value="<?php echo (int) $p_row->id; ?>">
+                                                                <?php wp_nonce_field( 'ofp_rent_reject_payment', 'ofp_rent_nonce' ); ?>
+                                                                <input type="text" name="reason" maxlength="150" placeholder="Reason (tenant sees it)" style="padding:4px 8px; font-size:12px; width:140px;">
+                                                                <button type="submit" class="ofp-btn ofp-btn-sm" style="background:#ef4444; color:#fff;">Reject</button>
+                                                            </form>
+                                                        </div>
+                                                    <?php else : ?>
+                                                        <span style="color:var(--text-muted); font-size:12px;">—</span>
+                                                    <?php endif; ?>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>

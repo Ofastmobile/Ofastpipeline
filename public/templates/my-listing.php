@@ -33,7 +33,7 @@ $status_badges = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Listing — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'My Listing', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
@@ -45,7 +45,7 @@ $status_badges = [
 
     <div class="ofp-page-header">
         <h1>My Listing</h1>
-        <p>Your property listings on the OFast Pipeline directory.</p>
+        <p>Your property listings on the <?php echo esc_html( OFP_Brand::name() ); ?> directory.</p>
     </div>
 
     <div class="ofp-alert ofp-alert-info">

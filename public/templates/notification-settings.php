@@ -56,7 +56,7 @@ $current_pref = $client->ofp_notification_pref ?? OFP_Notification::PREF_BOTH;
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Notification Settings — OFast Pipeline</title>
+	<title><?php echo esc_html( OFP_Brand::title( 'Notification Settings', $client ?? null ) ); ?></title>
 	<?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>

@@ -310,7 +310,7 @@ class OFP_Client_Portal {
 
     private function render_placeholder( string $route ): void {
         $title = ucwords( str_replace( '-', ' ', $route ) );
-        ?><!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?php echo esc_html( $title ); ?> — OFast Pipeline</title><style>*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f0f4f8;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#333}.card{background:#fff;border-radius:12px;padding:48px 40px;max-width:480px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08)}.badge{display:inline-block;background:#e8f4fd;color:#1a73e8;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:4px 12px;border-radius:100px;margin-bottom:20px}h1{font-size:24px;font-weight:700;margin-bottom:12px;color:#111}p{font-size:15px;color:#666;line-height:1.6}.route{margin-top:20px;font-size:13px;background:#f8f9fa;border-radius:6px;padding:8px 16px;color:#888;font-family:monospace}.back{margin-top:28px;display:inline-block;color:#1a73e8;text-decoration:none;font-size:14px}</style></head><body><div class="card"><span class="badge">Coming Soon</span><h1><?php echo esc_html( $title ); ?></h1><p>This section of the OFast Pipeline client portal is being built as part of the phased rollout.</p><div class="route">/<?php echo esc_html( $route ); ?></div><a class="back" href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>">← Back to Dashboard</a></div></body></html><?php
+        ?><!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?php echo esc_html( OFP_Brand::title( $title ) ); ?></title><style>*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f0f4f8;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#333}.card{background:#fff;border-radius:12px;padding:48px 40px;max-width:480px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08)}.badge{display:inline-block;background:#e8f4fd;color:#1a73e8;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:4px 12px;border-radius:100px;margin-bottom:20px}h1{font-size:24px;font-weight:700;margin-bottom:12px;color:#111}p{font-size:15px;color:#666;line-height:1.6}.route{margin-top:20px;font-size:13px;background:#f8f9fa;border-radius:6px;padding:8px 16px;color:#888;font-family:monospace}.back{margin-top:28px;display:inline-block;color:#1a73e8;text-decoration:none;font-size:14px}</style></head><body><div class="card"><span class="badge">Coming Soon</span><h1><?php echo esc_html( $title ); ?></h1><p>This section of the <?php echo esc_html( OFP_Brand::name() ); ?> client portal is being built as part of the phased rollout.</p><div class="route">/<?php echo esc_html( $route ); ?></div><a class="back" href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>">← Back to Dashboard</a></div></body></html><?php
     }
 
     public function ajax_invite_team_member() {
@@ -694,12 +694,17 @@ class OFP_Client_Portal {
         if ( ! $client ) {
             wp_send_json_error( 'Unauthorized.' );
         }
+        if ( ! OFP_Subscription::allows_email_templates( (int) $client->id ) ) {
+            wp_send_json_error( 'Email branding is available on the Silver and Gold plans.' );
+        }
 
         global $wpdb;
         $p = $wpdb->prefix;
 
         $brand_color   = sanitize_hex_color( $_POST['email_brand_color'] ?? '#0f172a' ) ?: '#0f172a';
-        $header_text   = sanitize_text_field( $_POST['email_header_text'] ?? '' );
+        // The header name is always the registered business name and the logo
+        // always comes from the account page, so neither is accepted here.
+        $header_text   = '';
         $tagline       = sanitize_text_field( $_POST['email_header_tagline'] ?? '' );
         $footer_text   = wp_kses_post( wp_unslash( $_POST['email_footer_text'] ?? '' ) );
         $template_mode = sanitize_text_field( $_POST['email_template_mode'] ?? 'visual' );
@@ -707,7 +712,6 @@ class OFP_Client_Portal {
             $template_mode = 'visual';
         }
         $custom_html   = wp_unslash( $_POST['email_custom_html'] ?? '' );
-        $logo_url      = esc_url_raw( trim( $_POST['logo_url'] ?? '' ) );
 
         $data = [
             'email_brand_color'    => $brand_color,
@@ -717,9 +721,6 @@ class OFP_Client_Portal {
             'email_template_mode'  => $template_mode,
             'email_custom_html'    => $custom_html,
         ];
-        if ( ! empty( $logo_url ) ) {
-            $data['logo_url'] = $logo_url;
-        }
 
         $updated = $wpdb->update(
             "{$p}ofp_clients",
@@ -745,7 +746,7 @@ class OFP_Client_Portal {
         $test_subject = 'Test: ' . ( $client->business_name ?: 'Your Company' ) . ' Branded Email Layout';
         $test_body = '
             <p>Hello <strong>' . esc_html( $client->owner_name ) . '</strong>,</p>
-            <p>This is a live preview test of your branded email layout from <strong>' . esc_html( $client->business_name ?: 'OFast Pipeline' ) . '</strong>.</p>
+            <p>This is a live preview test of your branded email layout from <strong>' . esc_html( $client->business_name ?: OFP_Brand::name() ) . '</strong>.</p>
             <p>Whenever you send broadcasts, automated lead follow-ups, or lease notices, your recipients will see this exact design and your business branding.</p>
             <div style="background:#f8fafc;border-left:4px solid ' . esc_attr( $client->email_brand_color ?: '#0f172a' ) . ';padding:14px 18px;margin:20px 0;border-radius:4px;">
                 <p style="margin:0;font-size:14px;color:#334155;">

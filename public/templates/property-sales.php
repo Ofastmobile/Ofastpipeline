@@ -144,7 +144,7 @@ $my_purchases = $wpdb->get_results( $wpdb->prepare(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Property Sales — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Property Sales', $client ?? null ) ); ?></title>
     <!-- Dark theme script to avoid FOUC -->
     <script>
         (function() {
@@ -165,8 +165,9 @@ $my_purchases = $wpdb->get_results( $wpdb->prepare(
                 Property Sales
             </h1>
             <p style="color:#64748b; margin:0; font-size:14px;">Every buyer deal in one place — pending offers awaiting a decision, and active or completed purchases with their paid amount and balance.</p>
-            <p style="margin-top:12px;"><a href="<?php echo esc_url( home_url( '/property-purchases' ) ); ?>" class="ofp-btn ofp-btn-primary">Add Purchase</a></p>
         </div>
+
+        <?php $ofp_sales_tab = 'sales'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
 
         <?php if ( $notice ) : ?>
             <div class="ofp-alert ofp-alert-success" style="margin-bottom:24px;">
@@ -185,7 +186,7 @@ $my_purchases = $wpdb->get_results( $wpdb->prepare(
         <?php endif; ?>
 
         <div style="display:grid; grid-template-columns: 1fr; gap:24px;">
-            <div class="ofp-card">
+            <div class="ofp-card" id="create-offer">
                 <h3 style="margin-bottom:4px;">Create Installment Offer</h3>
                 <?php if ( ! $can_create_installments ) : ?>
                     <p class="ofp-hint">Installment offers are a Gold plan feature. Existing offers stay visible below.</p>
@@ -277,10 +278,10 @@ $my_purchases = $wpdb->get_results( $wpdb->prepare(
                 <?php endif; ?>
             </div>
 
-            <div class="ofp-card">
+            <div class="ofp-card" id="my-sales">
                 <h3>My Sales</h3>
                 <?php if ( empty( $existing_offers ) && empty( $my_purchases ) ) : ?>
-                    <p class="ofp-hint">No sales yet. Use <strong>Add Purchase</strong> above or create an installment offer to start one.</p>
+                    <p class="ofp-hint">No sales yet. Use the <strong>Add Purchase</strong> tab or create an installment offer to start one.</p>
                 <?php else : ?>
                     <div class="ofp-table-responsive">
                         <table class="ofp-table" style="width: 100%; white-space: nowrap;">

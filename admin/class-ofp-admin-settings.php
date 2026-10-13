@@ -34,7 +34,7 @@ class OFP_Admin_Settings {
         $sent = OFP_Mailer::send(
             $current_user->user_email,
             $current_user->display_name,
-            'OFast Pipeline — Test Email',
+            OFP_Brand::name() . ' — Test Email',
             '<h2>✅ Test Email Successful</h2>
              <p>If you are reading this, your SMTP configuration is working correctly.</p>
              <p><strong>Sent at:</strong> ' . current_time( 'mysql' ) . '</p>'

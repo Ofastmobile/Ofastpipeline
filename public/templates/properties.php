@@ -15,7 +15,7 @@ $client = OFP_Auth::current_client();
 $error   = '';
 $success = '';
 
-$active_plan = OFP_Subscription::client_plan( $client->id );
+$active_plan = OFP_Subscription::feature_plan( $client->id );
 $can_edit_properties = OFP_Subscription::has_paid_plan( $client->id );
 $plan_prices = OFP_Property_CPT::get_plan_prices();
 $plan_caps   = OFP_Property_CPT::get_plan_caps();
@@ -172,6 +172,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                 update_post_meta( $post_id, 'ofp_parking', $parking );
                 update_post_meta( $post_id, 'ofp_area_sqm', $area_sqm );
                 update_post_meta( $post_id, 'ofp_title_document', $title_doc );
+                $bank_pick = (int) ( $_POST['bank_account_id'] ?? 0 );
+                if ( $bank_pick && ! OFP_Bank_Account::get( $bank_pick, (int) $client->id ) ) {
+                    $bank_pick = 0;
+                }
+                update_post_meta( $post_id, 'ofp_bank_account_id', $bank_pick );
                 update_post_meta( $post_id, 'ofp_condition', $condition_val );
                 update_post_meta( $post_id, 'ofp_furnishing', $furnishing );
                 update_post_meta( $post_id, 'ofp_video_url', $video_url );
@@ -281,7 +286,7 @@ if ( isset( $_GET['edit'] ) ) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Properties — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'My Properties', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
@@ -302,6 +307,7 @@ if ( isset( $_GET['edit'] ) ) {
 
             <div style="display:grid; grid-template-columns: 1fr; gap:24px;">
 
+                <?php if ( ! OFP_Brand::hide_plan_prompts( $client ) ) : ?>
                 <!-- Plan status / picker -->
                 <div class="ofp-card">
                     <?php
@@ -341,6 +347,7 @@ if ( isset( $_GET['edit'] ) ) {
                         </p>
                     <?php endif; ?>
                 </div>
+                <?php endif; ?>
 
                 <!-- Add / Edit property form -->
                 <div class="ofp-card">
@@ -349,7 +356,11 @@ if ( isset( $_GET['edit'] ) ) {
                     <?php if ( ! $editing_post && ! OFP_Property_CPT::can_add_property( $client->id ) ) : ?>
                         <p class="ofp-hint">
                             You have reached your plan's property limit.
-                            <a href="<?php echo esc_url( home_url( '/pricing' ) ); ?>">Upgrade</a> to add more listings.
+                            <?php if ( OFP_Brand::hide_plan_prompts( $client ) ) : ?>
+                                Contact support to raise the limit.
+                            <?php else : ?>
+                                <a href="<?php echo esc_url( home_url( '/pricing' ) ); ?>">Upgrade</a> to add more listings.
+                            <?php endif; ?>
                         </p>
                     <?php else : ?>
                         <form method="POST" enctype="multipart/form-data" style="margin-top:20px;">
@@ -496,6 +507,21 @@ if ( isset( $_GET['edit'] ) ) {
                                 </div>
 
                                 <div class="ofp-field">
+                                    <label>Receiving Bank Account</label>
+                                    <?php
+                                    $bank_list    = OFP_Bank_Account::list( (int) $client->id );
+                                    $current_bank = $editing_post ? (int) get_post_meta( $editing_post->ID, 'ofp_bank_account_id', true ) : 0;
+                                    ?>
+                                    <select name="bank_account_id" class="ofp-select">
+                                        <option value="0">Default account</option>
+                                        <?php foreach ( $bank_list as $b ) : ?>
+                                            <option value="<?php echo (int) $b->id; ?>" <?php selected( $current_bank, (int) $b->id ); ?>><?php echo esc_html( $b->bank_name . ' ' . $b->account_number ); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <small style="color:var(--text-muted);">Where buyers and tenants send money for this property. Add accounts in My Account.</small>
+                                </div>
+                                
+                                                                <div class="ofp-field">
                                     <label>Condition</label>
                                     <?php $current_condition = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_condition', true ) : ''; ?>
                                     <select name="condition" class="ofp-select">

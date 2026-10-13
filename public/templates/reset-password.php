@@ -52,7 +52,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && $token_valid ) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Set New Password — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Set New Password', $client ?? null ) ); ?></title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -177,14 +177,14 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && $token_valid ) {
         .ofp-footer a { color: #1a73e8; text-decoration: none; }
         .ofp-footer a:hover { text-decoration: underline; }
     </style>
+    <?php OFP_Brand::print_host_head(); ?>
 </head>
 <body>
 
 <div class="ofp-login-wrap">
 
     <div class="ofp-brand">
-        <h1>OFast Pipeline</h1>
-        <p>Client Portal — Password Recovery</p>
+        <?php echo OFP_Brand::auth_heading( 'Client Portal — Password Recovery' ); ?>
     </div>
 
     <div class="ofp-card">

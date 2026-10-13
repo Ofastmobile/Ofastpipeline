@@ -91,6 +91,13 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             $error = 'Please enter your email and password.';
         } else {
             $credentials_valid = OFP_Auth::check_credentials( $email, $password );
+
+            // A client's own domain only accepts that client's people.
+            $host_client = OFP_Host_Router::current_client_record();
+            if ( $credentials_valid && $host_client && ! OFP_Auth::is_admin_user()
+                && (int) $credentials_valid['client_id'] !== (int) $host_client->id ) {
+                $credentials_valid = false;
+            }
             
             if ( $credentials_valid ) {
                 // Admin bypass: Skip OTP and login directly
@@ -122,7 +129,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Login', $client ?? null ) ); ?></title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -252,14 +259,14 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
         .ofp-footer a { color: #1a73e8; text-decoration: none; }
         .ofp-footer a:hover { text-decoration: underline; }
     </style>
+    <?php OFP_Brand::print_host_head(); ?>
 </head>
 <body>
 
 <div class="ofp-login-wrap">
 
     <div class="ofp-brand">
-        <h1>OFast Pipeline</h1>
-        <p>Client Portal — Sign in to your account</p>
+        <?php echo OFP_Brand::auth_heading( 'Client Portal — Sign in to your account' ); ?>
     </div>
 
     <div class="ofp-card">
@@ -343,10 +350,14 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
         <?php endif; ?>
     </div>
 
+    <?php if ( OFP_Brand::is_solo_host() ) : ?>
+        <?php echo OFP_Brand::support_line_html(); ?>
+    <?php else : ?>
     <div class="ofp-footer">
         New client?
         <a href="<?php echo esc_url( home_url( '/signup' ) ); ?>">Create your account →</a>
     </div>
+    <?php endif; ?>
 
 </div>
 

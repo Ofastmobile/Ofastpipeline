@@ -10,7 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class OFP_Property_Sales_Client_UI {
 
     public static function init(): void {
-        add_action( 'wp_footer', [ __CLASS__, 'inject_sales_nav_item' ], 999 );
+        // The menu items are now built on the server in partials/nav.php.
+        // add_action( 'wp_footer', [ __CLASS__, 'inject_sales_nav_item' ], 999 );
     }
 
     public static function inject_sales_nav_item(): void {
@@ -46,6 +47,9 @@ class OFP_Property_Sales_Client_UI {
                     icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zM7.5 12h.008v.008H7.5V12zm3 0h.008v.008h-.008V12z" /></svg>'
                 }
             ];
+<?php if ( OFP_Brand::hide_plan_prompts( $client ) ) : ?>
+            items = items.filter(function (i) { return i.marker !== 'listing-billing'; });
+<?php endif; ?>
 
             function navList() {
                 return document.querySelector('.ofp-sidebar-nav ul');

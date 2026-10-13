@@ -91,6 +91,114 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
             $client->bio = $bio;
             $client->meta_pixel_id = $pixel;
         }
+    } elseif ( isset( $_POST['bank_do'] ) ) {
+        // Bank accounts shown to buyers and tenants. Every change needs the password.
+        $bank_pw   = (string) wp_unslash( $_POST['bank_password'] ?? '' );
+        $bank_auth = OFP_Auth::check_credentials( $client->email, $bank_pw );
+        $bank_cid  = is_array( $bank_auth ) ? (int) ( $bank_auth['client_id'] ?? 0 ) : ( is_object( $bank_auth ) ? (int) ( $bank_auth->client_id ?? 0 ) : 0 );
+        $bank_do   = sanitize_text_field( wp_unslash( $_POST['bank_do'] ) );
+
+        if ( $bank_cid !== (int) $client->id ) {
+            $error = 'Your password is not correct, so the bank details were not changed.';
+        } else {
+            $bank_msg = '';
+            if ( $bank_do === 'add' ) {
+                $new_bank = OFP_Bank_Account::add(
+                    (int) $client->id,
+                    (string) wp_unslash( $_POST['bank_name'] ?? '' ),
+                    (string) wp_unslash( $_POST['bank_account_number'] ?? '' ),
+                    (string) wp_unslash( $_POST['bank_account_name'] ?? '' )
+                );
+                if ( is_wp_error( $new_bank ) ) {
+                    $error = $new_bank->get_error_message();
+                } else {
+                    $success  = 'Bank account added.';
+                    $bank_msg = 'A bank account was added.';
+                }
+            } elseif ( strpos( $bank_do, 'delete:' ) === 0 ) {
+                if ( OFP_Bank_Account::delete( (int) substr( $bank_do, 7 ), (int) $client->id ) ) {
+                    $success  = 'Bank account removed.';
+                    $bank_msg = 'A bank account was removed.';
+                }
+            } elseif ( strpos( $bank_do, 'default:' ) === 0 ) {
+                if ( OFP_Bank_Account::set_default( (int) substr( $bank_do, 8 ), (int) $client->id ) ) {
+                    $success  = 'Default account changed.';
+                    $bank_msg = 'The default bank account was changed.';
+                }
+            }
+            if ( $bank_msg && ! empty( $client->email ) ) {
+                OFP_Mailer::send(
+                    $client->email,
+                    $client->owner_name ?: 'there',
+                    'Your bank account details were changed',
+                    '<p>' . esc_html( $bank_msg ) . ' Buyers and tenants will now see the new details.</p><p>If you did not do this, change your password right away and contact support.</p>'
+                );
+            }
+        }
+    } elseif ( isset( $_POST['update_branding'] ) ) {
+        // Branding (Gold and solo company only). Business name is never editable here.
+        if ( ! OFP_Brand::can_brand( $client ) ) {
+            $error = 'Branding is available on the Gold plan.';
+        } elseif ( ! OFP_White_Label::schema_ready() ) {
+            $error = 'Branding is not ready yet. Please reload the page and try again.';
+        } else {
+            $pick_color = static function ( string $field ): ?string {
+                if ( ! empty( $_POST[ 'use_default_' . $field ] ) ) {
+                    return null;
+                }
+                $v = sanitize_hex_color( trim( (string) wp_unslash( $_POST[ $field ] ?? '' ) ) );
+                return $v ?: null;
+            };
+            $b_color   = $pick_color( 'brand_color' );
+            $b_sidebar = $pick_color( 'sidebar_color' );
+            $b_hover   = $pick_color( 'menu_hover_color' );
+            $b_email = trim( (string) wp_unslash( $_POST['support_email'] ?? '' ) );
+            $b_phone = sanitize_text_field( wp_unslash( $_POST['support_phone'] ?? '' ) );
+            $b_fav   = null;
+
+            if ( $b_email !== '' && ! is_email( $b_email ) ) {
+                $error = 'Enter a valid support email address.';
+            } elseif ( isset( $_FILES['favicon'] ) && (int) $_FILES['favicon']['error'] === UPLOAD_ERR_OK ) {
+                $fav = $_FILES['favicon'];
+                $fav_type = wp_check_filetype( $fav['name'] );
+                if ( $fav['size'] > 100 * 1024 ) {
+                    $error = 'The favicon is too large. Maximum size is 100KB.';
+                } elseif ( ! in_array( $fav_type['type'], [ 'image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/webp', 'image/jpeg' ], true ) ) {
+                    $error = 'Invalid favicon type. Use PNG, ICO, WebP or JPG.';
+                } else {
+                    if ( ! function_exists( 'wp_handle_upload' ) ) {
+                        require_once ABSPATH . 'wp-admin/includes/file.php';
+                    }
+                    $moved = wp_handle_upload( $fav, [ 'test_form' => false ] );
+                    if ( $moved && ! isset( $moved['error'] ) ) {
+                        $b_fav = $moved['url'];
+                    } else {
+                        $error = $moved['error'] ?? 'Failed to save the favicon.';
+                    }
+                }
+            }
+
+            if ( ! $error ) {
+                $b_data = [
+                    'brand_color'   => $b_color,
+                    'sidebar_color' => $b_sidebar,
+                    'menu_hover_color' => $b_hover,
+                    'support_email' => $b_email !== '' ? sanitize_email( $b_email ) : null,
+                    'support_phone' => $b_phone !== '' ? $b_phone : null,
+                ];
+                if ( $b_fav ) {
+                    $b_data['favicon_url'] = $b_fav;
+                } elseif ( ! empty( $_POST['remove_favicon'] ) ) {
+                    $b_data['favicon_url'] = null;
+                }
+                global $wpdb;
+                $wpdb->update( $wpdb->prefix . 'ofp_clients', $b_data, [ 'id' => $client->id ] );
+                foreach ( $b_data as $k => $v ) {
+                    $client->$k = $v;
+                }
+                $success = 'Branding saved.';
+            }
+        }
     } elseif ( isset( $_POST['upload_logo'] ) && isset( $_FILES['logo'] ) ) {
         $file = $_FILES['logo'];
         
@@ -141,7 +249,7 @@ if ( isset( $_GET['success'] ) && $_GET['success'] === 'logo' ) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Account — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'My Account', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
@@ -387,6 +495,113 @@ if ( isset( $_GET['success'] ) && $_GET['success'] === 'logo' ) {
                     
                     <label for="ofp-logo-input" class="ofp-btn">Upload New Photo</label>
                 </div>
+
+                <?php if ( OFP_Brand::can_brand( $client ) && OFP_White_Label::schema_ready() ) : ?>
+                <!-- Branding Card (Gold and solo company) -->
+                <div class="ofp-card">
+                    <h3 style="font-size:16px; font-weight:600; margin:0 0 6px; color:var(--text-main);">Branding</h3>
+                    <p style="font-size:13px; color:var(--text-muted); margin:0 0 16px;">Your logo is set with the photo upload above. Your business name is fixed. Contact support to change it.</p>
+                    <form method="POST" action="" enctype="multipart/form-data">
+                        <input type="hidden" name="ofp_account_nonce" value="<?php echo esc_attr( wp_create_nonce( 'ofp_account_' . $client->id ) ); ?>">
+                        <input type="hidden" name="update_branding" value="1">
+
+                        <?php
+                        $color_rows = [
+                            'brand_color'      => [ 'Main Color', 'Buttons, links and highlights. The button hover color is made from it.', '#3b82f6' ],
+                            'sidebar_color'    => [ 'Sidebar Color', 'The menu background. Menu text turns light or dark by itself so it stays readable.', '#1c2233' ],
+                            'menu_hover_color' => [ 'Menu Hover Color', 'Needs a Sidebar Color. If it is too hard to read, a safe one is used instead.', '#252e42' ],
+                        ];
+                        foreach ( $color_rows as $field => $row ) :
+                            $saved = $client->$field ?? '';
+                        ?>
+                        <div class="ofp-form-group">
+                            <label class="ofp-label"><?php echo esc_html( $row[0] ); ?></label>
+                            <input type="color" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( $saved ?: $row[2] ); ?>" oninput="this.form.elements['use_default_<?php echo esc_attr( $field ); ?>'].checked=false;" style="width:60px;height:38px;padding:2px;border-radius:6px;">
+                            <label style="display:inline-block;font-size:12px;color:var(--text-muted);margin-left:10px;">
+                                <input type="checkbox" name="use_default_<?php echo esc_attr( $field ); ?>" value="1" <?php checked( empty( $saved ) ); ?>> Use default
+                            </label>
+                            <p style="font-size:12px;color:var(--text-muted);margin:4px 0 0;"><?php echo esc_html( $row[1] ); ?></p>
+                        </div>
+                        <?php endforeach; ?>
+
+                        <div class="ofp-form-group">
+                            <label class="ofp-label">Favicon (PNG, ICO, WebP or JPG, max 100KB)</label>
+                            <?php if ( ! empty( $client->favicon_url ) ) : ?>
+                                <img src="<?php echo esc_url( $client->favicon_url ); ?>" alt="Favicon" style="width:32px;height:32px;object-fit:contain;display:block;margin-bottom:8px;">
+                                <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:8px;">
+                                    <input type="checkbox" name="remove_favicon" value="1"> Remove favicon
+                                </label>
+                            <?php endif; ?>
+                            <input type="file" name="favicon" accept="image/png,image/x-icon,image/webp,image/jpeg">
+                        </div>
+
+                        <div class="ofp-form-group">
+                            <label class="ofp-label">Support Email</label>
+                            <input type="email" name="support_email" class="ofp-input" value="<?php echo esc_attr( $client->support_email ?? '' ); ?>" placeholder="support@yourcompany.com">
+                        </div>
+
+                        <div class="ofp-form-group">
+                            <label class="ofp-label">Support Phone</label>
+                            <input type="text" name="support_phone" class="ofp-input" value="<?php echo esc_attr( $client->support_phone ?? '' ); ?>" placeholder="+234...">
+                        </div>
+
+                        <button type="submit" class="ofp-btn ofp-btn-primary">Save Branding</button>
+                    </form>
+                </div>
+                <?php endif; ?>
+
+                <?php $ofp_current_user = OFP_Auth::current_user(); if ( empty( $ofp_current_user->is_team_member ) ) : $ofp_banks = OFP_Bank_Account::list( (int) $client->id ); ?>
+                <!-- Bank Accounts Card -->
+                <div class="ofp-card">
+                    <h3 style="font-size:16px; font-weight:600; margin:0 0 6px; color:var(--text-main);">Bank Accounts for Payments</h3>
+                    <p style="font-size:13px; color:var(--text-muted); margin:0 0 16px;">Buyers and tenants send money to these accounts. You approve each payment after you see it in your bank. You can pick an account for each property when you add or edit it. Every change needs your password.</p>
+                    <form method="POST" action="">
+                        <input type="hidden" name="ofp_account_nonce" value="<?php echo esc_attr( wp_create_nonce( 'ofp_account_' . $client->id ) ); ?>">
+
+                        <?php if ( $ofp_banks ) : foreach ( $ofp_banks as $b ) : ?>
+                            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-color);flex-wrap:wrap;">
+                                <div style="font-size:14px;color:var(--text-main);">
+                                    <strong><?php echo esc_html( $b->bank_name ); ?></strong> <?php echo esc_html( $b->account_number ); ?><br>
+                                    <span style="color:var(--text-muted);"><?php echo esc_html( $b->account_name ); ?></span>
+                                    <?php if ( (int) $b->is_default === 1 ) : ?><span style="margin-left:6px;font-size:11px;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;">Default</span><?php endif; ?>
+                                </div>
+                                <div>
+                                    <?php if ( (int) $b->is_default !== 1 ) : ?>
+                                        <button type="submit" name="bank_do" value="default:<?php echo (int) $b->id; ?>" class="ofp-btn ofp-btn-secondary" style="padding:4px 10px;font-size:12px;">Make default</button>
+                                    <?php endif; ?>
+                                    <button type="submit" name="bank_do" value="delete:<?php echo (int) $b->id; ?>" class="ofp-btn ofp-btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="return confirm('Remove this bank account?');">Remove</button>
+                                </div>
+                            </div>
+                        <?php endforeach; else : ?>
+                            <p style="font-size:13px;color:var(--text-muted);">No bank account yet. Add one so buyers and tenants know where to pay.</p>
+                        <?php endif; ?>
+
+                        <h4 style="font-size:14px;margin:18px 0 8px;color:var(--text-main);">Add an account</h4>
+                        <div class="ofp-form-group">
+                            <label class="ofp-label">Bank</label>
+                            <input type="text" name="bank_name" class="ofp-input" list="ofp-bank-names" placeholder="e.g. GTBank">
+                            <datalist id="ofp-bank-names">
+                                <?php foreach ( [ 'Access Bank', 'GTBank', 'First Bank', 'UBA', 'Zenith Bank', 'Fidelity Bank', 'Stanbic IBTC', 'Sterling Bank', 'Union Bank', 'Wema Bank', 'Polaris Bank', 'FCMB', 'Ecobank', 'Kuda', 'Opay', 'Palmpay', 'Moniepoint', '9PSB' ] as $bn ) : ?>
+                                    <option value="<?php echo esc_attr( $bn ); ?>">
+                                <?php endforeach; ?>
+                            </datalist>
+                        </div>
+                        <div class="ofp-form-group">
+                            <label class="ofp-label">Account number (10 digits)</label>
+                            <input type="text" name="bank_account_number" class="ofp-input" inputmode="numeric" maxlength="10" placeholder="0123456789">
+                        </div>
+                        <div class="ofp-form-group">
+                            <label class="ofp-label">Account name</label>
+                            <input type="text" name="bank_account_name" class="ofp-input" placeholder="Name on the account">
+                        </div>
+                        <div class="ofp-form-group">
+                            <label class="ofp-label">Your password (to confirm)</label>
+                            <input type="password" name="bank_password" class="ofp-input" autocomplete="current-password">
+                        </div>
+                        <button type="submit" name="bank_do" value="add" class="ofp-btn ofp-btn-primary">Add Account</button>
+                    </form>
+                </div>
+                <?php endif; ?>
 
                 <!-- Password Card -->
                 <div class="ofp-card">

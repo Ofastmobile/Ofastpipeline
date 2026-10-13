@@ -4,7 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
-if ( ! $client ) {
+if ( ! $client || OFP_Brand::hide_plan_prompts( $client ) ) {
     wp_safe_redirect( home_url( '/dashboard' ) );
     exit;
 }
@@ -21,7 +21,7 @@ $records = $wpdb->get_results( $wpdb->prepare(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Listing Billing — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Listing Billing', $client ?? null ) ); ?></title>
     <!-- Dark theme script to avoid FOUC -->
     <script>
         (function() {

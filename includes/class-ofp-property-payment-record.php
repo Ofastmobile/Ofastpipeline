@@ -56,6 +56,10 @@ class OFP_Property_Payment_Record {
 
     public static function reject( int $payment_id, int $verified_by = 0, string $note = '' ): bool {
         global $wpdb;
-        return false !== $wpdb->update( $wpdb->prefix . 'ofp_property_payments', [ 'status' => 'rejected', 'verified_by' => $verified_by ?: null, 'verified_at' => current_time( 'mysql' ), 'note' => sanitize_textarea_field( $note ), 'updated_at' => current_time( 'mysql' ) ], [ 'id' => $payment_id, 'status' => 'pending_verification' ] );
+        $ok = false !== $wpdb->update( $wpdb->prefix . 'ofp_property_payments', [ 'status' => 'rejected', 'verified_by' => $verified_by ?: null, 'verified_at' => current_time( 'mysql' ), 'note' => sanitize_textarea_field( $note ), 'updated_at' => current_time( 'mysql' ) ], [ 'id' => $payment_id, 'status' => 'pending_verification' ] );
+        if ( $ok ) {
+            do_action( 'ofp_property_payment_rejected', $payment_id, $note );
+        }
+        return $ok;
     }
 }

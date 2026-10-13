@@ -84,7 +84,7 @@ class OFP_Property_Payment_Records {
                             <td><?php echo esc_html( ucfirst( str_replace( '_', ' ', $row->status ) ) ); ?></td>
                             <td>NGN <?php echo esc_html( number_format( (float) $row->purchase_paid, 2 ) ); ?></td>
                             <td>NGN <?php echo esc_html( number_format( (float) $row->purchase_balance, 2 ) ); ?></td>
-                            <td><?php echo $row->receipt_path ? 'Available' : '—'; ?></td>
+                            <td><?php echo $row->receipt_path ? '<a href="' . esc_url( OFP_Property_Receipt_Viewer::get_receipt_url( (int) $row->id, 'purchase' ) ) . '" target="_blank" rel="noopener">View proof</a>' : '—'; ?></td>
                             <td>
                                 <?php if ( 'pending_verification' === $row->status ) : ?>
                                     <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
@@ -129,7 +129,7 @@ class OFP_Property_Payment_Records {
         ?>
         <!doctype html><html lang="en"><head>
             <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-            <title>Property Payments — OFast Pipeline</title>
+            <title>Property Payments — <?php echo esc_html( OFP_Brand::name() ); ?></title>
             <!-- Dark theme script to avoid FOUC -->
             <script>
                 (function() {
@@ -205,7 +205,7 @@ class OFP_Property_Payment_Records {
                                             <?php echo esc_html( ucfirst( str_replace( '_', ' ', $row->status ) ) ); ?>
                                         </span>
                                     </td>
-                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo $row->receipt_path ? 'Available' : '—'; ?></td>
+                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo $row->receipt_path ? '<a href="' . esc_url( OFP_Property_Receipt_Viewer::get_receipt_url( (int) $row->id, 'purchase' ) ) . '" target="_blank" rel="noopener">View proof</a>' : '—'; ?></td>
                                     <td style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $row->purchase_paid, 2 ) ); ?></td>
                                     <td style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $row->purchase_balance, 2 ) ); ?></td>
                                     <td>
@@ -221,6 +221,7 @@ class OFP_Property_Payment_Records {
                                                     <?php wp_nonce_field( 'ofp_client_payment_reject_' . $row->id ); ?>
                                                     <input type="hidden" name="action" value="ofp_client_payment_reject">
                                                     <input type="hidden" name="payment_id" value="<?php echo esc_attr( $row->id ); ?>">
+                                                    <input type="text" name="reason" maxlength="150" placeholder="Reason (buyer will see it)" style="padding:4px 8px; font-size:12px; width:150px; margin-right:4px;">
                                                     <button class="ofp-btn" style="padding:4px 12px; font-size:12px; background:rgba(128,128,128,0.1); color:var(--text-muted); border:1px solid rgba(128,128,128,0.2);" type="submit">Reject</button>
                                                 </form>
                                             </div>
@@ -284,7 +285,8 @@ class OFP_Property_Payment_Records {
         if ( $approve ) {
             OFP_Property_Payment_Record::success( $payment_id, 0 );
         } else {
-            OFP_Property_Payment_Record::reject( $payment_id, 0, 'Rejected by property client.' );
+            $reason = sanitize_text_field( wp_unslash( $_POST['reason'] ?? '' ) );
+            OFP_Property_Payment_Record::reject( $payment_id, 0, $reason !== '' ? $reason : 'Rejected by property client.' );
         }
 
         wp_safe_redirect( wp_get_referer() ?: home_url( '/property-payments/' ) );

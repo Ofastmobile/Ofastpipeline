@@ -101,7 +101,7 @@ class OFP_Payment {
             return null;
         }
 
-        return $gateway->initiate_transaction( [
+        $url = $gateway->initiate_transaction( [
             'client_id'    => $client_id,
             'amount'       => $amount,
             'reference'    => $reference,
@@ -111,6 +111,10 @@ class OFP_Payment {
             'description'  => ucfirst( $channel ) . ' Credit Top-Up',
             'redirect_url' => home_url( '/credits?topup_status=pending' ),
         ] );
+        if ( $url ) {
+            self::remember_pending( $reference );
+        }
+        return $url;
     }
 
     /**
@@ -308,6 +312,11 @@ class OFP_Payment {
                 return null;
             }
 
+            // A lower plan cannot replace a higher plan that is still running.
+            if ( $override_amount === null && OFP_Subscription::would_lower_running_plan( $client_id, $plan ) ) {
+                return null;
+            }
+
             $amount      = $override_amount ?? OFP_Property_CPT::get_plan_price( $plan );
             $description = ucfirst( $plan ) . ' Plan Payment';
         } else {
@@ -326,7 +335,7 @@ class OFP_Payment {
             return null;
         }
 
-        return $gateway->initiate_transaction( [
+        $url = $gateway->initiate_transaction( [
             'client_id'    => $client_id,
             'amount'       => $amount,
             'reference'    => $reference,
@@ -336,6 +345,10 @@ class OFP_Payment {
             'description'  => $description,
             'redirect_url' => home_url( '/funding?sub_status=pending' ),
         ] );
+        if ( $url ) {
+            self::remember_pending( $reference );
+        }
+        return $url;
     }
 
     /**
@@ -420,6 +433,104 @@ class OFP_Payment {
      * @param  WP_REST_Request $request  The incoming webhook request.
      * @return WP_REST_Response
      */
+    // ------------------------------------------------------------------
+    // Safety net for missed payment notifications
+    // ------------------------------------------------------------------
+
+    const PENDING_OPTION = 'ofp_pending_payment_refs';
+    const RECONCILE_HOOK = 'ofp_reconcile_payments';
+
+    public static function init(): void {
+        add_action( self::RECONCILE_HOOK, [ __CLASS__, 'reconcile_pending' ] );
+        if ( ! wp_next_scheduled( self::RECONCILE_HOOK ) ) {
+            wp_schedule_event( time() + 300, 'hourly', self::RECONCILE_HOOK );
+        }
+    }
+
+    /** The client a plan or credit payment reference belongs to, or 0. */
+    public static function reference_client_id( string $reference ): int {
+        $credit = self::parse_credit_topup_reference( $reference );
+        if ( $credit ) {
+            return (int) $credit['client_id'];
+        }
+        $sub = self::parse_subscription_checkout_reference( $reference );
+        return $sub ? (int) $sub['client_id'] : 0;
+    }
+
+    /** Remember a payment that was started, so it can be checked later. */
+    public static function remember_pending( string $reference ): void {
+        $list = get_option( self::PENDING_OPTION, [] );
+        if ( ! is_array( $list ) ) {
+            $list = [];
+        }
+        $list[ $reference ] = time();
+        if ( count( $list ) > 300 ) {
+            asort( $list );
+            $list = array_slice( $list, -300, null, true );
+        }
+        update_option( self::PENDING_OPTION, $list, false );
+    }
+
+    /**
+     * Checks one reference with Paystack and applies it if it was paid.
+     * Safe to call many times: the confirm functions ignore a repeat.
+     *
+     * @return string 'applied' | 'pending' | 'failed' | 'unknown'
+     */
+    public static function settle_reference( string $reference ): string {
+        $is_credit = self::is_credit_topup_reference( $reference );
+        $is_sub    = self::is_subscription_checkout_reference( $reference );
+        if ( ! $is_credit && ! $is_sub ) {
+            return 'unknown';
+        }
+
+        $gateway = self::get_gateway();
+        if ( ! $gateway || ! method_exists( $gateway, 'verify_transaction' ) ) {
+            return 'unknown';
+        }
+
+        $result = $gateway->verify_transaction( $reference );
+        if ( ! $result ) {
+            return 'unknown';
+        }
+        if ( $result['status'] === 'success' ) {
+            if ( $is_credit ) {
+                self::confirm_credit_topup( $reference, (float) $result['amount'], $result['id'] );
+            } else {
+                self::confirm_subscription_checkout( $reference, (float) $result['amount'], $result['id'] );
+            }
+            return 'applied';
+        }
+        if ( in_array( $result['status'], [ 'failed', 'abandoned', 'reversed' ], true ) ) {
+            return 'failed';
+        }
+        return 'pending';
+    }
+
+    /** Hourly job: check payments that were started but never confirmed. */
+    public static function reconcile_pending(): void {
+        $list = get_option( self::PENDING_OPTION, [] );
+        if ( ! is_array( $list ) || ! $list ) {
+            return;
+        }
+        $now = time();
+        foreach ( $list as $reference => $started ) {
+            $age = $now - (int) $started;
+            if ( $age < 180 ) {
+                continue; // give the normal notification a moment first
+            }
+            if ( $age > 3 * DAY_IN_SECONDS ) {
+                unset( $list[ $reference ] );
+                continue;
+            }
+            $state = self::settle_reference( (string) $reference );
+            if ( $state === 'applied' || $state === 'failed' ) {
+                unset( $list[ $reference ] );
+            }
+        }
+        update_option( self::PENDING_OPTION, $list, false );
+    }
+
     public static function handle_webhook( WP_REST_Request $request ): WP_REST_Response {
         $gateway = self::get_gateway();
 

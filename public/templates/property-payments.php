@@ -25,7 +25,7 @@ $payments = $wpdb->get_results( $wpdb->prepare(
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Property Payments — OFast Pipeline</title>
+<title><?php echo esc_html( OFP_Brand::title( 'Property Payments', $client ?? null ) ); ?></title>
 <?php wp_head(); ?>
 <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>

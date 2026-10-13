@@ -60,6 +60,33 @@ $nav_items[] = [
 ];
 
 $nav_items[] = [
+    'label'  => 'Sales & Installments',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7.5 16.5l3-3 2.25 2.25L19.5 9" /></svg>',
+    'url'    => OFP_Subscription::has_paid_plan( (int) $client->id ) ? home_url( '/property-sales' ) : home_url( '/pricing' ),
+    'slug'   => 'property-sales',
+    'locked' => ! OFP_Subscription::has_paid_plan( (int) $client->id ),
+];
+
+$nav_items[] = [
+    'label'  => 'Payment Records',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 5.25h-15A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75h15a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0019.5 5.25zM2.25 9h19.5M6 13.5h3" /></svg>',
+    'url'    => home_url( '/property-payments' ),
+    'slug'   => 'property-payments',
+    'locked' => false,
+];
+
+// Listing Billing is a plan subscription page, so solo companies do not get it.
+if ( ! OFP_Brand::hide_plan_prompts( $client ) ) {
+    $nav_items[] = [
+        'label'  => 'Listing Billing',
+        'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zM7.5 12h.008v.008H7.5V12zm3 0h.008v.008h-.008V12z" /></svg>',
+        'url'    => home_url( '/listing-billing' ),
+        'slug'   => 'listing-billing',
+        'locked' => false,
+    ];
+}
+
+$nav_items[] = [
     'label'  => 'Tenants',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.75c0-1.243-1.343-2.25-3-2.25s-3 1.007-3 2.25m6 0a2.25 2.25 0 01-2.25 2.25h-1.5A2.25 2.25 0 0112 18.75m6 0v-1.5a3 3 0 00-3-3h-1.5a3 3 0 00-3 3v1.5M12 9a3 3 0 100-6 3 3 0 000 6z" /></svg>',
     'url'    => OFP_Property_Rent::can_manage( (int) $client->id ) ? home_url( '/tenants' ) : home_url( '/pricing' ),
@@ -129,7 +156,7 @@ if ( $can_view_team ) {
 }
 
 // Funding — main client only, team members can't pay or manage billing
-if ( $current_user && empty( $current_user->is_team_member ) ) {
+if ( $current_user && empty( $current_user->is_team_member ) && ! OFP_Brand::hide_plan_prompts( $client ) ) {
     $nav_items[] = [
         'label'  => 'Funding',
         'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
@@ -139,23 +166,27 @@ if ( $current_user && empty( $current_user->is_team_member ) ) {
     ];
 }
 
-// Plans & Pricing (always visible)
+// Plans & Pricing: hidden for solo companies, they have no plan to choose
+if ( ! OFP_Brand::hide_plan_prompts( $client ) ) {
 $nav_items[] = [
     'label'  => 'Plans & Pricing',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" /></svg>',
     'url'    => home_url( '/pricing' ),
     'slug'   => 'pricing',
     'locked' => false,
-];
+];
+}
+
 ?>
 
+<?php OFP_Brand::print_head( $client ); ?>
 <div class="ofp-shell" id="ofp-shell">
     <div class="ofp-sidebar-backdrop" id="ofp-sidebar-backdrop"></div>
 
     <aside class="ofp-sidebar" id="ofp-sidebar">
         <div class="ofp-sidebar-header">
             <a class="ofp-nav-brand" href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>">
-                ⚡ <span>OFast Pipeline</span>
+                <?php echo OFP_Brand::sidebar_brand_html( $client ); ?>
             </a>
         </div>
         

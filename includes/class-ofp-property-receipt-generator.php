@@ -59,7 +59,7 @@ class OFP_Property_Receipt_Generator {
                     t.full_name AS tenant_name, t.email AS tenant_email, t.phone AS tenant_phone, t.id AS tenant_record_id,
                     pr.title AS property_title, pr.listing_type,
                     c.business_name, c.owner_name, c.email AS client_email, c.phone AS client_phone,
-                    c.business_phone AS client_business_phone
+                    c.business_phone AS client_business_phone, l.client_id AS receipt_client_id
              FROM {$p}ofp_property_lease_payments p
              INNER JOIN {$p}ofp_property_leases l ON l.id = p.lease_id
              INNER JOIN {$p}ofp_property_tenants t ON t.id = l.tenant_id
@@ -110,10 +110,29 @@ class OFP_Property_Receipt_Generator {
         $html = file_get_contents( $template_path );
 
         // ── Brand header: replace hardcoded "Ofast Pipeline" with client business name ──
-        $brand_name = ! empty( $data['business_name'] ) ? $data['business_name'] : 'Ofast Pipeline';
+        $brand_name = ! empty( $data['business_name'] ) ? $data['business_name'] : OFP_Brand::name();
         $brand_initials = self::initials( $brand_name );
         $html = str_replace( '<div class="brand-name">Ofast Pipeline</div>', '<div class="brand-name">' . esc_html( $brand_name ) . '</div>', $html );
         $html = str_replace( '>OP</div>', '>' . esc_html( $brand_initials ) . '</div>', $html );
+
+        // ── Client branding: same logo and email color as their emails ──
+        $brand_client = ! empty( $data['client_id'] ) ? OFP_Client::get( (int) $data['client_id'] ) : null;
+        if ( $brand_client ) {
+            if ( ! empty( $brand_client->logo_url ) ) {
+                $logo_html = '<div class="logo" style="background:none;overflow:hidden;"><img src="' . esc_url( $brand_client->logo_url ) . '" alt="" style="max-width:100%;max-height:100%;object-fit:contain;"></div>';
+                $html = preg_replace( '/<div class="logo">[^<]*<\/div>/', $logo_html, $html, 1 );
+            }
+            if ( OFP_Subscription::allows_email_templates( (int) $brand_client->id ) ) {
+                $rc = ! empty( $brand_client->email_brand_color ) ? sanitize_hex_color( $brand_client->email_brand_color ) : '';
+                if ( $rc ) {
+                    $html = str_replace( '--primary:#5b35d5;', '--primary:' . $rc . ';', $html );
+                    $html = str_replace( '--primary-dark:#4020a7;', '--primary-dark:' . OFP_Brand::darken( $rc, 0.2 ) . ';', $html );
+                }
+            }
+            if ( ! empty( $brand_client->is_white_label ) ) {
+                $html = str_replace( '<div class="brand-sub">Real Estate Management & Transaction Platform</div>', '', $html );
+            }
+        }
 
         // ── Hide sections not relevant to this transaction type ──
         foreach ( self::$section_visibility as $section_id => $allowed_types ) {
@@ -226,7 +245,8 @@ class OFP_Property_Receipt_Generator {
             'utility_reference'   => 'N/A',
 
             // Footer
-            'business_name'       => $payment->business_name ?: 'Ofast Pipeline',
+            'business_name'       => $payment->business_name ?: OFP_Brand::name(),
+            'client_id'           => (int) ( $payment->receipt_client_id ?? 0 ),
             'business_address'    => '',
             'business_email'      => $payment->client_email ?: '',
             'business_phone'      => $payment->client_business_phone ?: $payment->client_phone ?: '',
@@ -308,7 +328,8 @@ class OFP_Property_Receipt_Generator {
             'due_date'            => '',
             'next_payment_date'   => '',
 
-            'business_name'       => $payment->business_name ?? 'Ofast Pipeline',
+            'business_name'       => $payment->business_name ?? OFP_Brand::name(),
+            'client_id'           => (int) ( $payment->client_id ?? 0 ),
             'business_address'    => '',
             'business_email'      => $payment->client_email ?? '',
             'business_phone'      => $payment->client_business_phone ?? $payment->client_phone ?? '',

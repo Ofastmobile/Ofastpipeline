@@ -102,7 +102,7 @@ class OFP_Mailer {
                     'ofp_smtp_from_email',
                     get_option( 'admin_email' )
                 );
-                $phpmailer->FromName   = get_option( 'ofp_smtp_from_name', 'OFast Pipeline' );
+                $phpmailer->FromName   = get_option( 'ofp_smtp_from_name', '' ) ?: OFP_Brand::name();
 
             },
             10  // Lower than OFT's 999 — OFT always wins when both are configured.
@@ -139,15 +139,22 @@ class OFP_Mailer {
             return false;
         }
 
+        // Use the right product name. A solo company's people never see ours.
+        $recipient_client = self::client_for_recipient( $to );
+        $solo_client      = ( $recipient_client && ! empty( $recipient_client->is_white_label ) ) ? $recipient_client : null;
+        $brand_name       = OFP_Brand::email_name( $recipient_client );
+        $subject          = OFP_Brand::apply_name( $subject, $brand_name );
+        $body_html        = OFP_Brand::apply_name( $body_html, $brand_name );
+
         $from_email = get_option( 'ofp_smtp_from_email', get_option( 'admin_email' ) );
-        $from_name  = get_option( 'ofp_smtp_from_name', 'OFast Pipeline' );
+        $from_name  = $solo_client ? $brand_name : ( get_option( 'ofp_smtp_from_name', '' ) ?: OFP_Brand::name() );
 
         $headers = [
             'Content-Type: text/html; charset=UTF-8',
             "From: {$from_name} <{$from_email}>",
         ];
 
-        $full_html = self::wrap_in_template( $to_name, $subject, $body_html );
+        $full_html = self::wrap_in_template( $to_name, $subject, $body_html, $solo_client ? $brand_name : null );
 
         $sent = wp_mail( $to, $subject, $full_html, $headers );
 
@@ -179,6 +186,20 @@ class OFP_Mailer {
      * @param string $body_html
      * @return bool
      */
+    /** Finds the client (or the client of a team member) that owns an email address. */
+    private static function client_for_recipient( string $to ): ?object {
+        global $wpdb;
+        $p      = $wpdb->prefix;
+        $client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p}ofp_clients WHERE email = %s LIMIT 1", $to ) );
+        if ( ! $client ) {
+            $client = $wpdb->get_row( $wpdb->prepare(
+                "SELECT c.* FROM {$p}ofp_clients c INNER JOIN {$p}ofp_team_members t ON t.client_id = c.id WHERE t.email = %s LIMIT 1",
+                $to
+            ) );
+        }
+        return $client ?: null;
+    }
+
     public static function send_system_email( string $to, string $subject, string $body_html ): bool {
         return self::send( $to, 'User', $subject, $body_html );
     }
@@ -208,7 +229,7 @@ class OFP_Mailer {
             $client_id
         ) );
 
-        $from_name  = $client ? ( $client->business_name ?: $client->owner_name ) : get_option( 'ofp_smtp_from_name', 'OFast Pipeline' );
+        $from_name  = $client ? ( $client->business_name ?: $client->owner_name ) : ( get_option( 'ofp_smtp_from_name', '' ) ?: OFP_Brand::name() );
         $from_email = get_option( 'ofp_smtp_from_email', get_option( 'admin_email' ) );
 
         $headers = [
@@ -283,7 +304,7 @@ class OFP_Mailer {
             $brand_color = '#0f172a';
         }
 
-        $header_text = ! empty( $client->email_header_text ) ? $client->email_header_text : ( $client->business_name ?: $client->owner_name );
+        $header_text = $client->business_name ?: $client->owner_name;
         $tagline     = ! empty( $client->email_header_tagline ) ? $client->email_header_tagline : '';
         $logo_url    = ! empty( $client->logo_url ) ? esc_url( $client->logo_url ) : '';
         $year        = gmdate( 'Y' );
@@ -463,7 +484,7 @@ class OFP_Mailer {
             <h3 style="margin-top:28px;">What Happens Next?</h3>
             <ol style="padding-left:20px;line-height:2.2;">
                 <li>Log in to your dashboard at the URL above</li>
-                <li>Follow the onboarding steps to activate your subscription</li>
+                <li>You start on the Free plan. There is nothing to pay now.</li>
                 <li>Your lead pipeline activates automatically</li>
                 <li>Leads start flowing in as your ads run</li>
             </ol>
@@ -891,10 +912,11 @@ class OFP_Mailer {
     private static function wrap_in_template(
         string $recipient_name,
         string $subject,
-        string $body_html
+        string $body_html,
+        ?string $brand_name = null
     ): string {
 
-        $site_name = get_bloginfo( 'name' ) ?: 'OFast Pipeline';
+        $site_name = $brand_name ?: ( get_bloginfo( 'name' ) ?: OFP_Brand::name() );
         $site_url  = home_url();
         $year      = gmdate( 'Y' );
 

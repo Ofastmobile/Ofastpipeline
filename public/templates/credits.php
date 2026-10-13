@@ -12,6 +12,20 @@ OFP_Auth::require_active_subscription( $client );
 global $wpdb;
 $p = $wpdb->prefix;
 
+// Back from Paystack: ask Paystack right now instead of waiting for its notification.
+$ofp_return_ref = sanitize_text_field( wp_unslash( $_GET['reference'] ?? ( $_GET['trxref'] ?? '' ) ) );
+$ofp_return_msg = '';
+if ( $ofp_return_ref && OFP_Payment::reference_client_id( $ofp_return_ref ) === (int) $client->id ) {
+    $ofp_state = OFP_Payment::settle_reference( $ofp_return_ref );
+    if ( $ofp_state === 'applied' ) {
+        $ofp_return_msg = 'Payment confirmed. Your credits have been added.';
+    } elseif ( $ofp_state === 'failed' ) {
+        $ofp_return_msg = 'This payment was not completed, so nothing was charged.';
+    } else {
+        $ofp_return_msg = 'Your payment is still being confirmed. It will update automatically.';
+    }
+}
+
 $credits = OFP_Credit::get( $client->id );
 
 $sms_pct   = $credits && $credits->sms_loaded   > 0 ? round( ( $credits->sms_remaining   / $credits->sms_loaded   ) * 100 ) : 0;
@@ -36,7 +50,7 @@ $transactions = $wpdb->get_results(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Credits & Billing — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Credits & Billing', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
@@ -48,6 +62,9 @@ $transactions = $wpdb->get_results(
 
     <div class="ofp-page-header">
         <h1>Credits & Billing</h1>
+        <?php if ( ! empty( $ofp_return_msg ) ) : ?>
+            <div style="background:#ecfdf5;border:1px solid #6ee7b7;color:#065f46;padding:12px 16px;border-radius:8px;margin:0 0 16px;"><?php echo esc_html( $ofp_return_msg ); ?></div>
+        <?php endif; ?>
         <p>Your credit balances, subscription status, and payment history.</p>
     </div>
 
@@ -60,6 +77,7 @@ $transactions = $wpdb->get_results(
 
     <div class="ofp-grid-2" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 32px;">
         
+        <?php if ( ! OFP_Brand::hide_plan_prompts( $client ) ) : ?>
         <!-- Subscription Status -->
         <div class="ofp-card">
             <div class="ofp-card-header" style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
@@ -115,6 +133,7 @@ $transactions = $wpdb->get_results(
 
 
         </div>
+        <?php endif; ?>
 
         <?php if ( OFP_Subscription::has_platform_access( $client->id ) ) : ?>
         <!-- Credit Balances -->

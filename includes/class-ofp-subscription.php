@@ -98,6 +98,18 @@ class OFP_Subscription {
      *
      * Does not rename database values.
      */
+    /**
+     * True when a client's paid period has run out. The plan then counts as
+     * Free right away, even before the daily job has reset the saved plan.
+     * Solo companies never expire.
+     */
+    public static function is_plan_expired( ?object $client ): bool {
+        if ( ! $client || ! empty( $client->is_white_label ) || empty( $client->subscription_expires ) ) {
+            return false;
+        }
+        return strtotime( $client->subscription_expires ) < strtotime( current_time( 'Y-m-d' ) );
+    }
+
     public static function client_plan( int $client_id ): string {
         if ( $client_id <= 0 ) {
             return 'free';
@@ -106,6 +118,9 @@ class OFP_Subscription {
         $best = 'free';
 
         $client = OFP_Client::get( $client_id );
+        if ( self::is_plan_expired( $client ) ) {
+            return 'free';
+        }
         if ( $client ) {
             $best = self::higher_plan( $best, $client->plan ?? null );
             if ( isset( $client->listing_plan ) ) {
@@ -125,7 +140,38 @@ class OFP_Subscription {
      * True when the client's unified plan is at least $min (free|silver|gold).
      */
     public static function client_plan_at_least( int $client_id, string $min ): bool {
-        return self::plan_rank( self::client_plan( $client_id ) ) >= self::plan_rank( $min );
+        return self::plan_rank( self::feature_plan( $client_id ) ) >= self::plan_rank( $min );
+    }
+
+    /**
+     * A white label (solo company) has no limits at all. They are billed by
+     * the admin outside the plan system, so every feature gate treats them as
+     * Gold with unlimited listings and team seats.
+     * Billing code keeps using client_plan(), so nothing is charged for this.
+     */
+    public static function is_unlimited( int $client_id ): bool {
+        static $memo = [];
+        if ( $client_id <= 0 ) {
+            return false;
+        }
+        if ( ! isset( $memo[ $client_id ] ) ) {
+            $client = OFP_Client::get( $client_id );
+            $memo[ $client_id ] = $client && ! empty( $client->is_white_label );
+        }
+        return $memo[ $client_id ];
+    }
+
+    /** The plan to use for FEATURE gates. Never use this for billing. */
+    public static function feature_plan( int $client_id ): string {
+        return self::is_unlimited( $client_id ) ? 'gold' : self::client_plan( $client_id );
+    }
+
+    /** Team seats for a client. Unlimited for a solo company. */
+    public static function team_limit_for_client( int $client_id ): int {
+        if ( self::is_unlimited( $client_id ) ) {
+            return 100000;
+        }
+        return self::team_member_limit( self::client_plan( $client_id ) );
     }
 
     public static function has_paid_plan( int $client_id ): bool {
@@ -137,12 +183,12 @@ class OFP_Subscription {
     }
 
     public static function allows_installments( int $client_id ): bool {
-        return self::client_plan( $client_id ) === 'gold';
+        return self::feature_plan( $client_id ) === 'gold';
     }
 
     /** Rent management follows the same Gold-only server-side gate as installments. */
     public static function allows_rent_management( int $client_id ): bool {
-        return self::client_plan( $client_id ) === 'gold';
+        return self::feature_plan( $client_id ) === 'gold';
     }
 
     /**
@@ -200,6 +246,23 @@ class OFP_Subscription {
         $unified = self::normalize_plan( $plan );
         if ( $client_id <= 0 ) {
             return;
+        }
+
+        // Plan history: write down every real plan change and what caused it,
+        // so "who changed this plan?" can always be answered from the Activity Log.
+        $before = $wpdb->get_row( $wpdb->prepare( "SELECT plan, listing_plan FROM {$wpdb->prefix}ofp_clients WHERE id = %d", $client_id ) );
+        if ( $before && class_exists( 'OFP_Logger' ) && ( self::normalize_plan( $before->plan ) !== $unified ) ) {
+            $trace  = [];
+            foreach ( array_slice( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 6 ), 1, 4 ) as $frame ) {
+                $trace[] = ( $frame['class'] ?? '' ) . '::' . ( $frame['function'] ?? '' );
+            }
+            $who = function_exists( 'wp_get_current_user' ) && wp_get_current_user()->exists() ? wp_get_current_user()->user_login : 'system or client';
+            OFP_Logger::log( 'Plan changed', $client_id, [
+                'from'   => self::normalize_plan( $before->plan ),
+                'to'     => $unified,
+                'by'     => $who,
+                'caused' => implode( ' < ', $trace ),
+            ] );
         }
 
         $data = [
@@ -462,6 +525,40 @@ class OFP_Subscription {
      * allowed to renew or switch tiers. Free clients bypass this check
      * entirely wherever it's used (they can pick any plan anytime).
      */
+    /**
+     * Like in_renewal_window(), but a client with no expiry date is NOT in the
+     * window. Used to decide whether a lower plan may replace a higher one.
+     */
+    public static function in_renewal_window_strict( int $client_id ): bool {
+        $client = OFP_Client::get( $client_id );
+        if ( ! $client || empty( $client->subscription_expires ) ) {
+            return false;
+        }
+        $expiry = strtotime( $client->subscription_expires );
+        if ( ! $expiry ) {
+            return false;
+        }
+        return ( ( $expiry - time() ) / DAY_IN_SECONDS ) <= 7;
+    }
+
+    /**
+     * True when paying for $plan would LOWER a higher plan that is still running
+     * and the client is not yet in the last 7 days before it ends.
+     */
+    public static function would_lower_running_plan( int $client_id, ?string $plan ): bool {
+        if ( ! $plan ) {
+            return false;
+        }
+        $current = self::client_plan( $client_id );
+        if ( $current === 'free' || self::is_unlimited( $client_id ) ) {
+            return false;
+        }
+        if ( self::plan_rank( $plan ) >= self::plan_rank( $current ) ) {
+            return false;
+        }
+        return ! self::in_renewal_window_strict( $client_id );
+    }
+
     public static function in_renewal_window( int $client_id ): bool {
         $client = OFP_Client::get( $client_id );
         if ( ! $client || empty( $client->subscription_expires ) ) {
@@ -504,6 +601,9 @@ class OFP_Subscription {
      */
     public static function get_active_listing_plan( int $client_id ): ?string {
         global $wpdb;
+        if ( self::is_plan_expired( OFP_Client::get( $client_id ) ) ) {
+            return null;
+        }
         // Only a row that has actually been PAID counts as active access.
         // 'pending' rows are created the moment a client merely SELECTS a
         // plan on the Properties page, before they've paid a cent, and they
@@ -555,7 +655,7 @@ class OFP_Subscription {
              FROM {$p}ofp_clients
              WHERE subscription_expires BETWEEN CURDATE() AND DATE_ADD( CURDATE(), INTERVAL 7 DAY )
                AND status = 'active'
-               AND plan IN ('silver', 'gold')"
+               AND plan IN ('silver', 'gold')" . OFP_White_Label::not_solo_sql()
         );
         foreach ( $clients_expiring as $client ) {
             self::send_reminder( $client, (int) $client->days_left );
@@ -572,7 +672,7 @@ class OFP_Subscription {
             "SELECT id, plan, listing_plan FROM {$p}ofp_clients
              WHERE subscription_expires < CURDATE()
                AND status = 'active'
-               AND (plan != 'free' OR listing_plan != 'free')"
+               AND (plan != 'free' OR listing_plan != 'free')" . OFP_White_Label::not_solo_sql()
         );
 
         foreach ( $expired_clients as $expired ) {
@@ -581,6 +681,15 @@ class OFP_Subscription {
                 [ 'plan' => 'free', 'listing_plan' => 'free' ],
                 [ 'id' => $expired->id ]
             );
+
+            // A paid row with no end date, or one that ends after the client's
+            // expiry, must not keep the old plan alive. Close it today.
+            $wpdb->query( $wpdb->prepare(
+                "UPDATE {$p}ofp_subscriptions
+                 SET period_end = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+                 WHERE client_id = %d AND status = 'paid' AND ( period_end IS NULL OR period_end >= CURDATE() )",
+                (int) $expired->id
+            ) );
 
             if ( class_exists( 'OFP_Notification' ) ) {
                 OFP_Notification::create(
@@ -619,7 +728,7 @@ class OFP_Subscription {
 
         $free_clients = $wpdb->get_results(
             "SELECT * FROM {$wpdb->prefix}ofp_clients
-             WHERE status = 'active' AND plan = 'free'"
+             WHERE status = 'active' AND plan = 'free'" . OFP_White_Label::not_solo_sql()
         );
 
         foreach ( $free_clients as $client ) {
@@ -714,6 +823,34 @@ class OFP_Subscription {
                 'created_at'      => current_time( 'mysql' ),
             ]
         );
+
+        // A payment for a LOWER plan must not lower a higher plan that is still
+        // running. The money is recorded above. The plan and the end date are left
+        // alone, and the admin is told so it can be settled by hand.
+        if ( in_array( $type, [ 'listing', 'crm' ], true ) && self::would_lower_running_plan( $client_id, $plan ?: ( $client->plan ?? null ) ) ) {
+            if ( class_exists( 'OFP_Logger' ) ) {
+                OFP_Logger::log( 'Lower plan payment held', $client_id, [
+                    'paid_plan'    => $plan,
+                    'running_plan' => self::client_plan( $client_id ),
+                    'amount'       => $amount,
+                    'reference'    => $payment_ref,
+                    'note'         => 'Payment recorded. Plan and end date unchanged. Settle by hand.',
+                ] );
+            }
+            wp_mail(
+                get_option( 'admin_email' ),
+                'A payment for a lower plan needs your attention',
+                sprintf(
+                    "%s paid NGN %s for the %s plan, but they are still on %s which has not ended.\n\nThe payment (%s) is recorded. Their plan and end date were not changed.\nPlease refund it, or change their plan by hand.",
+                    $client->business_name ?: $client->owner_name,
+                    number_format( $amount, 2 ),
+                    ucfirst( (string) $plan ),
+                    ucfirst( self::client_plan( $client_id ) ),
+                    $payment_ref
+                )
+            );
+            return;
+        }
 
         // Extend the client's subscription_expires date in ofp_clients.
         // Uses GREATEST() so a payment processed slightly late still gives a
@@ -914,7 +1051,7 @@ class OFP_Subscription {
             . '<p><strong>Amount expected:</strong> NGN ' . number_format( $expected, 2 ) . '</p>'
             . '<p><strong>Shortfall:</strong> NGN ' . number_format( $shortfall, 2 ) . '</p>'
             . '<p><strong>Reference:</strong> ' . esc_html( $payment_ref ) . '</p>'
-            . '<p>Review this in wp-admin → OFast Pipeline → Billing before it renews automatically.</p>'
+            . '<p>Review this in wp-admin → ' . esc_html( OFP_Brand::name() ) . ' → Billing before it renews automatically.</p>'
         );
 
         // Let the client know too, via their own notification preference.
@@ -972,7 +1109,7 @@ class OFP_Subscription {
             . '<p><strong>Reference:</strong> ' . esc_html( $payment_ref ) . '</p>'
             . '<p>The plan is already active — this is just the extra amount, decide '
             . 'whether to refund it or credit it toward their next renewal in wp-admin → '
-            . 'OFast Pipeline → Billing.</p>'
+            . esc_html( OFP_Brand::name() ) . ' → Billing.</p>'
         );
 
         if ( class_exists( 'OFP_Logger' ) ) {
@@ -1250,6 +1387,42 @@ class OFP_Subscription {
      * @param  int $client_id
      * @return bool
      */
+    /**
+     * One time cleanup. Earlier signups on the Free plan (and solo companies)
+     * were given pending CRM and listing rows that showed as "Awaiting Payment".
+     * Pending rows for the free tier are removed. A pending upgrade to a paid
+     * plan is never touched.
+     */
+    public static function cleanup_free_pending_once(): void {
+        if ( get_option( 'ofp_free_pending_cleanup' ) === '1' && get_option( 'ofp_pending_review_cleanup' ) === '1' ) {
+            return;
+        }
+        global $wpdb;
+        $p = $wpdb->prefix;
+
+        // Self-serve signups no longer wait for review. Move any old ones that
+        // are still waiting to active, on the Free plan they signed up with.
+        if ( get_option( 'ofp_pending_review_cleanup' ) !== '1' ) {
+            $wpdb->query( "UPDATE {$p}ofp_clients SET status = 'active', updated_at = NOW() WHERE status = 'pending_review'" );
+            update_option( 'ofp_pending_review_cleanup', '1', false );
+        }
+        if ( get_option( 'ofp_free_pending_cleanup' ) === '1' ) {
+            return;
+        }
+        if ( ! $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $p . 'ofp_subscriptions' ) ) ) ) {
+            return;
+        }
+        $wpdb->query(
+            "DELETE s FROM {$p}ofp_subscriptions s
+             INNER JOIN {$p}ofp_clients c ON c.id = s.client_id
+             WHERE s.status = 'pending'
+               AND s.payment_method = 'pending'
+               AND ( s.plan IS NULL OR s.plan IN ('', 'free', 'bronze') )
+               AND c.plan = 'free'"
+        );
+        update_option( 'ofp_free_pending_cleanup', '1', false );
+    }
+
     public static function has_unpaid( int $client_id ): bool {
         global $wpdb;
 

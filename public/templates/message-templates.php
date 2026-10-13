@@ -96,7 +96,7 @@ $type_badges = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Communications — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Communications', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>
@@ -666,7 +666,7 @@ $type_badges = [
     <?php if ( $tab === 'branding' ) : ?>
         <?php
         $brand_color   = ! empty( $client->email_brand_color ) ? $client->email_brand_color : '#0f172a';
-        $header_text   = ! empty( $client->email_header_text ) ? $client->email_header_text : ( $client->business_name ?: $client->owner_name );
+        $header_text   = $client->business_name ?: $client->owner_name;
         $header_tagline= ! empty( $client->email_header_tagline ) ? $client->email_header_tagline : '';
         $footer_text   = ! empty( $client->email_footer_text ) ? $client->email_footer_text : (
             'Sent by ' . ( $client->business_name ?: $client->owner_name ) . ( ! empty( $client->phone ) ? ' • Tel: ' . $client->phone : '' ) . "\n" .
@@ -740,18 +740,21 @@ $type_badges = [
 
                         <!-- Company Logo -->
                         <div class="ofp-field" style="margin-bottom: 20px;">
-                            <label style="display:block; margin-bottom: 6px; font-weight: 600; font-size: 13px;">Company Logo URL</label>
-                            <input type="url" id="eb-logo-url" name="logo_url" value="<?php echo esc_attr( $logo_url ); ?>" placeholder="https://yourwebsite.com/logo.png" style="width: 100%;">
+                            <label style="display:block; margin-bottom: 6px; font-weight: 600; font-size: 13px;">Company Logo (locked)</label>
+                            <input type="hidden" id="eb-logo-url" value="<?php echo esc_attr( $logo_url ); ?>">
+                            <?php if ( $logo_url ) : ?>
+                                <img src="<?php echo esc_url( $logo_url ); ?>" alt="Logo" style="max-height:48px;max-width:220px;display:block;margin-bottom:6px;">
+                            <?php endif; ?>
                             <p class="ofp-hint" style="margin-top: 4px; font-size: 12px;">
-                                Enter a public image URL for your logo (PNG with transparent background recommended).
+                                Your emails use the logo and business name from your account. To change the logo,
                                 <a href="<?php echo esc_url( home_url( '/account' ) ); ?>" target="_blank" style="color: var(--accent-blue); text-decoration: underline;">Upload logo in Account Settings &rarr;</a>
                             </p>
                         </div>
 
                         <!-- Header Title -->
                         <div class="ofp-field" style="margin-bottom: 20px;">
-                            <label style="display:block; margin-bottom: 6px; font-weight: 600; font-size: 13px;">Header Title / Business Name <span class="required">*</span></label>
-                            <input type="text" id="eb-header-text" name="email_header_text" value="<?php echo esc_attr( $header_text ); ?>" required placeholder="e.g. Apex Homes & Realty" style="width: 100%;">
+                            <label style="display:block; margin-bottom: 6px; font-weight: 600; font-size: 13px;">Business Name (locked)</label>
+                            <input type="text" id="eb-header-text" value="<?php echo esc_attr( $header_text ); ?>" readonly placeholder="e.g. Apex Homes & Realty" style="background:#f1f5f9;cursor:not-allowed;width: 100%;">
                         </div>
 
                         <!-- Header Tagline -->

@@ -30,6 +30,7 @@ class OFP_Property_Commerce_Repair {
             'posts_per_page' => -1,
             'fields'         => 'ids',
             'no_found_rows'  => true,
+            'ofp_include_occupied' => true,
         ]);
 
         foreach ( $posts as $post_id ) {

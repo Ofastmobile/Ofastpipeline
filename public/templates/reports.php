@@ -90,7 +90,7 @@ $comms_last_month = (int) $wpdb->get_var(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reports — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Reports', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>

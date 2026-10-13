@@ -78,10 +78,26 @@ class OFP_Property_Manual_Payment {
                 $payer_reference = sanitize_text_field( wp_unslash( $_POST['payer_reference'] ?? '' ) );
                 $note = sanitize_textarea_field( wp_unslash( $_POST['note'] ?? '' ) );
 
-                if ( $amount <= 0 ) {
+                $dup = ( $payer_reference !== '' ) ? (int) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$p}ofp_property_payments WHERE purchase_id = %d AND payer_reference = %s AND status IN ('pending_verification','successful')",
+                    $purchase_id,
+                    $payer_reference
+                ) ) : 0;
+                $open = (int) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$p}ofp_property_payments WHERE purchase_id = %d AND status = 'pending_verification'",
+                    $purchase_id
+                ) );
+
+                if ( (float) $purchase->balance <= 0 ) {
+                    $error = 'This purchase is already fully paid.';
+                } elseif ( $amount <= 0 ) {
                     $error = 'Enter a valid payment amount.';
-                } elseif ( $amount > (float) $purchase->balance * 5 && (float) $purchase->balance > 0 ) {
-                    $error = 'Please confirm the payment amount before submitting.';
+                } elseif ( $amount > (float) $purchase->balance + 0.01 ) {
+                    $error = 'The amount is more than your remaining balance of NGN ' . number_format( (float) $purchase->balance, 2 ) . '.';
+                } elseif ( $dup ) {
+                    $error = 'You already sent a payment notice with that reference.';
+                } elseif ( $open >= 5 ) {
+                    $error = 'You have several payments waiting for approval. Please wait for them to be confirmed.';
                 } elseif ( empty( $_FILES['receipt']['name'] ) || ! empty( $_FILES['receipt']['error'] ) ) {
                     $error = 'A payment receipt is required.';
                 } else {
@@ -122,7 +138,53 @@ class OFP_Property_Manual_Payment {
             }
         }
         ?>
-        <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Manual Property Payment</title><?php wp_head(); ?><style>body{font-family:system-ui;background:#f5f7fb;color:#111827}.wrap{max-width:700px;margin:40px auto;padding:20px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:28px}.field{margin:0 0 16px}.field label{display:block;font-weight:600;margin-bottom:7px}.field input,.field textarea{width:100%;box-sizing:border-box;padding:11px;border:1px solid #d1d5db;border-radius:8px}.btn{border:0;border-radius:8px;padding:12px 18px;font-weight:700;background:#2563eb;color:#fff;cursor:pointer}.alert{padding:14px;border-radius:9px;margin-bottom:16px}.err{background:#fef2f2;color:#991b1b}.ok{background:#ecfdf5;color:#065f46}.meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}.meta div{background:#f8fafc;border-radius:10px;padding:12px}.meta small{display:block;color:#64748b}</style></head><body><div class="wrap"><div class="card"><h1>Submit Manual Payment</h1><p><?php echo esc_html( $purchase ? $purchase->property_title : 'Property purchase' ); ?></p><?php if ( $error ) : ?><div class="alert err"><?php echo esc_html( $error ); ?></div><?php endif; ?><?php if ( $success ) : ?><div class="alert ok"><?php echo esc_html( $success ); ?></div><?php endif; ?><?php if ( $purchase ) : ?><div class="meta"><div><small>Buyer</small><strong><?php echo esc_html( $purchase->buyer_name ); ?></strong></div><div><small>Outstanding balance</small><strong>NGN <?php echo esc_html( number_format( (float) $purchase->balance, 2 ) ); ?></strong></div></div><form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'ofp_manual_payment_' . $purchase_id, 'ofp_manual_payment_nonce' ); ?><input type="hidden" name="ofp_manual_payment_submit" value="1"><div class="field"><label>Amount paid</label><input type="number" name="amount" min="0.01" step="0.01" required></div><div class="field"><label>Payer name</label><input type="text" name="payer_name" value="<?php echo esc_attr( $purchase->buyer_name ); ?>"></div><div class="field"><label>Bank/payment reference</label><input type="text" name="payer_reference"></div><div class="field"><label>Receipt</label><input type="file" name="receipt" accept="image/jpeg,image/png,application/pdf" required><small>JPG, PNG or PDF. Maximum 5 MB.</small></div><div class="field"><label>Note</label><textarea name="note" rows="4"></textarea></div><button class="btn" type="submit">Submit Payment</button></form><?php endif; ?></div></div><?php wp_footer(); ?></body></html>
+        <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Manual Property Payment</title><?php wp_head(); ?><style>body{font-family:system-ui;background:#f5f7fb;color:#111827}.wrap{max-width:700px;margin:40px auto;padding:20px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:28px}.field{margin:0 0 16px}.field label{display:block;font-weight:600;margin-bottom:7px}.field input,.field textarea{width:100%;box-sizing:border-box;padding:11px;border:1px solid #d1d5db;border-radius:8px}.btn{border:0;border-radius:8px;padding:12px 18px;font-weight:700;background:#2563eb;color:#fff;cursor:pointer}.alert{padding:14px;border-radius:9px;margin-bottom:16px}.err{background:#fef2f2;color:#991b1b}.ok{background:#ecfdf5;color:#065f46}.meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}.meta div{background:#f8fafc;border-radius:10px;padding:12px}.meta small{display:block;color:#64748b}</style></head><body><div class="wrap"><div class="card"><h1>Submit Manual Payment</h1><p><?php echo esc_html( $purchase ? $purchase->property_title : 'Property purchase' ); ?></p><?php if ( $error ) : ?><div class="alert err"><?php echo esc_html( $error ); ?></div><?php endif; ?><?php if ( $success ) : ?><div class="alert ok"><?php echo esc_html( $success ); ?></div><?php endif; ?><?php if ( $purchase ) : ?><div class="meta"><div><small>Buyer</small><strong><?php echo esc_html( $purchase->buyer_name ); ?></strong></div><div><small>Outstanding balance</small><strong>NGN <?php echo esc_html( number_format( (float) $purchase->balance, 2 ) ); ?></strong></div></div><?php if ( $purchase ) :
+    $ofp_bank = OFP_Bank_Account::for_purchase( $purchase );
+    $ofp_ref  = OFP_Bank_Account::purchase_reference( (int) $purchase_id );
+    // What is due now: the initial payment if it is still unpaid, otherwise the next installment.
+    $ofp_ip   = $GLOBALS['wpdb']->prefix;
+    $ofp_next = $GLOBALS['wpdb']->get_row( $GLOBALS['wpdb']->prepare(
+        "SELECT * FROM {$ofp_ip}ofp_property_installments WHERE purchase_id = %d AND status IN ('scheduled','due','partially_paid','overdue') AND amount_paid < amount_due ORDER BY installment_no ASC LIMIT 1",
+        (int) $purchase_id
+    ) );
+    $ofp_count   = (int) $GLOBALS['wpdb']->get_var( $GLOBALS['wpdb']->prepare( "SELECT COUNT(*) FROM {$ofp_ip}ofp_property_installments WHERE purchase_id = %d", (int) $purchase_id ) );
+    $ofp_balance = max( 0.0, (float) $purchase->balance );
+    $ofp_due     = $ofp_next ? min( $ofp_balance, max( 0.0, (float) $ofp_next->amount_due - (float) $ofp_next->amount_paid ) ) : 0.0;
+    $ofp_default = $ofp_due > 0 ? $ofp_due : $ofp_balance;
+    if ( $ofp_next ) {
+        $ofp_is_initial = ( (float) $purchase->initial_payment > 0 && (int) $ofp_next->installment_no === 1 );
+        $ofp_label      = $ofp_is_initial ? 'Initial payment' : 'Installment ' . (int) $ofp_next->installment_no . ' of ' . $ofp_count;
+        $ofp_overdue    = ( $ofp_next->status === 'overdue' ) || ( strtotime( $ofp_next->due_date ) < strtotime( current_time( 'Y-m-d' ) ) );
+    }
+?>
+<?php if ( $ofp_balance > 0 ) : ?>
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px;margin:0 0 18px;">
+<strong style="display:block;margin-bottom:8px;">What you need to pay</strong>
+<?php if ( $ofp_next && $ofp_due > 0 ) : ?>
+<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;"><div><?php echo esc_html( $ofp_label ); ?><br><small style="color:#64748b;">Due <?php echo esc_html( wp_date( 'M j, Y', strtotime( $ofp_next->due_date ) ) ); ?><?php if ( $ofp_overdue ) : ?> <strong style="color:#b91c1c;">(overdue)</strong><?php endif; ?></small></div><strong style="font-size:22px;">NGN <?php echo esc_html( number_format( $ofp_due, 2 ) ); ?></strong></div>
+<?php endif; ?>
+<div style="margin-top:8px;color:#475569;">Remaining balance: <strong>NGN <?php echo esc_html( number_format( $ofp_balance, 2 ) ); ?></strong></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+<?php if ( $ofp_next && $ofp_due > 0 && $ofp_due < $ofp_balance - 0.01 ) : ?>
+<button type="button" onclick="document.getElementById('ofp-pay-amount').value='<?php echo esc_js( number_format( $ofp_due, 2, '.', '' ) ); ?>';" style="padding:9px 14px;border:0;border-radius:8px;background:#2563eb;color:#fff;font-weight:600;cursor:pointer;">Pay amount due (NGN <?php echo esc_html( number_format( $ofp_due, 2 ) ); ?>)</button>
+<?php endif; ?>
+<button type="button" onclick="document.getElementById('ofp-pay-amount').value='<?php echo esc_js( number_format( $ofp_balance, 2, '.', '' ) ); ?>';" style="padding:9px 14px;border:1px solid #2563eb;border-radius:8px;background:#fff;color:#2563eb;font-weight:600;cursor:pointer;">Pay full balance (NGN <?php echo esc_html( number_format( $ofp_balance, 2 ) ); ?>)</button>
+</div>
+<small style="display:block;margin-top:8px;color:#64748b;">The amount is filled in for you below. You can change it. Anything above the amount due goes to your next installments.</small>
+</div>
+<?php endif; ?>
+<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:16px;margin:0 0 18px;">
+<strong style="display:block;margin-bottom:8px;">Step 1. Send the money by bank transfer</strong>
+<?php if ( $ofp_bank ) : ?>
+<div style="line-height:1.9;">Bank: <strong><?php echo esc_html( $ofp_bank->bank_name ); ?></strong><br>Account number: <strong id="ofp-acct-no" style="font-size:20px;letter-spacing:1px;"><?php echo esc_html( $ofp_bank->account_number ); ?></strong> <button type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText('<?php echo esc_js( $ofp_bank->account_number ); ?>');this.textContent='Copied';" style="margin-left:6px;padding:3px 10px;border:1px solid #16a34a;background:#fff;border-radius:6px;cursor:pointer;">Copy</button><br>Account name: <strong><?php echo esc_html( $ofp_bank->account_name ); ?></strong><br>Write this in the transfer note: <strong><?php echo esc_html( $ofp_ref ); ?></strong></div>
+<p style="margin:10px 0 0;font-size:13px;color:#166534;">Send only to this account. Then complete Step 2 below so the owner can confirm your payment.</p>
+<p style="margin:6px 0 0;font-size:13px;"><a href="<?php echo esc_url( OFP_Property_My_Payments::url() ); ?>">See all my payments and receipts</a></p>
+<?php else : ?>
+<p style="margin:0;color:#b45309;">The owner has not added bank details yet. Please contact them for the account before you pay.</p>
+<?php endif; ?>
+</div>
+<strong style="display:block;margin-bottom:8px;">Step 2. Tell us you have paid</strong>
+<?php endif; ?><form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'ofp_manual_payment_' . $purchase_id, 'ofp_manual_payment_nonce' ); ?><input type="hidden" name="ofp_manual_payment_submit" value="1"><div class="field"><label>Amount paid</label><input type="number" id="ofp-pay-amount" name="amount" min="0.01" step="0.01" <?php if ( isset( $ofp_default ) ) : ?>max="<?php echo esc_attr( number_format( $ofp_balance, 2, '.', '' ) ); ?>" value="<?php echo esc_attr( number_format( $ofp_default, 2, '.', '' ) ); ?>"<?php endif; ?> required></div><div class="field"><label>Payer name</label><input type="text" name="payer_name" value="<?php echo esc_attr( $purchase->buyer_name ); ?>"></div><div class="field"><label>Bank/payment reference</label><input type="text" name="payer_reference"></div><div class="field"><label>Receipt</label><input type="file" name="receipt" accept="image/jpeg,image/png,application/pdf" required><small>JPG, PNG or PDF. Maximum 5 MB.</small></div><div class="field"><label>Note</label><textarea name="note" rows="4"></textarea></div><button class="btn" type="submit">Submit Payment</button></form><?php endif; ?></div></div><?php wp_footer(); ?></body></html>
         <?php
     }
 

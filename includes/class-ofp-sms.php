@@ -83,6 +83,7 @@ class OFP_SMS {
                 'message'  => mb_substr( $message, 0, 160 ),
                 'provider' => $this->provider,
                 'error'    => $result['error'] ?? null,
+                'reply'    => $result['raw'] ?? null,
             ] );
         }
 
@@ -186,10 +187,11 @@ class OFP_SMS {
         $routing   = get_option( 'ofp_smartsms_routing', '3' ); // 3 = Corporate DND bypass
         $sender_id = get_option( 'ofp_smartsms_sender_id', 'OFastPipe' );
 
+        // SmartSMS wants digits only in international form: 2348012345678 (no plus).
         $params = [
             'token'   => $this->api_key,
             'sender'  => $sender_id,
-            'to'      => $phone,
+            'to'      => ltrim( $phone, '+' ),
             'message' => $message,
             'routing' => $routing,
             'type'    => '0', // Plain text
@@ -218,12 +220,14 @@ class OFP_SMS {
                     'success'      => true,
                     'provider_ref' => $data['message_id'] ?? '',
                     'error'        => '',
+                    'raw'          => substr( $body, 0, 300 ),
                 ];
             }
             return [
                 'success'      => false,
                 'provider_ref' => '',
                 'error'        => $data['comment'] ?? $data['message'] ?? 'Unknown SmartSMS error',
+                'raw'          => substr( $body, 0, 300 ),
             ];
         }
 

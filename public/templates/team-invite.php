@@ -45,7 +45,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && $team_member ) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accept Invitation — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Accept Invitation', $client ?? null ) ); ?></title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f0f4f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .card { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px; text-align: center; }
@@ -63,7 +63,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && $team_member ) {
 </head>
 <body>
     <div class="card">
-        <h1>Welcome to OFast Pipeline</h1>
+        <h1><?php echo esc_html( OFP_Brand::welcome_title() ); ?></h1>
         
         <?php if ( $success ) : ?>
             <div class="alert alert-success">Your password has been set. You can now log in.</div>

@@ -94,12 +94,12 @@ class OFP_Client {
         $business_phone     = OFP_Security::sanitize_phone( $data['business_phone'] ?? $data['phone'] );
         $whatsapp_number    = OFP_Security::sanitize_phone( $data['whatsapp_number'] ?? $data['phone'] );
 
-        // Self-serve signups start as pending_review until manually approved.
-        // Manual onboarding (admin-created) goes straight to active.
+        // Every new client starts active. Free is the starting plan, so there is
+        // no review step and nothing to pay. A paid plan is chosen later.
         if ( isset( $data['status'] ) ) {
             $status = sanitize_text_field( $data['status'] );
         } else {
-            $status = ( $onboarding_source === 'self_serve' ) ? 'pending_review' : 'active';
+            $status = 'active';
         }
 
         // ── 3. Insert client row ──────────────────────────────────────────────
@@ -165,6 +165,15 @@ class OFP_Client {
                     $sub_plan
                 );
             }
+        }
+
+        // Free plan owes nothing. Remove the pending rows so no "Awaiting Payment"
+        // line or payment banner shows. The pipeline config was already created above.
+        if ( OFP_Subscription::normalize_plan( $plan ) === 'free' && OFP_Subscription::normalize_plan( $listing_plan ) === 'free' ) {
+            $wpdb->query( $wpdb->prepare(
+                "DELETE FROM {$wpdb->prefix}ofp_subscriptions WHERE client_id = %d AND status = 'pending'",
+                $client_id
+            ) );
         }
 
         // ── 6. Send welcome email ─────────────────────────────────────────────
@@ -578,15 +587,58 @@ class OFP_Client {
      * @param  string $email  Email to check.
      * @return bool           True if the email exists in ofp_clients.
      */
+    /**
+     * Makes a profile link name from the business name, such as "supreme-homes".
+     * If it is taken, it adds -2, -3 and so on. Also adds the profile_slug
+     * column when a site was updated by uploading files and never re-activated.
+     * (This method was called by create() but did not exist, so every new client
+     * crashed the page.)
+     */
+    public static function generate_unique_slug( string $business_name ): string {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofp_clients';
+
+        if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'profile_slug'" ) ) ) {
+            $wpdb->query( "ALTER TABLE {$table} ADD COLUMN profile_slug VARCHAR(255) DEFAULT NULL" );
+        }
+
+        $base = sanitize_title( $business_name );
+        if ( $base === '' ) {
+            $base = 'agent';
+        }
+        $base = substr( $base, 0, 60 );
+
+        $slug = $base;
+        $i    = 2;
+        while ( $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE profile_slug = %s LIMIT 1", $slug ) ) ) {
+            $slug = $base . '-' . $i;
+            $i++;
+            if ( $i > 500 ) {
+                $slug = $base . '-' . wp_generate_password( 6, false, false );
+                break;
+            }
+        }
+        return $slug;
+    }
+
     public static function email_exists( string $email ): bool {
         global $wpdb;
 
-        return (bool) $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1",
-                sanitize_email( $email )
-            )
-        );
+        $email = sanitize_email( $email );
+
+        if ( $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1", $email ) ) ) {
+            return true; // Includes trashed clients: their email stays reserved.
+        }
+
+        // A team member's email is also a login. It cannot start another account.
+        $team_table = $wpdb->prefix . 'ofp_team_members';
+        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $team_table ) ) ) ) {
+            if ( $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$team_table} WHERE email = %s LIMIT 1", $email ) ) ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

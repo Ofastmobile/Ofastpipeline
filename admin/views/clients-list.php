@@ -69,6 +69,24 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
 
         <div class="ofp-form-grid">
+            <div class="ofp-field">
+                <label>Subdomain <span class="required">*</span></label>
+                <input type="text" name="subdomain" required placeholder="supremehomes">
+                <small style="color:#6b7280;">Their dashboard address: name.yourdomain.com. At least 3 letters or numbers.</small>
+            </div>
+            <div class="ofp-field" id="ofp-wl-field">
+                <label>White Label (Solo Company)</label>
+                <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start;">
+                    <input type="checkbox" name="is_white_label" id="ofp-wl-checkbox" value="1" style="margin-top:3px;">
+                    <span>No plan, no renewals, no limits. Their properties show only on their own address and never on your main marketplace.</span>
+                </label>
+                <input type="hidden" name="ofp_wl_fields" value="1">
+            </div>
+            <div class="ofp-field" id="ofp-domain-field" style="display:none;">
+                <label>Custom Domain (optional)</label>
+                <input type="text" name="custom_domain" placeholder="crm.supremehomes.com">
+                <small style="color:#6b7280;">Only the domain. Leave empty to use the subdomain only.</small>
+            </div>
             <div class="ofp-field" id="ofp-plan-field">
                 <label>Plan</label>
                 <select name="plan" class="ofp-select">
@@ -78,6 +96,20 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 </select>
             </div>
         </div>
+        <script>
+        (function () {
+            var box = document.getElementById('ofp-wl-checkbox');
+            if (!box) return;
+            function sync() {
+                var on = box.checked;
+                document.getElementById('ofp-plan-field').style.display   = on ? 'none' : '';
+                document.getElementById('ofp-domain-field').style.display = on ? '' : 'none';
+                if (on) { var sel = document.querySelector('#ofp-plan-field select'); if (sel) sel.value = 'free'; }
+            }
+            box.addEventListener('change', sync);
+            sync();
+        })();
+        </script>
 
 
 
@@ -144,6 +176,24 @@ include OFP_PATH . 'admin/views/partials/header.php';
                     <option value="silver" <?php selected( $edit_plan, 'silver' ); ?>>Silver</option>
                     <option value="gold"   <?php selected( $edit_plan, 'gold' ); ?>>Gold</option>
                 </select>
+            </div>
+            <div class="ofp-field">
+                <label>Subdomain</label>
+                <input type="text" name="subdomain" value="<?php echo esc_attr( $client->subdomain ); ?>" placeholder="supremehomes">
+                <small style="color:#6b7280;">Their dashboard address. Changing it breaks any link already shared.</small>
+            </div>
+            <div class="ofp-field">
+                <label>Custom Domain</label>
+                <input type="text" name="custom_domain" value="<?php echo esc_attr( $client->custom_domain ?? '' ); ?>" placeholder="crm.supremehomes.com">
+                <small style="color:#6b7280;">Only the domain, no https:// and no path. The client points their DNS to your server first.</small>
+            </div>
+            <div class="ofp-field">
+                <label>White Label (Solo Company)</label>
+                <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start;">
+                    <input type="checkbox" name="is_white_label" value="1" <?php checked( ! empty( $client->is_white_label ) ); ?> style="margin-top:3px;">
+                    <span>Their properties show only on their own domain and never on your main marketplace.</span>
+                </label>
+                <input type="hidden" name="ofp_wl_fields" value="1">
             </div>
             <div class="ofp-field">
                 <label>SMS Provider</label>
@@ -214,6 +264,12 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <div><strong>Subdomain Slug:</strong> <?php echo esc_html( $client_subdomain ); ?> <span style="color:#9ca3af;">(base domain not set in Settings)</span></div>
         <?php else : ?>
         <div><strong>Domain:</strong> <span style="color:#9ca3af;">Not set</span></div>
+        <?php endif; ?>
+        <?php if ( ! empty( $client->custom_domain ) ) : ?>
+        <div><strong>Custom Domain:</strong> <?php echo esc_html( $client->custom_domain ); ?></div>
+        <?php endif; ?>
+        <?php if ( ! empty( $client->is_white_label ) ) : ?>
+        <div><strong>White Label:</strong> <span style="color:#15803d;font-weight:600;">On</span></div>
         <?php endif; ?>
     </div>
 

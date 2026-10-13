@@ -442,7 +442,7 @@ class OFP_Property_CPT {
                 if ( $client_id ) {
                     $plan = 'free';
                     if ( class_exists( 'OFP_Subscription' ) ) {
-                        $plan = OFP_Subscription::client_plan( $client_id );
+                        $plan = OFP_Subscription::feature_plan( $client_id );
                     }
                     if ( $plan === 'free' ) {
                         $can_feature = false;
@@ -600,7 +600,7 @@ class OFP_Property_CPT {
         if ( $client_id ) {
             $plan = 'free';
             if ( class_exists( 'OFP_Subscription' ) ) {
-                $plan = OFP_Subscription::client_plan( $client_id );
+                $plan = OFP_Subscription::feature_plan( $client_id );
             }
             if ( $plan === 'free' ) {
                 $is_featured = '0';
@@ -717,6 +717,7 @@ class OFP_Property_CPT {
             'post_status'    => 'publish',
             'posts_per_page' => -1,
             'fields'         => 'ids',
+            'ofp_include_occupied' => true,
         ] );
 
         foreach ( $post_ids as $post_id ) {
@@ -1101,6 +1102,9 @@ class OFP_Property_CPT {
     }
 
     public static function can_add_property( int $client_id ): bool {
+        if ( OFP_Subscription::is_unlimited( $client_id ) ) {
+            return true; // Solo company: no listing limit.
+        }
         $plan = OFP_Subscription::client_plan( $client_id );
         $cap  = self::get_plan_cap( $plan );
         return self::count_for_client( $client_id ) < $cap;

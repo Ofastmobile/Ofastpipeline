@@ -234,7 +234,7 @@ if ( $detail_purchase_id ) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Purchase Details — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Purchase Details', $client ?? null ) ); ?></title>
     <script>
         (function() {
             var currentTheme = localStorage.getItem('ofp_theme') || 'dark';
@@ -250,7 +250,7 @@ if ( $detail_purchase_id ) {
 <div class="ofp-container">
     <div style="padding-bottom: 60px;">
         <div style="margin: 0 0 24px;">
-            <p style="margin:0 0 8px;"><a href="<?php echo esc_url( home_url( '/property-sales' ) ); ?>" style="color:var(--primary); text-decoration:none; font-size:14px;">← Back to Sales</a></p>
+            <?php $ofp_sales_tab = 'purchase'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
             <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
                 Purchase #<?php echo esc_html( $detail_purchase->id ); ?>
             </h1>
@@ -386,7 +386,7 @@ if ( $detail_purchase_id ) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Property Purchases — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Property Purchases', $client ?? null ) ); ?></title>
     <!-- Dark theme script to avoid FOUC -->
     <script>
         (function() {
@@ -403,7 +403,7 @@ if ( $detail_purchase_id ) {
 <div class="ofp-container">
     <div style="padding-bottom: 60px;">
         <div style="margin: 0 0 24px;">
-            <p style="margin:0 0 8px;"><a href="<?php echo esc_url( home_url( '/property-sales' ) ); ?>" style="color:var(--primary); text-decoration:none; font-size:14px;">← Back to Sales</a></p>
+            <?php $ofp_sales_tab = 'purchase'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
             <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
                 Add Purchase
             </h1>

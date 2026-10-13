@@ -35,7 +35,11 @@ class OFP_Property_Receipt_Viewer {
         } else {
             $params['nonce'] = wp_create_nonce( 'ofp_view_receipt_' . $payment_id );
         }
-        return add_query_arg( $params, admin_url( 'admin-ajax.php' ) );
+        $ajax = admin_url( 'admin-ajax.php' );
+        if ( ! is_admin() && ! empty( $_SERVER['HTTP_HOST'] ) ) {
+            $ajax = ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . wp_parse_url( $ajax, PHP_URL_PATH );
+        }
+        return add_query_arg( $params, $ajax );
     }
 
     public static function handle_view_receipt(): void {

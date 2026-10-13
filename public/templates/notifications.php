@@ -69,7 +69,7 @@ $total_pages = ceil( $total / $per_page );
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notifications — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Notifications', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 </head>

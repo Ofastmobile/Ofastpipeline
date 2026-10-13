@@ -45,8 +45,28 @@ class OFP_Host_Router {
 
 	public static function init(): void {
 		add_filter( 'home_url', [ __CLASS__, 'rewrite_portal_links' ], 10, 2 );
+		add_action( 'template_redirect', [ __CLASS__, 'handle_unknown_client_host' ], 0 );
 		add_action( 'template_redirect', [ __CLASS__, 'maybe_redirect_app_root' ] );
 		add_filter( 'redirect_canonical', [ __CLASS__, 'guard_canonical_redirect' ], 10, 2 );
+		add_filter( 'allowed_redirect_hosts', [ __CLASS__, 'allow_portal_redirect_hosts' ] );
+	}
+
+	/**
+	 * wp_safe_redirect() only trusts the main site host by default. The portal
+	 * redirects people to app.{base}, property.{base} and client hosts, so those
+	 * hosts must be trusted too, otherwise a redirect can fall back to wp-admin.
+	 */
+	public static function allow_portal_redirect_hosts( array $hosts ): array {
+		$base = get_option( 'ofp_crm_base_domain' );
+		if ( $base ) {
+			$hosts[] = 'app.' . $base;
+			$hosts[] = 'property.' . $base;
+		}
+		$current = self::current_client_host();
+		if ( $current ) {
+			$hosts[] = $current;
+		}
+		return $hosts;
 	}
 
 	/**
@@ -60,27 +80,56 @@ class OFP_Host_Router {
 	}
 
 	/**
-	 * Resolves the client record associated with the current hostname
-	 * if the visitor is on a client subdomain or custom domain.
+	 * The hostname of this request, lowercase, without a port.
 	 */
-	public static function current_client_record(): ?object {
-		if ( self::current_zone() !== 'client' ) {
+	private static function normalized_host(): string {
+		$host = strtolower( trim( $_SERVER['HTTP_HOST'] ?? '' ) );
+		return preg_replace( '/:\d+$/', '', $host );
+	}
+
+	/**
+	 * Whether the host is this WordPress site's own address.
+	 * Only used when no base domain is set, so the normal site never
+	 * triggers a client lookup.
+	 */
+	private static function is_own_site_host( string $host ): bool {
+		static $own = null;
+		if ( $own === null ) {
+			$own = preg_replace( '/^www\./', '', strtolower( (string) parse_url( get_option( 'siteurl' ), PHP_URL_HOST ) ) );
+		}
+		return $own !== '' && preg_replace( '/^www\./', '', $host ) === $own;
+	}
+
+	private static function has_custom_domain_column(): bool {
+		static $has = null;
+		if ( $has === null ) {
+			global $wpdb;
+			$has = (bool) $wpdb->get_var( "SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'custom_domain'" );
+		}
+		return $has;
+	}
+
+	/**
+	 * Finds the client that owns the current host: first by
+	 * {subdomain}.{base_domain}, then by custom domain (Level 2).
+	 * Works with or without a base domain. Cached per host.
+	 */
+	private static function resolve_host_client(): ?object {
+		static $memo = [];
+
+		$host = self::normalized_host();
+		if ( $host === '' ) {
 			return null;
 		}
-
-		static $cached = -1;
-		if ( $cached !== -1 ) {
-			return $cached;
+		if ( array_key_exists( $host, $memo ) ) {
+			return $memo[ $host ];
 		}
 
-		$host = strtolower( trim( $_SERVER['HTTP_HOST'] ?? '' ) );
-		$host = preg_replace( '/:\d+$/', '', $host );
+		global $wpdb;
+		$client      = null;
 		$base_domain = get_option( 'ofp_crm_base_domain' );
 
-		global $wpdb;
-		$client = null;
-
-		// 1. Check if it's a subdomain of base_domain: {subdomain}.{base_domain}
+		// 1. A subdomain of the base domain: {subdomain}.{base_domain}
 		if ( $base_domain && str_ends_with( $host, '.' . $base_domain ) ) {
 			$sub = substr( $host, 0, -strlen( '.' . $base_domain ) );
 			if ( ! self::is_reserved( $sub ) ) {
@@ -91,31 +140,59 @@ class OFP_Host_Router {
 			}
 		}
 
-		// 2. Check if it's a custom domain (Level 2)
-		if ( ! $client ) {
-			$has_col = $wpdb->get_var( "SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'custom_domain'" );
-			if ( $has_col ) {
-				$client = $wpdb->get_row( $wpdb->prepare(
-					"SELECT * FROM {$wpdb->prefix}ofp_clients WHERE custom_domain = %s AND status != 'trash' LIMIT 1",
-					$host
-				) );
-			}
+		// 2. A custom domain (Level 2). Matches with or without "www.".
+		if ( ! $client && self::has_custom_domain_column() ) {
+			$bare   = preg_replace( '/^www\./', '', $host );
+			$client = $wpdb->get_row( $wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}ofp_clients WHERE custom_domain IN (%s, %s) AND status != 'trash' LIMIT 1",
+				$bare,
+				'www.' . $bare
+			) );
 		}
 
-		$cached = $client;
-		return $cached;
+		$memo[ $host ] = $client ?: null;
+		return $memo[ $host ];
+	}
+
+	/**
+	 * A host that looks like a client address but matches no client (a typo or an
+	 * unclaimed name) is sent to the main site instead of showing the portal.
+	 * Only front end page requests are affected.
+	 */
+	public static function handle_unknown_client_host(): void {
+		if ( is_admin() || wp_doing_ajax() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			return;
+		}
+		$base_domain = get_option( 'ofp_crm_base_domain' );
+		if ( ! $base_domain || self::current_zone() !== 'client' || self::resolve_host_client() ) {
+			return;
+		}
+		if ( self::is_own_site_host( self::normalized_host() ) ) {
+			return;
+		}
+		wp_redirect( 'https://' . $base_domain . '/', 302 );
+		exit;
+	}
+
+	/**
+	 * Resolves the client record associated with the current hostname
+	 * if the visitor is on a client subdomain or custom domain.
+	 */
+	public static function current_client_record(): ?object {
+		if ( self::current_zone() !== 'client' ) {
+			return null;
+		}
+		return self::resolve_host_client();
 	}
 
 	/**
 	 * Returns current client host string if visitor is on a valid client host.
 	 */
 	public static function current_client_host(): ?string {
-		$client = self::current_client_record();
-		if ( ! $client ) {
+		if ( ! self::current_client_record() ) {
 			return null;
 		}
-		$host = strtolower( trim( $_SERVER['HTTP_HOST'] ?? '' ) );
-		return preg_replace( '/:\d+$/', '', $host );
+		return self::normalized_host();
 	}
 
 	/**
@@ -135,14 +212,20 @@ class OFP_Host_Router {
 			return $url; // not a portal route — leave untouched
 		}
 
+		// If visitor is currently on a recognized client subdomain or custom
+		// domain, keep them on that host (works even with no base domain set).
+		if ( self::current_zone() === 'client' && self::current_client_host() ) {
+			return preg_replace( '#^https?://[^/]+#', 'https://' . self::current_client_host(), $url );
+		}
+
 		$base_domain = get_option( 'ofp_crm_base_domain' );
 		if ( ! $base_domain ) {
 			return $url; // option not set yet — fail safe to normal behaviour
 		}
 
-		// If visitor is currently on a recognized client subdomain, keep them on that client host!
-		if ( self::current_zone() === 'client' && self::current_client_host() ) {
-			return preg_replace( '#^https?://[^/]+#', 'https://' . self::current_client_host(), $url );
+		// The app. address can be switched off in Settings (when its DNS is not set up).
+		if ( get_option( 'ofp_use_app_host', '1' ) !== '1' ) {
+			return $url;
 		}
 
 		return preg_replace( '#^https?://[^/]+#', 'https://app.' . $base_domain, $url );
@@ -159,9 +242,18 @@ class OFP_Host_Router {
 				wp_redirect( self::rewrite_portal_links( home_url( '/login' ), '/login' ) );
 				exit;
 			}
-			if ( $zone === 'client' && self::current_client_record() ) {
-				wp_redirect( self::rewrite_portal_links( home_url( '/login' ), '/login' ) );
-				exit;
+			if ( $zone === 'client' ) {
+				$client = self::current_client_record();
+				if ( $client ) {
+					// A white label (solo company) domain opens on their own
+					// marketplace, never on the main site's homepage.
+					if ( ! empty( $client->is_white_label ) ) {
+						wp_redirect( 'https://' . self::current_client_host() . '/marketplace/' );
+						exit;
+					}
+					wp_redirect( self::rewrite_portal_links( home_url( '/login' ), '/login' ) );
+					exit;
+				}
 			}
 		}
 	}
@@ -188,16 +280,23 @@ class OFP_Host_Router {
 	 * @return string
 	 */
 	public static function current_zone(): string {
-		$host = strtolower( trim( $_SERVER['HTTP_HOST'] ?? '' ) );
-		$host = preg_replace( '/:\d+$/', '', $host );
+		$host = self::normalized_host();
 
 		$base_domain = get_option( 'ofp_crm_base_domain' );
-		if ( ! $base_domain ) return 'main';
 
-		if ( $host === 'app.' . $base_domain )      return 'app';
-		if ( $host === 'property.' . $base_domain ) return 'property';
-		if ( $host === $base_domain || $host === 'www.' . $base_domain ) return 'main';
+		if ( $base_domain ) {
+			if ( $host === 'app.' . $base_domain )      return 'app';
+			if ( $host === 'property.' . $base_domain ) return 'property';
+			if ( $host === $base_domain || $host === 'www.' . $base_domain ) return 'main';
 
-		return 'client'; // anything else is assumed to be a client's own subdomain/domain
+			return 'client'; // anything else is assumed to be a client's own subdomain/domain
+		}
+
+		// No base domain set: the main site behaves exactly as before.
+		// Only a registered custom domain counts as a client host.
+		if ( $host === '' || self::is_own_site_host( $host ) ) {
+			return 'main';
+		}
+		return self::resolve_host_client() ? 'client' : 'main';
 	}
 }

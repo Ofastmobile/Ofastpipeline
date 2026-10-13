@@ -25,6 +25,13 @@ class OFP_Property_Checkout {
     public static function handle_route(): void {
         if ( ! get_query_var( 'ofp_property_checkout' ) ) return;
 
+        // Old checkout links go to the bank transfer page while online payments are off.
+        if ( ! OFP_Bank_Account::online_payments_enabled() ) {
+            $old_token = sanitize_text_field( wp_unslash( $_GET['token'] ?? '' ) );
+            wp_safe_redirect( add_query_arg( 'token', rawurlencode( $old_token ), home_url( '/property-pay/' ) ) );
+            exit;
+        }
+
         $token = sanitize_text_field( wp_unslash( $_GET['token'] ?? '' ) );
         $purchase_id = self::verify_purchase_token( $token );
         if ( ! $purchase_id ) {
@@ -116,8 +123,18 @@ class OFP_Property_Checkout {
                         ]) : null;
 
                         if ( $url ) {
-                            wp_safe_redirect( $url );
-                            exit;
+                            // wp_safe_redirect() only allows this site's own address and
+                            // sends everything else to wp-admin, which is why the buyer
+                            // landed there. The gateway lives on its own address, so check
+                            // that it is the real gateway (secure address) and go there.
+                            $gw_host  = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+                            $gw_https = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) ) === 'https';
+                            $trusted  = $gw_https && ( $gw_host === 'paystack.com' || str_ends_with( $gw_host, '.paystack.com' ) );
+                            if ( $trusted ) {
+                                wp_redirect( esc_url_raw( $url ) );
+                                exit;
+                            }
+                            error_log( 'OFP checkout: refused an unexpected gateway address: ' . $gw_host );
                         }
 
                         $wpdb->update(
@@ -160,6 +177,10 @@ class OFP_Property_Checkout {
      * Shared so nobody duplicates this HMAC pattern inline again.
      */
     public static function payment_link( int $purchase_id, int $ttl = 2592000 ): string {
+        // Bank transfer is the default. Every link goes to the transfer page.
+        if ( ! OFP_Bank_Account::online_payments_enabled() && class_exists( 'OFP_Property_Manual_Payment' ) ) {
+            return OFP_Property_Manual_Payment::payment_link( $purchase_id );
+        }
         $expires = time() + $ttl;
         $payload = $purchase_id . '.' . $expires;
         $sig = hash_hmac( 'sha256', $payload, wp_salt( 'auth' ) );

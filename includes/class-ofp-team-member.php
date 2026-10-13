@@ -32,8 +32,7 @@ class OFP_Team_Member {
         $client = OFP_Client::get( $client_id );
         if ( ! $client ) return new WP_Error( 'not_found', 'Client not found.' );
 
-        $plan        = OFP_Subscription::client_plan( $client_id );
-        $max_members = OFP_Subscription::team_member_limit( $plan );
+        $max_members = OFP_Subscription::team_limit_for_client( $client_id );
 
         if ( $max_members <= 0 ) {
             return new WP_Error( 'not_allowed', 'Free plan does not support team members. Upgrade to Silver or Gold.' );
@@ -99,7 +98,7 @@ class OFP_Team_Member {
                 <h2>You\'re invited!</h2>
                 <p>Hi ' . esc_html( $name ) . ',</p>
                 <p><strong>' . esc_html( $client->business_name ) . '</strong> has invited you to join their
-                   team on Ofast Pipeline as a <strong>' . esc_html( $role_name ) . '</strong>.</p>
+                   team on ' . esc_html( OFP_Brand::email_name( $client ) ) . ' as a <strong>' . esc_html( $role_name ) . '</strong>.</p>
                 <p>Click below to accept and set your password:</p>
                 <p>
                     <a href="' . esc_url( $invite_url ) . '"
@@ -119,7 +118,7 @@ class OFP_Team_Member {
         }
         
         if ( class_exists( 'OFP_SMS' ) ) {
-            $sms = "You're invited to join {$client->business_name} on Ofast Pipeline. Click here to accept: {$invite_url}";
+            $sms = "You're invited to join {$client->business_name} on " . OFP_Brand::email_name( $client ) . ". Click here to accept: {$invite_url}";
             OFP_SMS::send_system_sms( $phone, $sms );
         }
 

@@ -53,6 +53,8 @@ class OFP_Property_Tenant_Portal {
             $error = 'This lease offer has expired. Please contact your property manager to request a new offer.';
         }
 
+        $online = OFP_Bank_Account::online_payments_enabled();
+
         if ( $lease && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_accept_lease'] ) ) {
             if ( ! wp_verify_nonce( $_POST['ofp_tenant_lease_nonce'] ?? '', 'ofp_tenant_lease_' . $lease->id ) ) {
                 $error = 'Security check failed. Please refresh the page and try again.';
@@ -77,7 +79,20 @@ class OFP_Property_Tenant_Portal {
             }
         }
 
-        if ( $lease && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_tenant_checkout'] ) && $lease->accepted_at ) {
+        if ( $lease && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_tenant_transfer'] ) && $lease->accepted_at && ! $online ) {
+            if ( ! wp_verify_nonce( $_POST['ofp_tenant_transfer_nonce'] ?? '', 'ofp_tenant_transfer_' . $lease->id ) ) {
+                $error = 'Security check failed. Please refresh the page and try again.';
+            } else {
+                $sent = OFP_Property_Tenant_Transfer::submit( $lease, $_POST, $_FILES );
+                if ( is_wp_error( $sent ) ) {
+                    $error = $sent->get_error_message();
+                } else {
+                    $notice = 'Payment notice received. It is pending approval. You will get an email and SMS when the owner confirms it.';
+                }
+            }
+        }
+
+        if ( $lease && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_tenant_checkout'] ) && $lease->accepted_at && $online ) {
             if ( ! wp_verify_nonce( $_POST['ofp_tenant_checkout_nonce'] ?? '', 'ofp_tenant_checkout_' . $lease->id ) ) {
                 $error = 'Security check failed. Please refresh the page and try again.';
             } else {
@@ -91,7 +106,7 @@ class OFP_Property_Tenant_Portal {
             }
         }
 
-        $va = ( $lease && $lease->accepted_at ) ? OFP_Property_Lease_Payment::ensure_virtual_account( (int) $lease->id ) : null;
+        $va = ( $lease && $lease->accepted_at && $online ) ? OFP_Property_Lease_Payment::ensure_virtual_account( (int) $lease->id ) : null;
 
         // Fetch payments made on this lease
         $payments = [];
@@ -378,7 +393,8 @@ class OFP_Property_Tenant_Portal {
                         </div>
 
                         <?php if ( (float) $lease->balance > 0 ) : ?>
-                            <div style="margin:24px 0;">
+                            <?php if ( $online ) : ?>
+<div style="margin:24px 0;">
                                 <h3 style="font-size:16px; margin: 0 0 12px;">Make Rent Payment</h3>
                                 <form method="post" style="display:flex; gap:10px; flex-wrap:wrap;">
                                     <div class="field" style="margin:0; flex:1; min-width:200px;">
@@ -390,6 +406,48 @@ class OFP_Property_Tenant_Portal {
                                     </button>
                                 </form>
                             </div>
+                        <?php else : ?>
+                            <?php
+                            $acct     = OFP_Bank_Account::for_purchase( $lease );
+                            $rent_ref = OFP_Property_Tenant_Transfer::reference_for( (int) $lease->id );
+                            ?>
+                            <div style="margin:24px 0;">
+                                <h3 style="font-size:16px; margin: 0 0 12px;">Pay by bank transfer</h3>
+                                <div class="bank" style="margin-top:0;">
+                                    <strong style="font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:var(--accent-blue);">Step 1. Send the money</strong>
+                                    <?php if ( $acct ) : ?>
+                                        <div style="font-size:14px; margin-top:8px; font-weight:600;"><?php echo esc_html( $acct->bank_name ); ?></div>
+                                        <div style="font-size:24px; font-weight:800; letter-spacing:0.03em; margin:6px 0;"><?php echo esc_html( $acct->account_number ); ?>
+                                            <button type="button" class="btn btn-sm" onclick="navigator.clipboard&amp;&amp;navigator.clipboard.writeText('<?php echo esc_js( $acct->account_number ); ?>');this.textContent='Copied';" style="margin-left:8px;">Copy</button>
+                                        </div>
+                                        <div style="font-size:14px;">Account name: <strong><?php echo esc_html( $acct->account_name ); ?></strong></div>
+                                        <small style="color:var(--text-muted); display:block; margin-top:6px;">Write <strong><?php echo esc_html( $rent_ref ); ?></strong> in the transfer note. Send only to this account.</small>
+                                    <?php else : ?>
+                                        <p style="margin:8px 0 0; color:#f59e0b;">The owner has not added bank details yet. Please contact them for the account before you pay.</p>
+                                    <?php endif; ?>
+                                </div>
+                                <h4 style="font-size:14px; margin:20px 0 4px;">Step 2. Tell us you have paid</h4>
+                                <form method="post" enctype="multipart/form-data">
+                                    <div class="field"><label>Amount you sent (NGN)</label>
+                                        <input type="number" name="amount" min="0.01" max="<?php echo esc_attr( $lease->balance ); ?>" step="0.01" value="<?php echo esc_attr( $lease->balance ); ?>" required>
+                                    </div>
+                                    <div class="field"><label>Name on the account you sent from</label>
+                                        <input type="text" name="payer_name" value="<?php echo esc_attr( $lease->full_name ); ?>" required>
+                                    </div>
+                                    <div class="field"><label>Bank reference or transaction ID (if any)</label>
+                                        <input type="text" name="payer_reference" maxlength="100">
+                                    </div>
+                                    <div class="field"><label>Proof of transfer (photo, screenshot or PDF, up to 5 MB)</label>
+                                        <input type="file" name="proof" accept="image/jpeg,image/png,application/pdf" required>
+                                    </div>
+                                    <div class="field"><label>Note (optional)</label>
+                                        <input type="text" name="note" maxlength="200">
+                                    </div>
+                                    <?php wp_nonce_field( 'ofp_tenant_transfer_' . $lease->id, 'ofp_tenant_transfer_nonce' ); ?>
+                                    <button class="btn" name="ofp_tenant_transfer" value="1" style="width:100%;">I have made the transfer</button>
+                                </form>
+                            </div>
+                        <?php endif; ?>
                         <?php endif; ?>
 
                         <?php if ( $va ) : ?>
@@ -432,7 +490,7 @@ class OFP_Property_Tenant_Portal {
                                                         <?php if ( $pay->status === 'successful' ) : ?>
                                                             <span style="color:#10b981; font-weight:600;">Verified</span>
                                                         <?php else : ?>
-                                                            <span style="color:#f59e0b; font-weight:600;"><?php echo esc_html( ucfirst( $pay->status ) ); ?></span>
+                                                            <span style="color:#f59e0b; font-weight:600;"><?php echo esc_html( [ 'pending_verification' => 'Pending approval', 'rejected' => 'Not confirmed', 'failed' => 'Failed', 'cancelled' => 'Cancelled' ][ $pay->status ] ?? ucfirst( $pay->status ) ); ?></span>
                                                         <?php endif; ?>
                                                     </td>
                                                     <td style="text-align:right;">

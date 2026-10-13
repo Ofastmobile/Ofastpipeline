@@ -11,39 +11,135 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+// A white label (solo company) domain has no public signup. Go to login.
+if ( class_exists( 'OFP_Brand' ) && OFP_Brand::is_solo_host() ) {
+    wp_redirect( home_url( '/login' ) );
+    exit;
+}
+
 $error   = '';
 $success = false;
 $step    = 'details'; // 'details' or 'otp'
 $user_email = '';
 $user_phone = '';
+$signup_token = '';
+
+/**
+ * Signup protection:
+ *  - a page security token (nonce) on every form
+ *  - a hidden trap field that only bots fill in
+ *  - a minimum fill time, so scripts that post instantly are refused
+ *  - limits on how many codes one email, one phone and the whole site can request
+ *  - the details are kept on the server between step 1 and step 2, so nothing
+ *    can be changed after the code is sent
+ *  - only 5 wrong codes, then the person must start again
+ *  - every check is repeated at step 2 before the account is made
+ */
+$ofp_form_stamp = static function (): string {
+    $t = (string) time();
+    return $t . '.' . hash_hmac( 'sha256', $t, wp_salt( 'auth' ) );
+};
+$ofp_stamp_age = static function ( string $stamp ): int {
+    $parts = explode( '.', $stamp, 2 );
+    if ( count( $parts ) !== 2 || ! ctype_digit( $parts[0] ) ) {
+        return -1;
+    }
+    if ( ! hash_equals( hash_hmac( 'sha256', $parts[0], wp_salt( 'auth' ) ), $parts[1] ) ) {
+        return -1;
+    }
+    return time() - (int) $parts[0];
+};
+$ofp_hit_limit = static function ( string $key, int $max, int $window ): bool {
+    $k = 'ofp_su_' . md5( $key );
+    $n = (int) get_transient( $k );
+    if ( $n >= $max ) {
+        return true;
+    }
+    set_transient( $k, $n + 1, $window );
+    return false;
+};
+$ofp_check_details = static function ( string $business_name, string $owner_name, string $email, string $phone, string $subdomain ): string {
+    if ( ! $business_name || ! $owner_name || ! $email || ! $phone ) {
+        return 'Please fill in all required fields.';
+    }
+    if ( strlen( $business_name ) > 100 || strlen( $owner_name ) > 100 || strlen( $email ) > 150 ) {
+        return 'One of your entries is too long. Please shorten it.';
+    }
+    if ( ! is_email( $email ) ) {
+        return 'Please enter a valid email address.';
+    }
+    if ( ! OFP_Security::is_valid_phone( $phone ) ) {
+        return 'Please enter a valid phone number.';
+    }
+    if ( OFP_Client::email_exists( $email ) ) {
+        return 'An account with this email address already exists. Please log in instead.';
+    }
+    if ( strlen( $subdomain ) < 3 || strlen( $subdomain ) > 40 ) {
+        return 'Please enter a portal subdomain of 3 to 40 characters.';
+    }
+    if ( ! preg_match( '/^[a-z0-9]+(-[a-z0-9]+)*$/', $subdomain ) ) {
+        return 'The subdomain can only use letters, numbers and single hyphens.';
+    }
+    if ( class_exists( 'OFP_Host_Router' ) && OFP_Host_Router::is_reserved( $subdomain ) ) {
+        return 'That subdomain is reserved by the system. Please choose another.';
+    }
+    if ( class_exists( 'OFP_Client' ) && OFP_Client::subdomain_exists( $subdomain ) ) {
+        return 'That subdomain is already taken. Please choose another.';
+    }
+    return '';
+};
 
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 
     OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'signup', 10, 600 );
 
-    $business_name = sanitize_text_field( wp_unslash( $_POST['business_name']  ?? '' ) );
-    $owner_name    = sanitize_text_field( wp_unslash( $_POST['owner_name']     ?? '' ) );
-    $email         = sanitize_email(      wp_unslash( $_POST['email']          ?? '' ) );
-    $phone         = OFP_Security::sanitize_phone( wp_unslash( $_POST['phone'] ?? '' ) );
-    $plan          = sanitize_text_field( wp_unslash( $_POST['plan']           ?? 'free' ) );
-    $subdomain     = sanitize_title(      wp_unslash( $_POST['subdomain']      ?? '' ) );
-    if ( empty( $subdomain ) && ! empty( $business_name ) ) {
-        $subdomain = sanitize_title( $business_name );
-    }
+    $nonce_ok = isset( $_POST['ofp_signup_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ofp_signup_nonce'] ) ), 'ofp_signup' );
+    $trap_ok  = empty( $_POST['ofp_website'] ); // real people never see this field
 
-    if ( isset( $_POST['otp_step'] ) && $_POST['otp_step'] === '1' ) {
+    if ( ! $nonce_ok ) {
+        $error = 'This page has expired. Please reload it and try again.';
+    } elseif ( ! $trap_ok ) {
+        $error = 'We could not process this request. Please try again.';
+    } elseif ( isset( $_POST['otp_step'] ) && $_POST['otp_step'] === '1' ) {
+
         // --- STEP 2: Verify OTP and Create Account ---
-        $step = 'otp';
-        $otp = isset( $_POST['otp'] ) ? sanitize_text_field( wp_unslash( $_POST['otp'] ) ) : '';
+        $step         = 'otp';
+        $signup_token = preg_replace( '/[^a-zA-Z0-9]/', '', (string) wp_unslash( $_POST['signup_token'] ?? '' ) );
+        $saved        = $signup_token ? get_transient( 'ofp_signup_' . $signup_token ) : false;
+        $otp          = isset( $_POST['otp'] ) ? sanitize_text_field( wp_unslash( $_POST['otp'] ) ) : '';
 
-        if ( empty( $otp ) ) {
-            $error = 'Please enter the verification code.';
-            $user_email = $email;
-            $user_phone = $phone;
+        if ( ! is_array( $saved ) ) {
+            $error = 'Your sign up session has expired. Please start again.';
+            $step  = 'details';
+        } elseif ( empty( $otp ) ) {
+            $error      = 'Please enter the verification code.';
+            $user_email = $saved['email'];
+            $user_phone = $saved['phone'];
+        } elseif ( (int) $saved['attempts'] >= 5 ) {
+            delete_transient( 'ofp_signup_' . $signup_token );
+            $error = 'Too many wrong codes. Please start again.';
+            $step  = 'details';
+        } elseif ( ! OFP_Auth::verify_otp( $saved['email'], $otp, 'signup' ) ) {
+            $saved['attempts'] = (int) $saved['attempts'] + 1;
+            set_transient( 'ofp_signup_' . $signup_token, $saved, 15 * MINUTE_IN_SECONDS );
+            $error      = 'Invalid or expired verification code.';
+            $user_email = $saved['email'];
+            $user_phone = $saved['phone'];
         } else {
-            if ( OFP_Auth::verify_otp( $email, $otp, 'signup' ) ) {
-                $subscriptions = [ 'crm', 'listing' ];
+            // The code is right. Use ONLY the details saved on the server, and
+            // check everything again in case something changed meanwhile.
+            $business_name = $saved['business_name'];
+            $owner_name    = $saved['owner_name'];
+            $email         = $saved['email'];
+            $phone         = $saved['phone'];
+            $subdomain     = $saved['subdomain'];
 
+            $again = $ofp_check_details( $business_name, $owner_name, $email, $phone, $subdomain );
+            if ( $again ) {
+                delete_transient( 'ofp_signup_' . $signup_token );
+                $error = $again;
+                $step  = 'details';
+            } else {
                 $client_id = OFP_Client::create( [
                     'business_name'     => $business_name,
                     'owner_name'        => $owner_name,
@@ -51,44 +147,70 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                     'phone'             => $phone,
                     'subdomain'         => $subdomain,
                     'business_category' => 'property',
-                    'plan'              => $plan,
-                    'listing_plan'      => $plan,
-                    'subscriptions'     => $subscriptions,
+                    // Everyone starts on the Free plan. A paid plan is chosen later
+                    // from Plans & Pricing. Nothing sent by the form can change this.
+                    'plan'              => 'free',
+                    'listing_plan'      => 'free',
+                    'subscriptions'     => [ 'crm', 'listing' ],
                     'onboarding_source' => 'self_serve',
                 ] );
 
+                delete_transient( 'ofp_signup_' . $signup_token );
+
                 if ( $client_id ) {
                     $success = true;
+                    $_POST['email'] = $email; // used by the welcome screen
                 } else {
                     $error = 'Something went wrong creating your account. Please try again or contact us.';
-                    $step = 'details'; // allow retry
+                    $step  = 'details';
                 }
-            } else {
-                $error = 'Invalid or expired verification code.';
-                $user_email = $email;
-                $user_phone = $phone;
             }
         }
+
     } else {
+
         // --- STEP 1: Validate Details & Send OTP ---
-        if ( ! $business_name || ! $owner_name || ! $email || ! $phone ) {
-            $error = 'Please fill in all required fields.';
-        } elseif ( ! is_email( $email ) ) {
-            $error = 'Please enter a valid email address.';
-        } elseif ( ! OFP_Security::is_valid_phone( $phone ) ) {
-            $error = 'Please enter a valid phone number.';
-        } elseif ( OFP_Client::email_exists( $email ) ) {
-            $error = 'An account with this email address already exists. Please log in instead.';
-        } elseif ( empty( $subdomain ) || strlen( $subdomain ) < 3 ) {
-            $error = 'Please enter a portal subdomain of at least 3 characters.';
-        } elseif ( class_exists( 'OFP_Host_Router' ) && OFP_Host_Router::is_reserved( $subdomain ) ) {
-            $error = 'That subdomain is reserved by the system. Please choose another.';
-        } elseif ( class_exists( 'OFP_Client' ) && OFP_Client::subdomain_exists( $subdomain ) ) {
-            $error = 'That subdomain is already taken. Please choose another.';
+        $business_name = sanitize_text_field( wp_unslash( $_POST['business_name'] ?? '' ) );
+        $owner_name    = sanitize_text_field( wp_unslash( $_POST['owner_name']    ?? '' ) );
+        $email         = sanitize_email(      wp_unslash( $_POST['email']         ?? '' ) );
+        $phone         = OFP_Security::sanitize_phone( wp_unslash( $_POST['phone'] ?? '' ) );
+        $subdomain     = sanitize_title(      wp_unslash( $_POST['subdomain']     ?? '' ) );
+        if ( empty( $subdomain ) && ! empty( $business_name ) ) {
+            $subdomain = sanitize_title( $business_name );
+        }
+
+        $age = $ofp_stamp_age( (string) wp_unslash( $_POST['ofp_stamp'] ?? '' ) );
+
+        if ( $age < 2 || $age > 12 * HOUR_IN_SECONDS ) {
+            $error = $age < 0 ? 'This page has expired. Please reload it and try again.' : 'That was too fast. Please check your details and try again.';
         } else {
-            // Generate OTP
+            $error = $ofp_check_details( $business_name, $owner_name, $email, $phone, $subdomain );
+        }
+
+        if ( ! $error ) {
+            if (
+                $ofp_hit_limit( 'email|' . strtolower( $email ), 3, HOUR_IN_SECONDS ) ||
+                $ofp_hit_limit( 'phone|' . $phone, 3, HOUR_IN_SECONDS ) ||
+                $ofp_hit_limit( 'day|' . gmdate( 'Y-m-d' ), 500, DAY_IN_SECONDS )
+            ) {
+                $error = 'Too many codes have been requested. Please try again later.';
+            }
+        }
+
+        if ( ! $error ) {
+            // Keep the details on the server. The next page only gets a random token.
+            $signup_token = wp_generate_password( 32, false, false );
+            set_transient( 'ofp_signup_' . $signup_token, [
+                'business_name' => $business_name,
+                'owner_name'    => $owner_name,
+                'email'         => $email,
+                'phone'         => $phone,
+                'subdomain'     => $subdomain,
+                'attempts'      => 0,
+            ], 15 * MINUTE_IN_SECONDS );
+
             OFP_Auth::generate_and_send_otp( $email, $phone, 'signup' );
-            $step = 'otp';
+            $step       = 'otp';
             $user_email = $email;
             $user_phone = $phone;
         }
@@ -100,7 +222,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Account — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Create Account', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
     <style>
@@ -149,19 +271,19 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
     <!-- Success State -->
     <div class="ofp-signup-wrap">
         <div class="ofp-signup-brand">
-            <h1>⚡ OFast Pipeline</h1>
+            <h1><?php echo esc_html( '⚡ ' . OFP_Brand::name() ); ?></h1>
         </div>
         <div class="ofp-signup-card" style="text-align:center;">
             <div style="font-size:52px;margin-bottom:16px;">🎉</div>
-            <h2>Account Created!</h2>
+            <h2>Welcome, <?php echo esc_html( $owner_name ); ?>!</h2>
             <p style="color:#6b7280;line-height:1.7;margin-bottom:20px;">
-                Your account is being reviewed. We will email you at
-                <strong><?php echo esc_html( sanitize_email( $_POST['email'] ?? '' ) ); ?></strong>
-                once approved — usually within 24 hours.
+                Your account is ready. We sent your temporary password to
+                <strong><?php echo esc_html( sanitize_email( $_POST['email'] ?? '' ) ); ?></strong>.
+                Log in with it, then change it from My Account.
             </p>
             <p style="color:#6b7280;font-size:13px;">
-                Check your inbox for a welcome email with your login credentials
-                and payment details to activate your subscription.
+                You start on the Free plan. There is nothing to pay now.
+                You can pick a paid plan later from Plans &amp; Pricing if you need more.
             </p>
             <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"
                class="ofp-btn ofp-btn-secondary" style="margin-top:24px; padding: 10px; display:inline-block; border-radius:8px; text-decoration:none; background:#e5e7eb; color:#000;">
@@ -175,7 +297,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
     <div class="ofp-signup-wrap">
 
         <div class="ofp-signup-brand">
-            <h1>⚡ OFast Pipeline</h1>
+            <h1><?php echo esc_html( '⚡ ' . OFP_Brand::name() ); ?></h1>
             <p>Your unified real estate sales & management platform</p>
         </div>
 
@@ -195,12 +317,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 
                 <form method="POST" action="" id="ofp-signup-form">
                     <input type="hidden" name="otp_step" value="1">
-                    <input type="hidden" name="business_name" value="<?php echo esc_attr( $_POST['business_name'] ); ?>">
-                    <input type="hidden" name="owner_name" value="<?php echo esc_attr( $_POST['owner_name'] ); ?>">
-                    <input type="hidden" name="email" value="<?php echo esc_attr( $_POST['email'] ); ?>">
-                    <input type="hidden" name="phone" value="<?php echo esc_attr( $_POST['phone'] ); ?>">
-                    <input type="hidden" name="plan" value="<?php echo esc_attr( $_POST['plan'] ?? 'free' ); ?>">
-                    <input type="hidden" name="subdomain" value="<?php echo esc_attr( $subdomain ); ?>">
+                    <input type="hidden" name="signup_token" value="<?php echo esc_attr( $signup_token ); ?>">
+                    <?php wp_nonce_field( 'ofp_signup', 'ofp_signup_nonce' ); ?>
+                    <div style="position:absolute;left:-9999px;" aria-hidden="true">
+                        <input type="text" name="ofp_website" tabindex="-1" autocomplete="off" value="">
+                    </div>
 
                     <div class="ofp-field" style="margin-bottom: 20px;">
                         <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">7-Character Verification Code (OTP) <span style="color:red">*</span></label>
@@ -225,6 +346,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                 $base_domain = get_option( 'ofp_crm_base_domain' ) ?: ( isset( $_SERVER['HTTP_HOST'] ) ? preg_replace( '/:\d+$/', '', $_SERVER['HTTP_HOST'] ) : 'ofastpipeline.com' );
                 ?>
                 <form method="POST" action="" id="ofp-signup-form">
+                    <?php wp_nonce_field( 'ofp_signup', 'ofp_signup_nonce' ); ?>
+                    <input type="hidden" name="ofp_stamp" value="<?php echo esc_attr( $ofp_form_stamp() ); ?>">
+                    <div style="position:absolute;left:-9999px;" aria-hidden="true">
+                        <input type="text" name="ofp_website" tabindex="-1" autocomplete="off" value="">
+                    </div>
 
                     <!-- STEP 1: Details -->
                     <div id="step-1" class="ofp-step-content active">

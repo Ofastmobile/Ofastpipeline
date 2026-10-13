@@ -169,7 +169,7 @@ if ( empty( $gallery_urls ) ) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Property Details | Bofast Homes</title>
+    <title><?php echo esc_html( OFP_Brand::public_page_title( 'Property Details', 'Bofast Homes' ) ); ?></title>
     <script>
         (function() {
             var theme = localStorage.getItem('ofp_theme');
@@ -338,7 +338,7 @@ if ( empty( $gallery_urls ) ) {
                     <a href="<?php echo esc_url( home_url('/') ); ?>" class="flex items-center">
                         <span
                             class="text-[13px] sm:text-sm font-black tracking-[0.25em] text-slate-900 dark:text-white uppercase transition-colors">
-                            BOFAST HOMES
+                            <?php echo OFP_Brand::public_logo_html( 'BOFAST HOMES' ); ?>
                         </span>
                     </a>
 
@@ -1311,7 +1311,7 @@ if ( empty( $gallery_urls ) ) {
                                 </svg>
                             </div>
                             <span style="font-size:16px;font-weight:700"
-                                class="tracking-tight text-slate-900 dark:text-white">Bofast Homes</span>
+                                class="tracking-tight text-slate-900 dark:text-white"><?php echo esc_html( OFP_Brand::public_name_text( 'Bofast Homes' ) ); ?></span>
                         </a>
                         <p class="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
                             Nigeria's leading verified real estate marketplace and integrated broker CRM portal. Fast,
@@ -1446,7 +1446,7 @@ if ( empty( $gallery_urls ) ) {
                     </svg>
                     <span>All listings strictly verified against state land registry archives.</span>
                 </div>
-                <p>&copy; 2026 Bofast Homes. Nigeria's most trusted verified property marketplace. All rights reserved.</p>
+                <p><?php echo OFP_Brand::public_copyright(); ?></p>
             </div>
         </div>
     </footer>

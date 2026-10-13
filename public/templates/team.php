@@ -26,8 +26,8 @@ if ( $user_type !== 'client' && ! $is_manager ) {
 
 $team_members = OFP_Team_Member::get_all_for_client( $client->id );
 
-$plan          = OFP_Subscription::client_plan( $client->id );
-$max_members   = OFP_Subscription::team_member_limit( $plan );
+$plan          = OFP_Subscription::feature_plan( $client->id );
+$max_members   = OFP_Subscription::team_limit_for_client( $client->id );
 $current_count = count( $team_members );
 $can_invite    = ( $max_members > 0 && $current_count < $max_members );
 $free_plan     = ( $plan === 'free' );
@@ -38,7 +38,7 @@ $free_plan     = ( $plan === 'free' );
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Team', $client ?? null ) ); ?></title>
     <!-- Dark theme script to avoid FOUC -->
     <script>
         (function() {

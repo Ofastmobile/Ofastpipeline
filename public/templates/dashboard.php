@@ -35,7 +35,7 @@ $status_badges = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'Dashboard', $client ?? null ) ); ?></title>
     <!-- Dark theme script to avoid FOUC -->
     <script>
         (function() {
@@ -103,7 +103,7 @@ $status_badges = [
     <?php endif; ?>
 
     <?php $ofp_current_user = OFP_Auth::current_user(); ?>
-    <?php if ( empty( $ofp_current_user->is_team_member ) && OFP_Subscription::client_plan( $client->id ) === 'free' ) : ?>
+    <?php if ( empty( $ofp_current_user->is_team_member ) && ! OFP_Brand::hide_plan_prompts( $client ) && OFP_Subscription::client_plan( $client->id ) === 'free' ) : ?>
         <div class="ofp-alert ofp-alert-info" id="ofp-free-plan-banner" style="display:none;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
             <span>
                 ✨ You're on the <strong>Free</strong> plan. Upgrade to unlock more listings with priority
@@ -340,6 +340,7 @@ $status_badges = [
         </div>
 
 
+    <?php if ( ! OFP_Brand::hide_plan_prompts( $client ) ) : ?>
     <!-- Referral / Upgrade Banner matching design -->
     <div class="ofp-referral-banner">
         <div class="ofp-banner-content">
@@ -353,6 +354,7 @@ $status_badges = [
         </div>
         <a href="#" class="ofp-btn-accent">Get Your Referral Link</a>
     </div>
+    <?php endif; ?>
 
 </div> <!-- .ofp-content-area -->
 </main>

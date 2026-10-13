@@ -81,8 +81,8 @@ class OFP_Admin_Menu {
 
         // ── Main menu item ────────────────────────────────────────────────────
         add_menu_page(
-            'OFast Pipeline',
-            'OFast Pipeline',
+            OFP_Brand::name(),
+            OFP_Brand::name(),
             'read',
             'ofp-overview',
             [ $this, 'render_overview' ],
@@ -211,7 +211,7 @@ class OFP_Admin_Menu {
         $file = OFP_PATH . 'admin/views/' . $view . '.php';
 
         if ( ! file_exists( $file ) ) {
-            echo '<div class="wrap"><h1>OFast Pipeline</h1>';
+            echo '<div class="wrap"><h1>' . esc_html( OFP_Brand::name() ) . '</h1>';
             echo '<p>View <code>' . esc_html( $view ) . '</code> is being built.</p></div>';
             return;
         }
@@ -232,7 +232,45 @@ class OFP_Admin_Menu {
 
         $this->require_admin_post( 'ofp_add_client' );
 
-        $subscriptions = [ 'crm', 'listing' ];
+        $add_url   = admin_url( 'admin.php?page=ofp-clients&action=add' );
+        $subdomain = sanitize_title( wp_unslash( $_POST['subdomain'] ?? '' ) );
+        $is_solo   = ! empty( $_POST['is_white_label'] );
+
+        // Subdomain: required, and checked the same way as on the signup page.
+        $sub_error = '';
+        if ( strlen( $subdomain ) < 3 ) {
+            $sub_error = 'The subdomain must be at least 3 characters.';
+        } elseif ( OFP_Host_Router::is_reserved( $subdomain ) ) {
+            $sub_error = 'That subdomain is reserved by the system.';
+        } elseif ( OFP_Client::subdomain_exists( $subdomain ) ) {
+            $sub_error = 'That subdomain is already used by another client.';
+        }
+        if ( $sub_error ) {
+            $this->set_message( '❌ ' . $sub_error, 'error' );
+            wp_safe_redirect( $add_url );
+            exit;
+        }
+
+        // Solo company: no plan. Optional custom domain, checked first.
+        $custom_domain = '';
+        if ( $is_solo ) {
+            OFP_White_Label::ensure_schema();
+            if ( ! OFP_White_Label::schema_ready() ) {
+                $why = (string) get_option( 'ofp_white_label_schema_error', 'unknown reason' );
+                $this->set_message( '❌ White Label could not be turned on because the database could not be updated (' . $why . ').', 'error' );
+                wp_safe_redirect( $add_url );
+                exit;
+            }
+            $custom_domain = OFP_White_Label::normalize_domain( wp_unslash( $_POST['custom_domain'] ?? '' ) );
+            $domain_err    = OFP_White_Label::validate_custom_domain( $custom_domain, 0 );
+            if ( $domain_err ) {
+                $this->set_message( '❌ ' . $domain_err, 'error' );
+                wp_safe_redirect( $add_url );
+                exit;
+            }
+        }
+
+        $plan = $is_solo ? 'free' : sanitize_text_field( wp_unslash( $_POST['plan'] ?? 'free' ) );
 
         $client_id = OFP_Client::create( [
             'business_name'     => sanitize_text_field( wp_unslash( $_POST['business_name']     ?? '' ) ),
@@ -241,13 +279,22 @@ class OFP_Admin_Menu {
             'phone'             => sanitize_text_field( wp_unslash( $_POST['phone']             ?? '' ) ),
             'business_phone'    => sanitize_text_field( wp_unslash( $_POST['business_phone']    ?? '' ) ),
             'whatsapp_number'   => sanitize_text_field( wp_unslash( $_POST['whatsapp_number']   ?? '' ) ),
-            'subdomain'         => sanitize_title(      wp_unslash( $_POST['subdomain']         ?? '' ) ),
+            'subdomain'         => $subdomain,
             'business_category' => 'property',
-            'plan'              => sanitize_text_field( wp_unslash( $_POST['plan']              ?? 'free' ) ),
-            'listing_plan'      => sanitize_text_field( wp_unslash( $_POST['listing_plan']      ?? 'free' ) ),
-            'subscriptions'     => $subscriptions,
+            'plan'              => $plan,
+            'listing_plan'      => $is_solo ? 'free' : sanitize_text_field( wp_unslash( $_POST['listing_plan'] ?? 'free' ) ),
+            'subscriptions'     => [ 'crm', 'listing' ],
             'onboarding_source' => 'manual',
         ] );
+
+        if ( $client_id && $is_solo ) {
+            global $wpdb;
+            $wpdb->update(
+                $wpdb->prefix . 'ofp_clients',
+                [ 'is_white_label' => 1, 'custom_domain' => $custom_domain !== '' ? $custom_domain : null ],
+                [ 'id' => $client_id ]
+            );
+        }
 
         if ( $client_id ) {
             $this->set_message( '✅ Client created successfully. Welcome email sent.', 'success' );
@@ -550,7 +597,10 @@ class OFP_Admin_Menu {
         $settings = [
             // Domain routing (Phase 16)
             'ofp_crm_base_domain'     => sanitize_text_field( wp_unslash( $_POST['ofp_crm_base_domain']     ?? '' ) ),
+            'ofp_use_app_host'        => empty( $_POST['ofp_use_app_host'] ) ? '0' : '1',
+            'ofp_online_buyer_payments' => empty( $_POST['ofp_online_buyer_payments'] ) ? '0' : '1',
             'ofp_global_pixel_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_global_pixel_id']     ?? '' ) ),
+            'ofp_app_name'            => sanitize_text_field( wp_unslash( $_POST['ofp_app_name']            ?? '' ) ),
             // Default pipeline messages
             'ofp_default_instant_sms' => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_instant_sms'] ?? '' ) ),
             'ofp_default_followup_1'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_1']  ?? '' ) ),
@@ -730,18 +780,75 @@ class OFP_Admin_Menu {
             }
         }
 
-        $updated = OFP_Client::update( $client_id, [
+        $edit_url = admin_url( 'admin.php?page=ofp-clients&client_id=' . $client_id . '&action=edit' );
+
+        $data = [
             'business_name'     => sanitize_text_field( wp_unslash( $_POST['business_name']     ?? '' ) ),
             'owner_name'        => sanitize_text_field( wp_unslash( $_POST['owner_name']        ?? '' ) ),
             'email'             => $new_email,
             'phone'             => sanitize_text_field( wp_unslash( $_POST['phone']             ?? '' ) ),
             'business_phone'    => sanitize_text_field( wp_unslash( $_POST['business_phone']    ?? '' ) ),
             'whatsapp_number'   => sanitize_text_field( wp_unslash( $_POST['whatsapp_number']   ?? '' ) ),
-            'subdomain'         => sanitize_title(      wp_unslash( $_POST['subdomain']         ?? '' ) ),
             'business_category' => 'property',
             'plan'              => sanitize_text_field( wp_unslash( $_POST['plan']              ?? '' ) ),
             'sms_provider'      => sanitize_text_field( wp_unslash( $_POST['sms_provider']      ?? 'africastalking' ) ),
-        ] );
+        ];
+
+        // Subdomain: only touched when the form actually sends it, so saving the
+        // form can never wipe an existing subdomain. Changes are checked first.
+        if ( isset( $_POST['subdomain'] ) ) {
+            $new_sub = sanitize_title( wp_unslash( $_POST['subdomain'] ) );
+            if ( $new_sub !== '' && $current && $new_sub !== (string) $current->subdomain ) {
+                $sub_error = '';
+                if ( strlen( $new_sub ) < 3 ) {
+                    $sub_error = 'The subdomain must be at least 3 characters.';
+                } elseif ( OFP_Host_Router::is_reserved( $new_sub ) ) {
+                    $sub_error = 'That subdomain is reserved by the system.';
+                } elseif ( OFP_Client::subdomain_exists( $new_sub, $client_id ) ) {
+                    $sub_error = 'That subdomain is already used by another client.';
+                }
+                if ( $sub_error ) {
+                    $this->set_message( '❌ ' . $sub_error, 'error' );
+                    wp_safe_redirect( $edit_url );
+                    exit;
+                }
+                $data['subdomain'] = $new_sub;
+            }
+        }
+
+        // Custom domain and white label flag (Blueprint 2.4). Admin only.
+        if ( isset( $_POST['ofp_wl_fields'] ) ) {
+            OFP_White_Label::ensure_schema();
+            $domain     = OFP_White_Label::normalize_domain( wp_unslash( $_POST['custom_domain'] ?? '' ) );
+            $domain_err = OFP_White_Label::validate_custom_domain( $domain, $client_id );
+            if ( $domain_err ) {
+                $this->set_message( '❌ ' . $domain_err, 'error' );
+                wp_safe_redirect( $edit_url );
+                exit;
+            }
+            if ( OFP_White_Label::schema_ready() ) {
+                $data['custom_domain']  = $domain !== '' ? $domain : null;
+                $data['is_white_label'] = empty( $_POST['is_white_label'] ) ? 0 : 1;
+            } else {
+                $why = (string) get_option( 'ofp_white_label_schema_error', 'unknown reason' );
+                $this->set_message( '❌ White Label could not be saved because the database could not be updated (' . $why . '). Send this message to support.', 'error' );
+                wp_safe_redirect( $edit_url );
+                exit;
+            }
+        }
+
+        $plan_before = $current ? OFP_Subscription::normalize_plan( $current->plan ) : null;
+        $updated = OFP_Client::update( $client_id, $data );
+        if ( $updated && $plan_before !== null && class_exists( 'OFP_Logger' )
+            && OFP_Subscription::normalize_plan( $data['plan'] ) !== $plan_before ) {
+            $admin_user = wp_get_current_user();
+            OFP_Logger::log( 'Plan changed', $client_id, [
+                'from'   => $plan_before,
+                'to'     => OFP_Subscription::normalize_plan( $data['plan'] ),
+                'by'     => $admin_user->exists() ? $admin_user->user_login : 'admin',
+                'caused' => 'Admin Edit Client form',
+            ] );
+        }
 
         $new_listing_plan = sanitize_text_field( wp_unslash( $_POST['listing_plan'] ?? '' ) );
         if ( $new_listing_plan ) {

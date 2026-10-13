@@ -118,9 +118,46 @@ class OFP_Gateway_Paystack implements OFP_Gateway_Interface {
         return $body->data->authorization_url;
     }
 
+    /**
+     * Asks Paystack directly about one payment (Verify Transaction).
+     * This does not depend on Paystack reaching our webhook, so a blocked or
+     * missing webhook can no longer leave a paid client without their plan.
+     *
+     * @return array|null [ 'status' => 'success'|'failed'|'abandoned'|..., 'amount' => naira, 'id' => string ]
+     *                    or null when Paystack could not be reached or does not know the reference.
+     */
+    public function verify_transaction( string $reference ): ?array {
+        if ( ! $this->secret_key || $reference === '' ) {
+            return null;
+        }
+        $response = wp_remote_get(
+            $this->base_url . '/transaction/verify/' . rawurlencode( $reference ),
+            [ 'headers' => $this->get_headers(), 'timeout' => 20 ]
+        );
+        if ( is_wp_error( $response ) ) {
+            error_log( 'OFP Paystack verify request error: ' . $response->get_error_message() );
+            return null;
+        }
+        $body = json_decode( wp_remote_retrieve_body( $response ) );
+        if ( empty( $body->status ) || empty( $body->data ) ) {
+            return null;
+        }
+        return [
+            'status' => (string) ( $body->data->status ?? '' ),
+            'amount' => ( (float) ( $body->data->amount ?? 0 ) ) / 100,
+            'id'     => (string) ( $body->data->id ?? '' ),
+        ];
+    }
+
     public function handle_webhook( WP_REST_Request $request ): WP_REST_Response {
         $payload   = $request->get_body();
         $signature = $request->get_header( 'x-paystack-signature' );
+
+        // With no secret key saved, the signature check below would accept a
+        // forged request that was signed with an empty key. Refuse instead.
+        if ( ! $this->secret_key ) {
+            return new WP_REST_Response( [ 'error' => 'Gateway not configured.' ], 401 );
+        }
 
         $expected = hash_hmac( 'sha512', $payload, $this->secret_key );
         if ( ! hash_equals( $expected, (string) $signature ) ) {

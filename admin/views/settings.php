@@ -62,10 +62,33 @@ include OFP_PATH . 'admin/views/partials/header.php';
         </p>
         <div class="ofp-form-grid">
             <div class="ofp-field">
+                <label>App Name</label>
+                <input type="text" name="ofp_app_name"
+                       value="<?php echo esc_attr( get_option( 'ofp_app_name', '' ) ); ?>"
+                       placeholder="<?php echo esc_attr( OFP_Brand::DEFAULT_NAME ); ?>">
+                <p class="ofp-hint" style="margin-top:6px;">The product name clients see on the login page, dashboard and browser tab. Leave empty to use <?php echo esc_html( OFP_Brand::DEFAULT_NAME ); ?>. Solo companies never see it.</p>
+            </div>
+
+            <div class="ofp-field">
                 <label>CRM Base Domain</label>
                 <input type="text" name="ofp_crm_base_domain"
                        value="<?php echo esc_attr( get_option( 'ofp_crm_base_domain', '' ) ); ?>"
                        placeholder="e.g. ofastpipeline.com">
+                <p class="ofp-hint" style="margin-top:6px;">Needed for client addresses like name.yourdomain.com. Each client address needs a DNS record (a wildcard * A record covers all of them) and a matching subdomain on your server.</p>
+            </div>
+
+            <div class="ofp-field">
+                <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;">
+                    <input type="checkbox" name="ofp_use_app_host" value="1" <?php checked( get_option( 'ofp_use_app_host', '1' ), '1' ); ?> style="margin-top:3px;">
+                    <span><strong>Use app.yourdomain for the dashboard.</strong> When on, dashboard links opened from your main site go to app.yourdomain. Turn it off if app.yourdomain is not set up in DNS and on your server. Clients on their own address are not affected.</span>
+                </label>
+            </div>
+
+            <div class="ofp-field">
+                <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;">
+                    <input type="checkbox" name="ofp_online_buyer_payments" value="1" <?php checked( get_option( 'ofp_online_buyer_payments', '0' ), '1' ); ?> style="margin-top:3px;">
+                    <span><strong>Allow online card payments for buyers and tenants (Paystack).</strong> Leave this off to have buyers and tenants pay by bank transfer into the property owner's account, with the owner approving each payment. Your own plan and credit payments are not affected.</span>
+                </label>
             </div>
             
             <div class="ofp-field">
@@ -178,12 +201,12 @@ include OFP_PATH . 'admin/views/partials/header.php';
                     <label>From Email</label>
                     <input type="email" name="ofp_smtp_from_email"
                            value="<?php echo esc_attr( get_option( 'ofp_smtp_from_email', '' ) ); ?>"
-                           placeholder="noreply@ofastpipeline.com">
+                           placeholder="noreply@yourdomain.com">
                 </div>
                 <div class="ofp-field">
                     <label>From Name</label>
                     <input type="text" name="ofp_smtp_from_name"
-                           value="<?php echo esc_attr( get_option( 'ofp_smtp_from_name', 'OFast Pipeline' ) ); ?>">
+                           value="<?php echo esc_attr( get_option( 'ofp_smtp_from_name', '' ) ); ?>">
                 </div>
             </div>
         </div>

@@ -14,6 +14,7 @@ class OFP_Property_Payment_Entry_UI {
     public static function render_online_option(): void {
         $path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
         if ( 'property-pay' !== $path ) return;
+        if ( ! OFP_Bank_Account::online_payments_enabled() ) return;
 
         $token = sanitize_text_field( wp_unslash( $_GET['token'] ?? '' ) );
         if ( ! $token ) return;

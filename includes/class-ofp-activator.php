@@ -156,6 +156,14 @@ class OFP_Activator {
             $wpdb->query( "ALTER TABLE {$p}ofp_activity_logs ADD COLUMN team_member_id BIGINT UNSIGNED DEFAULT NULL AFTER admin_id" );
         }
 
+        // custom_domain and is_white_label on ofp_clients (Blueprint v2 Section 2.4).
+        if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'custom_domain'" ) ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN custom_domain VARCHAR(150) DEFAULT NULL AFTER subdomain" );
+        }
+        if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'is_white_label'" ) ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN is_white_label TINYINT(1) NOT NULL DEFAULT 0 AFTER custom_domain" );
+        }
+
         // Email Branding and Custom Template fields on ofp_clients
         $email_branding_exists = $wpdb->get_results(
             "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'email_brand_color'"
@@ -213,6 +221,13 @@ class OFP_Activator {
             password               VARCHAR(255)    NOT NULL,
             subdomain              VARCHAR(100)             DEFAULT NULL,
             custom_domain          VARCHAR(150)             DEFAULT NULL,
+            is_white_label         TINYINT(1)      NOT NULL DEFAULT 0,
+            brand_color            VARCHAR(20)              DEFAULT NULL,
+            favicon_url            VARCHAR(255)             DEFAULT NULL,
+            support_email          VARCHAR(150)             DEFAULT NULL,
+            support_phone          VARCHAR(30)              DEFAULT NULL,
+            sidebar_color          VARCHAR(20)              DEFAULT NULL,
+            menu_hover_color       VARCHAR(20)              DEFAULT NULL,
             plan                   VARCHAR(20)              DEFAULT 'starter',
             status                 VARCHAR(20)     NOT NULL DEFAULT 'active',
             onboarding_source      VARCHAR(20)     NOT NULL DEFAULT 'manual',

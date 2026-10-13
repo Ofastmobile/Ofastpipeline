@@ -105,7 +105,7 @@ class OFP_Auth {
                 // every other feature gate in the app — checking only the
                 // raw CRM `plan` column would wrongly block a team member
                 // whose client paid for Listing only, or vice versa.
-                if ( class_exists( 'OFP_Subscription' ) && OFP_Subscription::team_member_limit( OFP_Subscription::client_plan( $team_member->client_id ) ) <= 0 ) {
+                if ( class_exists( 'OFP_Subscription' ) && OFP_Subscription::team_limit_for_client( (int) $team_member->client_id ) <= 0 ) {
                     return false;
                 }
 
@@ -157,13 +157,13 @@ class OFP_Auth {
 
         // Send via SMS
         if ( class_exists( 'OFP_SMS' ) ) {
-            $sms_msg = "Your Ofast Pipeline OTP is: {$otp_code}. It expires in 10 minutes.";
+            $sms_msg = "Your " . OFP_Brand::context_name() . " OTP is: {$otp_code}. It expires in 10 minutes.";
             OFP_SMS::send_system_sms( $phone, $sms_msg );
         }
 
         // Send via Email
         if ( class_exists( 'OFP_Mailer' ) ) {
-            $subject = "Your Ofast Pipeline Verification Code";
+            $subject = "Your " . OFP_Brand::context_name() . " Verification Code";
             $html = "<p>Your verification code is: <strong>{$otp_code}</strong></p><p>It will expire in 10 minutes.</p>";
             OFP_Mailer::send_system_email( $email, $subject, $html );
         }
@@ -281,6 +281,14 @@ class OFP_Auth {
             return null;
         }
 
+        // A client's own domain only serves that client's people.
+        if ( class_exists( 'OFP_Host_Router' ) ) {
+            $host_client = OFP_Host_Router::current_client_record();
+            if ( $host_client && (int) $session->client_id !== (int) $host_client->id && ! self::is_admin_user() ) {
+                return null;
+            }
+        }
+
         if ( isset( $session->user_type ) && $session->user_type === 'team_member' ) {
             $user = $wpdb->get_row(
                 $wpdb->prepare(
@@ -297,8 +305,7 @@ class OFP_Auth {
                 // otherwise they'd keep working the dashboard for however
                 // long their session cookie still has left.
                 if ( class_exists( 'OFP_Subscription' ) ) {
-                    $current_plan = OFP_Subscription::client_plan( $session->client_id );
-                    if ( OFP_Subscription::team_member_limit( $current_plan ) <= 0 ) {
+                    if ( OFP_Subscription::team_limit_for_client( (int) $session->client_id ) <= 0 ) {
                         $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'token' => $token ] );
                         self::clear_cookie();
                         return null;

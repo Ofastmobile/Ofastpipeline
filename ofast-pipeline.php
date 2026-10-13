@@ -58,7 +58,13 @@ require_once OFP_PATH . 'includes/class-ofp-property-payment-entry-ui.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce-repair.php';
 require_once OFP_PATH . 'includes/class-ofp-property-rent.php';
 require_once OFP_PATH . 'includes/class-ofp-property-rent-visibility.php';
+require_once OFP_PATH . 'includes/class-ofp-white-label.php';
+require_once OFP_PATH . 'includes/class-ofp-brand.php';
+require_once OFP_PATH . 'includes/class-ofp-bank-account.php';
 require_once OFP_PATH . 'includes/class-ofp-property-lease-payment.php';
+require_once OFP_PATH . 'includes/class-ofp-property-tenant-transfer.php';
+require_once OFP_PATH . 'includes/class-ofp-property-my-payments.php';
+require_once OFP_PATH . 'includes/class-ofp-property-transfer-reminders.php';
 require_once OFP_PATH . 'includes/class-ofp-property-tenant-portal.php';
 require_once OFP_PATH . 'includes/class-ofp-property-receipt-generator.php';
 require_once OFP_PATH . 'includes/class-ofp-property-receipt-viewer.php';
@@ -105,6 +111,11 @@ add_action( 'plugins_loaded', function (): void {
     new OFP_Cron_Handler();
     new OFP_Property_CPT();
     OFP_Host_Router::init();
+    OFP_White_Label::init();
+    OFP_Brand::init();
+    OFP_Subscription::cleanup_free_pending_once();
+    OFP_Payment::init();
+    OFP_Bank_Account::init();
     OFP_Property_Commerce::init();
     OFP_Property_Commerce_Migration::init();
     OFP_Property_Sales::init();
@@ -120,6 +131,9 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Property_Rent::init();
     OFP_Property_Rent_Visibility::init();
     OFP_Property_Tenant_Portal::init();
+    OFP_Property_Tenant_Transfer::init();
+    OFP_Property_My_Payments::init();
+    OFP_Property_Transfer_Reminders::init();
     OFP_Property_Receipt_Generator::init();
 } );
 

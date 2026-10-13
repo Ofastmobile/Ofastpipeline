@@ -21,7 +21,7 @@ $pending_queue   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_trigger_q
 $failed_triggers = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_trigger_queue WHERE status = 'failed' AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)" );
 
 // ── Alerts ─────────────────────────────────────────────────────────────────
-$expiring_soon  = $wpdb->get_results( "SELECT business_name, subscription_expires FROM {$p}ofp_clients WHERE subscription_expires <= DATE_ADD(CURDATE(), INTERVAL 3 DAY) AND status = 'active' ORDER BY subscription_expires ASC" );
+$expiring_soon  = $wpdb->get_results( "SELECT business_name, subscription_expires FROM {$p}ofp_clients WHERE subscription_expires <= DATE_ADD(CURDATE(), INTERVAL 3 DAY) AND status = 'active'" . OFP_White_Label::not_solo_sql() . " ORDER BY subscription_expires ASC" );
 $low_credit     = $wpdb->get_results( "SELECT c.business_name FROM {$p}ofp_clients c JOIN {$p}ofp_credits cr ON cr.client_id = c.id WHERE cr.sms_remaining < (cr.sms_loaded * 0.2) AND cr.sms_loaded > 0 AND c.status = 'active'" );
 
 // ── Recent leads ───────────────────────────────────────────────────────────

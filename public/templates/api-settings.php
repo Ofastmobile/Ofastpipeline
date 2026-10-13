@@ -15,7 +15,7 @@ OFP_Auth::require_active_subscription( $client );
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Settings — OFast Pipeline</title>
+    <title><?php echo esc_html( OFP_Brand::title( 'API Settings', $client ?? null ) ); ?></title>
     <!-- Dark theme script to avoid FOUC -->
     <script>
         (function() {

@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class OFP_White_Label {
 
 	const SCHEMA_OPTION  = 'ofp_white_label_schema';
-	const SCHEMA_VERSION = '1';
+	const SCHEMA_VERSION = '3';
 
 	public static function init(): void {
 		self::ensure_schema();
@@ -39,7 +39,7 @@ class OFP_White_Label {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Adds custom_domain and is_white_label to ofp_clients when missing.
+	 * Adds custom_domain, is_white_label and the branding columns to ofp_clients when missing.
 	 * Runs once, then remembers it in an option, so no reactivation is needed.
 	 */
 	public static function ensure_schema(): void {
@@ -54,19 +54,43 @@ class OFP_White_Label {
 			return; // Plugin tables not created yet.
 		}
 
-		if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'custom_domain'" ) ) ) {
-			$wpdb->query( "ALTER TABLE {$table} ADD COLUMN custom_domain VARCHAR(150) DEFAULT NULL AFTER subdomain" );
-		}
-		if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'is_white_label'" ) ) ) {
-			$wpdb->query( "ALTER TABLE {$table} ADD COLUMN is_white_label TINYINT(1) NOT NULL DEFAULT 0 AFTER custom_domain" );
+		$columns = [
+			'custom_domain'  => 'VARCHAR(150) DEFAULT NULL AFTER subdomain',
+			'is_white_label' => 'TINYINT(1) NOT NULL DEFAULT 0 AFTER custom_domain',
+			'brand_color'    => 'VARCHAR(20) DEFAULT NULL AFTER is_white_label',
+			'favicon_url'    => 'VARCHAR(255) DEFAULT NULL AFTER brand_color',
+			'support_email'  => 'VARCHAR(150) DEFAULT NULL AFTER favicon_url',
+			'support_phone'  => 'VARCHAR(30) DEFAULT NULL AFTER support_email',
+			'sidebar_color'  => 'VARCHAR(20) DEFAULT NULL AFTER support_phone',
+			'menu_hover_color' => 'VARCHAR(20) DEFAULT NULL AFTER sidebar_color',
+		];
+
+		$all = true;
+		foreach ( $columns as $name => $definition ) {
+			if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE '{$name}'" ) ) ) {
+				$wpdb->query( "ALTER TABLE {$table} ADD COLUMN {$name} {$definition}" );
+			}
+			if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE '{$name}'" ) ) ) {
+				$all = false;
+				update_option( 'ofp_white_label_schema_error', $name . ': ' . $wpdb->last_error, false );
+			}
 		}
 
-		$both = ! empty( $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'custom_domain'" ) )
-			&& ! empty( $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'is_white_label'" ) );
-
-		if ( $both ) {
+		if ( $all ) {
+			delete_option( 'ofp_white_label_schema_error' );
 			update_option( self::SCHEMA_OPTION, self::SCHEMA_VERSION, true );
 		}
+	}
+
+	/**
+	 * SQL to leave solo companies out of billing jobs (renewal reminders, plan
+	 * expiry, upgrade nudges). Empty until the column exists.
+	 */
+	public static function not_solo_sql( string $alias = '' ): string {
+		if ( ! self::schema_ready() ) {
+			return '';
+		}
+		return ' AND ' . ( $alias !== '' ? $alias . '.' : '' ) . 'is_white_label = 0';
 	}
 
 	public static function schema_ready(): bool {
