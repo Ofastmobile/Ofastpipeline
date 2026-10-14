@@ -5,7 +5,7 @@
  * - 'sales': Active Deals & Sales Portfolio Table
  * - 'offer': Create Installment Offer Form
  * - 'purchase': Add Purchase (Manual)
- * - 'payments': Payment Records Ledger
+ * - 'payments': Transactions Ledger
  *
  * Set $ofp_sales_tab before including.
  */
@@ -31,7 +31,7 @@ $ofp_tabs = [
         'icon'  => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>',
     ],
     'payments' => [
-        'label' => 'Payment Records',
+        'label' => 'Transactions',
         'url'   => home_url( '/property-payments' ),
         'icon'  => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 5.25h-15A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75h15a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0019.5 5.25zM2.25 9h19.5M6 13.5h3" /></svg>',
     ],

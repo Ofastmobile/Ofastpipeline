@@ -105,12 +105,12 @@ class OFP_Property_Comms_Bridge {
                 $row->owner_name ?: 'there',
                 'Payment waiting for your approval — ' . $title,
                 sprintf(
-                    '<p>Hello %s,</p><p><strong>%s</strong> says they paid <strong>₦%s</strong> for <strong>%s</strong>.</p><p>Reference: <strong>%s</strong></p><p>Check your bank account. If the money is there, approve the payment. If not, reject it with a reason.</p><p><a href="%s">Open Payment Records</a></p>',
+                    '<p>Hello %s,</p><p><strong>%s</strong> says they paid <strong>₦%s</strong> for <strong>%s</strong>.</p><p>Reference: <strong>%s</strong></p><p>Check your bank account. If the money is there, approve the payment. If not, reject it with a reason.</p><p><a href="%s">Open Transactions</a></p>',
                     esc_html( $row->owner_name ?: 'there' ), esc_html( $who ), esc_html( $amount ), esc_html( $title ), esc_html( $row->payer_reference ?: 'none given' ), esc_url( home_url( '/property-payments/' ) )
                 )
             );
         }
-        self::sms_to( $row, (string) $row->owner_phone, sprintf( 'Payment to approve: %s says N%s paid for %s. Check your bank, then approve in Payment Records.', $who, $amount, $title ) );
+        self::sms_to( $row, (string) $row->owner_phone, sprintf( 'Payment to approve: %s says N%s paid for %s. Check your bank, then approve in Transactions.', $who, $amount, $title ) );
 
         // Tell the buyer it was received and is waiting.
         if ( ! empty( $row->buyer_email ) ) {

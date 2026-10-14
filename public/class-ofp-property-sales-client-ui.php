@@ -34,7 +34,7 @@ class OFP_Property_Sales_Client_UI {
                 },
                 {
                     url: <?php echo wp_json_encode( home_url( '/property-payments' ) ); ?>,
-                    label: 'Payment Records',
+                    label: 'Transactions',
                     marker: 'payment-records',
                     locked: false,
                     icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 5.25h-15A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75h15a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0019.5 5.25zM2.25 9h19.5M6 13.5h3" /></svg>'

@@ -59,6 +59,20 @@ $nav_items[] = [
     'locked' => false,
 ];
 
+$pending_inspections_count = (int) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COUNT(*) FROM {$wpdb->prefix}ofp_property_inquiries WHERE client_id = %d AND status = 'pending'",
+    $client->id
+) );
+
+$nav_items[] = [
+    'label'  => 'Inspections',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>',
+    'url'    => home_url( '/inspections' ),
+    'slug'   => 'inspections',
+    'badge'  => $pending_inspections_count > 0 ? (string) $pending_inspections_count : null,
+    'locked' => false,
+];
+
 $nav_items[] = [
     'label'  => 'Sales & Installments',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7.5 16.5l3-3 2.25 2.25L19.5 9" /></svg>',
@@ -68,7 +82,7 @@ $nav_items[] = [
 ];
 
 $nav_items[] = [
-    'label'  => 'Payment Records',
+    'label'  => 'Transactions',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 5.25h-15A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75h15a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0019.5 5.25zM2.25 9h19.5M6 13.5h3" /></svg>',
     'url'    => home_url( '/property-payments' ),
     'slug'   => 'property-payments',
@@ -386,12 +400,33 @@ svg { max-width: 100%; box-sizing: border-box; }
                     </a>
 
                     <?php
-                    $banner_btn_label = 'Add New Property';
-                    $banner_btn_url   = home_url( '/properties' );
+                    $banner_btn_label   = 'Add New Property';
+                    $banner_btn_url     = home_url( '/properties' );
+                    $banner_btn_onclick = '';
+                    $banner_btn_icon    = 'plus';
 
                     if ( ! empty( $ofp_banner_btn['label'] ) && ! empty( $ofp_banner_btn['url'] ) ) {
-                        $banner_btn_label = $ofp_banner_btn['label'];
-                        $banner_btn_url   = $ofp_banner_btn['url'];
+                        $banner_btn_label   = $ofp_banner_btn['label'];
+                        $banner_btn_url     = $ofp_banner_btn['url'];
+                        $banner_btn_onclick = $ofp_banner_btn['onclick'] ?? '';
+                        $banner_btn_icon    = $ofp_banner_btn['icon'] ?? 'plus';
+                    } elseif (
+                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'team' ) !== false ||
+                        strpos( $current_url, '/team' ) !== false
+                    ) {
+                        $banner_btn_label   = '+ Invite Member';
+                        $banner_btn_url     = home_url( '/team-invite' );
+                        $banner_btn_onclick = "if(typeof openInviteModal==='function'){ openInviteModal(); return false; }";
+                        $banner_btn_icon    = 'none'; // Plus is already included in label
+                    } elseif (
+                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'communication' ) !== false ||
+                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'message-templates' ) !== false ||
+                        strpos( $current_url, '/communications' ) !== false ||
+                        strpos( $current_url, '/message-templates' ) !== false
+                    ) {
+                        $banner_btn_label = 'Email Brand & Layout';
+                        $banner_btn_url   = home_url( '/message-templates?tab=branding' );
+                        $banner_btn_icon  = 'branding';
                     } elseif (
                         strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-sales' ) !== false ||
                         strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-purchases' ) !== false ||
@@ -405,10 +440,18 @@ svg { max-width: 100%; box-sizing: border-box; }
                         $banner_btn_url   = home_url( '/property-purchases' );
                     }
                     ?>
-                    <a href="<?php echo esc_url( $banner_btn_url ); ?>" class="ofp-hero-btn-add">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:16px;height:16px;">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                        </svg>
+                    <a href="<?php echo esc_url( $banner_btn_url ); ?>" 
+                       <?php if ( ! empty( $banner_btn_onclick ) ) : ?>onclick="<?php echo esc_attr( $banner_btn_onclick ); ?>"<?php endif; ?>
+                       class="ofp-hero-btn-add">
+                        <?php if ( $banner_btn_icon === 'branding' ) : ?>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
+                            </svg>
+                        <?php elseif ( $banner_btn_icon !== 'none' ) : ?>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:16px;height:16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                        <?php endif; ?>
                         <span><?php echo esc_html( $banner_btn_label ); ?></span>
                     </a>
                 </div>
@@ -516,11 +559,11 @@ svg { max-width: 100%; box-sizing: border-box; }
                     icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>'
                 },
                 {
-                    title: 'Payment Records',
+                    title: 'Transactions',
                     desc: 'View incoming customer transactions, receipts and history',
                     url: '<?php echo esc_js( home_url( '/property-payments' ) ); ?>',
                     cat: 'sales',
-                    badge: 'Payments',
+                    badge: 'Transactions',
                     icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>'
                 },
                 {
@@ -541,7 +584,7 @@ svg { max-width: 100%; box-sizing: border-box; }
                 },
                 {
                     title: 'Tenants & Leases',
-                    desc: 'Manage active tenants, rent payments and lease contracts',
+                    desc: 'Manage active tenants, rent transactions and lease contracts',
                     url: '<?php echo esc_js( home_url( '/tenants' ) ); ?>',
                     cat: 'crm',
                     badge: 'Tenants',
@@ -646,7 +689,7 @@ svg { max-width: 100%; box-sizing: border-box; }
                 if (!term) return text;
                 var idx = text.toLowerCase().indexOf(term.toLowerCase());
                 if (idx === -1) return text;
-                return text.substring(0, idx) + '<strong style="color:#8b5cf6; text-decoration:underline;">' + text.substring(idx, idx + term.length) + '</strong>' + text.substring(idx + term.length);
+                return text.substring(0, idx) + '<strong style="color:var(--btn-primary, var(--accent-purple, #8b5cf6)); text-decoration:underline;">' + text.substring(idx, idx + term.length) + '</strong>' + text.substring(idx + term.length);
             }
 
             function renderSearchResults() {

@@ -25,7 +25,7 @@ $payments = $wpdb->get_results( $wpdb->prepare(
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?php echo esc_html( OFP_Brand::title( 'Property Payments', $client ?? null ) ); ?></title>
+<title><?php echo esc_html( OFP_Brand::title( 'Transactions', $client ?? null ) ); ?></title>
 <?php wp_head(); ?>
 <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
@@ -41,7 +41,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
                 Sales &amp; Installments
             </h1>
-            <p style="color:var(--text-muted); margin:0; font-size:14px;">Payment records for purchases belonging to your properties and installment schedules.</p>
+            <p style="color:var(--text-muted); margin:0; font-size:14px;">Transactions and payment records for purchases belonging to your properties and installment schedules.</p>
         </div>
         
         <?php $ofp_sales_tab = 'payments'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
@@ -66,7 +66,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                     </thead>
                     <tbody>
                     <?php if ( empty( $payments ) ) : ?>
-                        <tr><td colspan="11" style="text-align:center; color:#64748b;">No property payment records yet.</td></tr>
+                        <tr><td colspan="11" style="text-align:center; color:#64748b;">No transactions recorded yet.</td></tr>
                     <?php else : foreach ( $payments as $payment ) : ?>
                         <tr>
                             <td style="color:#64748b;">#<?php echo esc_html( $payment->id ); ?></td>

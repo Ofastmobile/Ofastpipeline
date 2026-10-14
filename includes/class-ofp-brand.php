@@ -301,7 +301,7 @@ class OFP_Brand {
 		$color = ! empty( $c->brand_color ) ? sanitize_hex_color( $c->brand_color ) : '';
 		if ( $color ) {
 			$hover = self::darken( $color );
-			echo '<style id="ofp-brand-colors">body{--accent-blue:' . $color . ';--btn-primary:' . $color . ';--btn-primary-hover:' . $hover . ';}</style>' . "\n";
+			echo '<style id="ofp-brand-colors">:root, body { --accent-blue: ' . $color . '; --accent-purple: ' . $color . '; --btn-primary: ' . $color . '; --btn-primary-hover: ' . $hover . '; }</style>' . "\n";
 		}
 
 		$sidebar = ! empty( $c->sidebar_color ) ? sanitize_hex_color( $c->sidebar_color ) : '';

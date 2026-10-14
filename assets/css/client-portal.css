@@ -857,7 +857,7 @@ html.dark .ofp-hero-btn-export {
 }
 
 .ofp-hero-btn-add {
-    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    background: var(--btn-primary, linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%));
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 10px;
     padding: 8px 18px;
@@ -868,14 +868,14 @@ html.dark .ofp-hero-btn-export {
     align-items: center;
     gap: 7px;
     text-decoration: none;
-    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.35);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
     transition: all 0.2s ease;
 }
 
 .ofp-hero-btn-add:hover {
-    background: linear-gradient(135deg, #9333ea 0%, #5b21b6 100%);
+    background: var(--btn-primary-hover, linear-gradient(135deg, #9333ea 0%, #5b21b6 100%));
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(109, 40, 217, 0.45);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 @media (max-width: 768px) {
@@ -4185,11 +4185,137 @@ html.dark .ofp-stylized-map-box {
     padding: 28px 20px;
     text-align: center;
     background: var(--bg-body);
-    transition: border-color 0.2s ease;
+    transition: all 0.2s ease;
     cursor: pointer;
+    position: relative;
 }
-.ofp-file-dropzone:hover {
+.ofp-file-dropzone:hover,
+.ofp-file-dropzone.ofp-dropzone-dragover {
     border-color: var(--accent-blue);
+    background: rgba(37, 99, 235, 0.04);
+}
+.ofp-file-dropzone.ofp-dropzone-dragover {
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+/* Multi-photo Preview Grid */
+.ofp-photo-previews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+.ofp-photo-preview-card {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    aspect-ratio: 4 / 3;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+.ofp-photo-preview-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+}
+.ofp-photo-preview-card.is-primary {
+    border: 2px solid #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+.ofp-photo-preview-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.ofp-photo-remove-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.92);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    line-height: 1;
+    font-weight: 700;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    transition: all 0.15s ease;
+    z-index: 5;
+}
+.ofp-photo-remove-btn:hover {
+    background: #dc2626;
+    transform: scale(1.12);
+}
+.ofp-photo-badge {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 4;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+.ofp-badge-main {
+    background: #10b981;
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+}
+.ofp-badge-set-main {
+    background: rgba(15, 23, 42, 0.75);
+    color: #ffffff;
+    opacity: 0.88;
+}
+.ofp-badge-set-main:hover {
+    background: var(--accent-blue);
+    opacity: 1;
+    transform: scale(1.05);
+}
+.ofp-photo-info {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: 32px;
+    font-size: 9.5px;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.65);
+    padding: 2px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+.ofp-existing-photo-card {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    aspect-ratio: 4 / 3;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+.ofp-existing-photo-card.is-main {
+    border: 2px solid var(--accent-blue);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+.ofp-existing-photo-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -4263,7 +4389,7 @@ html.dark .ofp-stylized-map-box {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    background: #0f766e;
+    background: var(--btn-primary, #0f766e);
     color: #ffffff !important;
     font-size: 13.5px;
     font-weight: 600;
@@ -4271,14 +4397,14 @@ html.dark .ofp-stylized-map-box {
     border-radius: 8px;
     text-decoration: none;
     border: none;
-    box-shadow: 0 2px 6px rgba(15, 118, 110, 0.25);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     transition: all 0.2s ease;
     cursor: pointer;
 }
 .ofp-btn-header-add:hover {
-    background: #0d655e;
+    background: var(--btn-primary-hover, #0d655e);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.35);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 .ofp-btn-header-add:active {
     transform: translateY(0);
@@ -4845,7 +4971,7 @@ html.dark .ofp-search-modal-box {
 .ofp-search-modal-icon {
     width: 22px;
     height: 22px;
-    color: #8b5cf6;
+    color: var(--btn-primary, var(--accent-purple, #8b5cf6));
     flex-shrink: 0;
 }
 
@@ -4939,7 +5065,7 @@ html.dark .ofp-search-tab-pill:hover {
 }
 
 .ofp-search-tab-pill.active {
-    background: #8b5cf6;
+    background: var(--btn-primary, var(--accent-purple, #8b5cf6));
     color: #ffffff !important;
 }
 
@@ -4983,24 +5109,24 @@ html.dark .ofp-search-item {
 
 .ofp-search-item:hover,
 .ofp-search-item.selected {
-    background: rgba(139, 92, 246, 0.09);
-    border-color: rgba(139, 92, 246, 0.2);
+    background: rgba(59, 130, 246, 0.09);
+    border-color: var(--btn-primary, var(--accent-purple, #8b5cf6));
 }
 
 [data-theme="dark"] .ofp-search-item:hover,
 [data-theme="dark"] .ofp-search-item.selected,
 html.dark .ofp-search-item:hover,
 html.dark .ofp-search-item.selected {
-    background: rgba(139, 92, 246, 0.18);
-    border-color: rgba(139, 92, 246, 0.35);
+    background: rgba(59, 130, 246, 0.18);
+    border-color: var(--btn-primary, var(--accent-purple, #8b5cf6));
 }
 
 .ofp-search-item-icon {
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    background: rgba(139, 92, 246, 0.1);
-    color: #8b5cf6;
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--btn-primary, var(--accent-purple, #8b5cf6));
     display: flex;
     align-items: center;
     justify-content: center;

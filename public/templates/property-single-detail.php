@@ -55,6 +55,20 @@ $furnishing    = get_post_meta( $post_id, 'ofp_furnishing', true );
 $video_url     = get_post_meta( $post_id, 'ofp_video_url', true );
 $amenities     = json_decode( get_post_meta( $post_id, 'ofp_amenities', true ) ?: '[]', true ) ?: [];
 $client_id     = (int) get_post_meta( $post_id, 'ofp_client_id', true );
+$total_package = (float) get_post_meta( $post_id, 'ofp_total_package', true );
+$insp_days     = get_post_meta( $post_id, 'ofp_inspection_days', true ) ?: 'Mondays - Saturdays';
+$insp_hours    = get_post_meta( $post_id, 'ofp_inspection_hours', true ) ?: '10:00 AM - 5:00 PM';
+$insp_notice   = get_post_meta( $post_id, 'ofp_inspection_notice', true );
+$allow_installment = ( '1' === (string) get_post_meta( $post_id, 'ofp_allow_installment', true ) || 'yes' === (string) get_post_meta( $post_id, 'ofp_allow_installment', true ) );
+
+// Dynamic Map Location
+$raw_address       = trim( (string) get_post_meta( $post_id, 'ofp_location_text', true ) );
+$map_address_query = $raw_address ?: 'Nigeria';
+if ( stripos( $map_address_query, 'nigeria' ) === false ) {
+    $map_address_query .= ', Nigeria';
+}
+$map_embed_url    = 'https://maps.google.com/maps?q=' . rawurlencode( $map_address_query ) . '&t=&z=15&ie=UTF8&iwloc=&output=embed';
+$map_external_url = 'https://maps.google.com/?q=' . rawurlencode( $map_address_query );
 
 // Client / Agent details
 global $wpdb;
@@ -96,75 +110,7 @@ if ( empty( $gallery_urls ) ) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en"
-    x-data="{
-        darkMode: document.documentElement.classList.contains('dark'),
-        toggleDark() { ofpToggleTheme(); },
-        mobileMenu: false,
-        currentImage: 0,
-        showGallery: false,
-        activeTab: 'overview',
-        megaMenuOpen: false,
-        galleryImages: <?php echo esc_attr( json_encode( $gallery_urls ) ); ?>,
-        propertyPrice: <?php echo (float) $price; ?>,
-        downPaymentPercent: 20,
-        loanYears: 20,
-        interestRate: 0.16,
-        get downPayment() { return Math.round(this.propertyPrice * (this.downPaymentPercent / 100)); },
-        get principal() { return Math.max(0, this.propertyPrice - this.downPayment); },
-        get monthlyPayment() {
-            if (this.principal <= 0) return 0;
-            const r = this.interestRate / 12;
-            const n = this.loanYears * 12;
-            const p = (this.principal * (r * Math.pow(1 + r, n))) / (Math.pow(1 + r, n) - 1);
-            return Math.round(p);
-        },
-        inquiryLoading: false,
-        inquirySuccess: false,
-        inquiryError: '',
-        tourType: 'physical',
-        inquiryDate: '<?php echo gmdate('Y-m-d', strtotime('+3 days')); ?>',
-        inquiryTime: '10:00 AM',
-        inquiryName: '',
-        inquiryPhone: '',
-        inquiryEmail: '',
-        submitInquiry() {
-            if (!this.inquiryName || !this.inquiryPhone) {
-                this.inquiryError = 'Please enter your name and phone number.';
-                return;
-            }
-            this.inquiryLoading = true;
-            this.inquiryError = '';
-            fetch('<?php echo esc_url( rest_url( 'ofp/v1/capture-lead' ) ); ?>', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    client_id: <?php echo $client_id ?: 0; ?>,
-                    name: this.inquiryName,
-                    phone: this.inquiryPhone,
-                    email: this.inquiryEmail,
-                    property_id: <?php echo (int) $post_id; ?>,
-                    source: 'property_detail',
-                    viewing_date: this.inquiryDate + ' ' + this.inquiryTime,
-                    message: 'Inspection Tour (' + (this.tourType === 'physical' ? 'Physical Tour' : 'Video Call Tour') + ')'
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                this.inquiryLoading = false;
-                if (data.success) {
-                    this.inquirySuccess = true;
-                } else {
-                    this.inquiryError = data.message || 'Something went wrong. Please try again.';
-                }
-            })
-            .catch(() => {
-                this.inquiryLoading = false;
-                this.inquiryError = 'Network error. Please try again or reach out on WhatsApp.';
-            });
-        }
-    }"
-    }">
+<html lang="en" x-data="propertySingle">
 
 <head>
     <meta charset="UTF-8">
@@ -194,7 +140,7 @@ if ( empty( $gallery_urls ) ) {
                 html.classList.remove('light');
                 html.setAttribute('data-theme', 'dark');
             } else {
-                html.classList.add('light');
+                html.classList.remove('dark');
                 html.setAttribute('data-theme', 'light');
             }
             try {
@@ -218,6 +164,196 @@ if ( empty( $gallery_urls ) ) {
         }
         window.ofpToggleTheme = ofpToggleTheme;
         window.toggleDark = ofpToggleTheme;
+
+        // Cleanly register propertySingle component for Alpine.js without HTML attribute quote collisions
+        function ofpInitPropertySingle() {
+            const dataFactory = () => ({
+                darkMode: document.documentElement.classList.contains('dark'),
+                toggleDark() { ofpToggleTheme(); },
+                mobileMenu: false,
+                currentImage: 0,
+                showGallery: false,
+                activeTab: 'overview',
+                megaMenuOpen: false,
+                galleryImages: <?php echo json_encode( array_values( $gallery_urls ) ); ?>,
+                propertyPrice: <?php echo (float) $price; ?>,
+                downPaymentPercent: 20,
+                loanYears: 20,
+                interestRate: 0.16,
+                get downPayment() { return Math.round(this.propertyPrice * (this.downPaymentPercent / 100)); },
+                get principal() { return Math.max(0, this.propertyPrice - this.downPayment); },
+                get monthlyPayment() {
+                    if (this.principal <= 0) return 0;
+                    const r = this.interestRate / 12;
+                    const n = this.loanYears * 12;
+                    const p = (this.principal * (r * Math.pow(1 + r, n))) / (Math.pow(1 + r, n) - 1);
+                    return Math.round(p);
+                },
+                inquiryLoading: false,
+                actionLoading: '',
+                inquirySuccess: false,
+                inquiryError: '',
+                tourType: 'physical',
+                inquiryDate: <?php echo json_encode( gmdate( 'Y-m-d', strtotime( '+3 days' ) ) ); ?>,
+                inquiryTime: '10:00 AM',
+                inquiryName: '',
+                inquiryPhone: '',
+                inquiryEmail: '',
+                inquiryMessage: '',
+                shareModalOpen: false,
+                shareCopied: false,
+                isSaved: (function() {
+                    try {
+                        const saved = JSON.parse(localStorage.getItem('ofp_saved_properties') || '[]');
+                        return saved.includes(<?php echo (int) $post_id; ?>);
+                    } catch(e) { return false; }
+                })(),
+                get shareTitle() {
+                    return <?php echo json_encode( get_the_title() . ' - ₦' . number_format( (float) $price ) . ' | Bofast Homes' ); ?>;
+                },
+                toggleSaveProperty() {
+                    try {
+                        let saved = JSON.parse(localStorage.getItem('ofp_saved_properties') || '[]');
+                        const pid = <?php echo (int) $post_id; ?>;
+                        if (saved.includes(pid)) {
+                            saved = saved.filter(id => id !== pid);
+                            this.isSaved = false;
+                        } else {
+                            saved.push(pid);
+                            this.isSaved = true;
+                        }
+                        localStorage.setItem('ofp_saved_properties', JSON.stringify(saved));
+                    } catch(e) {
+                        this.isSaved = !this.isSaved;
+                    }
+                },
+                copyShareLink() {
+                    const url = window.location.href;
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(url).then(() => {
+                            this.shareCopied = true;
+                            setTimeout(() => { this.shareCopied = false; }, 2500);
+                        }).catch(() => {
+                            this.fallbackCopy(url);
+                        });
+                    } else {
+                        this.fallbackCopy(url);
+                    }
+                },
+                fallbackCopy(text) {
+                    const el = document.createElement('textarea');
+                    el.value = text;
+                    document.body.appendChild(el);
+                    el.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(el);
+                    this.shareCopied = true;
+                    setTimeout(() => { this.shareCopied = false; }, 2500);
+                },
+                shareNative() {
+                    if (navigator.share) {
+                        navigator.share({
+                            title: this.shareTitle,
+                            text: 'Check out this property: ' + this.shareTitle,
+                            url: window.location.href
+                        }).catch(() => {});
+                    } else {
+                        this.copyShareLink();
+                    }
+                },
+                get cleanWhatsAppUrl() {
+                    const cleanPhone = <?php echo json_encode( $clean_phone ?: '2348000000000' ); ?>;
+                    const tourLabel = this.tourType === 'whatsapp_video' ? 'WhatsApp Video Call Tour' : 'Physical Inspection Tour';
+                    const agent = <?php echo json_encode( $agent_name ); ?>;
+                    const title = <?php echo json_encode( get_the_title() ); ?>;
+                    const postId = <?php echo (int) $post_id; ?>;
+                    let text = "Hello " + agent + ",\n" +
+                        "I am interested in " + title + " (PID: " + postId + ").\n" +
+                        "Name: " + (this.inquiryName || 'Buyer/Tenant') + "\n" +
+                        "Phone: " + (this.inquiryPhone || 'Not provided') + "\n" +
+                        "Tour Type: " + tourLabel + "\n" +
+                        "Preferred Date: " + this.inquiryDate + " (" + this.inquiryTime + ")\n";
+                    if (this.inquiryMessage) {
+                        text += "Requirements/Notes: " + this.inquiryMessage;
+                    }
+                    return 'https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(text);
+                },
+                submitInquiry(action = 'booking') {
+                    this.inquiryError = '';
+                    if (!this.inquiryName || !this.inquiryName.trim()) {
+                        this.inquiryError = 'Please enter your full name.';
+                        return;
+                    }
+                    if (!this.inquiryPhone || !this.inquiryPhone.trim()) {
+                        this.inquiryError = 'Please enter your WhatsApp phone number.';
+                        return;
+                    }
+                    if (!this.inquiryMessage || !this.inquiryMessage.trim()) {
+                        this.inquiryError = 'Please enter what you are looking for in the request box below.';
+                        return;
+                    }
+
+                    this.inquiryLoading = true;
+                    this.actionLoading = action;
+
+                    const payload = {
+                        client_id: <?php echo (int) ( $client_id ?: 0 ); ?>,
+                        name: this.inquiryName.trim(),
+                        phone: this.inquiryPhone.trim(),
+                        email: this.inquiryEmail.trim(),
+                        property_id: <?php echo (int) $post_id; ?>,
+                        source: action === 'whatsapp' ? 'property_whatsapp_click' : (action === 'call' ? 'property_call_click' : 'property_inspection_booking'),
+                        tour_type: this.tourType === 'whatsapp_video' ? 'whatsapp_video' : 'physical',
+                        viewing_date: this.inquiryDate,
+                        viewing_time: this.inquiryTime,
+                        message: this.inquiryMessage.trim()
+                    };
+
+                    const targetWaUrl = this.cleanWhatsAppUrl;
+                    const agentPhone = <?php echo json_encode( $agent_phone ?: '+2348000000000' ); ?>;
+
+                    fetch(<?php echo json_encode( esc_url_raw( rest_url( 'ofp/v1/capture-lead' ) ) ); ?>, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        this.inquiryLoading = false;
+                        this.actionLoading = '';
+                        this.inquirySuccess = true;
+
+                        if (action === 'whatsapp') {
+                            window.open(targetWaUrl, '_blank');
+                        } else if (action === 'call') {
+                            window.location.href = 'tel:' + agentPhone;
+                        }
+                    })
+                    .catch(() => {
+                        this.inquiryLoading = false;
+                        this.actionLoading = '';
+                        if (action === 'whatsapp') {
+                            window.open(targetWaUrl, '_blank');
+                            this.inquirySuccess = true;
+                        } else if (action === 'call') {
+                            window.location.href = 'tel:' + agentPhone;
+                            this.inquirySuccess = true;
+                        } else {
+                            this.inquiryError = 'Network error. Please try again or connect directly on WhatsApp.';
+                        }
+                    });
+                }
+            });
+
+            if (window.Alpine) {
+                window.Alpine.data('propertySingle', dataFactory);
+            } else {
+                document.addEventListener('alpine:init', () => {
+                    window.Alpine.data('propertySingle', dataFactory);
+                });
+            }
+        }
+        ofpInitPropertySingle();
     </script>
     <script>
         window.tailwind = window.tailwind || {};
@@ -441,22 +577,27 @@ if ( empty( $gallery_urls ) ) {
 
             <!-- Right actions -->
             <div class="flex items-center gap-2 shrink-0">
-                <button
-                    class="flex items-center gap-1.5 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-1.5 transition-all cursor-pointer">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- Save Button (leave save) -->
+                <button type="button" @click="toggleSaveProperty()"
+                    :class="isSaved ? 'bg-rose-500/10 border-rose-500/50 text-rose-400' : 'text-slate-300 hover:text-white border-slate-700 hover:border-slate-500'"
+                    class="flex items-center gap-1.5 text-xs font-semibold border rounded-lg px-3 py-1.5 transition-all cursor-pointer hover:bg-slate-800">
+                    <svg class="w-3.5 h-3.5 transition-colors" :class="isSaved ? 'text-rose-500 fill-current' : 'text-current'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
-                    Save
+                    <span x-text="isSaved ? 'Saved' : 'Save'">Save</span>
                 </button>
-                <button
-                    class="flex items-center gap-1.5 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-1.5 transition-all cursor-pointer">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                <!-- Share Button (share to all social media) -->
+                <button type="button" @click="shareModalOpen = true"
+                    class="flex items-center gap-1.5 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-1.5 transition-all cursor-pointer hover:bg-slate-800 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
-                    Share
+                    <span>Share</span>
                 </button>
+
                 <span
                     class="bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-bold px-2.5 py-1.5 rounded-lg tracking-wider">PID:
                     <?php the_ID(); ?></span>
@@ -484,8 +625,22 @@ if ( empty( $gallery_urls ) ) {
             <!-- Tags -- top-left -->
             <div class="absolute top-4 left-4 z-20 flex items-center gap-2 flex-wrap">
                 <span class="bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg"><?php echo esc_html( $listing_label ); ?></span>
+                <?php if ( $status === 'taken' ) : ?>
+                    <span class="bg-rose-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg">
+                        ● <?php echo ( $listing_type === 'rent' || $listing_type === 'shortlet' ) ? 'Taken / Leased' : 'Sold Out'; ?>
+                    </span>
+                <?php elseif ( $status === 'under_offer' ) : ?>
+                    <span class="bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg">
+                        ● Under Offer
+                    </span>
+                <?php else : ?>
+                    <span class="bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                        Available
+                    </span>
+                <?php endif; ?>
                 <span
-                    class="bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                    class="bg-emerald-500/90 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -514,7 +669,15 @@ if ( empty( $gallery_urls ) ) {
                 class="absolute bottom-5 right-5 z-20 bg-slate-900/85 backdrop-blur-sm border border-slate-700/60 rounded-xl px-5 py-3 text-right shadow-2xl">
                 <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-0.5">Price</p>
                 <p class="text-emerald-400 font-black text-xl leading-tight">₦<?php echo number_format( (float) get_post_meta( get_the_ID(), 'ofp_price', true ) ); ?></p>
-                <?php if ( $listing_type === "rent" || $listing_type === "shortlet" ) : ?><p class="text-slate-400 text-xs font-semibold">/ <?php echo esc_html( get_post_meta( $post_id, "ofp_price_period", true ) ?: "year" ); ?></p><?php endif; ?>
+                <?php if ( $listing_type === "rent" || $listing_type === "shortlet" ) : ?>
+                    <p class="text-slate-400 text-xs font-semibold">/ <?php echo esc_html( get_post_meta( $post_id, "ofp_price_period", true ) ?: "year" ); ?></p>
+                <?php endif; ?>
+                <?php if ( ( $listing_type === 'rent' || $listing_type === 'shortlet' ) && $total_package > 0 ) : ?>
+                    <div class="mt-1.5 pt-1.5 border-t border-slate-700/70">
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Total Move-in Package</span>
+                        <span class="text-xs font-black text-blue-400">₦<?php echo number_format( $total_package ); ?></span>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -595,9 +758,11 @@ if ( empty( $gallery_urls ) ) {
                         :class="activeTab === 'location' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'"
                         class="pb-4 font-bold text-sm whitespace-nowrap border-b-2 transition-colors cursor-pointer">Location
                         &amp; Map</button>
+                    <?php if ( $allow_installment ) : ?>
                     <button @click="activeTab = 'calculator'"
                         :class="activeTab === 'calculator' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'"
-                        class="pb-4 font-bold text-sm whitespace-nowrap border-b-2 transition-colors cursor-pointer">Mortgage Calculator</button>
+                        class="pb-4 font-bold text-sm whitespace-nowrap border-b-2 transition-colors cursor-pointer">Installment &amp; Mortgage</button>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Tab Content: Overview -->
@@ -751,31 +916,42 @@ if ( empty( $gallery_urls ) ) {
 
                 <!-- Tab Content: Location -->
                 <div x-show="activeTab === 'location'" style="display: none;" class="space-y-6">
-                    <h2 class="text-xl font-bold mb-4">Location Map</h2>
+                    <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+                        <h2 class="text-xl font-bold">Location &amp; Map</h2>
+                        <?php if ( ! empty( $raw_address ) ) : ?>
+                            <span class="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <?php echo esc_html( $raw_address ); ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
                     <div
                         class="relative w-full h-[500px] rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-slate-100 dark:bg-slate-900">
                         <iframe
                             class="w-full h-full border-0"
-                            src="https://maps.google.com/maps?q=Admiralty+Way,+Lekki+Phase+1,+Lagos,+Nigeria&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                            src="<?php echo esc_url( $map_embed_url ); ?>"
                             loading="lazy"
                             allowfullscreen>
                         </iframe>
 
                         <!-- Floating Location Badge -->
-                        <div class="absolute top-4 right-4 z-10 bg-slate-900/90 backdrop-blur-md border border-slate-700/60 rounded-xl px-4 py-2.5 shadow-xl text-white flex items-center gap-2.5">
-                            <div class="relative flex items-center justify-center">
+                        <div class="absolute top-4 right-4 z-10 bg-slate-900/90 backdrop-blur-md border border-slate-700/60 rounded-xl px-4 py-2.5 shadow-xl text-white flex items-center gap-2.5 max-w-[85%] sm:max-w-sm">
+                            <div class="relative flex items-center justify-center shrink-0">
                                 <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></div>
                                 <div class="absolute w-2 h-2 rounded-full bg-emerald-500"></div>
                             </div>
-                            <div>
-                                <p class="text-xs font-bold leading-tight">Admiralty Way, Lekki Phase 1</p>
-                                <p class="text-[10px] text-slate-400">Lagos State, Nigeria</p>
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold leading-tight truncate"><?php echo esc_html( $raw_address ?: 'Location on Request' ); ?></p>
+                                <p class="text-[10px] text-slate-400">Nigeria</p>
                             </div>
                         </div>
 
                         <!-- External Maps link button -->
                         <div class="absolute bottom-4 right-4 z-10">
-                            <a href="https://maps.google.com/?q=Admiralty+Way,+Lekki+Phase+1,+Lagos,+Nigeria" target="_blank"
+                            <a href="<?php echo esc_url( $map_external_url ); ?>" target="_blank" rel="noopener noreferrer"
                                 class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md hover:bg-white dark:hover:bg-slate-800 text-slate-800 dark:text-white text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg flex items-center gap-1.5 transition-all cursor-pointer">
                                 <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -784,21 +960,13 @@ if ( empty( $gallery_urls ) ) {
                             </a>
                         </div>
                     </div>
-                    <div class="mt-4">
-                        <h3 class="font-bold mb-2">Nearby Landmarks</h3>
-                        <ul class="text-sm text-slate-600 dark:text-slate-400 list-disc list-inside space-y-1">
-                            <li>Upbeat Recreation Centre (2 mins away)</li>
-                            <li>Lekki Phase 1 Gate (5 mins away)</li>
-                            <li>Prince Ebeano Supermarket (4 mins away)</li>
-                            <li>The waterside / Jetty (1 min away)</li>
-                        </ul>
-                    </div>
                 </div>
 
-                <!-- Tab Content: Mortgage Calculator -->
+                <?php if ( $allow_installment ) : ?>
+                <!-- Tab Content: Mortgage / Installment Estimator -->
                 <div x-show="activeTab === 'calculator'" style="display: none;" class="space-y-6 animate-fade-in"
                     x-data="{
-                        price: 450000000,
+                        price: <?php echo (float) $price; ?>,
                         downPaymentPercent: 20,
                         loanYears: 15,
                         rate: 0.16,
@@ -834,8 +1002,8 @@ if ( empty( $gallery_urls ) ) {
                                 </svg>
                             </div>
                             <div>
-                                <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Mortgage Repayment Estimator</h2>
-                                <p class="text-xs sm:text-sm text-slate-400 font-medium mt-0.5">16% p.a. standard mortgage rate</p>
+                                <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Mortgage &amp; Installment Estimator</h2>
+                                <p class="text-xs sm:text-sm text-slate-400 font-medium mt-0.5">16% p.a. standard commercial mortgage / installment rate</p>
                             </div>
                         </div>
 
@@ -923,6 +1091,7 @@ if ( empty( $gallery_urls ) ) {
 
                     </div>
                 </div>
+                <?php endif; ?>
 
             </div>
 
@@ -961,117 +1130,178 @@ if ( empty( $gallery_urls ) ) {
                         </div>
                     </div>
 
-                    <!-- Direct Contact Buttons -->
-                    <div class="grid grid-cols-2 gap-3 mb-6">
-                        <a href="https://wa.me/<?php echo esc_attr( $clean_phone ?: "2348000000000" ); ?>?text=<?php echo rawurlencode( "Hello, I am interested in " . get_the_title() . " (PID: " . $post_id . ")" ); ?>" target="_blank"
-                            class="bg-[#00a859] hover:bg-[#00924d] text-white font-bold rounded-2xl py-3 px-4 flex items-center justify-center gap-2 text-sm shadow-lg shadow-emerald-950/40 transition-all">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z">
-                                </path>
-                            </svg>
-                            <span>WhatsApp</span>
-                        </a>
-                        <a href="tel:<?php echo esc_attr( $agent_phone ?: "+2348000000000" ); ?>"
-                            class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/70 text-white font-bold rounded-2xl py-3 px-4 flex items-center justify-center gap-2 text-sm transition-all">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
-                                </path>
-                            </svg>
-                            <span>Call Agent</span>
-                        </a>
-                    </div>
-
                     <!-- Book Inspection Tour Header -->
                     <div class="border-t border-slate-800/80 pt-5">
-                        <div
-                            class="flex items-center gap-2 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-100 mb-4">
-                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" stroke-width="2"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                                </path>
+                        <div class="flex items-center gap-2 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-100 mb-3">
+                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                             </svg>
-                            <span>BOOK INSPECTION TOUR</span>
+                            <span>SCHEDULE INSPECTION &amp; INQUIRY</span>
                         </div>
 
-                        <!-- Tour Type Selector Tabs -->
-                        <div class="bg-[#050B18] p-1 rounded-2xl flex gap-1 border border-slate-800/90 mb-4"
-                            x-data="{ tourType: 'video' }">
+                        <!-- Inspection Schedule Notice Badge -->
+                        <div class="bg-blue-950/40 border border-blue-900/40 rounded-xl p-2.5 mb-3.5 text-[11px] text-slate-300">
+                            <div class="flex items-center gap-1.5 font-bold text-blue-400 mb-0.5">
+                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span><?php echo esc_html( $insp_days ); ?> &bull; <?php echo esc_html( $insp_hours ); ?></span>
+                            </div>
+                            <?php if ( $insp_notice ) : ?>
+                                <p class="text-slate-400 text-[10px] mt-0.5 leading-tight">Notice: <?php echo esc_html( $insp_notice ); ?></p>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Tour Type Selector Tabs (Physical vs WhatsApp Video Call) -->
+                        <div class="bg-[#050B18] p-1 rounded-2xl flex gap-1 border border-slate-800/90 mb-4">
                             <button type="button" @click="tourType = 'physical'"
                                 :class="tourType === 'physical' ? 'bg-blue-600 text-white font-bold shadow-md border border-blue-400/50' : 'text-slate-400 hover:text-white font-semibold border border-transparent'"
-                                class="flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-all">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6m6 0l-3-3m3 3l-3 3"></path></svg>
+                                class="flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer">
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6m6 0l-3-3m3 3l-3 3"></path></svg>
                                 <span>Physical Tour</span>
                             </button>
-                            <button type="button" @click="tourType = 'video'"
-                                :class="tourType === 'video' ? 'bg-blue-600 text-white font-bold shadow-md border border-blue-400/50' : 'text-slate-400 hover:text-white font-semibold border border-transparent'"
-                                class="flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-all">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                                <span>Video Call Tour</span>
+                            <button type="button" @click="tourType = 'whatsapp_video'"
+                                :class="tourType === 'whatsapp_video' ? 'bg-[#25D366] text-white font-bold shadow-md border border-emerald-400/50' : 'text-slate-400 hover:text-white font-semibold border border-transparent'"
+                                class="flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer">
+                                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z" :fill="tourType === 'whatsapp_video' ? '#ffffff' : '#25D366'"/>
+                                    <path d="M17.84 16.03c-.24.68-1.2 1.26-1.98 1.42-.53.11-1.22.2-3.56-.76-2.99-1.24-4.91-4.28-5.06-4.48-.15-.2-1.2-1.6-1.2-3.05s.76-2.16 1.03-2.46c.27-.3.59-.37.78-.37.2 0 .39 0 .56.01.18.01.42-.07.66.5.24.58.83 2.03.9 2.18.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.18-.32.4-.45.53-.15.15-.31.31-.13.61.18.3.8 1.32 1.72 2.14 1.18 1.05 2.18 1.38 2.48 1.53.3.15.48.13.66-.08.18-.2.76-.89.96-1.19.2-.3.4-.25.66-.15.27.1 1.72.81 2.01.96.3.15.49.22.56.35.07.13.07.73-.17 1.41z" :fill="tourType === 'whatsapp_video' ? '#25D366' : '#ffffff'"/>
+                                </svg>
+                                <span>WhatsApp Video</span>
                             </button>
                         </div>
 
-                        <form class="space-y-3" @submit.prevent="submitInquiry()">
-                            <!-- Success Message Banner -->
-                            <div x-show="inquirySuccess" x-cloak class="p-3 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-semibold leading-relaxed">
-                                ✓ Inspection request confirmed! We have received your booking and the listing agent will contact you shortly.
+                        <!-- Success Message Banner -->
+                        <div x-show="inquirySuccess" x-cloak class="space-y-3">
+                            <div class="p-4 bg-emerald-950/80 border border-emerald-500/40 rounded-2xl text-emerald-300 text-xs font-semibold leading-relaxed">
+                                <div class="flex items-center gap-2 font-bold text-sm mb-1 text-emerald-200">
+                                    <svg class="w-4 h-4 shrink-0 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    Inspection Request Logged!
+                                </div>
+                                Your request and requirements have been sent to <?php echo esc_html( $agent_name ); ?>. You will be contacted shortly to confirm access.
                             </div>
 
+                            <a :href="cleanWhatsAppUrl" target="_blank"
+                                class="w-full bg-[#25D366] hover:bg-[#20ba59] text-white font-semibold rounded-xl py-2.5 px-4 flex items-center justify-center gap-2 text-xs shadow-md shadow-emerald-950/30 transition-all cursor-pointer">
+                                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z" fill="#ffffff"/>
+                                    <path d="M17.84 16.03c-.24.68-1.2 1.26-1.98 1.42-.53.11-1.22.2-3.56-.76-2.99-1.24-4.91-4.28-5.06-4.48-.15-.2-1.2-1.6-1.2-3.05s.76-2.16 1.03-2.46c.27-.3.59-.37.78-.37.2 0 .39 0 .56.01.18.01.42-.07.66.5.24.58.83 2.03.9 2.18.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.18-.32.4-.45.53-.15.15-.31.31-.13.61.18.3.8 1.32 1.72 2.14 1.18 1.05 2.18 1.38 2.48 1.53.3.15.48.13.66-.08.18-.2.76-.89.96-1.19.2-.3.4-.25.66-.15.27.1 1.72.81 2.01.96.3.15.49.22.56.35.07.13.07.73-.17 1.41z" fill="#25D366"/>
+                                </svg>
+                                <span>Continue to WhatsApp with Agent</span>
+                            </a>
+
+                            <button type="button" @click="inquirySuccess = false; inquiryMessage = ''"
+                                class="w-full text-center text-xs text-slate-400 hover:text-white py-2 transition-colors cursor-pointer">
+                                Submit another request
+                            </button>
+                        </div>
+
+                        <!-- Active Form View -->
+                        <div x-show="!inquirySuccess" class="space-y-3">
                             <!-- Error Message Banner -->
                             <div x-show="inquiryError" x-cloak class="p-3 bg-rose-950/80 border border-rose-500/40 rounded-xl text-rose-300 text-xs font-semibold" x-text="inquiryError"></div>
 
-                            <div x-show="!inquirySuccess" class="space-y-3">
-                                <!-- Date & Time Row -->
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Preferred Date</label>
-                                        <input type="date" x-model="inquiryDate" required
-                                            class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer [color-scheme:dark]">
-                                    </div>
-                                    <div>
-                                        <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Preferred Time</label>
-                                        <div class="relative">
-                                            <select x-model="inquiryTime"
-                                                class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-3 py-2.5 text-xs text-white appearance-none cursor-pointer focus:outline-none focus:border-blue-500 pr-7">
-                                                <option value="10:00 AM">10:00 AM</option>
-                                                <option value="11:30 AM">11:30 AM</option>
-                                                <option value="01:00 PM">01:00 PM</option>
-                                                <option value="02:30 PM">02:30 PM</option>
-                                                <option value="04:00 PM">04:00 PM</option>
-                                            </select>
-                                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
-                                            </div>
+                            <!-- Date & Time Row -->
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Preferred Date</label>
+                                    <input type="date" x-model="inquiryDate" required
+                                        class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer [color-scheme:dark]">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Preferred Time</label>
+                                    <div class="relative">
+                                        <select x-model="inquiryTime"
+                                            class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-3 py-2.5 text-xs text-white appearance-none cursor-pointer focus:outline-none focus:border-blue-500 pr-7">
+                                            <option value="10:00 AM">10:00 AM</option>
+                                            <option value="11:30 AM">11:30 AM</option>
+                                            <option value="01:00 PM">01:00 PM</option>
+                                            <option value="02:30 PM">02:30 PM</option>
+                                            <option value="04:00 PM">04:00 PM</option>
+                                        </select>
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <!-- Full Name -->
+                            <!-- Full Name -->
+                            <div>
+                                <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Your Full Name</label>
+                                <input type="text" x-model="inquiryName" placeholder="e.g. Chukwuma Adebayo" required
+                                    class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
+                            </div>
+
+                            <!-- WhatsApp Phone & Email -->
+                            <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <input type="text" x-model="inquiryName" placeholder="Your Full Name" required
-                                        class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
+                                    <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">WhatsApp Phone</label>
+                                    <input type="tel" x-model="inquiryPhone" placeholder="0801 234 5678" required
+                                        class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-3.5 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
                                 </div>
-
-                                <!-- WhatsApp Phone & Email -->
-                                <div class="grid grid-cols-2 gap-3">
-                                    <input type="tel" x-model="inquiryPhone" placeholder="WhatsApp Phone" required
-                                        class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
-                                    <input type="email" x-model="inquiryEmail" placeholder="Email Address"
-                                        class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
-                                </div>
-
-                                <!-- Submit Button -->
-                                <div class="pt-1">
-                                    <button type="submit" :disabled="inquiryLoading"
-                                        class="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-blue-600/30 text-sm tracking-wide active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer">
-                                        <span x-show="!inquiryLoading">Request Inspection Booking</span>
-                                        <span x-show="inquiryLoading" x-cloak>Submitting...</span>
-                                    </button>
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Email Address (Optional)</label>
+                                    <input type="email" x-model="inquiryEmail" placeholder="you@email.com"
+                                        class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-3.5 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
                                 </div>
                             </div>
-                        </form>
+
+                            <!-- Detailed Request Textarea -->
+                            <div>
+                                <label class="text-[11px] font-semibold text-slate-400 mb-1.5 flex items-center justify-between">
+                                    <span>Detailed Request / Specific Notes</span>
+                                    <span class="text-[10px] text-blue-400 font-normal">Required for agent dispatch</span>
+                                </label>
+                                <textarea x-model="inquiryMessage" rows="3" required
+                                    placeholder="Tell the agent what you are looking for (e.g. your budget, move-in date, key questions, or preferences)..."
+                                    class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors resize-none leading-relaxed"></textarea>
+                            </div>
+
+                            <!-- Primary Submit Button -->
+                            <div class="pt-1">
+                                <button type="button" @click="submitInquiry('booking')" :disabled="inquiryLoading"
+                                    class="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-blue-600/30 text-sm tracking-wide active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer">
+                                    <span x-show="!inquiryLoading || actionLoading !== 'booking'">Book Inspection Tour</span>
+                                    <span x-show="inquiryLoading && actionLoading === 'booking'" x-cloak class="flex items-center gap-2">
+                                        <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                                        Submitting Booking...
+                                    </span>
+                                </button>
+                            </div>
+
+                            <!-- Divider: Or Connect Directly -->
+                            <div class="relative flex py-2 items-center">
+                                <div class="flex-grow border-t border-slate-800"></div>
+                                <span class="flex-shrink mx-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Or Connect With Agent</span>
+                                <div class="flex-grow border-t border-slate-800"></div>
+                            </div>
+
+                            <!-- Direct WhatsApp & Call Buttons (Under Form & Textarea with silent lead capture) -->
+                            <div class="grid grid-cols-2 gap-2.5">
+                                <button type="button" @click="submitInquiry('whatsapp')" :disabled="inquiryLoading"
+                                    class="bg-[#25D366] hover:bg-[#20ba59] disabled:opacity-50 text-white font-semibold rounded-xl py-2 px-2.5 flex items-center justify-center gap-1.5 text-xs shadow-md shadow-emerald-950/30 transition-all cursor-pointer">
+                                    <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z" fill="#ffffff"/>
+                                        <path d="M17.84 16.03c-.24.68-1.2 1.26-1.98 1.42-.53.11-1.22.2-3.56-.76-2.99-1.24-4.91-4.28-5.06-4.48-.15-.2-1.2-1.6-1.2-3.05s.76-2.16 1.03-2.46c.27-.3.59-.37.78-.37.2 0 .39 0 .56.01.18.01.42-.07.66.5.24.58.83 2.03.9 2.18.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.18-.32.4-.45.53-.15.15-.31.31-.13.61.18.3.8 1.32 1.72 2.14 1.18 1.05 2.18 1.38 2.48 1.53.3.15.48.13.66-.08.18-.2.76-.89.96-1.19.2-.3.4-.25.66-.15.27.1 1.72.81 2.01.96.3.15.49.22.56.35.07.13.07.73-.17 1.41z" fill="#25D366"/>
+                                    </svg>
+                                    <span x-show="!inquiryLoading || actionLoading !== 'whatsapp'" class="truncate">WhatsApp Agent</span>
+                                    <span x-show="inquiryLoading && actionLoading === 'whatsapp'" x-cloak>Logging...</span>
+                                </button>
+
+                                <button type="button" @click="submitInquiry('call')" :disabled="inquiryLoading"
+                                    class="bg-slate-800/80 hover:bg-slate-700/80 disabled:opacity-50 border border-slate-700/70 text-white font-semibold rounded-xl py-2 px-2.5 flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer">
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                    </svg>
+                                    <span x-show="!inquiryLoading || actionLoading !== 'call'" class="truncate">Call Agent</span>
+                                    <span x-show="inquiryLoading && actionLoading === 'call'" x-cloak>Connecting...</span>
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-center text-slate-500 pt-1">
+                                WhatsApp &amp; Call automatically log your request for instant priority inspection response.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -1204,6 +1434,141 @@ if ( empty( $gallery_urls ) ) {
         <!-- Image Counter -->
         <div class="absolute bottom-6 text-white font-bold bg-black/50 px-4 py-2 rounded-full backdrop-blur">
             <span x-text="currentImage + 1"></span> / <span x-text="galleryImages.length"></span>
+        </div>
+    </div>
+
+    <!-- Social Media Share Modal (Alpine.js controlled) -->
+    <div x-show="shareModalOpen" x-cloak class="fixed inset-0 z-[110] flex items-center justify-center p-4"
+        @keydown.escape.window="shareModalOpen = false" style="display: none;">
+        
+        <!-- Backdrop Overlay -->
+        <div class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm transition-opacity"
+             @click="shareModalOpen = false"></div>
+
+        <!-- Modal Box -->
+        <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl z-10 text-slate-900 dark:text-white"
+             @click.stop>
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-inner">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-lg text-slate-900 dark:text-white tracking-tight">Share Property</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Share to your social networks &amp; contacts</p>
+                    </div>
+                </div>
+                <button type="button" @click="shareModalOpen = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+
+            <!-- Property Thumbnail & Info Preview -->
+            <div class="my-4 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl flex items-center gap-3 border border-slate-100 dark:border-slate-800">
+                <img src="<?php echo esc_url( !empty($gallery_urls[0]) ? $gallery_urls[0] : '' ); ?>" alt="" class="w-14 h-14 rounded-xl object-cover shrink-0">
+                <div class="min-w-0 flex-1">
+                    <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate"><?php echo esc_html( get_the_title() ); ?></h4>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate"><?php echo esc_html( $location ); ?></p>
+                    <p class="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-0.5">₦<?php echo number_format( (float) $price ); ?></p>
+                </div>
+            </div>
+
+            <!-- Social Media Share Grid -->
+            <div class="grid grid-cols-4 gap-2.5 my-5">
+                <!-- WhatsApp -->
+                <a :href="'https://api.whatsapp.com/send?text=' + encodeURIComponent(shareTitle + '\n' + window.location.href)"
+                   target="_blank" rel="noopener noreferrer"
+                   class="flex flex-col items-center gap-1.5 p-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/40 transition-all group">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                        <svg class="w-10 h-10 shrink-0" viewBox="0 0 24 24" fill="none">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z" fill="#25D366"/>
+                            <path d="M17.84 16.03c-.24.68-1.2 1.26-1.98 1.42-.53.11-1.22.2-3.56-.76-2.99-1.24-4.91-4.28-5.06-4.48-.15-.2-1.2-1.6-1.2-3.05s.76-2.16 1.03-2.46c.27-.3.59-.37.78-.37.2 0 .39 0 .56.01.18.01.42-.07.66.5.24.58.83 2.03.9 2.18.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.18-.32.4-.45.53-.15.15-.31.31-.13.61.18.3.8 1.32 1.72 2.14 1.18 1.05 2.18 1.38 2.48 1.53.3.15.48.13.66-.08.18-.2.76-.89.96-1.19.2-.3.4-.25.66-.15.27.1 1.72.81 2.01.96.3.15.49.22.56.35.07.13.07.73-.17 1.41z" fill="#ffffff"/>
+                        </svg>
+                    </div>
+                    <span class="text-[10px] font-bold">WhatsApp</span>
+                </a>
+
+                <!-- Facebook -->
+                <a :href="'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href)"
+                   target="_blank" rel="noopener noreferrer"
+                   class="flex flex-col items-center gap-1.5 p-2.5 rounded-2xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/40 transition-all group">
+                    <div class="w-10 h-10 rounded-full bg-[#1877F2] text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    </div>
+                    <span class="text-[10px] font-bold">Facebook</span>
+                </a>
+
+                <!-- X (Twitter) -->
+                <a :href="'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareTitle) + '&url=' + encodeURIComponent(window.location.href)"
+                   target="_blank" rel="noopener noreferrer"
+                   class="flex flex-col items-center gap-1.5 p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/60 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-all group">
+                    <div class="w-10 h-10 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    </div>
+                    <span class="text-[10px] font-bold">X (Twitter)</span>
+                </a>
+
+                <!-- Telegram -->
+                <a :href="'https://t.me/share/url?url=' + encodeURIComponent(window.location.href) + '&text=' + encodeURIComponent(shareTitle)"
+                   target="_blank" rel="noopener noreferrer"
+                   class="flex flex-col items-center gap-1.5 p-2.5 rounded-2xl bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/40 dark:hover:bg-sky-900/50 text-sky-700 dark:text-sky-400 border border-sky-200/50 dark:border-sky-800/40 transition-all group">
+                    <div class="w-10 h-10 rounded-full bg-[#229ED9] text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+                    </div>
+                    <span class="text-[10px] font-bold">Telegram</span>
+                </a>
+
+                <!-- LinkedIn -->
+                <a :href="'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(window.location.href)"
+                   target="_blank" rel="noopener noreferrer"
+                   class="flex flex-col items-center gap-1.5 p-2.5 rounded-2xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/40 transition-all group">
+                    <div class="w-10 h-10 rounded-full bg-[#0A66C2] text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 8.76a1.45 1.45 0 0 0 1.46-1.45 1.46 1.46 0 0 0-1.46-1.46 1.46 1.46 0 0 0-1.46 1.46c0 .8.65 1.45 1.46 1.45m1.39 9.74v-8.37H5.07v8.37h2.78z"/></svg>
+                    </div>
+                    <span class="text-[10px] font-bold">LinkedIn</span>
+                </a>
+
+                <!-- Email -->
+                <a :href="'mailto:?subject=' + encodeURIComponent(shareTitle) + '&body=' + encodeURIComponent('Check out this verified property listing: ' + window.location.href)"
+                   class="flex flex-col items-center gap-1.5 p-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800/40 transition-all group">
+                    <div class="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    </div>
+                    <span class="text-[10px] font-bold">Email</span>
+                </a>
+
+                <!-- Device Native Share -->
+                <button type="button" @click="shareNative()"
+                   class="flex flex-col items-center gap-1.5 p-2.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/40 transition-all group cursor-pointer col-span-2">
+                    <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    </div>
+                    <span class="text-[10px] font-bold">Share via Device Apps</span>
+                </button>
+            </div>
+
+            <!-- Direct Copy Link Section -->
+            <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Direct Listing URL</label>
+                <div class="flex items-center gap-2">
+                    <input type="text" readonly :value="window.location.href"
+                           class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-600 dark:text-slate-300 select-all outline-none">
+                    <button type="button" @click="copyShareLink()"
+                            class="px-4 py-2 rounded-xl font-bold text-xs bg-blue-600 hover:bg-blue-500 text-white transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow">
+                        <span x-show="!shareCopied">Copy</span>
+                        <span x-show="shareCopied" x-cloak class="flex items-center gap-1 text-emerald-300">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            Copied!
+                        </span>
+                    </button>
+                </div>
+            </div>
+
         </div>
     </div>
 

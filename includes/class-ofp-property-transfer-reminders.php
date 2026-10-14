@@ -96,7 +96,7 @@ class OFP_Property_Transfer_Reminders {
 					$client->email,
 					$client->owner_name ?: 'there',
 					count( $items ) === 1 ? 'A payment is still waiting for your approval' : count( $items ) . ' payments are still waiting for your approval',
-					'<p>Hello ' . esc_html( $client->owner_name ?: 'there' ) . ',</p><p>These payments are waiting for you. Check your bank account, then approve or reject each one:</p><ul>' . $lines . '</ul><p><a href="' . esc_url( home_url( '/property-payments/' ) ) . '">Open Payment Records</a> (buyers) or <a href="' . esc_url( add_query_arg( 'tab', 'payments', home_url( '/tenants' ) ) ) . '">the Tenants page</a> (tenants).</p>'
+					'<p>Hello ' . esc_html( $client->owner_name ?: 'there' ) . ',</p><p>These payments are waiting for you. Check your bank account, then approve or reject each one:</p><ul>' . $lines . '</ul><p><a href="' . esc_url( home_url( '/property-payments/' ) ) . '">Open Transactions</a> (buyers) or <a href="' . esc_url( add_query_arg( 'tab', 'payments', home_url( '/tenants' ) ) ) . '">the Tenants page</a> (tenants).</p>'
 				);
 			}
 			if ( class_exists( 'OFP_Notification' ) ) {

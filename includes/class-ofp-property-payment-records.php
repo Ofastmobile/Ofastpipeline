@@ -26,8 +26,8 @@ class OFP_Property_Payment_Records {
 
         add_submenu_page(
             'edit.php?post_type=ofp_property',
-            'Property Payments',
-            'Payments',
+            'Property Transactions',
+            'Transactions',
             'manage_options',
             'ofp-property-payments',
             [ __CLASS__, 'render_admin' ]
@@ -58,8 +58,8 @@ class OFP_Property_Payment_Records {
         $rows = self::get_rows();
         ?>
         <div class="wrap">
-            <h1>Property Payments</h1>
-            <p>Every property payment record. Pending manual payments can be verified or rejected here.</p>
+            <h1>Property Transactions</h1>
+            <p>Every property transaction and payment record. Pending manual payments can be verified or rejected here.</p>
             <div style="overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;">
                 <table class="widefat striped" style="min-width:1500px;">
                     <thead><tr>
@@ -69,7 +69,7 @@ class OFP_Property_Payment_Records {
                     </tr></thead>
                     <tbody>
                     <?php if ( empty( $rows ) ) : ?>
-                        <tr><td colspan="15">No property payment records yet.</td></tr>
+                        <tr><td colspan="15">No property transactions recorded yet.</td></tr>
                     <?php else : foreach ( $rows as $row ) : ?>
                         <tr>
                             <td>#<?php echo esc_html( $row->id ); ?></td>
@@ -129,7 +129,7 @@ class OFP_Property_Payment_Records {
         ?>
         <!doctype html><html lang="en"><head>
             <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-            <title>Property Payments — <?php echo esc_html( OFP_Brand::name() ); ?></title>
+            <title>Transactions — <?php echo esc_html( OFP_Brand::name() ); ?></title>
             <?php wp_head(); ?>
             <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
             <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
@@ -141,7 +141,7 @@ class OFP_Property_Payment_Records {
                     <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
                         Sales &amp; Installments
                     </h1>
-                    <p style="color:var(--text-muted); margin:0; font-size:14px;">All payments for purchases belonging to your properties. Pending manual payments can be verified or rejected here.</p>
+                    <p style="color:var(--text-muted); margin:0; font-size:14px;">All transactions and payments for purchases belonging to your properties. Pending manual payments can be verified or rejected here.</p>
                 </div>
                 
                 <?php $ofp_sales_tab = 'payments'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
@@ -168,7 +168,7 @@ class OFP_Property_Payment_Records {
                             </thead>
                             <tbody>
                             <?php if ( empty( $rows ) ) : ?>
-                                <tr><td colspan="13" style="text-align:center; color:#64748b;">No property payment records yet.</td></tr>
+                                <tr><td colspan="13" style="text-align:center; color:#64748b;">No property transactions recorded yet.</td></tr>
                             <?php else : foreach ( $rows as $row ) : ?>
                                 <tr>
                                     <td style="color:var(--text-muted);">#<?php echo esc_html( $row->id ); ?></td>

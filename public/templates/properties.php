@@ -182,17 +182,70 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                 update_post_meta( $post_id, 'ofp_video_url', $video_url );
                 update_post_meta( $post_id, 'ofp_amenities', $amenities );
 
-                // Photo upload
-                if ( ! empty( $_FILES['photos']['name'][0] ) ) {
+                $total_package     = (float) ( $_POST['total_package'] ?? 0 );
+                $allow_installment = ! empty( $_POST['allow_installment'] ) ? '1' : '0';
+                $inspection_days   = sanitize_text_field( $_POST['inspection_days'] ?? '' );
+                $inspection_hours  = sanitize_text_field( $_POST['inspection_hours'] ?? '' );
+                $inspection_notice = sanitize_text_field( $_POST['inspection_notice'] ?? '' );
+
+                update_post_meta( $post_id, 'ofp_total_package', $total_package );
+                update_post_meta( $post_id, 'ofp_allow_installment', $allow_installment );
+                update_post_meta( $post_id, 'ofp_inspection_days', $inspection_days ?: 'Mondays - Saturdays' );
+                update_post_meta( $post_id, 'ofp_inspection_hours', $inspection_hours ?: '10:00 AM - 5:00 PM' );
+                update_post_meta( $post_id, 'ofp_inspection_notice', $inspection_notice );
+
+                // 1. Existing photos management (for edit)
+                if ( ! empty( $_POST['remove_gallery_ids'] ) && is_array( $_POST['remove_gallery_ids'] ) ) {
+                    $remove_ids = array_map( 'absint', $_POST['remove_gallery_ids'] );
+                    $existing_gallery = json_decode( get_post_meta( $post_id, 'ofp_gallery_ids', true ) ?: '[]', true );
+                    if ( is_array( $existing_gallery ) ) {
+                        $updated_gallery = array_values( array_diff( $existing_gallery, $remove_ids ) );
+                        update_post_meta( $post_id, 'ofp_gallery_ids', json_encode( $updated_gallery ) );
+                    }
+                }
+
+                if ( ! empty( $_POST['delete_main_thumbnail'] ) ) {
+                    delete_post_thumbnail( $post_id );
+                    $existing_gallery = json_decode( get_post_meta( $post_id, 'ofp_gallery_ids', true ) ?: '[]', true );
+                    if ( is_array( $existing_gallery ) && ! empty( $existing_gallery ) ) {
+                        $new_main = array_shift( $existing_gallery );
+                        set_post_thumbnail( $post_id, (int) $new_main );
+                        update_post_meta( $post_id, 'ofp_gallery_ids', json_encode( array_values( $existing_gallery ) ) );
+                    }
+                }
+
+                if ( ! empty( $_POST['set_main_attachment_id'] ) ) {
+                    $new_main_id = absint( $_POST['set_main_attachment_id'] );
+                    if ( $new_main_id > 0 ) {
+                        $current_thumb = get_post_thumbnail_id( $post_id );
+                        $existing_gallery = json_decode( get_post_meta( $post_id, 'ofp_gallery_ids', true ) ?: '[]', true ) ?: [];
+                        $existing_gallery = array_values( array_diff( $existing_gallery, [ $new_main_id ] ) );
+                        if ( $current_thumb && $current_thumb !== $new_main_id ) {
+                            $existing_gallery[] = (int) $current_thumb;
+                        }
+                        set_post_thumbnail( $post_id, $new_main_id );
+                        update_post_meta( $post_id, 'ofp_gallery_ids', json_encode( array_values( array_unique( $existing_gallery ) ) ) );
+                    }
+                }
+
+                // 2. Multi-photo upload
+                if ( ! empty( $_FILES['photos']['name'] ) && is_array( $_FILES['photos']['name'] ) ) {
                     require_once ABSPATH . 'wp-admin/includes/file.php';
                     require_once ABSPATH . 'wp-admin/includes/image.php';
                     require_once ABSPATH . 'wp-admin/includes/media.php';
 
                     $gallery_ids = json_decode( get_post_meta( $post_id, 'ofp_gallery_ids', true ) ?: '[]', true );
+                    if ( ! is_array( $gallery_ids ) ) {
+                        $gallery_ids = [];
+                    }
+
+                    $primary_index = isset( $_POST['primary_photo_index'] ) ? (int) $_POST['primary_photo_index'] : 0;
+                    $uploaded_items = []; // [ index => attachment_id ]
 
                     $file_count = count( $_FILES['photos']['name'] );
                     for ( $i = 0; $i < $file_count; $i++ ) {
                         if ( empty( $_FILES['photos']['name'][ $i ] ) ) continue;
+                        if ( isset( $_FILES['photos']['error'][ $i ] ) && $_FILES['photos']['error'][ $i ] !== UPLOAD_ERR_OK ) continue;
 
                         $single_file = [
                             'name'     => $_FILES['photos']['name'][ $i ],
@@ -205,16 +258,45 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                         $_FILES['ofp_single_photo'] = $single_file;
                         $attachment_id = media_handle_upload( 'ofp_single_photo', $post_id );
 
-                        if ( ! is_wp_error( $attachment_id ) ) {
-                            if ( ! has_post_thumbnail( $post_id ) ) {
-                                set_post_thumbnail( $post_id, $attachment_id );
-                            } else {
-                                $gallery_ids[] = $attachment_id;
-                            }
+                        if ( ! is_wp_error( $attachment_id ) && $attachment_id ) {
+                            $uploaded_items[ $i ] = (int) $attachment_id;
                         }
                     }
 
-                    update_post_meta( $post_id, 'ofp_gallery_ids', json_encode( array_values( array_unique( $gallery_ids ) ) ) );
+                    if ( ! empty( $uploaded_items ) ) {
+                        // If no main thumbnail exists yet, pick the primary photo or first uploaded photo
+                        if ( ! has_post_thumbnail( $post_id ) ) {
+                            $thumb_att_id = $uploaded_items[ $primary_index ] ?? reset( $uploaded_items );
+                            set_post_thumbnail( $post_id, $thumb_att_id );
+
+                            foreach ( $uploaded_items as $att_id ) {
+                                if ( $att_id !== $thumb_att_id ) {
+                                    $gallery_ids[] = $att_id;
+                                }
+                            }
+                        } else {
+                            // If user explicitly chose a newly uploaded photo to become main cover
+                            if ( isset( $_POST['replace_main_with_new_primary'] ) && $_POST['replace_main_with_new_primary'] === '1' && isset( $uploaded_items[ $primary_index ] ) ) {
+                                $old_thumb = get_post_thumbnail_id( $post_id );
+                                if ( $old_thumb ) {
+                                    $gallery_ids[] = (int) $old_thumb;
+                                }
+                                $new_main_id = $uploaded_items[ $primary_index ];
+                                set_post_thumbnail( $post_id, $new_main_id );
+                                foreach ( $uploaded_items as $att_id ) {
+                                    if ( $att_id !== $new_main_id ) {
+                                        $gallery_ids[] = $att_id;
+                                    }
+                                }
+                            } else {
+                                foreach ( $uploaded_items as $att_id ) {
+                                    $gallery_ids[] = $att_id;
+                                }
+                            }
+                        }
+
+                        update_post_meta( $post_id, 'ofp_gallery_ids', json_encode( array_values( array_unique( $gallery_ids ) ) ) );
+                    }
                 }
 
                 // Sync to custom table
@@ -703,6 +785,25 @@ $prop_tabs = [
                                     </select>
                                 </div>
 
+                                <div class="ofp-field" id="ofp-total-package-field">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Total Move-in Package (₦) <span class="ofp-hint" style="display:inline;margin:0;">(Rent Only)</span></label>
+                                    <div style="position:relative;">
+                                        <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:700; color:var(--text-muted); font-size:15px;">₦</span>
+                                        <input type="number" step="0.01" name="total_package" placeholder="e.g. Rent + Legal + Agency + Caution"
+                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_total_package', true ) : '' ); ?>"
+                                               style="width:100%; padding:11px 14px 11px 32px; border-radius:8px;">
+                                    </div>
+                                    <span class="ofp-hint" style="font-size:11.5px; margin-top:4px; display:block;">In Nigeria, rent is listed separately while total package includes agency, legal, and caution fees.</span>
+                                </div>
+
+                                <div class="ofp-field" style="margin-bottom:8px;">
+                                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600; color:var(--text-main);">
+                                        <input type="checkbox" name="allow_installment" value="1" <?php checked( $editing_post ? (string) get_post_meta( $editing_post->ID, 'ofp_allow_installment', true ) : '0', '1' ); ?>>
+                                        Allow Installment / Mortgage Financing Plan
+                                    </label>
+                                    <span class="ofp-hint" style="font-size:11.5px; margin-top:2px; display:block;">Enable to activate the Installment &amp; Mortgage Estimator on the single property page.</span>
+                                </div>
+
                                 <div class="ofp-field">
                                     <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Title Document</label>
                                     <?php $current_title_doc = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_title_document', true ) : ''; ?>
@@ -834,44 +935,70 @@ $prop_tabs = [
 
                                 <div class="ofp-field" style="grid-column:1/-1;">
                                     <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">
-                                        Upload Photos <span class="ofp-hint" style="display:inline;margin:0;">(The first photo automatically becomes the main featured thumbnail)</span>
+                                        Upload Photos <span class="ofp-hint" style="display:inline;margin:0;">(Select multiple images or drag &amp; drop. Choose your main cover photo)</span>
                                     </label>
-                                    <div class="ofp-file-dropzone" onclick="document.getElementById('ofp-photos-file-input').click();">
+
+                                    <!-- Dropzone -->
+                                    <div class="ofp-file-dropzone" id="ofp-photos-dropzone">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:36px;height:36px;color:var(--text-muted);margin:0 auto 10px;display:block;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" /></svg>
                                         <div style="font-size:14px; font-weight:600; color:var(--text-main); margin-bottom:4px;">Select photos or drag and drop</div>
-                                        <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">Supports PNG, JPG, WEBP. You can select multiple images at once.</div>
-                                        <button type="button" class="ofp-btn-browse-photos" style="pointer-events:none;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                            <span>Choose Photos</span>
-                                        </button>
-                                        <input type="file" id="ofp-photos-file-input" name="photos[]" accept="image/*" multiple style="display:none;" onchange="document.getElementById('ofp-selected-files-count').textContent = this.files.length + ' photo(s) selected';">
-                                        <div id="ofp-selected-files-count" style="margin-top:10px; font-size:13px; font-weight:600; color:var(--accent-blue);"></div>
+                                        <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">Supports PNG, JPG, JPEG, WEBP. You can select multiple images from your device.</div>
+                                        <div style="display:inline-flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center;">
+                                            <button type="button" class="ofp-btn-browse-photos" id="ofp-btn-browse">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                                <span>Choose Photos</span>
+                                            </button>
+                                            <button type="button" class="ofp-btn-browse-photos" id="ofp-btn-add-more" style="display:none; background:rgba(16,185,129,0.12); color:#10b981; border-color:rgba(16,185,129,0.3);">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                                <span>+ Add More Photos</span>
+                                            </button>
+                                        </div>
+                                        <input type="file" id="ofp-photos-file-input" name="photos[]" accept="image/png,image/jpeg,image/webp,image/jpg" multiple style="display:none;">
+                                        <input type="hidden" name="primary_photo_index" id="ofp-primary-photo-index" value="0">
+                                        <input type="hidden" name="replace_main_with_new_primary" id="ofp-replace-main" value="0">
+                                        <div id="ofp-uploader-status" style="margin-top:12px; font-size:13px; font-weight:600; color:var(--accent-blue);"></div>
                                     </div>
 
+                                    <!-- Live Previews Grid for Newly Selected Files -->
+                                    <div id="ofp-photo-previews" class="ofp-photo-previews-grid" style="display:none;"></div>
+
+                                    <!-- Existing Uploaded Photos (When Editing) -->
                                     <?php if ( $editing_post ) :
-                                        $post_thumb_url = get_the_post_thumbnail_url( $editing_post->ID, 'medium' );
+                                        $post_thumb_id  = get_post_thumbnail_id( $editing_post->ID );
+                                        $post_thumb_url = $post_thumb_id ? wp_get_attachment_image_url( $post_thumb_id, 'medium' ) : '';
                                         $gallery_meta   = get_post_meta( $editing_post->ID, 'ofp_gallery_ids', true );
                                         $gallery_ids    = json_decode( $gallery_meta ?: '[]', true ) ?: [];
                                     ?>
                                         <?php if ( $post_thumb_url || ! empty( $gallery_ids ) ) : ?>
-                                            <div style="margin-top:16px;">
-                                                <div style="font-size:12.5px; font-weight:600; color:var(--text-muted); margin-bottom:8px;">Currently Uploaded Photos:</div>
-                                                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                            <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border-color);" id="ofp-existing-gallery-section">
+                                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                                                    <div style="font-size:13px; font-weight:600; color:var(--text-main);">
+                                                        Currently Uploaded Listing Photos:
+                                                    </div>
+                                                    <span style="font-size:12px; color:var(--text-muted);">Click &times; to remove or "Set Main" to change cover</span>
+                                                </div>
+                                                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:14px;" id="ofp-existing-photos-grid">
                                                     <?php if ( $post_thumb_url ) : ?>
-                                                        <div style="position:relative; width:80px; height:60px; border-radius:8px; overflow:hidden; border:2px solid var(--accent-blue);">
-                                                            <img src="<?php echo esc_url( $post_thumb_url ); ?>" alt="" style="width:100%; height:100%; object-fit:cover;">
-                                                            <span style="position:absolute; bottom:2px; left:2px; font-size:9px; font-weight:700; background:rgba(0,0,0,0.7); color:#fff; padding:1px 4px; border-radius:4px;">Main</span>
+                                                        <div class="ofp-existing-photo-card is-main" id="ofp-existing-thumb-card">
+                                                            <img src="<?php echo esc_url( $post_thumb_url ); ?>" alt="Main Photo">
+                                                            <span class="ofp-photo-badge ofp-badge-main">Main Cover</span>
+                                                            <button type="button" class="ofp-photo-remove-btn" title="Delete main photo" onclick="ofpRemoveExistingThumb();">&times;</button>
                                                         </div>
                                                     <?php endif; ?>
                                                     <?php foreach ( $gallery_ids as $gid ) :
-                                                        $g_url = wp_get_attachment_image_url( (int) $gid, 'thumbnail' );
+                                                        $g_url = wp_get_attachment_image_url( (int) $gid, 'medium' ) ?: wp_get_attachment_image_url( (int) $gid, 'thumbnail' );
                                                         if ( ! $g_url ) continue;
                                                     ?>
-                                                        <div style="width:80px; height:60px; border-radius:8px; overflow:hidden; border:1px solid var(--border-color);">
-                                                            <img src="<?php echo esc_url( $g_url ); ?>" alt="" style="width:100%; height:100%; object-fit:cover;">
+                                                        <div class="ofp-existing-photo-card" id="ofp-existing-photo-<?php echo (int) $gid; ?>">
+                                                            <img src="<?php echo esc_url( $g_url ); ?>" alt="Gallery Photo">
+                                                            <span class="ofp-photo-badge ofp-badge-set-main" onclick="ofpSetExistingMain(<?php echo (int) $gid; ?>);" title="Make this the cover photo">Set Main</span>
+                                                            <button type="button" class="ofp-photo-remove-btn" title="Remove photo" onclick="ofpRemoveExistingGallery(<?php echo (int) $gid; ?>);">&times;</button>
                                                         </div>
                                                     <?php endforeach; ?>
                                                 </div>
+                                                <div id="ofp-removed-photos-inputs"></div>
+                                                <input type="hidden" name="delete_main_thumbnail" id="ofp-delete-main-input" value="0">
+                                                <input type="hidden" name="set_main_attachment_id" id="ofp-set-main-input" value="0">
                                             </div>
                                         <?php endif; ?>
                                     <?php endif; ?>
@@ -919,14 +1046,53 @@ $prop_tabs = [
                             </div>
                         </div>
 
-                        <!-- 6. Status & Publishing Settings -->
+                        <!-- 6. Inspection & Viewing Schedule -->
+                        <div class="ofp-form-card-section">
+                            <div class="ofp-form-section-header">
+                                <div class="ofp-form-section-icon" style="background:rgba(16,185,129,0.1); color:#10b981;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="ofp-form-section-title">6. Inspection &amp; Viewing Schedule</h4>
+                                    <p class="ofp-form-section-desc">Set available showing days, viewing hours, and estate security gate clearance notices.</p>
+                                </div>
+                            </div>
+
+                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+                                <div class="ofp-field">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Available Inspection Days</label>
+                                    <input type="text" name="inspection_days" placeholder="e.g. Mondays - Saturdays, or Weekends Only"
+                                           value="<?php echo esc_attr( $editing_post ? ( get_post_meta( $editing_post->ID, 'ofp_inspection_days', true ) ?: 'Mondays - Saturdays' ) : 'Mondays - Saturdays' ); ?>"
+                                           style="width:100%; padding:11px 14px; border-radius:8px;">
+                                    <span class="ofp-hint" style="font-size:11.5px; margin-top:4px; display:block;">Days you are available to host physical tours or WhatsApp video walkthroughs.</span>
+                                </div>
+
+                                <div class="ofp-field">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Available Inspection Hours</label>
+                                    <input type="text" name="inspection_hours" placeholder="e.g. 10:00 AM - 5:00 PM"
+                                           value="<?php echo esc_attr( $editing_post ? ( get_post_meta( $editing_post->ID, 'ofp_inspection_hours', true ) ?: '10:00 AM - 5:00 PM' ) : '10:00 AM - 5:00 PM' ); ?>"
+                                           style="width:100%; padding:11px 14px; border-radius:8px;">
+                                    <span class="ofp-hint" style="font-size:11.5px; margin-top:4px; display:block;">Daily inspection time window.</span>
+                                </div>
+
+                                <div class="ofp-field" style="grid-column:1/-1;">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Estate Gate Access &amp; Notice Protocol</label>
+                                    <input type="text" name="inspection_notice" placeholder="e.g. 24 hours advance notice required for estate security clearance code."
+                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_inspection_notice', true ) : '' ); ?>"
+                                           style="width:100%; padding:11px 14px; border-radius:8px;">
+                                    <span class="ofp-hint" style="font-size:11.5px; margin-top:4px; display:block;">Displayed on single property booking card so prospective buyers/tenants know entry requirements in advance.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 7. Status & Publishing Settings -->
                         <div class="ofp-form-card-section">
                             <div class="ofp-form-section-header">
                                 <div class="ofp-form-section-icon" style="background:rgba(59,130,246,0.1); color:var(--accent-blue);">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" /></svg>
                                 </div>
                                 <div>
-                                    <h4 class="ofp-form-section-title">6. Status &amp; Visibility</h4>
+                                    <h4 class="ofp-form-section-title">7. Status &amp; Visibility</h4>
                                     <p class="ofp-form-section-desc">Manage public visibility, availability status, and featured promotion.</p>
                                 </div>
                             </div>
@@ -1017,6 +1183,238 @@ $prop_tabs = [
     form.addEventListener('change', sync);
     sync();
 })();
+
+// ── Multi-Photo Uploader Logic ──
+(function(){
+    var fileInput = document.getElementById('ofp-photos-file-input');
+    var dropzone = document.getElementById('ofp-photos-dropzone');
+    var browseBtn = document.getElementById('ofp-btn-browse');
+    var addMoreBtn = document.getElementById('ofp-btn-add-more');
+    var previewContainer = document.getElementById('ofp-photo-previews');
+    var statusText = document.getElementById('ofp-uploader-status');
+    var primaryIndexInput = document.getElementById('ofp-primary-photo-index');
+    var replaceMainInput = document.getElementById('ofp-replace-main');
+
+    if (!fileInput || !dropzone) return;
+
+    var selectedFiles = []; // Accumulated Array of File objects
+    var primaryIndex = 0;
+
+    function syncInputFiles() {
+        if (window.DataTransfer) {
+            var dt = new DataTransfer();
+            selectedFiles.forEach(function(f) {
+                dt.items.add(f);
+            });
+            fileInput.files = dt.files;
+        }
+        if (primaryIndexInput) {
+            primaryIndexInput.value = primaryIndex;
+        }
+    }
+
+    function renderPreviews() {
+        previewContainer.innerHTML = '';
+        if (selectedFiles.length === 0) {
+            previewContainer.style.display = 'none';
+            if (statusText) statusText.innerHTML = '';
+            if (addMoreBtn) addMoreBtn.style.display = 'none';
+            syncInputFiles();
+            return;
+        }
+
+        previewContainer.style.display = 'grid';
+        if (addMoreBtn) addMoreBtn.style.display = 'inline-flex';
+
+        if (primaryIndex >= selectedFiles.length) {
+            primaryIndex = 0;
+        }
+
+        if (statusText) {
+            statusText.innerHTML = '&#10003; <strong>' + selectedFiles.length + ' photo(s) selected</strong> &bull; Photo #' + (primaryIndex + 1) + ' will be the main cover.';
+        }
+
+        selectedFiles.forEach(function(file, index) {
+            var card = document.createElement('div');
+            card.className = 'ofp-photo-preview-card' + (index === primaryIndex ? ' is-primary' : '');
+            card.setAttribute('data-index', index);
+
+            var img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.alt = file.name;
+
+            // Remove button
+            var removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'ofp-photo-remove-btn';
+            removeBtn.title = 'Remove photo';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                URL.revokeObjectURL(img.src);
+                selectedFiles.splice(index, 1);
+                if (primaryIndex >= selectedFiles.length) {
+                    primaryIndex = Math.max(0, selectedFiles.length - 1);
+                }
+                syncInputFiles();
+                renderPreviews();
+            };
+
+            // Badge / Make Primary
+            var badge = document.createElement('div');
+            badge.className = 'ofp-photo-badge ' + (index === primaryIndex ? 'ofp-badge-main' : 'ofp-badge-set-main');
+            badge.textContent = index === primaryIndex ? 'Main Cover' : 'Set as Main';
+            badge.title = index === primaryIndex ? 'Current cover photo' : 'Click to make this the cover photo';
+            badge.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                primaryIndex = index;
+                if (replaceMainInput) replaceMainInput.value = '1';
+                syncInputFiles();
+                renderPreviews();
+            };
+
+            // Info bar
+            var info = document.createElement('div');
+            info.className = 'ofp-photo-info';
+            var sizeKb = Math.round(file.size / 1024);
+            var sizeStr = sizeKb > 1024 ? (sizeKb / 1024).toFixed(1) + ' MB' : sizeKb + ' KB';
+            info.textContent = file.name + ' (' + sizeStr + ')';
+            info.title = file.name;
+
+            card.appendChild(img);
+            card.appendChild(removeBtn);
+            card.appendChild(badge);
+            card.appendChild(info);
+            previewContainer.appendChild(card);
+        });
+
+        syncInputFiles();
+    }
+
+    function addFiles(files) {
+        var validExts = /\.(jpe?g|png|webp|gif)$/i;
+        var addedCount = 0;
+        for (var i = 0; i < files.length; i++) {
+            var f = files[i];
+            if (f.type && !f.type.startsWith('image/') && !validExts.test(f.name)) {
+                continue;
+            }
+            var isDuplicate = selectedFiles.some(function(sf) {
+                return sf.name === f.name && sf.size === f.size;
+            });
+            if (!isDuplicate) {
+                selectedFiles.push(f);
+                addedCount++;
+            }
+        }
+        if (addedCount > 0) {
+            renderPreviews();
+        }
+    }
+
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files.length) {
+            addFiles(this.files);
+        }
+    });
+
+    dropzone.addEventListener('click', function(e) {
+        if (e.target.closest('button') || e.target.closest('.ofp-photo-preview-card')) {
+            return;
+        }
+        fileInput.click();
+    });
+
+    if (browseBtn) {
+        browseBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            fileInput.click();
+        });
+    }
+
+    if (addMoreBtn) {
+        addMoreBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            fileInput.click();
+        });
+    }
+
+    // Drag and Drop
+    ['dragenter', 'dragover'].forEach(function(evtName) {
+        dropzone.addEventListener(evtName, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.add('ofp-dropzone-dragover');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(function(evtName) {
+        dropzone.addEventListener(evtName, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('ofp-dropzone-dragover');
+        });
+    });
+
+    dropzone.addEventListener('drop', function(e) {
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+            addFiles(e.dataTransfer.files);
+        }
+    });
+})();
+
+// Existing photos management helpers
+function ofpRemoveExistingGallery(id) {
+    if (!confirm('Remove this photo from the listing gallery?')) return;
+    var card = document.getElementById('ofp-existing-photo-' + id);
+    if (card) card.remove();
+    var container = document.getElementById('ofp-removed-photos-inputs');
+    if (container) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'remove_gallery_ids[]';
+        inp.value = id;
+        container.appendChild(inp);
+    }
+}
+
+function ofpRemoveExistingThumb() {
+    if (!confirm('Remove this main cover photo? A gallery photo will become the new cover.')) return;
+    var card = document.getElementById('ofp-existing-thumb-card');
+    if (card) card.remove();
+    var inp = document.getElementById('ofp-delete-main-input');
+    if (inp) inp.value = '1';
+}
+
+function ofpSetExistingMain(id) {
+    var inp = document.getElementById('ofp-set-main-input');
+    if (inp) inp.value = id;
+    var grid = document.getElementById('ofp-existing-photos-grid');
+    if (grid) {
+        var allCards = grid.querySelectorAll('.ofp-existing-photo-card');
+        allCards.forEach(function(c) {
+            c.classList.remove('is-main');
+            var b = c.querySelector('.ofp-photo-badge');
+            if (b) {
+                b.className = 'ofp-photo-badge ofp-badge-set-main';
+                b.textContent = 'Set Main';
+            }
+        });
+        var target = document.getElementById('ofp-existing-photo-' + id);
+        if (target) {
+            target.classList.add('is-main');
+            var tb = target.querySelector('.ofp-photo-badge');
+            if (tb) {
+                tb.className = 'ofp-photo-badge ofp-badge-main';
+                tb.textContent = 'Main Cover (On Save)';
+            }
+        }
+    }
+}
 </script>
 <?php wp_footer(); ?>
 </body>

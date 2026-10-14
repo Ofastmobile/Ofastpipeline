@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /pricing
  * Client Plans & Pricing page.
@@ -59,7 +59,7 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
                     'CRM & Automation (Basic)',
                     'Leads & Buyers Management',
                     ($caps['free'] ?? 1) . ' Property Listing',
-                    'Payment records & Customer portal',
+                    'Transactions & Customer portal',
                     '0 Team members'
                 ]
             ],
@@ -71,7 +71,7 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
                     'CRM & Automation (Standard)',
                     'Leads & Buyers Management',
                     ($caps['silver'] ?? 3) . ' Property Listings',
-                    'Payment records & Customer portal',
+                    'Transactions & Customer portal',
                     'Editable email templates',
                     '2 Team members',
                     'Standard Reports'
@@ -85,7 +85,7 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
                     'CRM & Automation (Advanced)',
                     'Leads & Buyers Management',
                     ($caps['gold'] ?? 10) . ' Property Listings',
-                    'Payment records & Customer portal',
+                    'Transactions & Customer portal',
                     'Editable email templates',
                     '3 Team members',
                     'Installment payments & ROI/Investment',

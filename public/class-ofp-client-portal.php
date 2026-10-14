@@ -32,6 +32,7 @@ class OFP_Client_Portal {
         'account' => 'account.php',
         'my-listing' => 'my-listing.php',
         'properties' => 'properties.php',
+        'inspections' => 'inspections.php',
         'listing-billing' => 'credits.php',
         'notifications' => 'notifications.php',
         'notification-settings' => 'notification-settings.php',

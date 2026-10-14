@@ -559,7 +559,7 @@ if ( $can_rent ) {
                     <span class="ofp-tab-badge"><?php echo count( $rent_options ); ?></span>
                 </a>
                 <a href="<?php echo esc_url( add_query_arg( 'tab', 'payments', home_url( '/tenants' ) ) ); ?>" class="ofp-tab-btn <?php echo $active_tab === 'payments' ? 'active' : ''; ?>">
-                    Payment Records
+                    Rent Transactions
                     <span class="ofp-tab-badge"><?php echo count( $payments ); ?></span>
                 </a>
                 <a href="<?php echo esc_url( add_query_arg( 'tab', 'revisions', home_url( '/tenants' ) ) ); ?>" class="ofp-tab-btn <?php echo $active_tab === 'revisions' ? 'active' : ''; ?>">
@@ -848,15 +848,15 @@ if ( $can_rent ) {
                 </div>
 
             <!-- ══════════════════════════════════════════════════════════════ -->
-            <!-- TAB 4: PAYMENT RECORDS                                         -->
+            <!-- TAB 4: RENT TRANSACTIONS                                       -->
             <!-- ══════════════════════════════════════════════════════════════ -->
             <?php elseif ( $active_tab === 'payments' ) : ?>
                 <div class="ofp-card">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
-                        <h3 style="margin:0; font-size:16px; font-weight:600; color:var(--text-main);">Rent Payment Records</h3>
+                        <h3 style="margin:0; font-size:16px; font-weight:600; color:var(--text-main);">Rent Transactions</h3>
                         <div>
                             <div class="ofp-search-box">
-                                <input type="text" id="ofp-pay-search" class="ofp-input" placeholder="Search payment..." onkeyup="ofpFilterTable('ofp-pay-search', 'ofp-payments-table')">
+                                <input type="text" id="ofp-pay-search" class="ofp-input" placeholder="Search transaction..." onkeyup="ofpFilterTable('ofp-pay-search', 'ofp-payments-table')">
                                 <svg width="15" height="15" fill="none" stroke="var(--text-muted)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                             </div>
                         </div>
@@ -864,7 +864,7 @@ if ( $can_rent ) {
 
                     <?php if ( empty( $payments ) ) : ?>
                         <div style="text-align:center; padding:48px 16px; color:var(--text-muted);">
-                            <p style="font-size:15px; font-weight:500; color:var(--text-main); margin-bottom:4px;">No rent payments logged yet</p>
+                            <p style="font-size:15px; font-weight:500; color:var(--text-main); margin-bottom:4px;">No rent transactions logged yet</p>
                             <p style="font-size:13px;">Payments from Paystack Virtual Accounts, checkout links, and cash receipts appear here.</p>
                         </div>
                     <?php else : ?>

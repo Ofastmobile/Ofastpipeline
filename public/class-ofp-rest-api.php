@@ -159,9 +159,21 @@ class OFP_REST_API {
         $name        = sanitize_text_field( (string) $request->get_param( 'name' ) );
         $email       = sanitize_email( (string) $request->get_param( 'email' ) );
         $property_id = (int) $request->get_param( 'property_id' ) ?: null;
-        $source      = $request->get_header( 'referer' ) ?: 'direct';
+        $message     = sanitize_textarea_field( (string) $request->get_param( 'message' ) );
+        $source      = $request->get_header( 'referer' ) ?: 'property_detail';
 
-        if ( ! $client_id ) {
+        // Support platform-owned listings (client_id 0)
+        $is_platform_property = false;
+        if ( ! $client_id && $property_id ) {
+            $prop_owner = (int) get_post_meta( $property_id, 'ofp_client_id', true );
+            if ( $prop_owner === 0 ) {
+                $is_platform_property = true;
+            } else {
+                $client_id = $prop_owner;
+            }
+        }
+
+        if ( ! $client_id && ! $is_platform_property ) {
             return new WP_REST_Response(
                 [ 'success' => false, 'message' => 'Invalid request.' ],
                 200
@@ -177,29 +189,40 @@ class OFP_REST_API {
 
         // ── 5. Validate client ────────────────────────────────────────────────
         global $wpdb;
-        $client = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT id, status FROM {$wpdb->prefix}ofp_clients
-                 WHERE id = %d AND status = 'active'
-                 LIMIT 1",
-                $client_id
-            )
-        );
-
-        if ( ! $client ) {
-            // Client not found or not active — return generic success to avoid
-            // exposing client status information to the public.
-            return new WP_REST_Response(
-                [ 'success' => true, 'message' => 'Thank you! We will be in touch shortly.' ],
-                200
+        if ( ! $is_platform_property && $client_id > 0 ) {
+            $client = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT id, status FROM {$wpdb->prefix}ofp_clients
+                     WHERE id = %d AND status = 'active'
+                     LIMIT 1",
+                    $client_id
+                )
             );
+
+            if ( ! $client ) {
+                // Client not found or not active — return generic success to avoid
+                // exposing client status information to the public.
+                return new WP_REST_Response(
+                    [ 'success' => true, 'message' => 'Thank you! We will be in touch shortly.' ],
+                    200
+                );
+            }
         }
 
         // ── 6. Duplicate check ────────────────────────────────────────────────
         // Same phone number for the same client within 24 hours = duplicate.
-        // We still return success so the user isn't confused, but we don't
-        // create a new lead or re-trigger the pipeline.
-        if ( OFP_Lead::is_duplicate( $client_id, $phone, 24 ) ) {
+        if ( $client_id > 0 && OFP_Lead::is_duplicate( $client_id, $phone, 24 ) ) {
+            // Still record inquiry if this is for a property
+            if ( $property_id ) {
+                $existing_lead_id = (int) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT id FROM {$wpdb->prefix}ofp_leads WHERE client_id = %d AND phone = %s ORDER BY id DESC LIMIT 1",
+                    $client_id,
+                    $phone
+                ) );
+                if ( $existing_lead_id ) {
+                    $this->record_property_inquiry( $existing_lead_id, $property_id, $client_id, $request );
+                }
+            }
             return new WP_REST_Response(
                 [ 'success' => true, 'message' => 'Thank you! We already have your details and will be in touch.' ],
                 200
@@ -213,7 +236,8 @@ class OFP_REST_API {
             $phone,
             $email ?: null,
             $source,
-            $property_id
+            $property_id,
+            $message ?: null
         );
 
         if ( ! $lead_id ) {
@@ -224,9 +248,10 @@ class OFP_REST_API {
             );
         }
 
-        // This is where the automation starts.
-        // populate_triggers() schedules the instant SMS + all follow-ups.
-        OFP_Queue::populate_triggers( $client_id, $lead_id );
+        // Automation queue only runs for clients with CRM configs
+        if ( $client_id > 0 ) {
+            OFP_Queue::populate_triggers( $client_id, $lead_id );
+        }
 
         // ── 8. Handle property inquiry extras (v2.1) ──────────────────────────
         if ( $property_id ) {

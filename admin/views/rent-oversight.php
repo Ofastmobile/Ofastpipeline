@@ -209,7 +209,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 ?>
 
 <h2>Rent Management Oversight</h2>
-<p>Cross-client view of all tenants, leases, and rent payments on the platform.</p>
+<p>Cross-client view of all tenants, leases, and rent transactions on the platform.</p>
 
 <?php if ( $action_msg ) : ?>
     <div class="notice notice-success is-dismissible" style="margin: 12px 0;"><p><strong><?php echo esc_html( $action_msg ); ?></strong></p></div>
@@ -254,7 +254,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 <!-- Tabs -->
 <h2 class="nav-tab-wrapper">
     <?php
-    $tabs = [ 'leases' => 'Leases (' . $lease_total . ')', 'tenants' => 'Tenants (' . $tenant_total . ')', 'payments' => 'Payments (' . $pay_total . ')' ];
+    $tabs = [ 'leases' => 'Leases (' . $lease_total . ')', 'tenants' => 'Tenants (' . $tenant_total . ')', 'payments' => 'Transactions (' . $pay_total . ')' ];
     foreach ( $tabs as $slug => $label ) :
         $url = add_query_arg( [ 'tab' => $slug, 'paged' => 1, 'client_id' => $filter_client ?: '' ] );
     ?>
@@ -358,7 +358,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
 <?php elseif ( $active_tab === 'payments' ) : ?>
     <?php if ( empty( $payments ) ) : ?>
-        <p>No rent payments found.</p>
+        <p>No rent transactions found.</p>
     <?php else : ?>
         <div style="overflow-x:auto;">
             <table class="widefat ofp-table" style="min-width:1100px;">

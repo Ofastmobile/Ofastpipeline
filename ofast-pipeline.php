@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION', '2.1.6' );
+define( 'OFP_VERSION', '2.2.0' );
 define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
@@ -69,6 +69,7 @@ require_once OFP_PATH . 'includes/class-ofp-property-tenant-portal.php';
 require_once OFP_PATH . 'includes/class-ofp-property-receipt-generator.php';
 require_once OFP_PATH . 'includes/class-ofp-property-receipt-viewer.php';
 require_once OFP_PATH . 'includes/class-ofp-property-lease-reminders.php';
+require_once OFP_PATH . 'includes/class-ofp-property-inquiry.php';
 
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-paystack.php';
@@ -135,6 +136,7 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Property_My_Payments::init();
     OFP_Property_Transfer_Reminders::init();
     OFP_Property_Receipt_Generator::init();
+    OFP_Property_Inquiry::init();
 } );
 
 // ── Frontend Admin Bar Control ─────────────────────────────────────────────

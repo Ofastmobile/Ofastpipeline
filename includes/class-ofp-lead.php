@@ -37,7 +37,8 @@ class OFP_Lead {
         string $phone,
         ?string $email      = null,
         ?string $source     = null,
-        ?int $property_id   = null
+        ?int $property_id   = null,
+        ?string $notes      = null
     ): int {
         global $wpdb;
 
@@ -51,6 +52,7 @@ class OFP_Lead {
                 'email'       => $email ? sanitize_email( $email ) : null,
                 'source'      => $source ? sanitize_text_field( $source ) : 'direct',
                 'ip_address'  => OFP_Security::get_client_ip(),
+                'notes'       => $notes ? sanitize_textarea_field( $notes ) : null,
                 'status'      => 'new',
                 'created_at'  => current_time( 'mysql' ),
             ]
