@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 OFP_Auth::require_client_login();
@@ -27,18 +27,25 @@ $payments = $wpdb->get_results( $wpdb->prepare(
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?php echo esc_html( OFP_Brand::title( 'Property Payments', $client ?? null ) ); ?></title>
 <?php wp_head(); ?>
+<link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
+<script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
 </head>
 <body class="ofp-portal-body">
-<?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
+<?php 
+$ofp_banner_btn = [ 'label' => 'Add Purchase', 'url' => home_url( '/property-purchases' ) ];
+include OFP_PATH . 'public/templates/partials/nav.php'; 
+?>
 <div class="ofp-container">
     <div style="padding-bottom: 60px;">
         <div style="margin: 0 0 24px;">
-            <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
-                Property Payments
+            <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
+                Sales &amp; Installments
             </h1>
-            <p style="color:#64748b; margin:0; font-size:14px;">Payment records for purchases belonging to your properties. This page is read-only; payment submission and verification are handled separately.</p>
+            <p style="color:var(--text-muted); margin:0; font-size:14px;">Payment records for purchases belonging to your properties and installment schedules.</p>
         </div>
         
+        <?php $ofp_sales_tab = 'payments'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
+
         <div class="ofp-card">
             <div class="ofp-table-responsive">
                 <table class="ofp-table" style="width:100%;">
@@ -69,7 +76,7 @@ $payments = $wpdb->get_results( $wpdb->prepare(
                             </td>
                             <td style="color:var(--text-dark);"><?php echo esc_html( $payment->property_title ); ?></td>
                             <td style="color:var(--text-dark);">#<?php echo esc_html( $payment->purchase_id ); ?></td>
-                            <td><strong style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $payment->amount, 2 ) ); ?></strong></td>
+                            <td><strong style="color:var(--text-main);">₦<?php echo esc_html( number_format( (float) $payment->amount, 2 ) ); ?></strong></td>
                             <td style="color:var(--text-dark);"><?php echo esc_html( ucfirst( str_replace( '_', ' ', $payment->payment_method ) ) ); ?></td>
                             <td style="color:var(--text-muted); font-size:13px;"><?php echo esc_html( $payment->gateway ?: '—' ); ?></td>
                             <td>
@@ -101,6 +108,9 @@ $payments = $wpdb->get_results( $wpdb->prepare(
         </div>
     </div>
 </div>
+</div> <!-- .ofp-content-area -->
+</main>
+</div> <!-- .ofp-shell -->
 <?php wp_footer(); ?>
 </body>
 </html>

@@ -1754,7 +1754,7 @@
                     <div>
                         <div
                             class="text-[32px] font-extrabold text-white mb-0.5 leading-none font-system tracking-tight">
-                            â‚¦120B+</div>
+                            &#8358;120B+</div>
                         <div class="text-[13px] text-white/90 font-medium">Verified Transactions</div>
                     </div>
                 </div>
@@ -1820,43 +1820,47 @@
     </section>
 
     <!-- 11. FAQ -->
-    <section class="max-w-3xl mx-auto px-4 sm:px-6 mb-24 md:mb-28" x-data="{ activeAccordion: 1 }">
-        <div class="flex justify-center mb-10">
+    <section class="max-w-3xl mx-auto px-4 sm:px-6 mb-24 md:mb-28" x-data="{ activeAccordion: null }">
+        <div class="text-center mb-10">
             <div
-                class="inline-flex items-center gap-3 px-6 py-3 rounded-full border border-white/10 bg-slate-900/50 backdrop-blur-sm text-blue-500 shadow-sm">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-200/80 dark:border-blue-500/20 bg-blue-50/90 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shadow-sm mb-3.5">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
                     </path>
                 </svg>
-                <span class="text-[15px] font-system font-extrabold tracking-wider uppercase">FREQUENTLY ASKED
-                    QUESTIONS</span>
+                <span class="text-[12px] font-system font-extrabold tracking-wider uppercase">Frequently Asked Questions</span>
             </div>
+            <h2 class="text-2xl sm:text-3xl font-black font-system text-slate-950 dark:text-white tracking-tight mb-2">
+                Everything You Need to Know
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                Clear answers regarding property inspections, title diligence, escrow security, and diaspora purchases.
+            </p>
         </div>
         <div class="space-y-4">
             <!-- Item 1 -->
-            <div class="border rounded-2xl bg-slate-900/40 overflow-hidden transition-all duration-300"
-                :class="activeAccordion === 1 ? 'border-blue-600/60 shadow-lg shadow-blue-950/20' : 'border-white/10 hover:border-white/20'">
+            <div class="rounded-2xl overflow-hidden transition-all duration-300 border bg-white dark:bg-slate-900/60"
+                :class="activeAccordion === 1 ? 'border-blue-600 dark:border-blue-500 shadow-lg shadow-blue-600/10 dark:shadow-blue-950/40 ring-1 ring-blue-600/20 dark:ring-blue-500/30' : 'border-slate-200/90 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'">
                 <button @click="activeAccordion = activeAccordion === 1 ? null : 1"
-                    class="w-full px-6 py-5 text-left flex justify-between items-center font-bold focus:outline-none transition-colors duration-300"
-                    :class="activeAccordion === 1 ? 'text-blue-400' : 'text-white'">
-                    <span class="text-[17px] font-system tracking-tight">How do physical and virtual inspection tours
-                        work?</span>
-                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-white shrink-0 transition-all duration-300"
-                        :class="activeAccordion === 1 ? 'bg-blue-600 rotate-180' : 'bg-white/10 border border-white/10'">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    class="w-full px-6 py-5 text-left flex justify-between items-center font-bold focus:outline-none transition-colors duration-200 cursor-pointer"
+                    :class="activeAccordion === 1 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400'">
+                    <span class="text-[16px] sm:text-[17px] font-system tracking-tight">How do physical and virtual inspection tours work?</span>
+                    <div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-300"
+                        :class="activeAccordion === 1 ? 'bg-blue-600 text-white rotate-180 shadow-sm shadow-blue-600/30' : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </div>
                 </button>
                 <div x-show="activeAccordion === 1" x-collapse
-                    class="px-6 pb-6 text-[15px] leading-relaxed text-slate-300 border-t border-white/5 pt-4">
+                    class="px-6 pb-6 text-[14.5px] leading-relaxed text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800/80 pt-4">
                     Simply click "Schedule Inspection Tour" on any property page. You can choose between an in-person
                     guided walk-through with a certified broker or an interactive live video call tour. Our concierge
                     confirms your date, coordinates building access, and sends you a calendar invite within 15 minutes.
                     <div
-                        class="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-900/50 bg-blue-950/40 text-blue-300/80 text-[10px] font-semibold font-system tracking-wide">
-                        <svg class="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor"
+                        class="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-200/80 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[11px] font-semibold font-system tracking-wide">
+                        <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -1867,93 +1871,92 @@
             </div>
 
             <!-- Item 2 -->
-            <div class="border rounded-2xl bg-slate-900/40 overflow-hidden transition-all duration-300"
-                :class="activeAccordion === 2 ? 'border-blue-600/60 shadow-lg shadow-blue-950/20' : 'border-white/10 hover:border-white/20'">
+            <div class="rounded-2xl overflow-hidden transition-all duration-300 border bg-white dark:bg-slate-900/60"
+                :class="activeAccordion === 2 ? 'border-blue-600 dark:border-blue-500 shadow-lg shadow-blue-600/10 dark:shadow-blue-950/40 ring-1 ring-blue-600/20 dark:ring-blue-500/30' : 'border-slate-200/90 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'">
                 <button @click="activeAccordion = activeAccordion === 2 ? null : 2"
-                    class="w-full px-6 py-5 text-left flex justify-between items-center font-bold focus:outline-none transition-colors duration-300"
-                    :class="activeAccordion === 2 ? 'text-blue-400' : 'text-white'">
-                    <span class="text-[17px] font-system tracking-tight">How is the property verification process
-                        handled?</span>
-                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-white shrink-0 transition-all duration-300"
-                        :class="activeAccordion === 2 ? 'bg-blue-600 rotate-180' : 'bg-white/10 border border-white/10'">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    class="w-full px-6 py-5 text-left flex justify-between items-center font-bold focus:outline-none transition-colors duration-200 cursor-pointer"
+                    :class="activeAccordion === 2 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400'">
+                    <span class="text-[16px] sm:text-[17px] font-system tracking-tight">How is the property verification process handled?</span>
+                    <div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-300"
+                        :class="activeAccordion === 2 ? 'bg-blue-600 text-white rotate-180 shadow-sm shadow-blue-600/30' : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </div>
                 </button>
                 <div x-show="activeAccordion === 2" x-collapse
-                    class="px-6 pb-6 text-[15px] leading-relaxed text-slate-300 border-t border-white/5 pt-4">
+                    class="px-6 pb-6 text-[14.5px] leading-relaxed text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800/80 pt-4">
                     We strictly vet every listing. Our internal legal team conducts searches at the state Lands Bureau
                     to confirm Governor's Consent, C of O, and ensures there are no encumbrances before assigning the
                     "Verified Title" badge.
                     <div
-                        class="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-900/50 bg-blue-950/40 text-blue-300/80 text-[10px] font-semibold font-system tracking-wide">
-                        <svg class="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor"
+                        class="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-200/80 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold font-system tracking-wide">
+                        <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        Flexible 7 days a week inspection availability.
+                        100% legal title diligence and survey verification.
                     </div>
                 </div>
             </div>
 
             <!-- Item 3 -->
-            <div class="border rounded-2xl bg-slate-900/40 overflow-hidden transition-all duration-300"
-                :class="activeAccordion === 3 ? 'border-blue-600/60 shadow-lg shadow-blue-950/20' : 'border-white/10 hover:border-white/20'">
+            <div class="rounded-2xl overflow-hidden transition-all duration-300 border bg-white dark:bg-slate-900/60"
+                :class="activeAccordion === 3 ? 'border-blue-600 dark:border-blue-500 shadow-lg shadow-blue-600/10 dark:shadow-blue-950/40 ring-1 ring-blue-600/20 dark:ring-blue-500/30' : 'border-slate-200/90 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'">
                 <button @click="activeAccordion = activeAccordion === 3 ? null : 3"
-                    class="w-full px-6 py-5 text-left flex justify-between items-center font-bold focus:outline-none transition-colors duration-300"
-                    :class="activeAccordion === 3 ? 'text-blue-400' : 'text-white'">
-                    <span class="text-[17px] font-system tracking-tight">Can diaspora buyers purchase properties?</span>
-                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-white shrink-0 transition-all duration-300"
-                        :class="activeAccordion === 3 ? 'bg-blue-600 rotate-180' : 'bg-white/10 border border-white/10'">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    class="w-full px-6 py-5 text-left flex justify-between items-center font-bold focus:outline-none transition-colors duration-200 cursor-pointer"
+                    :class="activeAccordion === 3 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400'">
+                    <span class="text-[16px] sm:text-[17px] font-system tracking-tight">Can diaspora buyers purchase properties?</span>
+                    <div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-300"
+                        :class="activeAccordion === 3 ? 'bg-blue-600 text-white rotate-180 shadow-sm shadow-blue-600/30' : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </div>
                 </button>
                 <div x-show="activeAccordion === 3" x-collapse
-                    class="px-6 pb-6 text-[15px] leading-relaxed text-slate-300 border-t border-white/5 pt-4">
+                    class="px-6 pb-6 text-[14.5px] leading-relaxed text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800/80 pt-4">
                     Yes! Over 40% of our buyers are based in the US, UK, and Canada. We facilitate virtual inspections
                     and use milestone escrow payments so your funds are safe until conditions are met.
                     <div
-                        class="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-900/50 bg-blue-950/40 text-blue-300/80 text-[10px] font-semibold font-system tracking-wide">
-                        <svg class="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor"
+                        class="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-purple-200/80 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 text-[11px] font-semibold font-system tracking-wide">
+                        <svg class="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        Flexible 7 days a week inspection availability.
+                        Dedicated diaspora concierge &amp; remote video notary.
                     </div>
                 </div>
             </div>
 
             <!-- Item 4 -->
-            <div class="border rounded-2xl bg-slate-900/40 overflow-hidden transition-all duration-300"
-                :class="activeAccordion === 4 ? 'border-blue-600/60 shadow-lg shadow-blue-950/20' : 'border-white/10 hover:border-white/20'">
+            <div class="rounded-2xl overflow-hidden transition-all duration-300 border bg-white dark:bg-slate-900/60"
+                :class="activeAccordion === 4 ? 'border-blue-600 dark:border-blue-500 shadow-lg shadow-blue-600/10 dark:shadow-blue-950/40 ring-1 ring-blue-600/20 dark:ring-blue-500/30' : 'border-slate-200/90 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'">
                 <button @click="activeAccordion = activeAccordion === 4 ? null : 4"
-                    class="w-full px-6 py-5 text-left flex justify-between items-center font-bold focus:outline-none transition-colors duration-300"
-                    :class="activeAccordion === 4 ? 'text-blue-400' : 'text-white'">
-                    <span class="text-[17px] font-system tracking-tight">What does Escrow Protection mean?</span>
-                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-white shrink-0 transition-all duration-300"
-                        :class="activeAccordion === 4 ? 'bg-blue-600 rotate-180' : 'bg-white/10 border border-white/10'">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    class="w-full px-6 py-5 text-left flex justify-between items-center font-bold focus:outline-none transition-colors duration-200 cursor-pointer"
+                    :class="activeAccordion === 4 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400'">
+                    <span class="text-[16px] sm:text-[17px] font-system tracking-tight">What does Escrow Protection mean?</span>
+                    <div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-300"
+                        :class="activeAccordion === 4 ? 'bg-blue-600 text-white rotate-180 shadow-sm shadow-blue-600/30' : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </div>
                 </button>
                 <div x-show="activeAccordion === 4" x-collapse
-                    class="px-6 pb-6 text-[15px] leading-relaxed text-slate-300 border-t border-white/5 pt-4">
+                    class="px-6 pb-6 text-[14.5px] leading-relaxed text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800/80 pt-4">
                     Your payment is held in a neutral third-party trust account and only released to the
                     seller/developer when all agreed legal documents and property handovers are successfully verified.
                     <div
-                        class="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-900/50 bg-blue-950/40 text-blue-300/80 text-[10px] font-semibold font-system tracking-wide">
-                        <svg class="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor"
+                        class="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-200/80 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-[11px] font-semibold font-system tracking-wide">
+                        <svg class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        Flexible 7 days a week inspection availability.
+                        Milestone release trust account protection.
                     </div>
                 </div>
             </div>
@@ -2061,7 +2064,7 @@
 
                 <!-- Description -->
                 <p class="text-slate-400 text-xs leading-relaxed mb-6">
-                    Access your dedicated CRM dashboard to manage listings, track leads, and coordinate inspections â€”
+                    Access your dedicated CRM dashboard to manage listings, track leads, and coordinate inspections &mdash;
                     all in one secure workspace.
                 </p>
 

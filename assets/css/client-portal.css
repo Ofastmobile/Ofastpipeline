@@ -487,6 +487,430 @@ body.ofp-portal-body {
 }
 
 /* ── Dashboard Content ────────────────────────────────────────────────────── */
+/* ── Dashboard Page: Full-Width Integrated Hero Header ───────────────────── */
+.ofp-hero-full-header {
+    position: relative;
+    width: 100%;
+    min-height: 290px;
+    background-size: cover;
+    background-position: center 60%;
+    background-repeat: no-repeat;
+    border-radius: 0;
+    overflow: visible;
+    margin-bottom: 28px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .ofp-hero-full-header,
+html.dark .ofp-hero-full-header {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 14px 34px -8px rgba(0, 0, 0, 0.35);
+}
+
+.ofp-hero-full-header-overlay {
+    position: relative;
+    width: 100%;
+    min-height: 290px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-bottom: 22px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.18) 0%, rgba(15, 23, 42, 0.02) 40%, rgba(15, 23, 42, 0.55) 100%);
+    border-radius: 0;
+}
+
+/* Make topbar completely transparent so image reflects 100% through it */
+.ofp-topbar.ofp-topbar-transparent {
+    background: transparent !important;
+    background-color: transparent !important;
+    border-bottom: none !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    height: 76px;
+    padding: 0 32px;
+    z-index: 50;
+    box-shadow: none !important;
+}
+
+.ofp-topbar.ofp-topbar-transparent .ofp-topbar-search {
+    display: none !important;
+}
+
+.ofp-hero-full-header .ofp-hero-topbar-controls {
+    padding: 0 32px;
+}
+
+/* Glassmorphism Menus on Top-Right of Hero */
+.ofp-topbar-transparent .ofp-topbar-actions {
+    gap: 12px;
+}
+
+.ofp-topbar-transparent .ofp-topbar-actions .ofp-btn-balance {
+    background: rgba(255, 255, 255, 0.92) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: #1e293b !important;
+    border: 1px solid rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    font-weight: 600;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+
+.ofp-topbar-transparent .ofp-topbar-actions .ofp-btn-balance svg {
+    color: #3b82f6;
+}
+
+.ofp-topbar-transparent .ofp-topbar-actions .ofp-btn-balance:hover {
+    background: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.ofp-topbar-transparent .ofp-topbar-actions .ofp-icon-btn,
+.ofp-topbar-transparent .ofp-user-menu .ofp-icon-btn {
+    background: rgba(255, 255, 255, 0.92) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.9) !important;
+    color: #1e293b !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.ofp-topbar-transparent .ofp-topbar-actions .ofp-icon-btn:hover,
+.ofp-topbar-transparent .ofp-user-menu .ofp-icon-btn:hover {
+    background: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.ofp-topbar-transparent .ofp-sidebar-toggle {
+    background: rgba(255, 255, 255, 0.92) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.9) !important;
+    border-radius: 10px;
+    padding: 8px;
+    color: #1e293b !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.ofp-topbar-transparent .ofp-user-avatar {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.ofp-topbar-transparent .ofp-user-avatar:hover {
+    transform: scale(1.05);
+}
+
+/* Dark theme overrides for transparent topbar glass controls */
+[data-theme="dark"] .ofp-topbar-transparent .ofp-topbar-actions .ofp-btn-balance,
+html.dark .ofp-topbar-transparent .ofp-topbar-actions .ofp-btn-balance {
+    background: rgba(15, 23, 42, 0.88) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .ofp-topbar-transparent .ofp-topbar-actions .ofp-icon-btn,
+html.dark .ofp-topbar-transparent .ofp-topbar-actions .ofp-icon-btn,
+[data-theme="dark"] .ofp-topbar-transparent .ofp-user-menu .ofp-icon-btn,
+html.dark .ofp-topbar-transparent .ofp-user-menu .ofp-icon-btn {
+    background: rgba(15, 23, 42, 0.88) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .ofp-topbar-transparent .ofp-sidebar-toggle,
+html.dark .ofp-topbar-transparent .ofp-sidebar-toggle {
+    background: rgba(15, 23, 42, 0.88) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #f8fafc !important;
+}
+
+.ofp-hero-topbar-header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.ofp-hero-greeting-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .ofp-hero-greeting-pill,
+html.dark .ofp-hero-greeting-pill {
+    background: rgba(15, 23, 42, 0.85);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #f1f5f9;
+}
+
+.ofp-status-dot-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: ofpDotPulse 2s infinite;
+}
+
+@keyframes ofpDotPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+.ofp-hero-date-divider {
+    color: #94a3b8;
+    font-size: 11px;
+}
+
+.ofp-hero-date {
+    color: #64748b;
+    font-weight: 500;
+    font-size: 12px;
+}
+
+[data-theme="dark"] .ofp-hero-date,
+html.dark .ofp-hero-date {
+    color: #94a3b8;
+}
+
+.ofp-hero-topbar-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.ofp-hero-search-box {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    padding: 7px 14px;
+    min-width: 280px;
+    max-width: 380px;
+    flex: 1;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .ofp-hero-search-box,
+html.dark .ofp-hero-search-box {
+    background: rgba(15, 23, 42, 0.88);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.ofp-hero-search-box:focus-within {
+    box-shadow: 0 0 0 2px #8b5cf6, 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.ofp-hero-search-box svg {
+    width: 16px;
+    height: 16px;
+    color: #64748b;
+    margin-right: 8px;
+    shrink: 0;
+}
+
+.ofp-hero-search-box input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 13px;
+    font-weight: 500;
+    color: #0f172a;
+    width: 100%;
+}
+
+[data-theme="dark"] .ofp-hero-search-box input,
+html.dark .ofp-hero-search-box input {
+    color: #f8fafc;
+}
+
+.ofp-hero-search-box input::placeholder {
+    color: #94a3b8;
+}
+
+.ofp-hero-kbd {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 6px;
+    padding: 2px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    user-select: none;
+}
+
+[data-theme="dark"] .ofp-hero-kbd,
+html.dark .ofp-hero-kbd {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+}
+
+.ofp-hero-action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ofp-hero-btn-more {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #334155;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .ofp-hero-btn-more,
+html.dark .ofp-hero-btn-more {
+    background: rgba(15, 23, 42, 0.88);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #e2e8f0;
+}
+
+.ofp-hero-btn-more:hover {
+    background: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.ofp-hero-btn-export {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .ofp-hero-btn-export,
+html.dark .ofp-hero-btn-export {
+    background: rgba(15, 23, 42, 0.88);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #f1f5f9;
+}
+
+.ofp-hero-btn-export:hover {
+    background: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    color: #0f172a;
+}
+
+.ofp-hero-btn-add {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 10px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.35);
+    transition: all 0.2s ease;
+}
+
+.ofp-hero-btn-add:hover {
+    background: linear-gradient(135deg, #9333ea 0%, #5b21b6 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(109, 40, 217, 0.45);
+}
+
+@media (max-width: 768px) {
+    .ofp-dashboard-page .ofp-topbar {
+        padding: 0 16px;
+        height: 64px;
+    }
+    .ofp-dashboard-page .ofp-topbar-actions {
+        gap: 8px;
+    }
+    .ofp-dashboard-page .ofp-hero-topbar {
+        height: auto;
+        min-height: 320px;
+        padding-top: 70px;
+        border-radius: 0 0 18px 18px;
+    }
+    .ofp-dashboard-page .ofp-hero-topbar-overlay {
+        padding: 16px;
+        padding-top: 74px;
+    }
+    .ofp-hero-topbar-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    .ofp-hero-search-box {
+        max-width: 100%;
+        min-width: 0;
+    }
+    .ofp-hero-action-buttons {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+}
+
 .ofp-greeting {
     display: flex;
     justify-content: space-between;
@@ -2889,40 +3313,97 @@ input[type="date"].ofp-input,
         .ofp-permissions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
         .ofp-permission-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-main); }
 
-/* --- tenants --- */.ofp-tab-btn {
-            padding: 10px 18px;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-muted);
-            background: transparent;
-            border: none;
-            border-bottom: 2px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .ofp-tab-btn:hover {
-            color: var(--text-main);
-        }
-        .ofp-tab-btn.active {
-            color: var(--accent-blue);
-            border-bottom-color: var(--accent-blue);
-        }
-        .ofp-tab-badge {
-            background: var(--bg-card-hover);
-            color: var(--text-muted);
-            padding: 2px 7px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        .ofp-tab-btn.active .ofp-tab-badge {
-            background: rgba(59, 130, 246, 0.15);
-            color: var(--accent-blue);
-        }
+/* --- Tabs Navigation System --- */
+.ofp-tab-btn {
+    padding: 12px 20px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: -1px;
+    white-space: nowrap;
+}
+.ofp-tab-btn svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+.ofp-tab-btn:hover {
+    color: var(--text-main);
+}
+.ofp-tab-btn:hover svg {
+    transform: translateY(-1px);
+}
+.ofp-tab-btn.active {
+    color: var(--accent-blue) !important;
+    border-bottom: 2px solid var(--accent-blue) !important;
+}
+.ofp-tab-badge {
+    background: var(--bg-card-hover);
+    color: var(--text-muted);
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.ofp-tab-btn.active .ofp-tab-badge {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--accent-blue);
+}
+
+/* Static Left-aligned Back Button (No Hover Effect) */
+.ofp-back-link-left,
+.ofp-back-link-left:hover,
+.ofp-back-link-left:focus,
+.ofp-back-link-left:active {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 7px 14px !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: var(--text-muted, #94a3b8) !important;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08)) !important;
+    transform: none !important;
+    box-shadow: none !important;
+    text-decoration: none !important;
+    transition: none !important;
+    cursor: pointer !important;
+    outline: none !important;
+    margin-right: auto !important;
+}
+.ofp-back-link-left svg,
+.ofp-back-link-left:hover svg {
+    transform: none !important;
+    transition: none !important;
+    color: inherit !important;
+}
+[data-theme="light"] .ofp-back-link-left,
+[data-theme="light"] .ofp-back-link-left:hover,
+[data-theme="light"] .ofp-back-link-left:focus,
+[data-theme="light"] .ofp-back-link-left:active,
+html.light .ofp-back-link-left,
+html.light .ofp-back-link-left:hover,
+html.light .ofp-back-link-left:focus,
+html.light .ofp-back-link-left:active {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    border-color: #cbd5e1 !important;
+    transform: none !important;
+    box-shadow: none !important;
+    transition: none !important;
+}
         .ofp-kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -3080,3 +3561,1543 @@ input[type="date"].ofp-input,
             border-radius: 999px;
             transition: width 0.3s ease;
         }
+
+/* ── Zentra Dashboard Components ─────────────────────────────────────────── */
+
+/* 1. KPI Cards Grid */
+.ofp-zentra-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.ofp-kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 145px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ofp-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.ofp-kpi-card-hero {
+    background: linear-gradient(135deg, #1b0e36 0%, #110724 100%) !important;
+    border: 1px solid rgba(139, 92, 246, 0.4) !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 24px rgba(27, 14, 54, 0.35) !important;
+}
+
+[data-theme="light"] .ofp-kpi-card-hero,
+html.light .ofp-kpi-card-hero {
+    background: linear-gradient(135deg, #241247 0%, #180933 100%) !important;
+    border-color: rgba(139, 92, 246, 0.5) !important;
+}
+
+.ofp-kpi-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.ofp-kpi-card-hero .ofp-kpi-title {
+    color: #c4b5fd !important;
+}
+
+.ofp-kpi-value {
+    font-size: 30px;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1.1;
+    margin-bottom: 14px;
+    letter-spacing: -0.02em;
+}
+
+.ofp-kpi-card-hero .ofp-kpi-value {
+    color: #ffffff !important;
+}
+
+.ofp-kpi-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    width: fit-content;
+}
+
+.ofp-kpi-badge.badge-hero {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #34d399;
+}
+
+.ofp-kpi-badge.badge-purple {
+    background: rgba(139, 92, 246, 0.12);
+    color: #8b5cf6;
+}
+
+.ofp-kpi-badge.badge-blue {
+    background: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+}
+
+.ofp-kpi-badge.badge-green {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+
+/* 2. Analytics Row (Cash Flow + Month Breakdown) */
+.ofp-zentra-analytics-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.ofp-zentra-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.ofp-zentra-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.ofp-zentra-card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.ofp-chart-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.ofp-chart-legends {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ofp-chart-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.ofp-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.ofp-zentra-select {
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    outline: none;
+    cursor: pointer;
+}
+
+/* Month Breakdown Card */
+.ofp-breakdown-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-top: 10px;
+}
+
+.ofp-breakdown-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ofp-breakdown-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.ofp-breakdown-label {
+    color: var(--text-muted);
+}
+
+.ofp-breakdown-amount {
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+.ofp-breakdown-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 9999px;
+    background: rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+[data-theme="dark"] .ofp-breakdown-track,
+html.dark .ofp-breakdown-track {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.ofp-breakdown-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.5s ease;
+}
+
+.ofp-breakdown-fill.income {
+    background: linear-gradient(90deg, #8b5cf6 0%, #6366f1 100%);
+}
+
+.ofp-breakdown-fill.expense {
+    background: linear-gradient(90deg, #c084fc 0%, #a855f7 100%);
+}
+
+.ofp-breakdown-fill.net {
+    background: linear-gradient(90deg, #93c5fd 0%, #60a5fa 100%);
+}
+
+/* 3. Bottom Row: Location + Recent Properties */
+.ofp-zentra-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.ofp-card-header-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ofp-card-mini-search {
+    display: flex;
+    align-items: center;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 4px 10px;
+    width: 160px;
+}
+
+.ofp-card-mini-search input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 12px;
+    color: var(--text-main);
+    width: 100%;
+    margin-left: 6px;
+}
+
+.ofp-card-filter-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-body);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* Featured Property in Location */
+.ofp-location-featured-card {
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.ofp-loc-feat-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 4px;
+}
+
+.ofp-loc-feat-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ofp-loc-feat-price {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 4px;
+    text-align: right;
+}
+
+.ofp-btn-see-details {
+    background: #1e113a;
+    color: #ffffff !important;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .ofp-btn-see-details,
+html.dark .ofp-btn-see-details {
+    background: #7c3aed;
+}
+
+.ofp-btn-see-details:hover {
+    background: #8b5cf6;
+    transform: translateY(-1px);
+}
+
+/* Stylized Map View */
+.ofp-stylized-map-box {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #f1f0fb;
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .ofp-stylized-map-box,
+html.dark .ofp-stylized-map-box {
+    background: #18112e;
+}
+
+.ofp-map-svg-grid {
+    width: 100%;
+    height: 100%;
+}
+
+.ofp-map-pin-overlay {
+    position: absolute;
+    top: 45%;
+    left: 48%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.ofp-map-pin-circle {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #8b5cf6;
+    border: 3px solid #ffffff;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.5);
+    animation: ofpPulsePin 2s infinite;
+}
+
+@keyframes ofpPulsePin {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+}
+
+/* Recent Properties List */
+.ofp-recent-properties-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ofp-recent-property-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.ofp-recent-property-card:hover {
+    transform: translateX(2px);
+    border-color: #8b5cf6;
+}
+
+.ofp-recent-prop-thumb {
+    width: 58px;
+    height: 58px;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #e2e8f0;
+}
+
+.ofp-recent-prop-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ofp-recent-prop-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.ofp-recent-prop-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.ofp-recent-prop-price {
+    font-size: 13px;
+    font-weight: 800;
+    color: #8b5cf6;
+    margin-bottom: 4px;
+}
+
+.ofp-recent-prop-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+    .ofp-zentra-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .ofp-zentra-analytics-grid,
+    .ofp-zentra-bottom-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .ofp-zentra-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- Luxury Properties Table & Form Redesign --- */
+.ofp-property-row {
+    transition: background 0.15s ease;
+}
+.ofp-property-row:hover {
+    background: var(--bg-card-hover) !important;
+}
+.ofp-prop-thumb-wrap {
+    width: 68px;
+    height: 52px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ofp-prop-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.ofp-prop-thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.03);
+}
+.ofp-prop-info-cell {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.ofp-prop-meta-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    text-decoration: none;
+    line-height: 1.3;
+    display: block;
+    margin-bottom: 3px;
+    transition: color 0.15s ease;
+}
+.ofp-prop-meta-title:hover {
+    color: var(--accent-blue);
+}
+.ofp-prop-meta-loc {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.ofp-spec-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+.ofp-table-action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    transition: all 0.15s ease;
+    text-decoration: none;
+    cursor: pointer;
+}
+.ofp-table-action-icon:hover {
+    color: var(--text-main);
+    border-color: var(--accent-blue);
+    background: rgba(59, 130, 246, 0.08);
+}
+.ofp-table-action-icon.danger:hover {
+    color: #ef4444;
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+/* Redesigned Form Builder Sections */
+.ofp-form-card-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+.ofp-form-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+.ofp-form-section-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--accent-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.ofp-form-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 2px 0;
+}
+.ofp-form-section-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+}
+.ofp-amenity-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 13px;
+    color: var(--text-main);
+    user-select: none;
+}
+.ofp-amenity-card:hover {
+    border-color: var(--accent-blue);
+}
+.ofp-amenity-card input[type="checkbox"] {
+    accent-color: var(--accent-blue);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+.ofp-file-dropzone {
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 28px 20px;
+    text-align: center;
+    background: var(--bg-body);
+    transition: border-color 0.2s ease;
+    cursor: pointer;
+}
+.ofp-file-dropzone:hover {
+    border-color: var(--accent-blue);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PREMIUM SEGMENTED TABS & MY PROPERTIES BUTTONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 1. Segmented Tab Switcher */
+.ofp-segmented-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.ofp-segmented-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-radius: 9px;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+.ofp-segmented-tab svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+.ofp-segmented-tab:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.04);
+}
+.ofp-segmented-tab:hover svg {
+    transform: translateY(-1px);
+}
+.ofp-segmented-tab.active {
+    background: var(--accent-blue, #2563eb) !important;
+    color: #ffffff !important;
+    border-color: var(--accent-blue, #2563eb) !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+.ofp-segmented-tab.active svg {
+    color: #ffffff;
+}
+.ofp-segmented-tab .ofp-tab-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 100px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+}
+.ofp-segmented-tab.active .ofp-tab-badge {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+/* 2. Table Header Add Property Button (Matching HomeVista reference monitor) */
+.ofp-btn-header-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #0f766e;
+    color: #ffffff !important;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    border: none;
+    box-shadow: 0 2px 6px rgba(15, 118, 110, 0.25);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.ofp-btn-header-add:hover {
+    background: #0d655e;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.35);
+}
+.ofp-btn-header-add:active {
+    transform: translateY(0);
+}
+
+/* 3. Table Row Action Buttons */
+.ofp-table-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+}
+.ofp-table-action-btn.view {
+    background: var(--bg-card);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+}
+.ofp-table-action-btn.view:hover {
+    color: var(--text-main);
+    border-color: var(--text-muted);
+    background: var(--bg-card-hover);
+    transform: translateY(-1px);
+}
+.ofp-table-action-btn.edit {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--accent-blue, #3b82f6);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.ofp-table-action-btn.edit:hover {
+    background: var(--accent-blue, #3b82f6);
+    color: #ffffff;
+    border-color: var(--accent-blue, #3b82f6);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(59, 130, 246, 0.35);
+}
+/* Solid Red Delete Button (Exact match from the HomeVista monitor image) */
+.ofp-table-action-btn.delete {
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 2px 5px rgba(239, 68, 68, 0.3);
+}
+.ofp-table-action-btn.delete:hover {
+    background: #dc2626 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.45);
+}
+.ofp-table-action-btn.delete:active {
+    transform: translateY(0);
+}
+
+/* 4. Form Action Buttons */
+.ofp-form-actions-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+}
+.ofp-btn-form-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-blue, #2563eb);
+    color: #ffffff !important;
+    font-size: 14.5px;
+    font-weight: 700;
+    padding: 12px 28px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ofp-btn-form-save:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+}
+.ofp-btn-form-save:active {
+    transform: translateY(0);
+}
+
+.ofp-btn-form-cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 10px;
+    background: var(--bg-card);
+    color: var(--text-muted) !important;
+    border: 1px solid var(--border-color);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.ofp-btn-form-cancel:hover {
+    color: var(--text-main) !important;
+    border-color: var(--text-muted);
+    background: var(--bg-card-hover);
+}
+
+.ofp-btn-form-delete {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 12px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 10px;
+    background: #ef4444;
+    color: #ffffff !important;
+    border: none;
+    margin-left: auto;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
+    transition: all 0.15s ease;
+}
+.ofp-btn-form-delete:hover {
+    background: #dc2626;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+}
+
+.ofp-btn-browse-photos {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border-radius: 8px;
+    background: rgba(59, 130, 246, 0.12);
+    color: var(--accent-blue);
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.15s ease;
+}
+.ofp-btn-browse-photos:hover {
+    background: var(--accent-blue);
+    color: #ffffff;
+}
+
+/* 5. Plan Action Buttons (Funding & Renewals / Upgrade Plan) */
+.ofp-btn-plan-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 9px;
+    background: var(--bg-card);
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color);
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+}
+.ofp-btn-plan-action svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    color: var(--accent-blue, #2563eb);
+    transition: transform 0.25s ease;
+}
+.ofp-btn-plan-action:hover {
+    background: var(--accent-blue, #2563eb);
+    color: #ffffff !important;
+    border-color: var(--accent-blue, #2563eb);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+.ofp-btn-plan-action:hover svg {
+    color: #ffffff !important;
+    transform: rotate(45deg);
+}
+.ofp-btn-plan-action.primary {
+    background: var(--accent-blue, #2563eb);
+    color: #ffffff !important;
+    border-color: var(--accent-blue, #2563eb);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+.ofp-btn-plan-action.primary svg {
+    color: #ffffff;
+}
+.ofp-btn-plan-action.primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INTERACTIVE DASHBOARD MAP & RECENT PROPERTIES LINKING
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Quick Location Pills Bar */
+.ofp-location-pills-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    -webkit-overflow-scrolling: touch;
+}
+.ofp-location-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 100px;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+.ofp-location-pill-btn:hover {
+    color: var(--text-main);
+    border-color: #8b5cf6;
+}
+.ofp-location-pill-btn.active {
+    background: #8b5cf6;
+    color: #ffffff !important;
+    border-color: #8b5cf6;
+    box-shadow: 0 2px 6px rgba(139, 92, 246, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   REAL GOOGLE MAP & RECENT PROPERTIES LINKING
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Real Google Map Embed Container */
+.ofp-google-map-wrap {
+    position: relative;
+    width: 100%;
+    height: 270px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: var(--bg-body);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+.ofp-google-map-wrap iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
+
+/* Floating Live Location Beacon Badge */
+.ofp-map-live-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 10px;
+    padding: 6px 12px;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+}
+.ofp-beacon-dot-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+}
+.ofp-beacon-ping {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #10b981;
+    opacity: 0.75;
+    animation: ofpBeaconPulse 1.8s infinite;
+}
+.ofp-beacon-core {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+}
+@keyframes ofpBeaconPulse {
+    0% { transform: scale(0.9); opacity: 0.9; }
+    50% { transform: scale(1.6); opacity: 0.2; }
+    100% { transform: scale(0.9); opacity: 0.9; }
+}
+.ofp-map-badge-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #ffffff;
+}
+.ofp-map-badge-sub {
+    font-size: 9.5px;
+    opacity: 0.75;
+    line-height: 1;
+    color: #cbd5e1;
+}
+
+/* External Google Maps Button */
+.ofp-map-ext-btn-wrap {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    z-index: 10;
+}
+.ofp-map-external-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.96);
+    color: #1e293b;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: all 0.15s ease;
+}
+.ofp-map-external-link-btn:hover {
+    background: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+}
+[data-theme="dark"] .ofp-map-external-link-btn,
+html.dark .ofp-map-external-link-btn {
+    background: rgba(30, 41, 59, 0.96);
+    color: #f8fafc;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+[data-theme="dark"] .ofp-map-external-link-btn:hover,
+html.dark .ofp-map-external-link-btn:hover {
+    background: #1e293b;
+}
+
+/* Locate Mini Button inside property card */
+.ofp-btn-card-locate {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    background: rgba(139, 92, 246, 0.12);
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    color: #8b5cf6;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+.ofp-btn-card-locate:hover {
+    background: #8b5cf6;
+    color: #ffffff;
+    transform: scale(1.1);
+}
+.ofp-map-pin:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+    z-index: 20;
+}
+.ofp-map-pin.active {
+    transform: translate(-50%, -50%) scale(1.15);
+    z-index: 25;
+}
+.ofp-map-pin-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #8b5cf6;
+    border: 3px solid #ffffff;
+    box-shadow: 0 4px 10px rgba(139, 92, 246, 0.45);
+    animation: ofpPulsePin 2s infinite;
+    transition: all 0.2s ease;
+}
+.ofp-map-pin.active .ofp-map-pin-circle {
+    background: #6366f1;
+    border-color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.35), 0 6px 16px rgba(99, 102, 241, 0.5);
+    animation: ofpPulseActive 1.4s infinite;
+}
+@keyframes ofpPulseActive {
+    0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+    70% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+.ofp-map-pin-label {
+    margin-top: 4px;
+    background: rgba(15, 23, 42, 0.88);
+    color: #ffffff;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(4px);
+    pointer-events: auto;
+    transition: all 0.2s ease;
+}
+.ofp-map-pin.active .ofp-map-pin-label {
+    background: #6366f1;
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+.ofp-map-pin-label .ofp-pin-count {
+    background: rgba(255, 255, 255, 0.25);
+    padding: 1px 5px;
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* Location Filter Tag in Recent Properties Header */
+.ofp-loc-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(139, 92, 246, 0.12);
+    color: #8b5cf6;
+    border: 1px solid rgba(139, 92, 246, 0.28);
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.ofp-loc-filter-badge button {
+    background: none;
+    border: none;
+    color: #8b5cf6;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+}
+.ofp-loc-filter-badge button:hover {
+    color: #ef4444;
+}
+
+/* Empty State when no properties match clicked location */
+.ofp-location-empty-state {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+    border: 1px dashed var(--border-color);
+}
+.ofp-location-empty-state button {
+    margin-top: 10px;
+    background: rgba(139, 92, 246, 0.12);
+    color: #8b5cf6;
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ofp-location-empty-state button:hover {
+    background: #8b5cf6;
+    color: #ffffff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLOBAL SPOTLIGHT / COMMAND PALETTE SEARCH POP-UP MODAL (CTRL+L / ⌘+L)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.ofp-search-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 999999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 80px 16px 40px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s ease;
+}
+
+.ofp-search-modal-backdrop.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.ofp-search-modal-box {
+    width: 100%;
+    max-width: 620px;
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 18px;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(139, 92, 246, 0.15);
+    overflow: hidden;
+    transform: translateY(-14px) scale(0.97);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+}
+
+.ofp-search-modal-backdrop.open .ofp-search-modal-box {
+    transform: translateY(0) scale(1);
+}
+
+[data-theme="dark"] .ofp-search-modal-box,
+html.dark .ofp-search-modal-box {
+    background: #131826;
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(139, 92, 246, 0.3);
+}
+
+/* Modal Search Input Header */
+.ofp-search-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+    background: transparent;
+}
+
+.ofp-search-modal-icon {
+    width: 22px;
+    height: 22px;
+    color: #8b5cf6;
+    flex-shrink: 0;
+}
+
+.ofp-search-modal-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-main, #0f172a);
+    font-family: inherit;
+}
+
+[data-theme="dark"] .ofp-search-modal-input,
+html.dark .ofp-search-modal-input {
+    color: #f8fafc;
+}
+
+.ofp-search-modal-input::placeholder {
+    color: #94a3b8;
+}
+
+.ofp-search-modal-close {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+[data-theme="dark"] .ofp-search-modal-close,
+html.dark .ofp-search-modal-close {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+}
+
+.ofp-search-modal-close:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #ffffff;
+}
+
+/* Category Filter Tabs inside Modal */
+.ofp-search-modal-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px 8px;
+    background: rgba(0, 0, 0, 0.015);
+    border-bottom: 1px solid var(--border-color, #f1f5f9);
+    overflow-x: auto;
+}
+
+[data-theme="dark"] .ofp-search-modal-tabs,
+html.dark .ofp-search-modal-tabs {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+.ofp-search-tab-pill {
+    padding: 4px 10px;
+    border-radius: 100px;
+    background: transparent;
+    border: 1px solid transparent;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+
+.ofp-search-tab-pill:hover {
+    color: var(--text-main, #0f172a);
+    background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .ofp-search-tab-pill:hover,
+html.dark .ofp-search-tab-pill:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.ofp-search-tab-pill.active {
+    background: #8b5cf6;
+    color: #ffffff !important;
+}
+
+/* Results & Suggestions List */
+.ofp-search-modal-results {
+    max-height: 380px;
+    overflow-y: auto;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ofp-search-result-group-title {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #94a3b8);
+    padding: 6px 10px 4px;
+}
+
+.ofp-search-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text-main, #0f172a);
+    background: transparent;
+    transition: background 0.15s ease, transform 0.1s ease;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+[data-theme="dark"] .ofp-search-item,
+html.dark .ofp-search-item {
+    color: #f1f5f9;
+}
+
+.ofp-search-item:hover,
+.ofp-search-item.selected {
+    background: rgba(139, 92, 246, 0.09);
+    border-color: rgba(139, 92, 246, 0.2);
+}
+
+[data-theme="dark"] .ofp-search-item:hover,
+[data-theme="dark"] .ofp-search-item.selected,
+html.dark .ofp-search-item:hover,
+html.dark .ofp-search-item.selected {
+    background: rgba(139, 92, 246, 0.18);
+    border-color: rgba(139, 92, 246, 0.35);
+}
+
+.ofp-search-item-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ofp-search-item-icon svg {
+    width: 17px;
+    height: 17px;
+}
+
+.ofp-search-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ofp-search-item-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ofp-search-item-desc {
+    font-size: 11.5px;
+    color: var(--text-muted, #64748b);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ofp-search-item-badge {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-muted, #64748b);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    flex-shrink: 0;
+}
+
+[data-theme="dark"] .ofp-search-item-badge,
+html.dark .ofp-search-item-badge {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+}
+
+/* Modal Footer with Shortcuts Info */
+.ofp-search-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.02);
+    border-top: 1px solid var(--border-color, #e2e8f0);
+    font-size: 11px;
+    color: var(--text-muted, #64748b);
+}
+
+[data-theme="dark"] .ofp-search-modal-footer,
+html.dark .ofp-search-modal-footer {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.ofp-search-hints {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ofp-search-hint-kbd {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ofp-search-hint-kbd kbd {
+    background: rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: inherit;
+}
+
+[data-theme="dark"] .ofp-search-hint-kbd kbd,
+html.dark .ofp-search-hint-kbd kbd {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #e2e8f0;
+}
+
+

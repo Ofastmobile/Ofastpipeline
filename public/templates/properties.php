@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /properties (client portal) — "My Properties" dashboard.
  *
@@ -249,10 +249,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_delete_property
         } else {
             wp_trash_post( $delete_id );
             
-            // Note: Trashing a post doesn't automatically delete the custom table row right now, 
-            // but the count_for_client ignores trashed posts anyway.
-            // wpdb->delete could be run here if needed.
-
             wp_safe_redirect( add_query_arg( 'success', 'deleted', home_url( '/properties' ) ) );
             exit;
         }
@@ -280,6 +276,27 @@ if ( isset( $_GET['edit'] ) ) {
         }
     }
 }
+
+$active_tab = sanitize_key( $_GET['tab'] ?? ( isset( $_GET['edit'] ) ? 'form' : 'table' ) );
+if ( ! in_array( $active_tab, [ 'table', 'form' ], true ) ) {
+    $active_tab = 'table';
+}
+
+$prop_tabs = [
+    'table' => [
+        'label' => 'All Properties',
+        'url'   => home_url( '/properties' ),
+        'icon'  => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>',
+        'badge' => count( $my_properties ),
+    ],
+    'form' => [
+        'label' => $editing_post ? 'Edit Property' : 'Add New Property',
+        'url'   => $editing_post ? add_query_arg( [ 'tab' => 'form', 'edit' => $editing_post->ID ], home_url( '/properties' ) ) : add_query_arg( 'tab', 'form', home_url( '/properties' ) ),
+        'icon'  => $editing_post
+            ? '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg>'
+            : '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>',
+    ],
+];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -288,102 +305,341 @@ if ( isset( $_GET['edit'] ) ) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'My Properties', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
+    <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
 </head>
 <body class="ofp-portal-body">
-    <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
+    <?php 
+    $ofp_banner_btn = [ 'label' => 'Add New Property', 'url' => add_query_arg( 'tab', 'form', home_url( '/properties' ) ) ];
+    include OFP_PATH . 'public/templates/partials/nav.php'; 
+    ?>
 
     <div class="ofp-container">
         <div style="padding-bottom: 60px;">
-            <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 24px; letter-spacing:-0.01em;">
-                My Properties
-            </h1>
+            <div style="margin: 0 0 20px;">
+                <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 6px; letter-spacing:-0.01em;">
+                    My Properties
+                </h1>
+                <p style="color:var(--text-muted); margin:0; font-size:14px;">Manage your real estate listings portfolio, property details, and listing statuses.</p>
+            </div>
+
+            <!-- Segmented Pill Tab Bar -->
+            <div class="ofp-segmented-nav">
+                <?php foreach ( $prop_tabs as $key => $tab ) :
+                    $is_active = ( $key === $active_tab );
+                ?>
+                    <a href="<?php echo esc_url( $tab['url'] ); ?>"
+                       class="ofp-segmented-tab <?php echo $is_active ? 'active' : ''; ?>">
+                        <?php echo $tab['icon']; ?>
+                        <span><?php echo esc_html( $tab['label'] ); ?></span>
+                        <?php if ( ! empty( $tab['badge'] ) ) : ?>
+                            <span class="ofp-tab-badge"><?php echo esc_html( $tab['badge'] ); ?></span>
+                        <?php endif; ?>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+
             <?php if ( $error ) : ?>
-                <div class="ofp-alert ofp-alert-error"><?php echo esc_html( $error ); ?></div>
+                <div class="ofp-alert ofp-alert-error" style="margin-bottom:20px;"><?php echo esc_html( $error ); ?></div>
             <?php endif; ?>
             <?php if ( $success ) : ?>
-                <div class="ofp-alert ofp-alert-success"><?php echo esc_html( $success ); ?></div>
+                <div class="ofp-alert ofp-alert-success" style="margin-bottom:20px;"><?php echo esc_html( $success ); ?></div>
             <?php endif; ?>
 
-            <div style="display:grid; grid-template-columns: 1fr; gap:24px;">
+            <?php if ( $active_tab === 'table' ) : ?>
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- TAB 1: ALL PROPERTIES TABLE (MATCHING THE MONITOR IMAGE)      -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
 
                 <?php if ( ! OFP_Brand::hide_plan_prompts( $client ) ) : ?>
-                <!-- Plan status / picker -->
-                <div class="ofp-card">
                     <?php
                     $has_active_paid_plan = OFP_Subscription::has_paid_plan( $client->id );
-                    $active_sub = OFP_Subscription::get_active( 'listing', $client->id )
-                        ?: OFP_Subscription::get_active( 'crm', $client->id );
+                    $active_sub = OFP_Subscription::get_active( 'listing', $client->id ) ?: OFP_Subscription::get_active( 'crm', $client->id );
                     $plan_expires = $active_sub ? $active_sub->period_end : ( $client->subscription_expires ?? null );
                     ?>
-
-                    <?php if ( $has_active_paid_plan ) : ?>
-                        <h3>
-                            <?php echo esc_html( $plan_labels[ $active_plan ] ?? ucfirst( $active_plan ) ); ?> Plan
-                            <span style="background:#dcfce7; color:#16a34a; font-size:12px; font-weight:600; padding:3px 10px; border-radius:100px; vertical-align:middle; margin-left:8px;">Active</span>
-                        </h3>
-                        <p class="ofp-hint">
-                            Using <?php echo esc_html( $used_count ); ?> of <?php echo esc_html( $plan_caps[ $active_plan ] ?? 1 ); ?> properties.
-                            <?php if ( $plan_expires ) : ?>
-                            &nbsp; Expires <strong><?php echo esc_html( date( 'd M Y', strtotime( $plan_expires ) ) ); ?></strong>.
-                            <?php endif; ?>
-                        </p>
-                        <p class="ofp-hint" style="margin-top:8px;">
-                            Upgrade or renew from the <a href="<?php echo esc_url( home_url('/funding') ); ?>" style="color:#3b82f6;">Funding page</a>
-                            or see <a href="<?php echo esc_url( home_url('/pricing') ); ?>" style="color:#3b82f6;">Plans & Pricing</a>.
-                        </p>
-
-                    <?php else : ?>
-                        <h3>
-                            Free Plan
-                            <span style="background:#e0e7ff; color:#4338ca; font-size:12px; font-weight:600; padding:3px 10px; border-radius:100px; vertical-align:middle; margin-left:8px;">Active</span>
-                        </h3>
-                        <p class="ofp-hint">
-                            Using <?php echo esc_html( $used_count ); ?> of <?php echo esc_html( $plan_caps['free'] ?? 1 ); ?> properties.
-                            CRM, leads, and 1 listing are included. Upgrade to Silver or Gold for more listings, templates, and team seats.
-                        </p>
-                        <p style="margin-top:16px;">
-                            <a href="<?php echo esc_url( home_url( '/pricing' ) ); ?>" class="ofp-btn ofp-btn-primary">Upgrade plan</a>
-                        </p>
-                    <?php endif; ?>
-                </div>
+                    <div class="ofp-card" style="padding:16px 20px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:36px; height:36px; border-radius:8px; background:rgba(59,130,246,0.1); color:var(--accent-blue); display:flex; align-items:center; justify-content:center;">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m1-3l1 3m6-3l1 3m-1-3l-1 3M3 10.5h18" /></svg>
+                            </div>
+                            <div>
+                                <div style="font-size:14px; font-weight:700; color:var(--text-main);">
+                                    <?php echo esc_html( $plan_labels[ $active_plan ] ?? ucfirst( $active_plan ) ); ?> Plan
+                                    <span style="font-size:11px; font-weight:600; padding:2px 8px; border-radius:100px; <?php echo $has_active_paid_plan ? 'background:#dcfce7; color:#16a34a;' : 'background:#e0e7ff; color:#4338ca;'; ?> margin-left:6px;">Active</span>
+                                </div>
+                                <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">
+                                    Using <strong><?php echo esc_html( $used_count ); ?></strong> of <strong><?php echo esc_html( $plan_caps[ $active_plan ] ?? 1 ); ?></strong> listings allowed.
+                                    <?php if ( $plan_expires ) : ?>
+                                        &bull; Renews: <?php echo esc_html( date( 'd M Y', strtotime( $plan_expires ) ) ); ?>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                        <?php if ( ! $has_active_paid_plan ) : ?>
+                            <a href="<?php echo esc_url( home_url( '/pricing' ) ); ?>" class="ofp-btn-plan-action primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                                </svg>
+                                <span>Upgrade Plan</span>
+                            </a>
+                        <?php else : ?>
+                            <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn-plan-action">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                </svg>
+                                <span>Funding &amp; Renewals</span>
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 <?php endif; ?>
 
-                <!-- Add / Edit property form -->
-                <div class="ofp-card">
-                    <h3><?php echo $editing_post ? 'Edit Property' : 'Add New Property'; ?></h3>
+                <div class="ofp-card" style="padding:0; overflow:hidden;">
+                    <!-- Table Card Header -->
+                    <div style="padding:20px 24px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                        <div>
+                            <h3 style="margin:0 0 4px; font-size:18px; font-weight:700; color:var(--text-main);">Manage Properties</h3>
+                            <p style="margin:0; font-size:13px; color:var(--text-muted);">Real-time inventory of all property listings and unit statuses.</p>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span style="background:var(--bg-body); border:1px solid var(--border-color); font-size:12.5px; font-weight:600; padding:6px 12px; border-radius:8px; color:var(--text-muted);">
+                                Total Properties: <strong style="color:var(--text-main);"><?php echo count( $my_properties ); ?></strong>
+                            </span>
+                            <a href="<?php echo esc_url( add_query_arg( 'tab', 'form', home_url( '/properties' ) ) ); ?>" class="ofp-btn-header-add">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                <span>Add Property</span>
+                            </a>
+                        </div>
+                    </div>
 
-                    <?php if ( ! $editing_post && ! OFP_Property_CPT::can_add_property( $client->id ) ) : ?>
-                        <p class="ofp-hint">
-                            You have reached your plan's property limit.
-                            <?php if ( OFP_Brand::hide_plan_prompts( $client ) ) : ?>
-                                Contact support to raise the limit.
-                            <?php else : ?>
-                                <a href="<?php echo esc_url( home_url( '/pricing' ) ); ?>">Upgrade</a> to add more listings.
-                            <?php endif; ?>
-                        </p>
+                    <?php if ( empty( $my_properties ) ) : ?>
+                        <div style="text-align:center; padding:56px 24px; background:rgba(255,255,255,0.01);">
+                            <div style="width:56px; height:56px; border-radius:50%; background:rgba(59,130,246,0.1); color:var(--accent-blue); display:inline-flex; align-items:center; justify-content:center; margin-bottom:16px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:28px;height:28px;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>
+                            </div>
+                            <h4 style="margin:0 0 8px; font-size:16px; font-weight:700; color:var(--text-main);">No Properties Listed Yet</h4>
+                            <p style="margin:0 auto 20px; max-width:440px; font-size:13.5px; color:var(--text-muted); line-height:1.5;">You haven't added any listings to your portfolio. Create your first property with photos, pricing, and specs.</p>
+                            <a href="<?php echo esc_url( add_query_arg( 'tab', 'form', home_url( '/properties' ) ) ); ?>" class="ofp-btn ofp-btn-primary" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:9px 18px; text-decoration:none;">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                <span>Add Your First Property</span>
+                            </a>
+                        </div>
                     <?php else : ?>
-                        <form method="POST" enctype="multipart/form-data" style="margin-top:20px;">
-                            <?php wp_nonce_field( 'ofp_save_property_action', 'ofp_property_nonce' ); ?>
-                            <?php if ( $editing_post ) : ?>
-                                <input type="hidden" name="property_id" value="<?php echo esc_attr( $editing_post->ID ); ?>">
-                            <?php endif; ?>
+                        <div class="ofp-table-responsive" style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                            <table class="ofp-table" style="width:100%; border-collapse:collapse; white-space:nowrap;">
+                                <thead>
+                                    <tr style="border-bottom:1px solid var(--border-color); background:rgba(255,255,255,0.02);">
+                                        <th style="padding:12px 16px; width:40px; font-size:12px; color:var(--text-muted);">#</th>
+                                        <th style="padding:12px 16px; font-size:12px; color:var(--text-muted); min-width:280px;">Property</th>
+                                        <th style="padding:12px 16px; font-size:12px; color:var(--text-muted);">Price</th>
+                                        <th style="padding:12px 16px; font-size:12px; color:var(--text-muted);">Listing Type</th>
+                                        <th style="padding:12px 16px; font-size:12px; color:var(--text-muted);">Property Type</th>
+                                        <th style="padding:12px 16px; font-size:12px; color:var(--text-muted);">Specs</th>
+                                        <th style="padding:12px 16px; font-size:12px; color:var(--text-muted);">Status</th>
+                                        <th style="padding:12px 16px; font-size:12px; color:var(--text-muted); text-align:right;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ( $my_properties as $idx => $property ) :
+                                        $prop_id      = (int) $property->ID;
+                                        $thumb_url    = get_the_post_thumbnail_url( $prop_id, 'medium' ) ?: get_the_post_thumbnail_url( $prop_id, 'thumbnail' );
+                                        $ltype        = get_post_meta( $prop_id, 'ofp_listing_type', true ) ?: 'sale';
+                                        $ptype        = get_post_meta( $prop_id, 'ofp_property_type', true ) ?: '—';
+                                        $loc          = get_post_meta( $prop_id, 'ofp_location_text', true ) ?: '—';
+                                        $price        = (float) get_post_meta( $prop_id, 'ofp_price', true );
+                                        $price_period = get_post_meta( $prop_id, 'ofp_price_period', true );
+                                        if ( $price_period === 'one-time' ) $price_period = 'sales';
+                                        $beds         = get_post_meta( $prop_id, 'ofp_bedrooms', true );
+                                        $baths        = get_post_meta( $prop_id, 'ofp_bathrooms', true );
+                                        $area         = get_post_meta( $prop_id, 'ofp_area_sqm', true );
+                                        $db_status    = get_post_meta( $prop_id, 'ofp_status', true ) ?: 'pending_upload';
+                                        $is_occupied  = class_exists( 'OFP_Property_Rent' ) && OFP_Property_Rent::wp_property_is_occupied( $prop_id );
 
-                            <div class="ofp-form-grid" style="grid-template-columns: 1fr 1fr; gap:16px;">
-                                <div class="ofp-field" style="grid-column: 1 / -1;">
-                                    <label>Title</label>
-                                    <input type="text" name="title" required
-                                           value="<?php echo esc_attr( $editing_post->post_title ?? '' ); ?>">
+                                        // Badge style for listing type
+                                        $ltype_colors = [
+                                            'sale'       => 'background:rgba(37, 99, 235, 0.12); color:#3b82f6;',
+                                            'rent'       => 'background:rgba(139, 92, 246, 0.12); color:#8b5cf6;',
+                                            'shortlet'   => 'background:rgba(217, 119, 6, 0.12); color:#d97706;',
+                                            'commercial' => 'background:rgba(124, 58, 237, 0.12); color:#7c3aed;',
+                                            'land'       => 'background:rgba(77, 124, 15, 0.12); color:#4d7c0f;'
+                                        ];
+                                        $ltype_badge_style = $ltype_colors[ $ltype ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
+
+                                        // Status badge
+                                        if ( $is_occupied ) {
+                                            $status_html = '<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:#ede9fe;color:#7c3aed;">Occupied</span>';
+                                        } elseif ( $property->post_status === 'pending' || $db_status === 'pending_upload' ) {
+                                            $status_html = '<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:#fef3c7;color:#d97706;">Pending Review</span>';
+                                        } elseif ( $db_status === 'live' ) {
+                                            $status_html = '<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:#dcfce7;color:#16a34a;">Live</span>';
+                                        } elseif ( $db_status === 'taken' ) {
+                                            $status_html = '<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:rgba(128,128,128,0.12);color:var(--text-muted);">Taken</span>';
+                                        } elseif ( $db_status === 'expired' ) {
+                                            $status_html = '<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:#fee2e2;color:#ef4444;">Expired</span>';
+                                        } else {
+                                            $status_html = '<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:rgba(128,128,128,0.12);color:var(--text-muted);">' . esc_html( ucfirst($db_status) ) . '</span>';
+                                        }
+
+                                        $period_labels = [ 'sales' => '', 'year' => '/ yr', '2years' => '/ 2 yrs', 'month' => '/ mo' ];
+                                        $period_suffix = $period_labels[ $price_period ] ?? ( $price_period ? ' / ' . $price_period : '' );
+                                    ?>
+                                        <tr class="ofp-property-row" style="border-bottom:1px solid var(--border-color);">
+                                            <td style="padding:14px 16px; color:var(--text-muted); font-size:12px; font-weight:600;">
+                                                <?php echo esc_html( $idx + 1 ); ?>
+                                            </td>
+                                            <td style="padding:14px 16px;">
+                                                <div class="ofp-prop-info-cell">
+                                                    <div class="ofp-prop-thumb-wrap">
+                                                        <?php if ( $thumb_url ) : ?>
+                                                            <img src="<?php echo esc_url( $thumb_url ); ?>" alt="" class="ofp-prop-thumb-img" loading="lazy">
+                                                        <?php else : ?>
+                                                            <div class="ofp-prop-thumb-placeholder">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:22px;height:22px;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <div style="min-width:0; max-width:320px;">
+                                                        <a href="<?php echo esc_url( get_permalink( $prop_id ) ); ?>" target="_blank" class="ofp-prop-meta-title" title="<?php echo esc_attr( $property->post_title ); ?>">
+                                                            <?php echo esc_html( $property->post_title ); ?>
+                                                        </a>
+                                                        <div class="ofp-prop-meta-loc">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:13px;height:13px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                                                            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?php echo esc_html( $loc ); ?></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="padding:14px 16px; font-weight:700; color:var(--text-main); font-size:14px;">
+                                                ₦<?php echo esc_html( number_format( $price, 0 ) ); ?>
+                                                <?php if ( $period_suffix ) : ?>
+                                                    <span style="font-size:11.5px; font-weight:500; color:var(--text-muted); margin-left:2px;"><?php echo esc_html( $period_suffix ); ?></span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td style="padding:14px 16px;">
+                                                <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr( $ltype_badge_style ); ?>">
+                                                    <?php echo esc_html( ucfirst( $ltype ) ); ?>
+                                                </span>
+                                            </td>
+                                            <td style="padding:14px 16px; color:var(--text-main); font-weight:500; font-size:13.5px;">
+                                                <?php echo esc_html( ucfirst( $ptype ) ); ?>
+                                            </td>
+                                            <td style="padding:14px 16px;">
+                                                <?php if ( $ltype === 'land' ) : ?>
+                                                    <span class="ofp-spec-pill"><?php echo $area ? esc_html($area) . ' SQM' : 'Plot'; ?></span>
+                                                <?php else : ?>
+                                                    <div style="display:flex; align-items:center; gap:10px;">
+                                                        <?php if ( $beds !== '' && $beds !== null && (int)$beds > 0 ) : ?>
+                                                            <span class="ofp-spec-pill" title="<?php echo esc_attr($beds); ?> Bedrooms">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
+                                                                <?php echo esc_html( $beds ); ?> Bed
+                                                            </span>
+                                                        <?php endif; ?>
+                                                        <?php if ( $baths !== '' && $baths !== null && (int)$baths > 0 ) : ?>
+                                                            <span class="ofp-spec-pill" title="<?php echo esc_attr($baths); ?> Bathrooms">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25V3.75m0 3.75a3 3 0 01-3-3m3 3a3 3 0 00-3-3m0 0H6.75" /></svg>
+                                                                <?php echo esc_html( $baths ); ?> Bath
+                                                            </span>
+                                                        <?php endif; ?>
+                                                        <?php if ( ( $beds === '' || (int)$beds === 0 ) && ( $baths === '' || (int)$baths === 0 ) ) : ?>
+                                                            <span style="color:var(--text-muted); font-size:12px;">—</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td style="padding:14px 16px;">
+                                                <?php echo $status_html; ?>
+                                            </td>
+                                            <td style="padding:14px 16px; text-align:right;">
+                                                <div style="display:inline-flex; align-items:center; gap:8px;">
+                                                    <a href="<?php echo esc_url( get_permalink( $prop_id ) ); ?>" target="_blank" class="ofp-table-action-btn view" title="View Public Listing">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
+                                                    </a>
+                                                    <?php if ( $can_edit_properties ) : ?>
+                                                        <a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'form', 'edit' => $prop_id ], home_url( '/properties' ) ) ); ?>" class="ofp-table-action-btn edit" title="Edit Property">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg>
+                                                        </a>
+                                                    <?php else : ?>
+                                                        <span class="ofp-table-action-btn view" style="opacity:0.4;cursor:not-allowed;" title="Renew or upgrade to edit">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                    <form method="POST" style="display:inline; margin:0;" onsubmit="return confirm('Are you sure you want to delete this property listing?');">
+                                                        <?php wp_nonce_field( 'ofp_delete_property_action', 'ofp_delete_nonce' ); ?>
+                                                        <input type="hidden" name="property_id" value="<?php echo esc_attr( $prop_id ); ?>">
+                                                        <button type="submit" name="ofp_delete_property" value="1" class="ofp-table-action-btn delete" title="Delete Property">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+            <?php elseif ( $active_tab === 'form' ) : ?>
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- TAB 2: REDESIGNED PROPERTY FORM BUILDER                       -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+
+                <?php if ( $editing_post ) : ?>
+                    <div style="margin: 0 0 16px; text-align: left;">
+                        <a href="<?php echo esc_url( home_url( '/properties' ) ); ?>" class="ofp-back-link-left">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
+                            <span>Back to Properties</span>
+                        </a>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ( ! $editing_post && ! OFP_Property_CPT::can_add_property( $client->id ) ) : ?>
+                    <div class="ofp-card" style="padding:32px 24px; text-align:center;">
+                        <div style="width:52px; height:52px; border-radius:50%; background:rgba(217,119,6,0.1); color:#d97706; display:inline-flex; align-items:center; justify-content:center; margin-bottom:16px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:26px;height:26px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                        </div>
+                        <h3 style="margin:0 0 8px; font-size:18px; font-weight:700; color:var(--text-main);">Plan Limit Reached</h3>
+                        <p class="ofp-hint" style="max-width:480px; margin:0 auto 20px;">
+                            You have reached your plan's maximum property limit. Upgrade your listing tier to add more properties to your portfolio.
+                        </p>
+                        <a href="<?php echo esc_url( home_url( '/pricing' ) ); ?>" class="ofp-btn ofp-btn-primary" style="padding:10px 24px;">Upgrade Plan</a>
+                    </div>
+                <?php else : ?>
+                    <form method="POST" enctype="multipart/form-data" style="margin-top:0;">
+                        <?php wp_nonce_field( 'ofp_save_property_action', 'ofp_property_nonce' ); ?>
+                        <?php if ( $editing_post ) : ?>
+                            <input type="hidden" name="property_id" value="<?php echo esc_attr( $editing_post->ID ); ?>">
+                        <?php endif; ?>
+
+                        <!-- 1. Basic Information -->
+                        <div class="ofp-form-card-section">
+                            <div class="ofp-form-section-header">
+                                <div class="ofp-form-section-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="ofp-form-section-title">1. Basic Information</h4>
+                                    <p class="ofp-form-section-desc">Primary title, detailed description, and real estate categorization.</p>
+                                </div>
+                            </div>
+
+                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+                                <div class="ofp-field" style="grid-column:1/-1;">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Property Title <span style="color:#ef4444;">*</span></label>
+                                    <input type="text" name="title" required placeholder="e.g. Luxury 4-Bedroom Semi-Detached Duplex with BQ"
+                                           value="<?php echo esc_attr( $editing_post->post_title ?? '' ); ?>"
+                                           style="width:100%; font-size:14.5px; padding:11px 14px; border-radius:8px;">
                                 </div>
 
-                                <div class="ofp-field" style="grid-column: 1 / -1;">
-                                    <label>Description</label>
-                                    <textarea name="description" rows="4"><?php echo esc_textarea( $editing_post->post_content ?? '' ); ?></textarea>
+                                <div class="ofp-field" style="grid-column:1/-1;">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Full Description</label>
+                                    <textarea name="description" rows="5" placeholder="Detail the property layout, accessibility, neighborhood highlights, and finishes..." style="width:100%; font-size:14px; padding:12px 14px; border-radius:8px;"><?php echo esc_textarea( $editing_post->post_content ?? '' ); ?></textarea>
                                 </div>
-                                
+
                                 <div class="ofp-field">
-                                    <label>Listing Type</label>
-                                    <select name="listing_type" class="ofp-select">
-                                        <option value="" hidden>— Select —</option>
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Listing Type <span style="color:#ef4444;">*</span></label>
+                                    <select name="listing_type" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
+                                        <option value="" hidden>— Select Listing Type —</option>
                                         <?php $current_ltype = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_listing_type', true ) : 'sale'; ?>
                                         <option value="sale" <?php selected( $current_ltype, 'sale' ); ?>>For Sale</option>
                                         <option value="rent" <?php selected( $current_ltype, 'rent' ); ?>>For Rent</option>
@@ -394,9 +650,9 @@ if ( isset( $_GET['edit'] ) ) {
                                 </div>
 
                                 <div class="ofp-field">
-                                    <label>Property Type</label>
-                                    <select name="property_type" class="ofp-select">
-                                        <option value="" hidden>— Select —</option>
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Property Type <span style="color:#ef4444;">*</span></label>
+                                    <select name="property_type" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
+                                        <option value="" hidden>— Select Property Type —</option>
                                         <?php 
                                         $current_ptype = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_property_type', true ) : 'apartment'; 
                                         $types = [ 'apartment' => 'Apartment', 'duplex' => 'Duplex', 'semi-detached' => 'Semi-Detached', 'bungalow' => 'Bungalow', 'terrace' => 'Terrace', 'land' => 'Land', 'office' => 'Office', 'shop' => 'Shop', 'warehouse' => 'Warehouse', 'other' => 'Other' ];
@@ -406,53 +662,283 @@ if ( isset( $_GET['edit'] ) ) {
                                         ?>
                                     </select>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Pricing & Commerce -->
+                        <div class="ofp-form-card-section">
+                            <div class="ofp-form-section-header">
+                                <div class="ofp-form-section-icon" style="background:rgba(16,185,129,0.1); color:#10b981;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="ofp-form-section-title">2. Pricing &amp; Commerce</h4>
+                                    <p class="ofp-form-section-desc">Valuation, billing period, title documentation, and receiving bank details.</p>
+                                </div>
+                            </div>
+
+                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+                                <div class="ofp-field">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Price (₦ Nigerian Naira) <span style="color:#ef4444;">*</span></label>
+                                    <div style="position:relative;">
+                                        <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:700; color:var(--text-muted); font-size:15px;">₦</span>
+                                        <input type="number" step="0.01" name="price" required placeholder="0.00"
+                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_price', true ) : '' ); ?>"
+                                               style="width:100%; padding:11px 14px 11px 32px; border-radius:8px; font-weight:600;">
+                                    </div>
+                                </div>
 
                                 <div class="ofp-field">
-                                    <label>Price (NGN)</label>
-                                    <input type="number" step="0.01" name="price" required
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_price', true ) : '' ); ?>">
-                                </div>
-                                
-                                <div class="ofp-field">
-                                    <label>Price Period</label>
-                                    <select name="price_period" class="ofp-select">
-                                        <option value="" hidden>— N/A —</option>
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Price Period</label>
+                                    <select name="price_period" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
+                                        <option value="" hidden>— Select Period —</option>
                                         <?php 
                                         $current_period = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_price_period', true ) : 'year'; 
                                         if ( $current_period === 'one-time' ) $current_period = 'sales';
                                         ?>
-                                        <option value="sales" <?php selected( $current_period, 'sales' ); ?>>Sales</option>
+                                        <option value="sales" <?php selected( $current_period, 'sales' ); ?>>Sales (One-off Total)</option>
                                         <option value="year" <?php selected( $current_period, 'year' ); ?>>Per Year (Rent)</option>
                                         <option value="2years" <?php selected( $current_period, '2years' ); ?>>Per 2 Years (Rent)</option>
-                                        <option value="month" <?php selected( $current_period, 'month' ); ?>>Per Month (Rent)</option>
+                                        <option value="month" <?php selected( $current_period, 'month' ); ?>>Per Month (Shortlet/Rent)</option>
                                     </select>
                                 </div>
 
                                 <div class="ofp-field">
-                                    <label>Bedrooms</label>
-                                    <input type="number" name="bedrooms"
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_bedrooms', true ) : '' ); ?>">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Title Document</label>
+                                    <?php $current_title_doc = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_title_document', true ) : ''; ?>
+                                    <select name="title_document" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
+                                        <option value="">-- Select Title Document --</option>
+                                        <option value="C of O" <?php selected( $current_title_doc, 'C of O' ); ?>>Certificate of Occupancy (C of O)</option>
+                                        <option value="Governor's Consent" <?php selected( $current_title_doc, "Governor's Consent" ); ?>>Governor's Consent</option>
+                                        <option value="Gazette" <?php selected( $current_title_doc, 'Gazette' ); ?>>Government Gazette</option>
+                                        <option value="Deed of Assignment" <?php selected( $current_title_doc, 'Deed of Assignment' ); ?>>Deed of Assignment</option>
+                                        <option value="R of O" <?php selected( $current_title_doc, 'R of O' ); ?>>Right of Occupancy (R of O)</option>
+                                        <option value="Excision" <?php selected( $current_title_doc, 'Excision' ); ?>>Excision</option>
+                                        <option value="Other" <?php selected( $current_title_doc, 'Other' ); ?>>Other</option>
+                                    </select>
                                 </div>
 
                                 <div class="ofp-field">
-                                    <label>Bathrooms</label>
-                                    <input type="number" name="bathrooms"
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_bathrooms', true ) : '' ); ?>">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Receiving Bank Account</label>
+                                    <?php
+                                    $bank_list    = OFP_Bank_Account::list( (int) $client->id );
+                                    $current_bank = $editing_post ? (int) get_post_meta( $editing_post->ID, 'ofp_bank_account_id', true ) : 0;
+                                    ?>
+                                    <select name="bank_account_id" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
+                                        <option value="0">Default primary account</option>
+                                        <?php foreach ( $bank_list as $b ) : ?>
+                                            <option value="<?php echo (int) $b->id; ?>" <?php selected( $current_bank, (int) $b->id ); ?>>
+                                                <?php echo esc_html( $b->bank_name . ' — ' . $b->account_number . ' (' . $b->account_name . ')' ); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Specifications & Condition -->
+                        <div class="ofp-form-card-section">
+                            <div class="ofp-form-section-header">
+                                <div class="ofp-form-section-icon" style="background:rgba(139,92,246,0.1); color:#8b5cf6;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.32l-3.27 3.287a1.5 1.5 0 01-2.122-2.122l3.287-3.27a4.5 4.5 0 00-6.32 4.486c.048.58.024 1.193-.14 1.743" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="ofp-form-section-title">3. Specifications &amp; Features</h4>
+                                    <p class="ofp-form-section-desc">Room counts, land sizing, construction condition, and furnishing grade.</p>
+                                </div>
+                            </div>
+
+                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:18px;">
+                                <div class="ofp-field">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Bedrooms</label>
+                                    <input type="number" name="bedrooms" min="0" placeholder="e.g. 4"
+                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_bedrooms', true ) : '' ); ?>"
+                                           style="width:100%; padding:11px 14px; border-radius:8px;">
                                 </div>
 
-                                <div class="ofp-field" style="grid-column: 1 / -1;">
-                                    <label>Location / Address</label>
-                                    <input type="text" name="location_text" placeholder="e.g. Lekki Phase 1, Lagos"
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_location_text', true ) : '' ); ?>">
+                                <div class="ofp-field">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Bathrooms</label>
+                                    <input type="number" name="bathrooms" min="0" placeholder="e.g. 4"
+                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_bathrooms', true ) : '' ); ?>"
+                                           style="width:100%; padding:11px 14px; border-radius:8px;">
                                 </div>
 
+                                <div class="ofp-field">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Parking Spaces</label>
+                                    <input type="number" name="parking" min="0" placeholder="e.g. 3"
+                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_parking', true ) : '' ); ?>"
+                                           style="width:100%; padding:11px 14px; border-radius:8px;">
+                                </div>
+
+                                <div class="ofp-field">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Area (SQM)</label>
+                                    <input type="number" name="area_sqm" min="0" placeholder="e.g. 450"
+                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_area_sqm', true ) : '' ); ?>"
+                                           style="width:100%; padding:11px 14px; border-radius:8px;">
+                                </div>
+                            </div>
+
+                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px;">
+                                <div class="ofp-field">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Condition</label>
+                                    <?php $current_condition = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_condition', true ) : ''; ?>
+                                    <select name="condition" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
+                                        <option value="">-- Select Condition --</option>
+                                        <option value="Newly Built" <?php selected( $current_condition, 'Newly Built' ); ?>>Newly Built</option>
+                                        <option value="Fairly Used" <?php selected( $current_condition, 'Fairly Used' ); ?>>Fairly Used</option>
+                                        <option value="Renovation Needed" <?php selected( $current_condition, 'Renovation Needed' ); ?>>Renovation Needed</option>
+                                        <option value="Under Construction" <?php selected( $current_condition, 'Under Construction' ); ?>>Under Construction</option>
+                                        <option value="Off-Plan" <?php selected( $current_condition, 'Off-Plan' ); ?>>Off-Plan</option>
+                                    </select>
+                                </div>
+
+                                <div class="ofp-field">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Furnishing</label>
+                                    <?php $current_furnishing = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_furnishing', true ) : ''; ?>
+                                    <select name="furnishing" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
+                                        <option value="">-- Select Furnishing --</option>
+                                        <option value="Furnished" <?php selected( $current_furnishing, 'Furnished' ); ?>>Furnished</option>
+                                        <option value="Semi-Furnished" <?php selected( $current_furnishing, 'Semi-Furnished' ); ?>>Semi-Furnished</option>
+                                        <option value="Unfurnished" <?php selected( $current_furnishing, 'Unfurnished' ); ?>>Unfurnished</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Location & Media -->
+                        <div class="ofp-form-card-section">
+                            <div class="ofp-form-section-header">
+                                <div class="ofp-form-section-icon" style="background:rgba(217,119,6,0.1); color:#d97706;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="ofp-form-section-title">4. Location &amp; Media</h4>
+                                    <p class="ofp-form-section-desc">Physical address, video tour link, and high-resolution photo uploads.</p>
+                                </div>
+                            </div>
+
+                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+                                <div class="ofp-field" style="grid-column:1/-1;">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Location / Address <span style="color:#ef4444;">*</span></label>
+                                    <input type="text" name="location_text" required placeholder="e.g. Lekki Phase 1, off Admiralty Way, Lagos"
+                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_location_text', true ) : '' ); ?>"
+                                           style="width:100%; padding:11px 14px; border-radius:8px;">
+                                </div>
+
+                                <div class="ofp-field" style="grid-column:1/-1;">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Video Tour URL <span class="ofp-hint" style="display:inline;margin:0;">(Optional)</span></label>
+                                    <input type="url" name="video_url" placeholder="https://www.youtube.com/watch?v=... or Vimeo"
+                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_video_url', true ) : '' ); ?>"
+                                           style="width:100%; padding:11px 14px; border-radius:8px;">
+                                </div>
+
+                                <div class="ofp-field" style="grid-column:1/-1;">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">
+                                        Upload Photos <span class="ofp-hint" style="display:inline;margin:0;">(The first photo automatically becomes the main featured thumbnail)</span>
+                                    </label>
+                                    <div class="ofp-file-dropzone" onclick="document.getElementById('ofp-photos-file-input').click();">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:36px;height:36px;color:var(--text-muted);margin:0 auto 10px;display:block;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" /></svg>
+                                        <div style="font-size:14px; font-weight:600; color:var(--text-main); margin-bottom:4px;">Select photos or drag and drop</div>
+                                        <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">Supports PNG, JPG, WEBP. You can select multiple images at once.</div>
+                                        <button type="button" class="ofp-btn-browse-photos" style="pointer-events:none;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                            <span>Choose Photos</span>
+                                        </button>
+                                        <input type="file" id="ofp-photos-file-input" name="photos[]" accept="image/*" multiple style="display:none;" onchange="document.getElementById('ofp-selected-files-count').textContent = this.files.length + ' photo(s) selected';">
+                                        <div id="ofp-selected-files-count" style="margin-top:10px; font-size:13px; font-weight:600; color:var(--accent-blue);"></div>
+                                    </div>
+
+                                    <?php if ( $editing_post ) :
+                                        $post_thumb_url = get_the_post_thumbnail_url( $editing_post->ID, 'medium' );
+                                        $gallery_meta   = get_post_meta( $editing_post->ID, 'ofp_gallery_ids', true );
+                                        $gallery_ids    = json_decode( $gallery_meta ?: '[]', true ) ?: [];
+                                    ?>
+                                        <?php if ( $post_thumb_url || ! empty( $gallery_ids ) ) : ?>
+                                            <div style="margin-top:16px;">
+                                                <div style="font-size:12.5px; font-weight:600; color:var(--text-muted); margin-bottom:8px;">Currently Uploaded Photos:</div>
+                                                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                                    <?php if ( $post_thumb_url ) : ?>
+                                                        <div style="position:relative; width:80px; height:60px; border-radius:8px; overflow:hidden; border:2px solid var(--accent-blue);">
+                                                            <img src="<?php echo esc_url( $post_thumb_url ); ?>" alt="" style="width:100%; height:100%; object-fit:cover;">
+                                                            <span style="position:absolute; bottom:2px; left:2px; font-size:9px; font-weight:700; background:rgba(0,0,0,0.7); color:#fff; padding:1px 4px; border-radius:4px;">Main</span>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <?php foreach ( $gallery_ids as $gid ) :
+                                                        $g_url = wp_get_attachment_image_url( (int) $gid, 'thumbnail' );
+                                                        if ( ! $g_url ) continue;
+                                                    ?>
+                                                        <div style="width:80px; height:60px; border-radius:8px; overflow:hidden; border:1px solid var(--border-color);">
+                                                            <img src="<?php echo esc_url( $g_url ); ?>" alt="" style="width:100%; height:100%; object-fit:cover;">
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5. Features & Amenities -->
+                        <div class="ofp-form-card-section">
+                            <div class="ofp-form-section-header">
+                                <div class="ofp-form-section-icon" style="background:rgba(236,72,153,0.1); color:#ec4899;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="ofp-form-section-title">5. Features &amp; Amenities</h4>
+                                    <p class="ofp-form-section-desc">Select all amenities, security provisions, and utilities available on-site.</p>
+                                </div>
+                            </div>
+
+                            <?php
+                            $all_amenities = [
+                                'swimming_pool'   => 'Swimming Pool',
+                                'smart_home'      => 'Smart Home Automation',
+                                'power_247'       => '24/7 Electricity',
+                                'cctv_security'   => 'CCTV & Security',
+                                'gym'             => 'Gym / Fitness',
+                                'elevator'        => 'Elevator / Lift',
+                                'playground'      => 'Children Play Area',
+                                'bq'              => 'Boys Quarters (BQ)',
+                                'water_treatment' => 'Water Treatment',
+                                'fitted_kitchen'  => 'Fitted Kitchen',
+                            ];
+                            $selected_amenities = $editing_post ? ( json_decode( get_post_meta( $editing_post->ID, 'ofp_amenities', true ) ?: '[]', true ) ?: [] ) : [];
+                            ?>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:12px;">
+                                <?php foreach ( $all_amenities as $key => $label ) :
+                                    $is_checked = in_array( $key, $selected_amenities, true );
+                                ?>
+                                    <label class="ofp-amenity-card">
+                                        <input type="checkbox" name="amenities[]" value="<?php echo esc_attr( $key ); ?>"
+                                            <?php checked( $is_checked ); ?>>
+                                        <span><?php echo esc_html( $label ); ?></span>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <!-- 6. Status & Publishing Settings -->
+                        <div class="ofp-form-card-section">
+                            <div class="ofp-form-section-header">
+                                <div class="ofp-form-section-icon" style="background:rgba(59,130,246,0.1); color:var(--accent-blue);">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="ofp-form-section-title">6. Status &amp; Visibility</h4>
+                                    <p class="ofp-form-section-desc">Manage public visibility, availability status, and featured promotion.</p>
+                                </div>
+                            </div>
+
+                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
                                 <?php if ( $editing_post ) : ?>
-                                    <div class="ofp-field" style="grid-column: 1 / -1;">
-                                        <label>Status</label>
+                                    <div class="ofp-field">
+                                        <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Listing Status</label>
                                         <?php $current_status = get_post_meta( $editing_post->ID, 'ofp_status', true ); ?>
-                                        <select name="status" class="ofp-select">
-                                            <option value="pending_upload" <?php selected( $current_status, 'pending_upload' ); ?>>Pending Upload</option>
-                                            <option value="live" <?php selected( $current_status, 'live' ); ?>>Live</option>
+                                        <select name="status" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
+                                            <option value="pending_upload" <?php selected( $current_status, 'pending_upload' ); ?>>Pending Upload / Draft</option>
+                                            <option value="live" <?php selected( $current_status, 'live' ); ?>>Live (Publicly visible)</option>
                                             <option value="taken" <?php selected( $current_status, 'taken' ); ?>>Taken / Sold / Rented</option>
                                             <option value="expired" <?php selected( $current_status, 'expired' ); ?>>Expired</option>
                                         </select>
@@ -463,221 +949,54 @@ if ( isset( $_GET['edit'] ) ) {
                                 $can_feature = $active_plan !== 'free';
                                 $is_featured = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_is_featured', true ) : '0';
                                 ?>
-                                <div class="ofp-field" style="grid-column: 1 / -1;">
-                                    <label>
+                                <div class="ofp-field" style="<?php echo $editing_post ? '' : 'grid-column:1/-1;'; ?> display:flex; flex-direction:column; justify-content:center;">
+                                    <label class="ofp-amenity-card" style="margin-top:<?php echo $editing_post ? '24px' : '0'; ?>;">
                                         <input type="checkbox" name="is_featured" value="1"
                                             <?php checked( $is_featured, '1' ); ?>
                                             <?php disabled( ! $can_feature, true ); ?>>
-                                        Featured Listing (Display at the top of search results)
-                                        <?php if ( ! $can_feature ) echo '<span style="color:#ef4444;font-size:12px;display:block;margin-top:4px;">(Not available on Free plan)</span>'; ?>
+                                        <span style="font-weight:600;">Featured Property (Highlight at the top of directory results)</span>
                                     </label>
-                                </div>
-
-                                <div class="ofp-field" style="grid-column: 1 / -1;">
-                                    <label>Photos <span class="ofp-hint" style="display:inline;margin:0;">(first photo becomes the main image)</span></label>
-                                    <input type="file" name="photos[]" accept="image/*" multiple style="font-size:14px; padding:10px 0;">
-                                </div>
-
-                                <div class="ofp-field">
-                                    <label>Parking Spaces</label>
-                                    <input type="number" name="parking" min="0"
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_parking', true ) : '' ); ?>">
-                                </div>
-
-                                <div class="ofp-field">
-                                    <label>Area (SQM)</label>
-                                    <input type="number" name="area_sqm" min="0"
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_area_sqm', true ) : '' ); ?>">
-                                </div>
-
-                                <div class="ofp-field">
-                                    <label>Title Document</label>
-                                    <?php $current_title_doc = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_title_document', true ) : ''; ?>
-                                    <select name="title_document" class="ofp-select">
-                                        <option value="">-- Select --</option>
-                                        <option value="C of O" <?php selected( $current_title_doc, 'C of O' ); ?>>C of O</option>
-                                        <option value="Governor's Consent" <?php selected( $current_title_doc, "Governor's Consent" ); ?>>Governor's Consent</option>
-                                        <option value="Gazette" <?php selected( $current_title_doc, 'Gazette' ); ?>>Gazette</option>
-                                        <option value="Deed of Assignment" <?php selected( $current_title_doc, 'Deed of Assignment' ); ?>>Deed of Assignment</option>
-                                        <option value="R of O" <?php selected( $current_title_doc, 'R of O' ); ?>>R of O</option>
-                                        <option value="Excision" <?php selected( $current_title_doc, 'Excision' ); ?>>Excision</option>
-                                        <option value="Other" <?php selected( $current_title_doc, 'Other' ); ?>>Other</option>
-                                    </select>
-                                </div>
-
-                                <div class="ofp-field">
-                                    <label>Receiving Bank Account</label>
-                                    <?php
-                                    $bank_list    = OFP_Bank_Account::list( (int) $client->id );
-                                    $current_bank = $editing_post ? (int) get_post_meta( $editing_post->ID, 'ofp_bank_account_id', true ) : 0;
-                                    ?>
-                                    <select name="bank_account_id" class="ofp-select">
-                                        <option value="0">Default account</option>
-                                        <?php foreach ( $bank_list as $b ) : ?>
-                                            <option value="<?php echo (int) $b->id; ?>" <?php selected( $current_bank, (int) $b->id ); ?>><?php echo esc_html( $b->bank_name . ' ' . $b->account_number ); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <small style="color:var(--text-muted);">Where buyers and tenants send money for this property. Add accounts in My Account.</small>
-                                </div>
-                                
-                                                                <div class="ofp-field">
-                                    <label>Condition</label>
-                                    <?php $current_condition = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_condition', true ) : ''; ?>
-                                    <select name="condition" class="ofp-select">
-                                        <option value="">-- Select --</option>
-                                        <option value="Newly Built" <?php selected( $current_condition, 'Newly Built' ); ?>>Newly Built</option>
-                                        <option value="Fairly Used" <?php selected( $current_condition, 'Fairly Used' ); ?>>Fairly Used</option>
-                                        <option value="Renovation Needed" <?php selected( $current_condition, 'Renovation Needed' ); ?>>Renovation Needed</option>
-                                        <option value="Under Construction" <?php selected( $current_condition, 'Under Construction' ); ?>>Under Construction</option>
-                                        <option value="Off-Plan" <?php selected( $current_condition, 'Off-Plan' ); ?>>Off-Plan</option>
-                                    </select>
-                                </div>
-
-                                <div class="ofp-field">
-                                    <label>Furnishing</label>
-                                    <?php $current_furnishing = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_furnishing', true ) : ''; ?>
-                                    <select name="furnishing" class="ofp-select">
-                                        <option value="">-- Select --</option>
-                                        <option value="Furnished" <?php selected( $current_furnishing, 'Furnished' ); ?>>Furnished</option>
-                                        <option value="Semi-Furnished" <?php selected( $current_furnishing, 'Semi-Furnished' ); ?>>Semi-Furnished</option>
-                                        <option value="Unfurnished" <?php selected( $current_furnishing, 'Unfurnished' ); ?>>Unfurnished</option>
-                                    </select>
-                                </div>
-
-                                <div class="ofp-field" style="grid-column: 1 / -1;">
-                                    <label>Video Tour URL</label>
-                                    <input type="url" name="video_url" placeholder="https://www.youtube.com/watch?v=..."
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_video_url', true ) : '' ); ?>">
-                                </div>
-
-                                <div class="ofp-field" style="grid-column: 1 / -1;">
-                                    <label>Amenities</label>
-                                    <?php
-                                    $all_amenities = [
-                                        'swimming_pool' => 'Swimming Pool', 'smart_home' => 'Smart Home', 'power_247' => '24/7 Electricity',
-                                        'cctv_security' => 'CCTV / Security', 'gym' => 'Gym / Fitness', 'elevator' => 'Elevator',
-                                        'playground' => 'Children Play Area', 'bq' => 'Boys Quarters (BQ)',
-                                        'water_treatment' => 'Water Treatment', 'fitted_kitchen' => 'Fitted Kitchen',
-                                    ];
-                                    $selected_amenities = $editing_post ? ( json_decode( get_post_meta( $editing_post->ID, 'ofp_amenities', true ) ?: '[]', true ) ?: [] ) : [];
-                                    ?>
-                                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:8px; margin-top:4px;">
-                                        <?php foreach ( $all_amenities as $key => $label ) : ?>
-                                            <label style="display:flex; align-items:center; gap:6px; font-weight:normal; font-size:13px; cursor:pointer;">
-                                                <input type="checkbox" name="amenities[]" value="<?php echo esc_attr( $key ); ?>"
-                                                    <?php checked( in_array( $key, $selected_amenities, true ) ); ?>>
-                                                <?php echo esc_html( $label ); ?>
-                                            </label>
-                                        <?php endforeach; ?>
-                                    </div>
+                                    <?php if ( ! $can_feature ) : ?>
+                                        <span style="color:#ef4444; font-size:12px; margin-top:4px;">(Featured promotion requires Silver or Gold plan)</span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
+                        </div>
 
-                            <div style="margin-top:24px;">
-                                <button type="submit" name="ofp_save_property" value="1" class="ofp-btn ofp-btn-primary">
-                                    <?php echo $editing_post ? 'Save Changes' : 'Submit Property'; ?>
+                        <!-- 7. Actions Bar -->
+                        <div class="ofp-form-actions-bar">
+                            <button type="submit" name="ofp_save_property" value="1" class="ofp-btn-form-save">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:17px;height:17px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span><?php echo $editing_post ? 'Save Changes' : 'Publish Property'; ?></span>
+                            </button>
+                            <a href="<?php echo esc_url( add_query_arg( 'tab', 'table', home_url( '/properties' ) ) ); ?>" class="ofp-btn-form-cancel">
+                                Cancel
+                            </a>
+                            <?php if ( $editing_post ) : ?>
+                                <button type="button" class="ofp-btn-form-delete" onclick="if(confirm('Are you sure you want to permanently delete this property listing?')){document.getElementById('ofp-delete-property-form-direct').submit();}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                    <span>Delete Property</span>
                                 </button>
-                                <?php if ( $editing_post ) : ?>
-                                    <a href="?_x=<?php echo rand(); ?>" class="ofp-btn" style="background:var(--bg-body); color:var(--text-muted); border:1px solid var(--border-color); margin-left:12px; text-decoration:none;">Cancel Edit</a>
-                                <?php endif; ?>
-                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </form>
+
+                    <?php if ( $editing_post ) : ?>
+                        <form id="ofp-delete-property-form-direct" method="POST" style="display:none;">
+                            <?php wp_nonce_field( 'ofp_delete_property_action', 'ofp_delete_nonce' ); ?>
+                            <input type="hidden" name="property_id" value="<?php echo esc_attr( $editing_post->ID ); ?>">
+                            <input type="hidden" name="ofp_delete_property" value="1">
                         </form>
                     <?php endif; ?>
-                </div>
+                <?php endif; ?>
 
-                <!-- My Properties list -->
-                <div class="ofp-card">
-                    <h3>Your Listings</h3>
-                    <?php if ( empty( $my_properties ) ) : ?>
-                        <p class="ofp-hint">You haven't added any properties yet.</p>
-                    <?php else : ?>
-                        <div class="ofp-table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; white-space: nowrap; min-width: 800px;">
-                                <thead>
-                                    <tr style="border-bottom: 2px solid #e2e8f0; color: #64748b;">
-                                        <th style="padding: 12px 16px;">Title</th>
-                                        <th style="padding: 12px 16px;">Listing Type</th>
-                                        <th style="padding: 12px 16px;">Property Type</th>
-                                        <th style="padding: 12px 16px;">Location</th>
-                                        <th style="padding: 12px 16px;">Date</th>
-                                        <th style="padding: 12px 16px;">Status</th>
-                                        <th style="padding: 12px 16px;">Price</th>
-                                        <th style="padding: 12px 16px; text-align:right;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ( $my_properties as $property ) : ?>
-                                        <tr style="border-bottom: 1px solid #f1f5f9;">
-                                            <td style="padding: 12px 16px; font-weight: 500;">
-                                                <a href="<?php echo esc_url( get_permalink( $property->ID ) ); ?>" target="_blank" class="property-title-link">
-                                                    <?php echo esc_html( $property->post_title ); ?>
-                                                </a>
-                                            </td>
-                                            <td style="padding: 12px 16px;">
-                                                <?php 
-                                                    $ltype = get_post_meta( $property->ID, 'ofp_listing_type', true ) ?: 'sale';
-                                                    echo esc_html( ucfirst( $ltype ) );
-                                                ?>
-                                            </td>
-                                            <td style="padding: 12px 16px;">
-                                                <?php 
-                                                    $ptype = get_post_meta( $property->ID, 'ofp_property_type', true ) ?: '—';
-                                                    echo esc_html( ucfirst( $ptype ) );
-                                                ?>
-                                            </td>
-                                            <td style="padding: 12px 16px;">
-                                                <?php 
-                                                    $loc = get_post_meta( $property->ID, 'ofp_location_text', true ) ?: '—';
-                                                    echo esc_html( $loc );
-                                                ?>
-                                            </td>
-                                            <td style="padding: 12px 16px;">
-                                                <?php echo esc_html( wp_date( 'M j, Y', strtotime( $property->post_date ) ) ); ?>
-                                            </td>
-                                            <td style="padding: 12px 16px;">
-                                                <?php 
-                                                    $db_status = get_post_meta( $property->ID, 'ofp_status', true ) ?: 'pending_upload';
-                                                    $is_occupied = class_exists( 'OFP_Property_Rent' ) && OFP_Property_Rent::wp_property_is_occupied( (int) $property->ID );
-                                                    if ( $is_occupied ) {
-                                                        echo '<span style="color:#7c3aed;font-weight:600;">Occupied</span>';
-                                                    } elseif ( $property->post_status === 'pending' ) {
-                                                        echo '<span style="color:#f59e0b;font-weight:500;">Pending Review</span>';
-                                                    } else {
-                                                        $status_labels = [
-                                                            'live' => '<span style="color:#10b981;">Live</span>',
-                                                            'pending_upload' => '<span style="color:#f59e0b;">Draft</span>',
-                                                            'taken' => '<span style="color:#64748b;">Taken</span>',
-                                                            'expired' => '<span style="color:#ef4444;">Expired</span>',
-                                                        ];
-                                                        echo $status_labels[$db_status] ?? esc_html($db_status);
-                                                    }
-                                                ?>
-                                            </td>
-                                            <td style="padding: 12px 16px;">
-                                                NGN <?php echo esc_html( number_format( (float) get_post_meta( $property->ID, 'ofp_price', true ), 2 ) ); ?>
-                                            </td>
-                                            <td style="padding: 12px 16px; text-align:right;">
-                                                <?php if ( $can_edit_properties ) : ?>
-                                                    <a href="?edit=<?php echo esc_attr( $property->ID ); ?>" style="color:#3b82f6; text-decoration:none; margin-right:16px; font-weight:500;">Edit</a>
-                                                <?php else : ?>
-                                                    <span style="color:#94a3b8; margin-right:16px; font-weight:500;" title="Renew or choose a plan to edit">Renew to Edit</span>
-                                                <?php endif; ?>
-                                                <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this property?');">
-                                                    <?php wp_nonce_field( 'ofp_delete_property_action', 'ofp_delete_nonce' ); ?>
-                                                    <input type="hidden" name="property_id" value="<?php echo esc_attr( $property->ID ); ?>">
-                                                    <button type="submit" name="ofp_delete_property" value="1" style="background:none; border:none; color:#ef4444; font-weight:500; cursor:pointer; padding:0;">Delete</button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
+            <?php endif; ?>
         </div>
     </div>
+</div> <!-- .ofp-content-area -->
+</main>
+</div> <!-- .ofp-shell -->
+
 <script>
 (function(){
     var form = document.querySelector('select[name="listing_type"]');

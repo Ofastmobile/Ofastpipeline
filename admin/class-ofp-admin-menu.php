@@ -662,22 +662,7 @@ class OFP_Admin_Menu {
             }
         }
 
-        // ── CRM Client Subscription Plans ──────────────────────────────────
-        if ( isset( $_POST['price_starter'] ) || isset( $_POST['price_growth'] ) || isset( $_POST['price_pro'] ) ) {
-            $sub_prices = [];
-            $sub_setups = [];
-            foreach ( OFP_Subscription::PLAN_KEYS as $sub_plan ) {
-                if ( isset( $_POST[ "price_{$sub_plan}" ] ) ) {
-                    $sub_prices[ $sub_plan ] = (float) $_POST[ "price_{$sub_plan}" ];
-                }
-                if ( isset( $_POST[ "setup_{$sub_plan}" ] ) ) {
-                    $sub_setups[ $sub_plan ] = (float) $_POST[ "setup_{$sub_plan}" ];
-                }
-            }
-            if ( ! empty( $sub_prices ) ) {
-                OFP_Subscription::save_pricing( $sub_prices, $sub_setups );
-            }
-        }
+
 
         $updated_keys = [];
 

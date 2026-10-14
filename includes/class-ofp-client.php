@@ -9,8 +9,8 @@
  *  2.  Generate a temporary password (plaintext, emailed once, never stored plain)
  *  3.  Insert the client row into wp_ofp_clients
  *  4.  Create the credit record in wp_ofp_credits (starts at zero balance)
- *  5.  Create subscriptions based on what was requested (crm / listing / both)
- *      — OFP_Subscription::create() handles this, including pipeline_config for CRM
+ *  5.  Create the listing subscription
+ *  5b. Create the pipeline_config for lead automation messages
  *  6.  Send the welcome email with login credentials
  *
  * TWO ONBOARDING PATHS (v2.1):
@@ -45,12 +45,10 @@ class OFP_Client {
      *     @type string   $business_phone     Phone for IVR call transfer (defaults to $phone).
      *     @type string   $whatsapp_number    WhatsApp number (defaults to $phone).
      *     @type string   $subdomain          Requested subdomain slug.
-     *     @type string   $plan               CRM plan: 'starter'|'growth'|'pro'. Default 'starter'.
+     *     @type string   $plan               Plan tier: 'free'|'silver'|'gold'. Default 'free'.
      *     @type string   $business_category  e.g. 'property', 'food', 'fashion'.
      *     @type string   $onboarding_source  'manual' (default) or 'self_serve'.
      *     @type string   $status             Override default status (rarely needed).
-     *     @type array    $subscriptions      Which types to create: ['crm'], ['listing'], or both.
-     *                                        Defaults to ['crm'] for backward compatibility.
      * }
      *
      * @return int|false  The new client ID on success, false on failure.
@@ -89,7 +87,6 @@ class OFP_Client {
         $temp_password      = self::generate_temp_password();
         $onboarding_source  = $data['onboarding_source'] ?? 'manual';
         $plan               = sanitize_text_field( $data['plan'] ?? 'free' );
-        $subscriptions      = $data['subscriptions'] ?? [ 'crm', 'listing' ];
         $phone              = OFP_Security::sanitize_phone( $data['phone'] );
         $business_phone     = OFP_Security::sanitize_phone( $data['business_phone'] ?? $data['phone'] );
         $whatsapp_number    = OFP_Security::sanitize_phone( $data['whatsapp_number'] ?? $data['phone'] );
@@ -144,36 +141,51 @@ class OFP_Client {
             ]
         );
 
-        // ── 5. Create subscriptions ───────────────────────────────────────────
-        // OFP_Subscription::create() also handles pipeline_config creation
-        // for CRM subscriptions. Listing-only clients don't get pipeline_configs.
+        // ── 5. Create listing subscription ────────────────────────────────────
         $listing_plan = isset( $data['listing_plan'] ) ? sanitize_text_field( $data['listing_plan'] ) : 'bronze';
 
-        foreach ( $subscriptions as $sub_type ) {
-            $sub_type = sanitize_text_field( $sub_type );
-            if ( in_array( $sub_type, [ 'crm', 'listing' ], true ) ) {
-                $sub_plan = null;
-                if ( $sub_type === 'crm' ) {
-                    $sub_plan = $plan;
-                } elseif ( $sub_type === 'listing' ) {
-                    $sub_plan = $listing_plan;
-                }
-
-                OFP_Subscription::create(
-                    $client_id,
-                    $sub_type,
-                    $sub_plan
-                );
-            }
-        }
+        OFP_Subscription::create( $client_id, 'listing', $listing_plan );
 
         // Free plan owes nothing. Remove the pending rows so no "Awaiting Payment"
-        // line or payment banner shows. The pipeline config was already created above.
+        // line or payment banner shows.
         if ( OFP_Subscription::normalize_plan( $plan ) === 'free' && OFP_Subscription::normalize_plan( $listing_plan ) === 'free' ) {
             $wpdb->query( $wpdb->prepare(
                 "DELETE FROM {$wpdb->prefix}ofp_subscriptions WHERE client_id = %d AND status = 'pending'",
                 $client_id
             ) );
+        }
+
+        // ── 5b. Create pipeline config for lead automation ────────────────────
+        // Every new client gets a pipeline_config so automated SMS/voice
+        // follow-ups work from day one, regardless of plan tier.
+        $config_exists = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}ofp_pipeline_configs WHERE client_id = %d LIMIT 1",
+                $client_id
+            )
+        );
+        if ( ! $config_exists ) {
+            $wpdb->insert(
+                $wpdb->prefix . 'ofp_pipeline_configs',
+                [
+                    'client_id'              => $client_id,
+                    'instant_sms_enabled'    => 1,
+                    'instant_sms_message'    => get_option( 'ofp_default_instant_sms', '' ),
+                    'followup_1_delay_hours' => 1,
+                    'followup_1_type'        => 'sms',
+                    'followup_1_message'     => get_option( 'ofp_default_followup_1', '' ),
+                    'followup_2_delay_hours' => 24,
+                    'followup_2_type'        => 'voice',
+                    'followup_2_message'     => get_option( 'ofp_default_followup_2', '' ),
+                    'followup_3_delay_hours' => 72,
+                    'followup_3_type'        => 'sms',
+                    'followup_3_message'     => get_option( 'ofp_default_followup_3', '' ),
+                    'max_followups'          => 3,
+                    'ivr_option_1_action'    => 'transfer',
+                    'ivr_option_2_action'    => 'sms',
+                    'ivr_option_3_action'    => 'schedule',
+                ]
+            );
         }
 
         // ── 6. Send welcome email ─────────────────────────────────────────────

@@ -67,8 +67,7 @@ $has_bank_set       = ! empty( $bank_name ) && ! empty( $bank_acc_no );
 // Plans & Pricing
 $listing_prices     = OFP_Property_CPT::get_plan_prices();
 $listing_caps       = OFP_Property_CPT::get_plan_caps();
-$crm_prices         = OFP_Subscription::get_plan_prices();
-$crm_setups         = OFP_Subscription::get_setup_fees();
+
 
 // Encryption Vault Status
 $has_vault_key      = ! empty( get_option( 'ofp_encryption_key', '' ) );
@@ -392,7 +391,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
                                 <div class="ofp-field-group">
                                     <div class="ofp-field-label-row">
-                                        <label class="ofp-field-label">CRM Base Domain</label>
+                                        <label class="ofp-field-label">Platform Base Domain</label>
                                     </div>
                                     <div class="ofp-input-box">
                                         <input type="text" name="ofp_crm_base_domain"
@@ -1066,108 +1065,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                             <input type="number" step="1" min="1"
                                                    name="listing_cap_gold"
                                                    value="<?php echo esc_attr( $listing_caps['gold'] ?? 50 ); ?>">
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- CRM Client Subscription Tiers -->
-                    <div class="ofp-card">
-                        <div class="ofp-card-header">
-                            <div class="ofp-card-header-main">
-                                <div class="ofp-icon-box ofp-icon-lg icon-violet">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect width="20" height="14" x="2" y="7" rx="2" ry="2"/>
-                                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-                                    </svg>
-                                </div>
-                                <div class="ofp-card-title-group">
-                                    <h3>CRM Client Subscription Plans</h3>
-                                    <p>Monthly recurring fees and one-time onboarding setup fees charged to CRM agency clients.</p>
-                                </div>
-                            </div>
-                            <span class="ofp-pill ofp-pill-info">Client Subscriptions</span>
-                        </div>
-                        <div class="ofp-card-body">
-                            <div class="ofp-pricing-tier-grid">
-                                
-                                <!-- Starter CRM -->
-                                <div class="ofp-tier-card">
-                                    <div class="ofp-tier-header">
-                                        <h4 class="ofp-tier-name">Starter</h4>
-                                        <span class="ofp-tier-tag">Solo</span>
-                                    </div>
-                                    <div class="ofp-tier-input-group">
-                                        <label>Monthly Subscription (NGN)</label>
-                                        <div class="ofp-currency-input-wrap">
-                                            <span class="ofp-currency-symbol">₦</span>
-                                            <input type="number" step="0.01" min="0"
-                                                   name="price_starter"
-                                                   value="<?php echo esc_attr( $crm_prices['starter'] ?? 15000 ); ?>">
-                                        </div>
-                                    </div>
-                                    <div class="ofp-tier-input-group">
-                                        <label>One-time Setup Fee (NGN)</label>
-                                        <div class="ofp-currency-input-wrap">
-                                            <span class="ofp-currency-symbol">₦</span>
-                                            <input type="number" step="0.01" min="0"
-                                                   name="setup_starter"
-                                                   value="<?php echo esc_attr( $crm_setups['starter'] ?? 5000 ); ?>">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Growth CRM -->
-                                <div class="ofp-tier-card tier-popular">
-                                    <div class="ofp-tier-header">
-                                        <h4 class="ofp-tier-name" style="color:var(--ofp-primary);">Growth</h4>
-                                        <span class="ofp-tier-tag">Agencies</span>
-                                    </div>
-                                    <div class="ofp-tier-input-group">
-                                        <label>Monthly Subscription (NGN)</label>
-                                        <div class="ofp-currency-input-wrap">
-                                            <span class="ofp-currency-symbol">₦</span>
-                                            <input type="number" step="0.01" min="0"
-                                                   name="price_growth"
-                                                   value="<?php echo esc_attr( $crm_prices['growth'] ?? 35000 ); ?>">
-                                        </div>
-                                    </div>
-                                    <div class="ofp-tier-input-group">
-                                        <label>One-time Setup Fee (NGN)</label>
-                                        <div class="ofp-currency-input-wrap">
-                                            <span class="ofp-currency-symbol">₦</span>
-                                            <input type="number" step="0.01" min="0"
-                                                   name="setup_growth"
-                                                   value="<?php echo esc_attr( $crm_setups['growth'] ?? 10000 ); ?>">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Pro CRM -->
-                                <div class="ofp-tier-card">
-                                    <div class="ofp-tier-header">
-                                        <h4 class="ofp-tier-name" style="color:#7e22ce;">Pro</h4>
-                                        <span class="ofp-tier-tag">Scale</span>
-                                    </div>
-                                    <div class="ofp-tier-input-group">
-                                        <label>Monthly Subscription (NGN)</label>
-                                        <div class="ofp-currency-input-wrap">
-                                            <span class="ofp-currency-symbol">₦</span>
-                                            <input type="number" step="0.01" min="0"
-                                                   name="price_pro"
-                                                   value="<?php echo esc_attr( $crm_prices['pro'] ?? 75000 ); ?>">
-                                        </div>
-                                    </div>
-                                    <div class="ofp-tier-input-group">
-                                        <label>One-time Setup Fee (NGN)</label>
-                                        <div class="ofp-currency-input-wrap">
-                                            <span class="ofp-currency-symbol">₦</span>
-                                            <input type="number" step="0.01" min="0"
-                                                   name="setup_pro"
-                                                   value="<?php echo esc_attr( $crm_setups['pro'] ?? 15000 ); ?>">
                                         </div>
                                     </div>
                                 </div>

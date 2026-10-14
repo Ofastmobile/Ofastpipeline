@@ -211,7 +211,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_log_manual_paym
 }
 
 // --- Purchase Details View ---
-$detail_purchase_id = absint( $_GET['purchase_id'] ?? 0 );
+$detail_purchase_id = absint( $_GET['purchase_id'] ?? ( $_GET['purchase'] ?? 0 ) );
 if ( $detail_purchase_id ) {
     $detail_purchase = $wpdb->get_row( $wpdb->prepare(
         "SELECT pu.*, p.title AS property_title
@@ -236,18 +236,30 @@ if ( $detail_purchase_id ) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Purchase Details', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
     <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
 </head>
 <body class="ofp-portal-body">
-<?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
+<?php 
+$ofp_banner_btn = [ 'label' => 'Add Purchase', 'url' => home_url( '/property-purchases' ) ];
+include OFP_PATH . 'public/templates/partials/nav.php'; 
+?>
 <div class="ofp-container">
     <div style="padding-bottom: 60px;">
-        <div style="margin: 0 0 24px;">
-            <?php $ofp_sales_tab = 'purchase'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
-            <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
-                Purchase #<?php echo esc_html( $detail_purchase->id ); ?>
-            </h1>
+        <div style="margin: 0 0 16px; text-align: left;">
+            <a href="<?php echo esc_url( home_url( '/property-sales' ) ); ?>" class="ofp-back-link-left">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
+                <span>Back to Sales</span>
+            </a>
         </div>
+        <div style="margin: 0 0 24px;">
+            <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
+                Sales &amp; Installments
+            </h1>
+            <p style="color:var(--text-muted); margin:0; font-size:14px;">Purchase details and installment payment schedule for Purchase #<?php echo esc_html( $detail_purchase->id ); ?>.</p>
+        </div>
+
+        <?php $ofp_sales_tab = 'purchase'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
 
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:24px;">
             <div class="ofp-card" style="padding:20px;">
@@ -271,11 +283,11 @@ if ( $detail_purchase_id ) {
             <div class="ofp-card" style="padding:20px;">
                 <h3 style="margin:0 0 12px; font-size:16px;">Property & Plan</h3>
                 <p style="margin:6px 0; color:var(--text-main);"><strong>Property:</strong> <?php echo esc_html( $detail_purchase->property_title ?: '—' ); ?></p>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Total Price:</strong> NGN <?php echo esc_html( number_format( (float) $detail_purchase->total_price, 2 ) ); ?></p>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Amount Paid:</strong> NGN <?php echo esc_html( number_format( (float) $detail_purchase->amount_paid, 2 ) ); ?></p>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Balance:</strong> <strong>NGN <?php echo esc_html( number_format( (float) $detail_purchase->balance, 2 ) ); ?></strong></p>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Initial Payment:</strong> NGN <?php echo esc_html( number_format( (float) $detail_purchase->initial_payment, 2 ) ); ?></p>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Plan:</strong> <?php echo esc_html( $detail_purchase->installment_count ); ?> × NGN <?php echo esc_html( number_format( (float) $detail_purchase->installment_amount, 2 ) ); ?> (<?php echo esc_html( ucfirst( $detail_purchase->frequency ) ); ?>)</p>
+                <p style="margin:6px 0; color:var(--text-main);"><strong>Total Price:</strong> ₦<?php echo esc_html( number_format( (float) $detail_purchase->total_price, 2 ) ); ?></p>
+                <p style="margin:6px 0; color:var(--text-main);"><strong>Amount Paid:</strong> ₦<?php echo esc_html( number_format( (float) $detail_purchase->amount_paid, 2 ) ); ?></p>
+                <p style="margin:6px 0; color:var(--text-main);"><strong>Balance:</strong> <strong>₦<?php echo esc_html( number_format( (float) $detail_purchase->balance, 2 ) ); ?></strong></p>
+                <p style="margin:6px 0; color:var(--text-main);"><strong>Initial Payment:</strong> ₦<?php echo esc_html( number_format( (float) $detail_purchase->initial_payment, 2 ) ); ?></p>
+                <p style="margin:6px 0; color:var(--text-main);"><strong>Plan:</strong> <?php echo esc_html( $detail_purchase->installment_count ); ?> × ₦<?php echo esc_html( number_format( (float) $detail_purchase->installment_amount, 2 ) ); ?> (<?php echo esc_html( ucfirst( $detail_purchase->frequency ) ); ?>)</p>
             </div>
         </div>
 
@@ -301,7 +313,7 @@ if ( $detail_purchase_id ) {
                                 <tr>
                                     <td style="color:var(--text-muted);"><?php echo $ins->installment_no == 1 && (float) $detail_purchase->initial_payment > 0 ? '—' : esc_html( $ins->installment_no ); ?></td>
                                     <td style="color:var(--text-main);"><?php echo $ins->installment_no == 1 && (float) $detail_purchase->initial_payment > 0 ? 'Initial Payment' : 'Installment'; ?></td>
-                                    <td style="color:var(--text-main); font-weight:500;">NGN <?php echo esc_html( number_format( (float) $ins->amount_due, 2 ) ); ?></td>
+                                    <td style="color:var(--text-main); font-weight:500;">₦<?php echo esc_html( number_format( (float) $ins->amount_due, 2 ) ); ?></td>
                                     <td style="color:var(--text-main); font-size:13px;"><?php echo esc_html( wp_date( 'M j, Y', strtotime( $ins->due_date ) ) ); ?></td>
                                     <td>
                                         <?php
@@ -367,6 +379,9 @@ if ( $detail_purchase_id ) {
         <?php endif; ?>
     </div>
 </div>
+</div> <!-- .ofp-content-area -->
+</main>
+</div> <!-- .ofp-shell -->
 <?php wp_footer(); ?>
 </body>
 </html>
@@ -381,19 +396,30 @@ if ( $detail_purchase_id ) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Property Purchases', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
     <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
 </head>
 <body class="ofp-portal-body">
-<?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
+<?php 
+$ofp_banner_btn = [ 'label' => 'Add Purchase', 'url' => home_url( '/property-purchases' ) ];
+include OFP_PATH . 'public/templates/partials/nav.php'; 
+?>
 <div class="ofp-container">
     <div style="padding-bottom: 60px;">
-        <div style="margin: 0 0 24px;">
-            <?php $ofp_sales_tab = 'purchase'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
-            <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
-                Add Purchase
-            </h1>
-            <p style="color:#64748b; margin:0; font-size:14px;">Manage manual property purchases and installments for your buyers.</p>
+        <div style="margin: 0 0 16px; text-align: left;">
+            <a href="<?php echo esc_url( home_url( '/property-sales' ) ); ?>" class="ofp-back-link-left">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
+                <span>Back to Sales</span>
+            </a>
         </div>
+        <div style="margin: 0 0 24px;">
+            <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
+                Sales &amp; Installments
+            </h1>
+            <p style="color:var(--text-muted); margin:0; font-size:14px;">Manage manual property purchases and installments for your buyers.</p>
+        </div>
+
+        <?php $ofp_sales_tab = 'purchase'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
 
         <?php if ( $error ) : ?><div class="ofp-alert ofp-alert-error" style="margin-bottom:24px;"><?php echo esc_html( $error ); ?></div><?php endif; ?>
         <?php if ( $message ) : ?><div class="ofp-alert ofp-alert-success" style="margin-bottom:24px;"><?php echo esc_html( $message ); ?></div><?php endif; ?>
@@ -414,7 +440,7 @@ if ( $detail_purchase_id ) {
                                 <option value="" hidden>— Select sale property —</option>
                                 <?php foreach ( $my_properties as $property ) : ?>
                                     <option value="<?php echo esc_attr( $property->id ); ?>">
-                                        <?php echo esc_html( $property->title . ' — NGN ' . number_format( (float) $property->price, 2 ) ); ?>
+                                        <?php echo esc_html( $property->title . ' — ₦' . number_format( (float) $property->price, 2 ) ); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -448,11 +474,11 @@ if ( $detail_purchase_id ) {
                             <input type="email" name="buyer_email" placeholder="Optional" style="width:100%;">
                         </div>
                         <div class="ofp-field">
-                            <label>Initial Payment (NGN)</label>
+                            <label>Initial Payment (₦)</label>
                             <input type="number" step="0.01" min="0" name="initial_payment" required style="width:100%;">
                         </div>
                         <div class="ofp-field">
-                            <label>Installment Amount (NGN)</label>
+                            <label>Installment Amount (₦)</label>
                             <input type="number" step="0.01" min="0" name="installment_amount" required style="width:100%;">
                         </div>
                         <div class="ofp-field">
@@ -460,7 +486,7 @@ if ( $detail_purchase_id ) {
                             <input type="number" min="1" name="installment_count" required style="width:100%;">
                         </div>
                         <div class="ofp-field">
-                            <label>Amount Paid (NGN)</label>
+                            <label>Amount Paid (₦)</label>
                             <input type="number" step="0.01" min="0" name="amount_paid" required style="width:100%;">
                             <p class="ofp-hint">The amount already received (e.g. initial deposit).</p>
                         </div>
@@ -505,6 +531,9 @@ if ( $detail_purchase_id ) {
         </div>
     </div>
 </div>
+</div> <!-- .ofp-content-area -->
+</main>
+</div> <!-- .ofp-shell -->
 <script>
 (function(){
     var source = document.getElementById('ofp-buyer-source');

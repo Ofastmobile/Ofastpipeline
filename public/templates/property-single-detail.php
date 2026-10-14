@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // Phase 23: Facebook Meta Pixel Injection
 add_action( 'wp_head', function() {
     $post_id = get_the_ID();
@@ -481,7 +481,7 @@ if ( empty( $gallery_urls ) ) {
                 style="background: linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.35) 45%, transparent 100%);">
             </div>
 
-            <!-- Tags â€” top-left -->
+            <!-- Tags -- top-left -->
             <div class="absolute top-4 left-4 z-20 flex items-center gap-2 flex-wrap">
                 <span class="bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg"><?php echo esc_html( $listing_label ); ?></span>
                 <span

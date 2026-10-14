@@ -41,6 +41,9 @@ class OFP_Client_Portal {
         'team-invite' => 'team-invite.php',
         'message-templates' => 'message-templates.php',
         'tenants' => 'tenants.php',
+        'property-sales' => 'property-sales.php',
+        'property-purchases' => 'property-purchases.php',
+        'property-payments' => 'property-payments.php',
     ];
 
     private array $public_routes = [ 'login', 'signup', 'forgot-password', 'reset-password', 'team-invite' ];
@@ -94,9 +97,15 @@ class OFP_Client_Portal {
             return;
         }
 
-        // Not one of our routes — bail out.
-        if ( empty( $route ) || ! array_key_exists( $route, $this->routes ) ) {
+        // Check if this is a portal page via query vars, explicit route, or path
+        $is_portal = $this->is_portal_page();
+        if ( ! $is_portal && ( empty( $route ) || ! array_key_exists( $route, $this->routes ) ) ) {
             return;
+        }
+
+        if ( empty( $route ) ) {
+            $path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+            $route = explode( '/', $path )[0] ?? '';
         }
 
         // ── Auth pages (login / signup / forgot-password / reset-password / team-invite) ──

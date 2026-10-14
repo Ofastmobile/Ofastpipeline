@@ -25,15 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OFP_Subscription {
 
-    /**
-     * CRM plan pricing in NGN.
-     * Stored here as the canonical reference. Monnify webhook uses these same values.
-     */
-    const CRM_PRICES = [
-        'starter' => 25000,
-        'growth'  => 45000,
-        'pro'     => 75000,
-    ];
+
 
     const PLAN_KEYS = [ 'starter', 'growth', 'pro' ];
 
@@ -282,33 +274,7 @@ class OFP_Subscription {
         );
     }
 
-    /**
-     * Returns all CRM monthly plan prices.
-     *
-     * @return array
-     */
-    public static function get_plan_prices(): array {
-        $prices = [];
-        foreach ( self::PLAN_KEYS as $plan ) {
-            $prices[ $plan ] = (float) get_option( "ofp_plan_price_{$plan}", self::DEFAULT_PLAN_PRICES[ $plan ] );
-        }
 
-        return $prices;
-    }
-
-    /**
-     * Returns all CRM setup fees.
-     *
-     * @return array
-     */
-    public static function get_setup_fees(): array {
-        $fees = [];
-        foreach ( self::PLAN_KEYS as $plan ) {
-            $fees[ $plan ] = (float) get_option( "ofp_plan_setup_fee_{$plan}", self::DEFAULT_SETUP_FEES[ $plan ] );
-        }
-
-        return $fees;
-    }
 
     /**
      * Get a single plan monthly price.
@@ -1157,18 +1123,14 @@ class OFP_Subscription {
     /**
      * Resolve the monthly fee for a given subscription type and plan.
      *
-     * CRM prices are defined as class constants above.
-     * Listing fee is configurable via wp-admin → Settings → Listing Fee.
+     * Listing fee is configurable via wp-admin → Settings → Plans & Pricing.
+     * Legacy CRM type returns 0 — CRM subscriptions are no longer created.
      *
-     * @param  string      $type  'crm' or 'listing'.
-     * @param  string|null $plan  CRM plan name (only relevant when type = 'crm').
+     * @param  string      $type  'listing' (or legacy 'crm').
+     * @param  string|null $plan  Plan tier.
      * @return float              Monthly fee in NGN.
      */
     public static function resolve_amount( string $type, ?string $plan ): float {
-        if ( $type === 'crm' ) {
-            return self::get_plan_price( $plan );
-        }
-
         if ( $type === 'listing' ) {
             return OFP_Property_CPT::get_plan_price( $plan );
         }

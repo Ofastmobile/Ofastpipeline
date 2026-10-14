@@ -180,6 +180,14 @@ $nav_items[] = [
 ?>
 
 <?php OFP_Brand::print_head( $client ); ?>
+<link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>" id="ofp-client-portal-css-bundle">
+<style id="ofp-svg-failsafe">
+svg { max-width: 100%; box-sizing: border-box; }
+.ofp-sidebar svg, .ofp-nav-icon svg { width: 20px !important; height: 20px !important; max-width: 20px !important; max-height: 20px !important; display: inline-block; vertical-align: middle; }
+.ofp-sidebar-logo-icon svg { width: 36px !important; height: 36px !important; max-width: 36px !important; max-height: 36px !important; }
+.ofp-topbar svg, .ofp-hero-full-header svg { max-width: 24px; max-height: 24px; }
+.ofp-kpi-badge svg { width: 14px !important; height: 14px !important; }
+</style>
 <div class="ofp-shell" id="ofp-shell">
     <div class="ofp-sidebar-backdrop" id="ofp-sidebar-backdrop"></div>
 
@@ -224,28 +232,33 @@ $nav_items[] = [
     </aside>
 
     <main class="ofp-main">
-        <header class="ofp-topbar">
+        <div class="ofp-hero-full-header" style="background-image: url('<?php echo esc_url( OFP_URL . 'assets/images/dashboard-hero-banner.jpg' ); ?>');">
+            <div class="ofp-hero-full-header-overlay">
+
+        <header class="ofp-topbar ofp-topbar-transparent">
             
             <button class="ofp-sidebar-toggle" id="ofp-sidebar-toggle" aria-label="Toggle navigation">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;color:var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" /></svg>
             </button>
 
-            <!-- Search Bar Match -->
-            <div class="ofp-topbar-search">
-                <div class="search-wrap">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
-                    <input type="text" placeholder="Search...">
-                </div>
+            <div class="ofp-hero-greeting-pill">
+                <span class="ofp-status-dot-pulse"></span>
+                <span>
+                    <?php 
+                        $hour = current_time('H');
+                        $greeting = 'Good evening';
+                        if ($hour < 12) { $greeting = 'Good morning'; }
+                        elseif ($hour < 18) { $greeting = 'Good afternoon'; }
+                        echo esc_html( $greeting . ', ' . explode(' ', trim($client->owner_name))[0] ); 
+                    ?>!
+                </span>
+                <span class="ofp-hero-date-divider">&bull;</span>
+                <span class="ofp-hero-date"><?php echo date('M j, Y'); ?></span>
             </div>
 
             <div class="ofp-topbar-spacer" style="flex:1;"></div>
 
             <div class="ofp-topbar-actions">
-                    <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn-balance" title="Credit Balance">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>
-                        <span>Top Up</span>
-                    </a>
-
                 <!-- Theme Toggle Desktop Icon -->
                 <button class="ofp-icon-btn" id="ofp-theme-toggle" type="button" aria-label="Toggle Theme" title="Toggle Light/Dark Theme">
                     <svg class="theme-toggle-moon" style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -345,5 +358,471 @@ $nav_items[] = [
                 </div>
             </div>
         </header>
+
+            <!-- Bottom Controls Row inside full-width hero header -->
+            <div class="ofp-hero-topbar-controls">
+                <!-- Search bar with Ctrl+L / ⌘+L shortcut -->
+                <div class="ofp-hero-search-box" id="ofp-hero-search-trigger" style="cursor:pointer;" title="Press Ctrl+L or ⌘+L anywhere to search">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                    <input type="text" id="ofp-hero-quick-search" placeholder="Search everywhere..." readonly style="cursor:pointer;" />
+                    <span class="ofp-hero-kbd" id="ofp-hero-kbd-badge">Ctrl + L</span>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="ofp-hero-action-buttons">
+                    <button type="button" class="ofp-hero-btn-more" title="Refresh" onclick="window.location.reload();">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                        </svg>
+                    </button>
+
+                    <a href="<?php echo esc_url( home_url( '/reports' ) ); ?>" class="ofp-hero-btn-export">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:16px;height:16px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        </svg>
+                        <span>Export Report</span>
+                    </a>
+
+                    <?php
+                    $banner_btn_label = 'Add New Property';
+                    $banner_btn_url   = home_url( '/properties' );
+
+                    if ( ! empty( $ofp_banner_btn['label'] ) && ! empty( $ofp_banner_btn['url'] ) ) {
+                        $banner_btn_label = $ofp_banner_btn['label'];
+                        $banner_btn_url   = $ofp_banner_btn['url'];
+                    } elseif (
+                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-sales' ) !== false ||
+                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-purchases' ) !== false ||
+                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-payments' ) !== false ||
+                        strpos( $current_url, '/property-sales' ) !== false ||
+                        strpos( $current_url, '/property-purchases' ) !== false ||
+                        strpos( $current_url, '/property-payments' ) !== false ||
+                        isset( $ofp_sales_tab )
+                    ) {
+                        $banner_btn_label = 'Add Purchase';
+                        $banner_btn_url   = home_url( '/property-purchases' );
+                    }
+                    ?>
+                    <a href="<?php echo esc_url( $banner_btn_url ); ?>" class="ofp-hero-btn-add">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:16px;height:16px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        <span><?php echo esc_html( $banner_btn_label ); ?></span>
+                    </a>
+                </div>
+            </div>
+            </div> <!-- .ofp-hero-full-header-overlay -->
+        </div> <!-- .ofp-hero-full-header -->
+
+        <!-- ── GLOBAL SPOTLIGHT / COMMAND PALETTE SEARCH POPUP (Ctrl+L / ⌘+L) ── -->
+        <div class="ofp-search-modal-backdrop" id="ofp-search-modal" aria-hidden="true">
+            <div class="ofp-search-modal-box" role="dialog" aria-modal="true" aria-label="Quick Search">
+                <!-- Header with Input -->
+                <div class="ofp-search-modal-header">
+                    <svg class="ofp-search-modal-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                    <input type="text" id="ofp-modal-search-input" class="ofp-search-modal-input" placeholder="Search properties, sales, leads, reports, settings..." autocomplete="off" />
+                    <button type="button" class="ofp-search-modal-close" id="ofp-search-modal-close-btn" title="Close Search (Esc)">
+                        <span>ESC</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width:12px;height:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                <!-- Category Filter Tabs -->
+                <div class="ofp-search-modal-tabs" id="ofp-search-modal-filter-tabs">
+                    <button type="button" class="ofp-search-tab-pill active" data-filter="all">All</button>
+                    <button type="button" class="ofp-search-tab-pill" data-filter="properties">Properties</button>
+                    <button type="button" class="ofp-search-tab-pill" data-filter="sales">Sales & Purchases</button>
+                    <button type="button" class="ofp-search-tab-pill" data-filter="reports">Reports</button>
+                    <button type="button" class="ofp-search-tab-pill" data-filter="crm">Leads & CRM</button>
+                    <button type="button" class="ofp-search-tab-pill" data-filter="settings">Settings</button>
+                </div>
+
+                <!-- Dynamic Results / Suggested Shortcuts -->
+                <div class="ofp-search-modal-results" id="ofp-search-modal-results-list">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <!-- Footer with Navigation Hints -->
+                <div class="ofp-search-modal-footer">
+                    <div class="ofp-search-hints">
+                        <span class="ofp-search-hint-kbd"><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+                        <span class="ofp-search-hint-kbd"><kbd>↵</kbd> select</span>
+                        <span class="ofp-search-hint-kbd"><kbd>esc</kbd> close</span>
+                    </div>
+                    <div style="font-weight:600; opacity:0.8;">
+                        <span id="ofp-modal-kbd-hint">Ctrl + L</span> anywhere to toggle
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        (function() {
+            var modal = document.getElementById('ofp-search-modal');
+            var modalInput = document.getElementById('ofp-modal-search-input');
+            var closeBtn = document.getElementById('ofp-search-modal-close-btn');
+            var resultsList = document.getElementById('ofp-search-modal-results-list');
+            var filterTabs = document.querySelectorAll('#ofp-search-modal-filter-tabs .ofp-search-tab-pill');
+            var triggerBox = document.getElementById('ofp-hero-search-trigger');
+            var heroInput = document.getElementById('ofp-hero-quick-search');
+            var heroKbdBadge = document.getElementById('ofp-hero-kbd-badge');
+            var modalKbdHint = document.getElementById('ofp-modal-kbd-hint');
+
+            var currentFilter = 'all';
+            var selectedIndex = 0;
+
+            // Detect OS to update badge
+            var isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+            var shortcutText = isMac ? '⌘ + L' : 'Ctrl + L';
+            if (heroKbdBadge) heroKbdBadge.textContent = shortcutText;
+            if (modalKbdHint) modalKbdHint.textContent = shortcutText;
+
+            // Search catalog
+            var searchData = [
+                {
+                    title: 'Properties Portfolio',
+                    desc: 'Browse and manage all properties in portfolio',
+                    url: '<?php echo esc_js( home_url( '/properties' ) ); ?>',
+                    cat: 'properties',
+                    badge: 'Properties',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21" /></svg>'
+                },
+                {
+                    title: 'Add New Property',
+                    desc: 'Create a new property listing with images and price',
+                    url: '<?php echo esc_js( home_url( '/properties?tab=add' ) ); ?>',
+                    cat: 'properties',
+                    badge: 'Action',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>'
+                },
+                {
+                    title: 'Property Sales & Installments',
+                    desc: 'Track sales records, installment offers and payment plans',
+                    url: '<?php echo esc_js( home_url( '/property-sales' ) ); ?>',
+                    cat: 'sales',
+                    badge: 'Sales',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>'
+                },
+                {
+                    title: 'Add Purchase (Manual)',
+                    desc: 'Record a new buyer contract or purchase agreement',
+                    url: '<?php echo esc_js( home_url( '/property-purchases' ) ); ?>',
+                    cat: 'sales',
+                    badge: 'Purchases',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>'
+                },
+                {
+                    title: 'Payment Records',
+                    desc: 'View incoming customer transactions, receipts and history',
+                    url: '<?php echo esc_js( home_url( '/property-payments' ) ); ?>',
+                    cat: 'sales',
+                    badge: 'Payments',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>'
+                },
+                {
+                    title: 'Financial & Sales Reports',
+                    desc: 'Performance metrics, statements and exportable revenue logs',
+                    url: '<?php echo esc_js( home_url( '/reports' ) ); ?>',
+                    cat: 'reports',
+                    badge: 'Reports',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>'
+                },
+                {
+                    title: 'Leads & Pipeline CRM',
+                    desc: 'Track prospective buyers, inquiries and sales stages',
+                    url: '<?php echo esc_js( home_url( '/leads' ) ); ?>',
+                    cat: 'crm',
+                    badge: 'Leads',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>'
+                },
+                {
+                    title: 'Tenants & Leases',
+                    desc: 'Manage active tenants, rent payments and lease contracts',
+                    url: '<?php echo esc_js( home_url( '/tenants' ) ); ?>',
+                    cat: 'crm',
+                    badge: 'Tenants',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" /></svg>'
+                },
+                {
+                    title: 'Communications & SMS',
+                    desc: 'Automated messaging, broadcast reminders and phone logs',
+                    url: '<?php echo esc_js( home_url( '/communications' ) ); ?>',
+                    cat: 'crm',
+                    badge: 'Comms',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.502 49.177 49.177 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" /></svg>'
+                },
+                {
+                    title: 'SMS & Voice Credits',
+                    desc: 'Top up wallet, view airtime and carrier usage balance',
+                    url: '<?php echo esc_js( home_url( '/credits' ) ); ?>',
+                    cat: 'settings',
+                    badge: 'Credits',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'
+                },
+                {
+                    title: 'Funding & Subscription Plan',
+                    desc: 'Manage your active subscription tier and renewals',
+                    url: '<?php echo esc_js( home_url( '/funding' ) ); ?>',
+                    cat: 'settings',
+                    badge: 'Billing',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>'
+                },
+                {
+                    title: 'Team Members & Permissions',
+                    desc: 'Invite collaborators, assign roles and manage access',
+                    url: '<?php echo esc_js( home_url( '/team' ) ); ?>',
+                    cat: 'settings',
+                    badge: 'Team',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.765z" /></svg>'
+                },
+                {
+                    title: 'API & Gateway Settings',
+                    desc: 'Webhook keys, Termii / Sendchamp integration and credentials',
+                    url: '<?php echo esc_js( home_url( '/api-settings' ) ); ?>',
+                    cat: 'settings',
+                    badge: 'Settings',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 9.75L16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" /></svg>'
+                },
+                {
+                    title: 'Notification Settings',
+                    desc: 'Configure email alerts, payment reminders and lead pings',
+                    url: '<?php echo esc_js( home_url( '/notification-settings' ) ); ?>',
+                    cat: 'settings',
+                    badge: 'Settings',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>'
+                },
+                {
+                    title: 'Account Profile',
+                    desc: 'Personal details, avatar, password and security',
+                    url: '<?php echo esc_js( home_url( '/account' ) ); ?>',
+                    cat: 'settings',
+                    badge: 'Account',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>'
+                }
+            ];
+
+            function isModalOpen() {
+                return modal && modal.classList.contains('open');
+            }
+
+            function openSearchModal() {
+                if (!modal) return;
+                modal.classList.add('open');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+                renderSearchResults();
+                setTimeout(function() {
+                    if (modalInput) {
+                        modalInput.focus();
+                        modalInput.select();
+                    }
+                }, 50);
+            }
+
+            function closeSearchModal() {
+                if (!modal) return;
+                modal.classList.remove('open');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
+
+            function toggleSearchModal() {
+                if (isModalOpen()) {
+                    closeSearchModal();
+                } else {
+                    openSearchModal();
+                }
+            }
+
+            window.openGlobalSearchModal = openSearchModal;
+            window.closeGlobalSearchModal = closeSearchModal;
+
+            // Highlight matches
+            function highlightMatch(text, term) {
+                if (!term) return text;
+                var idx = text.toLowerCase().indexOf(term.toLowerCase());
+                if (idx === -1) return text;
+                return text.substring(0, idx) + '<strong style="color:#8b5cf6; text-decoration:underline;">' + text.substring(idx, idx + term.length) + '</strong>' + text.substring(idx + term.length);
+            }
+
+            function renderSearchResults() {
+                if (!resultsList) return;
+                var query = modalInput ? modalInput.value.trim() : '';
+                var queryLower = query.toLowerCase();
+
+                var filtered = searchData.filter(function(item) {
+                    var matchesCat = currentFilter === 'all' || item.cat === currentFilter;
+                    if (!matchesCat) return false;
+                    if (!queryLower) return true;
+                    return item.title.toLowerCase().indexOf(queryLower) !== -1 ||
+                           item.desc.toLowerCase().indexOf(queryLower) !== -1 ||
+                           item.badge.toLowerCase().indexOf(queryLower) !== -1;
+                });
+
+                var html = '';
+
+                // If user is searching a keyword, add primary dynamic actions
+                if (queryLower) {
+                    html += '<div class="ofp-search-result-group-title">Live Search Actions</div>';
+                    
+                    var propSearchUrl = '<?php echo esc_js( home_url( '/properties' ) ); ?>?s=' + encodeURIComponent(query);
+                    html += '<a href="' + propSearchUrl + '" class="ofp-search-item' + (selectedIndex === 0 ? ' selected' : '') + '" data-url="' + propSearchUrl + '">';
+                    html += '  <div class="ofp-search-item-icon" style="background:rgba(16,185,129,0.12); color:#10b981;">';
+                    html += '    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>';
+                    html += '  </div>';
+                    html += '  <div class="ofp-search-item-info">';
+                    html += '    <div class="ofp-search-item-title">Search properties for &ldquo;<strong>' + query + '</strong>&rdquo;</div>';
+                    html += '    <div class="ofp-search-item-desc">Filter all listings, locations, and units</div>';
+                    html += '  </div>';
+                    html += '  <span class="ofp-search-item-badge" style="background:#10b981; color:#ffffff; border-color:#10b981;">Press ↵</span>';
+                    html += '</a>';
+
+                    // Contextual page search if applicable
+                    var path = window.location.pathname;
+                    if (path.indexOf('/leads') !== -1) {
+                        var leadUrl = '<?php echo esc_js( home_url( '/leads' ) ); ?>?s=' + encodeURIComponent(query);
+                        html += '<a href="' + leadUrl + '" class="ofp-search-item" data-url="' + leadUrl + '">';
+                        html += '  <div class="ofp-search-item-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07" /></svg></div>';
+                        html += '  <div class="ofp-search-item-info"><div class="ofp-search-item-title">Search leads for &ldquo;<strong>' + query + '</strong>&rdquo;</div></div>';
+                        html += '  <span class="ofp-search-item-badge">Leads</span>';
+                        html += '</a>';
+                    }
+                }
+
+                if (filtered.length > 0) {
+                    html += '<div class="ofp-search-result-group-title">' + (queryLower ? 'Navigation & Shortcuts' : 'Suggested Shortcuts') + '</div>';
+                    
+                    var offset = queryLower ? 1 : 0;
+                    filtered.forEach(function(item, idx) {
+                        var isSel = (idx + offset) === selectedIndex;
+                        html += '<a href="' + item.url + '" class="ofp-search-item' + (isSel ? ' selected' : '') + '" data-url="' + item.url + '">';
+                        html += '  <div class="ofp-search-item-icon">' + item.icon + '</div>';
+                        html += '  <div class="ofp-search-item-info">';
+                        html += '    <div class="ofp-search-item-title">' + highlightMatch(item.title, query) + '</div>';
+                        html += '    <div class="ofp-search-item-desc">' + highlightMatch(item.desc, query) + '</div>';
+                        html += '  </div>';
+                        html += '  <span class="ofp-search-item-badge">' + item.badge + '</span>';
+                        html += '</a>';
+                    });
+                } else if (!queryLower) {
+                    html += '<div style="padding:24px; text-align:center; color:var(--text-muted); font-size:13px;">No items in this category.</div>';
+                }
+
+                resultsList.innerHTML = html;
+            }
+
+            // Global Keydown Listener (Capture Phase)
+            window.addEventListener('keydown', function(e) {
+                // Check for Ctrl+L or Cmd+L (also support Ctrl+K / Cmd+K)
+                if ((e.metaKey || e.ctrlKey) && (e.key === 'l' || e.key === 'L' || e.key === 'k' || e.key === 'K')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSearchModal();
+                    return false;
+                }
+
+                if (e.key === 'Escape' && isModalOpen()) {
+                    e.preventDefault();
+                    closeSearchModal();
+                    return false;
+                }
+
+                if (isModalOpen()) {
+                    var items = resultsList.querySelectorAll('.ofp-search-item');
+                    if (items.length === 0) return;
+
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        selectedIndex = (selectedIndex + 1) % items.length;
+                        items.forEach(function(el, i) {
+                            if (i === selectedIndex) {
+                                el.classList.add('selected');
+                                el.scrollIntoView({ block: 'nearest' });
+                            } else {
+                                el.classList.remove('selected');
+                            }
+                        });
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+                        items.forEach(function(el, i) {
+                            if (i === selectedIndex) {
+                                el.classList.add('selected');
+                                el.scrollIntoView({ block: 'nearest' });
+                            } else {
+                                el.classList.remove('selected');
+                            }
+                        });
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        var activeItem = items[selectedIndex] || items[0];
+                        if (activeItem) {
+                            var targetUrl = activeItem.getAttribute('data-url') || activeItem.getAttribute('href');
+                            if (targetUrl) {
+                                window.location.href = targetUrl;
+                            }
+                        }
+                    }
+                }
+            }, true);
+
+            // Open modal when clicking hero search box
+            if (triggerBox) {
+                triggerBox.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    openSearchModal();
+                });
+            }
+            if (heroInput) {
+                heroInput.addEventListener('focus', function(e) {
+                    e.preventDefault();
+                    this.blur();
+                    openSearchModal();
+                });
+            }
+
+            // Close modal button
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    closeSearchModal();
+                });
+            }
+
+            // Close when clicking backdrop
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        closeSearchModal();
+                    }
+                });
+            }
+
+            // Modal input typing live filtering
+            if (modalInput) {
+                modalInput.addEventListener('input', function() {
+                    selectedIndex = 0;
+                    renderSearchResults();
+                });
+            }
+
+            // Category filter pills
+            filterTabs.forEach(function(pill) {
+                pill.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    filterTabs.forEach(function(p) { p.classList.remove('active'); });
+                    this.classList.add('active');
+                    currentFilter = this.getAttribute('data-filter') || 'all';
+                    selectedIndex = 0;
+                    renderSearchResults();
+                    if (modalInput) modalInput.focus();
+                });
+            });
+        })();
+        </script>
         
         <div class="ofp-content-area">
