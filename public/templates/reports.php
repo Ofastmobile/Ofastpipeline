@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /reports
  * Client's monthly report download page.
@@ -98,11 +98,6 @@ $comms_last_month = (int) $wpdb->get_var(
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
 <div class="ofp-container">
-
-    <div class="ofp-page-header">
-        <h1>Reports</h1>
-        <p>Monthly pipeline reports automatically generated on the 1st of each month.</p>
-    </div>
 
     <?php if ( ! empty( $token_error ) ) : ?>
         <div class="ofp-alert ofp-alert-error">

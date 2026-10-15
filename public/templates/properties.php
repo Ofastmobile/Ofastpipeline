@@ -412,13 +412,6 @@ $prop_tabs = [
 
     <div class="ofp-container">
         <div style="padding-bottom: 60px;">
-            <div style="margin: 0 0 20px;">
-                <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 6px; letter-spacing:-0.01em;">
-                    My Properties
-                </h1>
-                <p style="color:var(--text-muted); margin:0; font-size:14px;">Manage your real estate listings portfolio, property details, and listing statuses.</p>
-            </div>
-
             <!-- Segmented Pill Tab Bar -->
             <div class="ofp-segmented-nav">
                 <?php foreach ( $prop_tabs as $key => $tab ) :

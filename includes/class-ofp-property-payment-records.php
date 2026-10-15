@@ -70,7 +70,20 @@ class OFP_Property_Payment_Records {
                     <tbody>
                     <?php if ( empty( $rows ) ) : ?>
                         <tr><td colspan="15">No property transactions recorded yet.</td></tr>
-                    <?php else : foreach ( $rows as $row ) : ?>
+                    <?php else : foreach ( $rows as $row ) : 
+                        $admin_status_styles = [
+                            'verified'             => 'background:#dcfce7; color:#16a34a;',
+                            'successful'           => 'background:#dcfce7; color:#16a34a;',
+                            'pending'              => 'background:#fef3c7; color:#d97706;',
+                            'pending_verification' => 'background:#fef3c7; color:#d97706;',
+                            'failed'               => 'background:#fee2e2; color:#ef4444;',
+                            'rejected'             => 'background:#fee2e2; color:#ef4444;',
+                            'refunded'             => 'background:#f1f5f9; color:#64748b;',
+                        ];
+                        $admin_st = strtolower( $row->status );
+                        $admin_st_style = $admin_status_styles[ $admin_st ] ?? 'background:#f1f5f9; color:#64748b;';
+                        $admin_st_label = ( $admin_st === 'pending_verification' ) ? 'Pending' : ucfirst( str_replace( '_', ' ', $row->status ) );
+                    ?>
                         <tr>
                             <td>#<?php echo esc_html( $row->id ); ?></td>
                             <td><strong><?php echo esc_html( $row->buyer_name ); ?></strong><br><small><?php echo esc_html( $row->buyer_phone ); ?></small></td>
@@ -81,24 +94,33 @@ class OFP_Property_Payment_Records {
                             <td><?php echo esc_html( ucfirst( str_replace( '_', ' ', $row->payment_method ) ) ); ?></td>
                             <td><?php echo esc_html( $row->gateway ?: '—' ); ?></td>
                             <td><code><?php echo esc_html( $row->gateway_reference ?: ( $row->payer_reference ?: '—' ) ); ?></code></td>
-                            <td><?php echo esc_html( ucfirst( str_replace( '_', ' ', $row->status ) ) ); ?></td>
+                            <td>
+                                <span style="font-size:11.5px; font-weight:600; padding:3px 8px; border-radius:12px; <?php echo esc_attr( $admin_st_style ); ?>">
+                                    <?php echo esc_html( $admin_st_label ); ?>
+                                </span>
+                            </td>
                             <td>NGN <?php echo esc_html( number_format( (float) $row->purchase_paid, 2 ) ); ?></td>
                             <td>NGN <?php echo esc_html( number_format( (float) $row->purchase_balance, 2 ) ); ?></td>
-                            <td><?php echo $row->receipt_path ? '<a href="' . esc_url( OFP_Property_Receipt_Viewer::get_receipt_url( (int) $row->id, 'purchase' ) ) . '" target="_blank" rel="noopener">View proof</a>' : '—'; ?></td>
+                            <td><?php echo $row->receipt_path ? '<a href="' . esc_url( OFP_Property_Receipt_Viewer::get_receipt_url( (int) $row->id, 'purchase' ) ) . '" onclick="event.preventDefault(); ofpOpenProofModal(this.href);" style="color:#2563eb; font-weight:600; text-decoration:none;">View proof</a>' : '—'; ?></td>
                             <td>
-                                <?php if ( 'pending_verification' === $row->status ) : ?>
-                                    <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
-                                        <?php wp_nonce_field( 'ofp_property_payment_verify_' . $row->id ); ?>
-                                        <input type="hidden" name="action" value="ofp_property_payment_verify">
-                                        <input type="hidden" name="payment_id" value="<?php echo esc_attr( $row->id ); ?>">
-                                        <button class="button button-primary" type="submit">Verify</button>
-                                    </form>
-                                    <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
-                                        <?php wp_nonce_field( 'ofp_property_payment_reject_' . $row->id ); ?>
-                                        <input type="hidden" name="action" value="ofp_property_payment_reject">
-                                        <input type="hidden" name="payment_id" value="<?php echo esc_attr( $row->id ); ?>">
-                                        <button class="button" type="submit">Reject</button>
-                                    </form>
+                                <?php if ( 'pending_verification' === $row->status ) : 
+                                    $v_nonce = wp_create_nonce( 'ofp_property_payment_verify_' . $row->id );
+                                    $r_nonce = wp_create_nonce( 'ofp_property_payment_reject_' . $row->id );
+                                    $post_url = admin_url( 'admin-post.php' );
+                                    $amt_fmt = 'NGN ' . number_format( (float) $row->amount, 2 );
+                                ?>
+                                    <div style="display:flex; gap:6px; align-items:center;">
+                                        <button type="button" 
+                                                onclick="ofpOpenVerifyModal(<?php echo (int) $row->id; ?>, '<?php echo esc_js( $row->buyer_name ); ?>', '<?php echo esc_js( $amt_fmt ); ?>', '<?php echo esc_js( $v_nonce ); ?>', '<?php echo esc_url( $post_url ); ?>', 'ofp_property_payment_verify')" 
+                                                style="padding:3px 9px; font-size:11.5px; font-weight:600; border-radius:5px; background:#059669; color:#fff; border:1px solid #047857; cursor:pointer; line-height:1.4;">
+                                            Verify
+                                        </button>
+                                        <button type="button" 
+                                                onclick="ofpOpenRejectModal(<?php echo (int) $row->id; ?>, '<?php echo esc_js( $row->buyer_name ); ?>', '<?php echo esc_js( $amt_fmt ); ?>', '<?php echo esc_js( $r_nonce ); ?>', '<?php echo esc_url( $post_url ); ?>', 'ofp_property_payment_reject')" 
+                                                style="padding:3px 9px; font-size:11.5px; font-weight:600; border-radius:5px; background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; cursor:pointer; line-height:1.4;">
+                                            Reject
+                                        </button>
+                                    </div>
                                 <?php else : ?>—<?php endif; ?>
                             </td>
                             <td><?php echo esc_html( $row->created_at ); ?></td>
@@ -107,6 +129,7 @@ class OFP_Property_Payment_Records {
                     </tbody>
                 </table>
             </div>
+            <?php self::render_payment_modals(); ?>
         </div>
         <?php
     }
@@ -137,13 +160,6 @@ class OFP_Property_Payment_Records {
         <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
         <div class="ofp-container">
             <div style="padding-bottom: 60px;">
-                <div style="margin: 0 0 24px;">
-                    <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
-                        Sales &amp; Installments
-                    </h1>
-                    <p style="color:var(--text-muted); margin:0; font-size:14px;">All transactions and payments for purchases belonging to your properties. Pending manual payments can be verified or rejected here.</p>
-                </div>
-                
                 <?php $ofp_sales_tab = 'payments'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
 
                 <div class="ofp-card">
@@ -188,37 +204,42 @@ class OFP_Property_Payment_Records {
                                     <td>
                                         <?php 
                                             $status_styles = [
-                                                'verified' => 'background:#dcfce7; color:#16a34a;',
-                                                'pending'  => 'background:#fef3c7; color:#d97706;',
+                                                'verified'             => 'background:#dcfce7; color:#16a34a;',
+                                                'successful'           => 'background:#dcfce7; color:#16a34a;',
+                                                'pending'              => 'background:#fef3c7; color:#d97706;',
                                                 'pending_verification' => 'background:#fef3c7; color:#d97706;',
-                                                'failed'   => 'background:#fee2e2; color:#ef4444;',
-                                                'refunded' => 'background:rgba(128,128,128,0.1); color:var(--text-muted);'
+                                                'failed'               => 'background:#fee2e2; color:#ef4444;',
+                                                'rejected'             => 'background:#fee2e2; color:#ef4444;',
+                                                'refunded'             => 'background:rgba(128,128,128,0.1); color:var(--text-muted);'
                                             ];
                                             $style = $status_styles[ strtolower( $row->status ) ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
+                                            $status_display = ( strtolower( $row->status ) === 'pending_verification' ) ? 'Pending' : ucfirst( str_replace( '_', ' ', $row->status ) );
                                         ?>
                                         <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr($style); ?>">
-                                            <?php echo esc_html( ucfirst( str_replace( '_', ' ', $row->status ) ) ); ?>
+                                            <?php echo esc_html( $status_display ); ?>
                                         </span>
                                     </td>
-                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo $row->receipt_path ? '<a href="' . esc_url( OFP_Property_Receipt_Viewer::get_receipt_url( (int) $row->id, 'purchase' ) ) . '" target="_blank" rel="noopener">View proof</a>' : '—'; ?></td>
+                                    <td style="font-size:13px;"><?php echo $row->receipt_path ? '<a href="' . esc_url( OFP_Property_Receipt_Viewer::get_receipt_url( (int) $row->id, 'purchase' ) ) . '" onclick="event.preventDefault(); ofpOpenProofModal(this.href);" style="color:#2563eb; font-weight:600; text-decoration:none;">View proof</a>' : '<span style="color:var(--text-muted);">—</span>'; ?></td>
                                     <td style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $row->purchase_paid, 2 ) ); ?></td>
                                     <td style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $row->purchase_balance, 2 ) ); ?></td>
                                     <td>
-                                        <?php if ( 'pending_verification' === $row->status ) : ?>
-                                            <div style="display:flex; gap:8px;">
-                                                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-                                                    <?php wp_nonce_field( 'ofp_client_payment_verify_' . $row->id ); ?>
-                                                    <input type="hidden" name="action" value="ofp_client_payment_verify">
-                                                    <input type="hidden" name="payment_id" value="<?php echo esc_attr( $row->id ); ?>">
-                                                    <button class="ofp-btn ofp-btn-primary" style="padding:4px 12px; font-size:12px;" type="submit">Verify</button>
-                                                </form>
-                                                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-                                                    <?php wp_nonce_field( 'ofp_client_payment_reject_' . $row->id ); ?>
-                                                    <input type="hidden" name="action" value="ofp_client_payment_reject">
-                                                    <input type="hidden" name="payment_id" value="<?php echo esc_attr( $row->id ); ?>">
-                                                    <input type="text" name="reason" maxlength="150" placeholder="Reason (buyer will see it)" style="padding:4px 8px; font-size:12px; width:150px; margin-right:4px;">
-                                                    <button class="ofp-btn" style="padding:4px 12px; font-size:12px; background:rgba(128,128,128,0.1); color:var(--text-muted); border:1px solid rgba(128,128,128,0.2);" type="submit">Reject</button>
-                                                </form>
+                                        <?php if ( 'pending_verification' === $row->status ) : 
+                                            $client_v_nonce = wp_create_nonce( 'ofp_client_payment_verify_' . $row->id );
+                                            $client_r_nonce = wp_create_nonce( 'ofp_client_payment_reject_' . $row->id );
+                                            $client_post_url = admin_url( 'admin-post.php' );
+                                            $client_amt_fmt = 'NGN ' . number_format( (float) $row->amount, 2 );
+                                        ?>
+                                            <div style="display:flex; gap:6px; align-items:center;">
+                                                <button type="button" 
+                                                        onclick="ofpOpenVerifyModal(<?php echo (int) $row->id; ?>, '<?php echo esc_js( $row->buyer_name ); ?>', '<?php echo esc_js( $client_amt_fmt ); ?>', '<?php echo esc_js( $client_v_nonce ); ?>', '<?php echo esc_url( $client_post_url ); ?>', 'ofp_client_payment_verify')" 
+                                                        style="padding:4px 10px; font-size:11.5px; font-weight:600; border-radius:6px; background:#059669; color:#fff; border:1px solid #047857; cursor:pointer; line-height:1.4; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                                                    Verify
+                                                </button>
+                                                <button type="button" 
+                                                        onclick="ofpOpenRejectModal(<?php echo (int) $row->id; ?>, '<?php echo esc_js( $row->buyer_name ); ?>', '<?php echo esc_js( $client_amt_fmt ); ?>', '<?php echo esc_js( $client_r_nonce ); ?>', '<?php echo esc_url( $client_post_url ); ?>', 'ofp_client_payment_reject')" 
+                                                        style="padding:4px 10px; font-size:11.5px; font-weight:600; border-radius:6px; background:rgba(239,68,68,0.08); color:#dc2626; border:1px solid rgba(239,68,68,0.25); cursor:pointer; line-height:1.4; display:inline-flex; align-items:center; gap:4px;">
+                                                    Reject
+                                                </button>
                                             </div>
                                         <?php else : ?><span style="color:var(--text-muted);">—</span><?php endif; ?>
                                     </td>
@@ -231,6 +252,7 @@ class OFP_Property_Payment_Records {
                 </div>
             </div>
         </div>
+        <?php self::render_payment_modals(); ?>
         <?php wp_footer(); ?></body></html>
         <?php
         exit;
@@ -249,7 +271,8 @@ class OFP_Property_Payment_Records {
         if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Access denied.' );
         $payment_id = absint( $_POST['payment_id'] ?? 0 );
         check_admin_referer( 'ofp_property_payment_reject_' . $payment_id );
-        OFP_Property_Payment_Record::reject( $payment_id, get_current_user_id(), 'Rejected from property payment review.' );
+        $reason = sanitize_text_field( wp_unslash( $_POST['reason'] ?? '' ) );
+        OFP_Property_Payment_Record::reject( $payment_id, get_current_user_id(), $reason !== '' ? $reason : 'Rejected from property payment review.' );
         wp_safe_redirect( wp_get_referer() ?: admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-payments' ) );
         exit;
     }
@@ -293,6 +316,300 @@ class OFP_Property_Payment_Records {
         if ( 'property-payment-verification' !== $path ) return;
         wp_safe_redirect( home_url( '/property-payments/' ) );
         exit;
+    }
+
+    public static function render_payment_modals(): void {
+        ?>
+        <style>
+            .ofp-payment-modal-backdrop {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                width: 100vw; height: 100vh;
+                background: rgba(15, 23, 42, 0.65);
+                backdrop-filter: blur(4px);
+                -webkit-backdrop-filter: blur(4px);
+                z-index: 999999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 16px;
+                box-sizing: border-box;
+                animation: ofpFadeIn 0.15s ease-out;
+            }
+            @keyframes ofpFadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            .ofp-payment-modal-card {
+                background: #ffffff;
+                color: #0f172a;
+                width: 100%;
+                max-width: 460px;
+                border-radius: 14px;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+                border: 1px solid #e2e8f0;
+                overflow: hidden;
+                box-sizing: border-box;
+                animation: ofpPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            @keyframes ofpPopIn {
+                from { opacity: 0; transform: scale(0.96) translateY(8px); }
+                to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+            .ofp-payment-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px 20px;
+                border-bottom: 1px solid #e2e8f0;
+                background: #ffffff;
+            }
+            .ofp-payment-modal-body {
+                padding: 18px 20px;
+                background: #ffffff;
+                box-sizing: border-box;
+            }
+            .ofp-payment-modal-footer {
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+                padding: 14px 20px;
+                background: #f8fafc;
+                border-top: 1px solid #e2e8f0;
+            }
+            .ofp-modal-btn-cancel {
+                padding: 8px 16px;
+                font-size: 13px;
+                font-weight: 600;
+                border-radius: 8px;
+                border: 1px solid #cbd5e1;
+                background: #ffffff;
+                color: #475569;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                line-height: 1.4;
+            }
+            .ofp-modal-btn-cancel:hover {
+                background: #f1f5f9;
+                color: #0f172a;
+            }
+            .ofp-modal-btn-confirm {
+                padding: 8px 18px;
+                font-size: 13px;
+                font-weight: 600;
+                border-radius: 8px;
+                border: 1px solid #059669;
+                background: #059669;
+                color: #ffffff;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                line-height: 1.4;
+            }
+            .ofp-modal-btn-confirm:hover {
+                background: #047857;
+            }
+            .ofp-modal-btn-danger {
+                padding: 8px 18px;
+                font-size: 13px;
+                font-weight: 600;
+                border-radius: 8px;
+                border: 1px solid #dc2626;
+                background: #dc2626;
+                color: #ffffff;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                line-height: 1.4;
+            }
+            .ofp-modal-btn-danger:hover {
+                background: #b91c1c;
+            }
+            /* Dark theme support when on client portal with dark mode */
+            [data-theme="dark"] .ofp-payment-modal-card {
+                background: var(--bg-card, #1e293b);
+                color: var(--text-main, #f8fafc);
+                border-color: var(--border-color, #334155);
+            }
+            [data-theme="dark"] .ofp-payment-modal-header,
+            [data-theme="dark"] .ofp-payment-modal-body {
+                background: var(--bg-card, #1e293b);
+                border-color: var(--border-color, #334155);
+            }
+            [data-theme="dark"] .ofp-payment-modal-footer {
+                background: var(--bg-body, #0f172a);
+                border-color: var(--border-color, #334155);
+            }
+            [data-theme="dark"] .ofp-modal-btn-cancel {
+                background: var(--bg-card, #1e293b);
+                border-color: var(--border-color, #334155);
+                color: var(--text-muted, #94a3b8);
+            }
+            [data-theme="dark"] .ofp-modal-btn-cancel:hover {
+                background: var(--bg-body, #0f172a);
+                color: var(--text-main, #f8fafc);
+            }
+        </style>
+
+        <!-- VERIFY MODAL -->
+        <div id="ofp-modal-verify" class="ofp-payment-modal-backdrop" style="display:none;" onclick="if(event.target===this) ofpClosePaymentModal('ofp-modal-verify');">
+            <div class="ofp-payment-modal-card">
+                <div class="ofp-payment-modal-header">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:36px; height:36px; border-radius:50%; background:#dcfce7; color:#16a34a; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-size:16px; font-weight:700;">Confirm Verification</h3>
+                            <div style="font-size:12px; color:#64748b;">Ascertain and credit payment</div>
+                        </div>
+                    </div>
+                    <button type="button" onclick="ofpClosePaymentModal('ofp-modal-verify')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8; line-height:1; padding:0;">&times;</button>
+                </div>
+                <form method="post" id="ofp-form-verify">
+                    <input type="hidden" name="action" id="ofp-verify-action" value="">
+                    <input type="hidden" name="payment_id" id="ofp-verify-payment-id" value="">
+                    <div id="ofp-verify-nonce-holder"></div>
+
+                    <div class="ofp-payment-modal-body">
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px;">
+                                <span style="color:#64748b;">Buyer:</span>
+                                <strong id="ofp-verify-buyer" style="color:#0f172a;">—</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:13px;">
+                                <span style="color:#64748b;">Amount:</span>
+                                <strong id="ofp-verify-amount" style="color:#059669; font-size:14px;">—</strong>
+                            </div>
+                        </div>
+                        <p style="margin:0; font-size:13px; color:#475569; line-height:1.5;">
+                            Are you sure you want to verify this payment? This will confirm receipt of funds, credit the buyer's balance, and update their installment status.
+                        </p>
+                    </div>
+                    <div class="ofp-payment-modal-footer">
+                        <button type="button" onclick="ofpClosePaymentModal('ofp-modal-verify')" class="ofp-modal-btn-cancel">Cancel</button>
+                        <button type="submit" class="ofp-modal-btn-confirm">Verify &amp; Confirm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- REJECT MODAL -->
+        <div id="ofp-modal-reject" class="ofp-payment-modal-backdrop" style="display:none;" onclick="if(event.target===this) ofpClosePaymentModal('ofp-modal-reject');">
+            <div class="ofp-payment-modal-card">
+                <div class="ofp-payment-modal-header">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:36px; height:36px; border-radius:50%; background:#fee2e2; color:#ef4444; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-size:16px; font-weight:700;">Reject Payment</h3>
+                            <div style="font-size:12px; color:#64748b;">Decline submitted payment proof</div>
+                        </div>
+                    </div>
+                    <button type="button" onclick="ofpClosePaymentModal('ofp-modal-reject')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8; line-height:1; padding:0;">&times;</button>
+                </div>
+                <form method="post" id="ofp-form-reject">
+                    <input type="hidden" name="action" id="ofp-reject-action" value="">
+                    <input type="hidden" name="payment_id" id="ofp-reject-payment-id" value="">
+                    <div id="ofp-reject-nonce-holder"></div>
+
+                    <div class="ofp-payment-modal-body">
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px;">
+                                <span style="color:#64748b;">Buyer:</span>
+                                <strong id="ofp-reject-buyer" style="color:#0f172a;">—</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:13px;">
+                                <span style="color:#64748b;">Amount:</span>
+                                <strong id="ofp-reject-amount" style="color:#dc2626; font-size:14px;">—</strong>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="ofp-reject-reason-input" style="display:block; font-size:13px; font-weight:600; color:#1e293b; margin-bottom:6px;">
+                                Reason for Rejection <span style="color:#ef4444;">*</span>
+                            </label>
+                            <textarea name="reason" id="ofp-reject-reason-input" required rows="3" placeholder="Please enter reason (e.g. Transfer not received, incorrect amount)..." style="width:100%; box-sizing:border-box; padding:10px 12px; font-size:13px; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; resize:vertical; font-family:inherit;"></textarea>
+                        </div>
+                    </div>
+                    <div class="ofp-payment-modal-footer">
+                        <button type="button" onclick="ofpClosePaymentModal('ofp-modal-reject')" class="ofp-modal-btn-cancel">Cancel</button>
+                        <button type="submit" class="ofp-modal-btn-danger">Reject Payment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- PROOF LIGHTBOX MODAL -->
+        <div id="ofp-modal-proof" class="ofp-payment-modal-backdrop" style="display:none;" onclick="if(event.target===this) ofpClosePaymentModal('ofp-modal-proof');">
+            <div class="ofp-payment-modal-card" style="max-width:760px; width:92%; max-height:90vh; display:flex; flex-direction:column;">
+                <div class="ofp-payment-modal-header">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:36px; height:36px; border-radius:50%; background:#e0e7ff; color:#4338ca; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-size:16px; font-weight:700;">Payment Proof</h3>
+                            <div style="font-size:12px; color:#64748b;">Uploaded receipt / transfer proof preview</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:14px;">
+                        <a id="ofp-proof-external-link" href="#" target="_blank" rel="noopener" style="font-size:12px; font-weight:600; color:#2563eb; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                            <span>Open original</span> &nearr;
+                        </a>
+                        <button type="button" onclick="ofpClosePaymentModal('ofp-modal-proof')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8; line-height:1; padding:0;">&times;</button>
+                    </div>
+                </div>
+                <div class="ofp-payment-modal-body" style="padding:0; flex:1; min-height:480px; background:#0f172a; position:relative; overflow:hidden;">
+                    <iframe id="ofp-proof-iframe" src="about:blank" style="width:100%; height:100%; min-height:480px; border:none; display:block;"></iframe>
+                </div>
+                <div class="ofp-payment-modal-footer">
+                    <button type="button" onclick="ofpClosePaymentModal('ofp-modal-proof')" class="ofp-modal-btn-cancel">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        function ofpOpenVerifyModal(id, buyer, amount, nonce, actionUrl, actionName) {
+            document.getElementById('ofp-verify-payment-id').value = id;
+            document.getElementById('ofp-verify-action').value = actionName;
+            document.getElementById('ofp-verify-buyer').textContent = buyer;
+            document.getElementById('ofp-verify-amount').textContent = amount;
+            document.getElementById('ofp-form-verify').action = actionUrl;
+            document.getElementById('ofp-verify-nonce-holder').innerHTML = '<input type="hidden" name="_wpnonce" value="' + nonce + '">';
+            var m = document.getElementById('ofp-modal-verify');
+            if (m) m.style.display = 'flex';
+        }
+
+        function ofpOpenRejectModal(id, buyer, amount, nonce, actionUrl, actionName) {
+            document.getElementById('ofp-reject-payment-id').value = id;
+            document.getElementById('ofp-reject-action').value = actionName;
+            document.getElementById('ofp-reject-buyer').textContent = buyer;
+            document.getElementById('ofp-reject-amount').textContent = amount;
+            document.getElementById('ofp-reject-reason-input').value = '';
+            document.getElementById('ofp-form-reject').action = actionUrl;
+            document.getElementById('ofp-reject-nonce-holder').innerHTML = '<input type="hidden" name="_wpnonce" value="' + nonce + '">';
+            var m = document.getElementById('ofp-modal-reject');
+            if (m) m.style.display = 'flex';
+        }
+
+        function ofpOpenProofModal(url) {
+            var iframe = document.getElementById('ofp-proof-iframe');
+            var ext = document.getElementById('ofp-proof-external-link');
+            if (iframe) iframe.src = url;
+            if (ext) ext.href = url;
+            var m = document.getElementById('ofp-modal-proof');
+            if (m) m.style.display = 'flex';
+        }
+
+        function ofpClosePaymentModal(id) {
+            var m = document.getElementById(id);
+            if (m) m.style.display = 'none';
+            if (id === 'ofp-modal-proof') {
+                var iframe = document.getElementById('ofp-proof-iframe');
+                if (iframe) iframe.src = 'about:blank';
+            }
+        }
+        </script>
+        <?php
     }
 }
 

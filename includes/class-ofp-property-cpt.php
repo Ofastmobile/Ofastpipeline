@@ -2233,6 +2233,30 @@ class OFP_Property_CPT {
     }
 
     /**
+     * Mark a property as available / live across the database and WP post meta.
+     */
+    public static function mark_available( int $property_id ): void {
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $wpdb->update(
+            "{$p}ofp_properties",
+            [ 'status' => 'available', 'updated_at' => current_time( 'mysql' ) ],
+            [ 'id' => $property_id ]
+        );
+
+        $wp_post_id = $wpdb->get_var( $wpdb->prepare(
+            "SELECT wp_post_id FROM {$p}ofp_properties WHERE id = %d LIMIT 1",
+            $property_id
+        ) );
+        if ( $wp_post_id ) {
+            update_post_meta( (int) $wp_post_id, 'ofp_status', 'live' );
+            if ( 'publish' !== get_post_status( (int) $wp_post_id ) ) {
+                wp_update_post( [ 'ID' => (int) $wp_post_id, 'post_status' => 'publish' ] );
+            }
+        }
+    }
+
+    /**
      * Check if a property currently has an active or completed purchase.
      */
     public static function property_has_active_purchase( int $property_id ): bool {

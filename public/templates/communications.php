@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /communications
  * Client's full communication log - every SMS, voice call, and email sent.
@@ -67,11 +67,6 @@ $type_badges = [
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
 <div class="ofp-container">
-
-    <div class="ofp-page-header">
-        <h1>Communications</h1>
-        <p>Every message sent to your leads through the pipeline.</p>
-    </div>
 
     <!-- Hero Summary Cards -->
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px;">

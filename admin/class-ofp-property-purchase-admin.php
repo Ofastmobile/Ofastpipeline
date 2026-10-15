@@ -86,6 +86,14 @@ class OFP_Property_Purchase_Admin {
                             <?php endforeach; ?>
                         </select>
                     </td></tr>
+                    <tr><th><label for="payment_type">Payment type</label></th><td>
+                        <select name="payment_type" id="payment_type">
+                            <option value="installment">Installment</option>
+                            <option value="full_payment">Full Payment</option>
+                        </select>
+                        <p class="description">Full Payment records an outright purchase with no installment schedule.</p>
+                    </td></tr>
+                    <tr id="ofp-row-full-price" style="display:none;"><th><label>Amount due</label></th><td><input class="regular-text" id="ofp-full-price" readonly style="font-weight:600;background:rgba(0,0,0,0.03);" value="—"><p class="description">100% full property price.</p></td></tr>
                     <tr><th><label for="buyer_source">Buyer source</label></th><td>
                         <select name="buyer_source" id="buyer_source">
                             <option value="offline">Offline buyer</option>
@@ -106,10 +114,19 @@ class OFP_Property_Purchase_Admin {
                     <tr><th><label for="buyer_name">Buyer name</label></th><td><input class="regular-text" id="buyer_name" name="buyer_name" required></td></tr>
                     <tr><th><label for="buyer_phone">Buyer phone</label></th><td><input class="regular-text" id="buyer_phone" name="buyer_phone" required></td></tr>
                     <tr><th><label for="buyer_email">Buyer email</label></th><td><input type="email" class="regular-text" id="buyer_email" name="buyer_email"></td></tr>
-                    <tr><th><label for="initial_payment">Initial payment</label></th><td><input type="number" step="0.01" min="0" id="initial_payment" name="initial_payment" required></td></tr>
-                    <tr><th><label for="installment_amount">Installment amount</label></th><td><input type="number" step="0.01" min="0" id="installment_amount" name="installment_amount" required></td></tr>
-                    <tr><th><label for="installment_count">Number of installments</label></th><td><input type="number" min="1" id="installment_count" name="installment_count" required></td></tr>
-                    <tr><th><label for="amount_paid">Amount paid (NGN)</label></th><td><input type="number" step="0.01" min="0" id="amount_paid" name="amount_paid" required><p class="description">The amount already received from the buyer (e.g. initial deposit).</p></td></tr>
+                    <tr id="ofp-row-initial"><th><label for="initial_payment">Initial payment</label></th><td><input type="number" step="0.01" min="0" id="initial_payment" name="initial_payment" required></td></tr>
+                    <tr id="ofp-row-inst-amount"><th><label for="installment_amount">Installment amount</label></th><td><input type="number" step="0.01" min="0" id="installment_amount" name="installment_amount" required></td></tr>
+                    <tr id="ofp-row-inst-count"><th><label for="installment_count">Number of installments</label></th><td><input type="number" min="1" id="installment_count" name="installment_count" required></td></tr>
+                    <tr id="ofp-row-frequency"><th><label for="frequency">Payment frequency</label></th><td>
+                        <select id="frequency" name="frequency">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly" selected>Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                    </td></tr>
+                    <tr><th><label for="amount_paid">Amount paid (NGN)</label></th><td><input type="number" step="0.01" min="0" id="amount_paid" name="amount_paid" required><p class="description">The amount already received from the buyer (e.g. initial deposit or full payment).</p></td></tr>
                     <tr><th><label for="payment_method">Payment method</label></th><td>
                         <select id="payment_method" name="payment_method" required>
                             <option value="bank_transfer">Bank Transfer</option>
@@ -135,6 +152,13 @@ class OFP_Property_Purchase_Admin {
             var email = document.getElementById('buyer_email');
             var property = document.getElementById('property_id');
             var initial = document.getElementById('initial_payment');
+            var typeEl = document.getElementById('payment_type');
+            var instRows = ['ofp-row-initial', 'ofp-row-inst-amount', 'ofp-row-inst-count', 'ofp-row-frequency'];
+            var fullRow = document.getElementById('ofp-row-full-price');
+            var fullPriceEl = document.getElementById('ofp-full-price');
+            var amountPaid = document.getElementById('amount_paid');
+            var instAmount = document.getElementById('installment_amount');
+            var instCount = document.getElementById('installment_count');
 
             function syncLeadMode(){
                 var isLead = source.value === 'lead';
@@ -152,13 +176,51 @@ class OFP_Property_Purchase_Admin {
                 var opt = property.options[property.selectedIndex];
                 if (!opt) return;
                 var price = parseFloat(opt.getAttribute('data-price') || '0');
-                initial.max = price > 0 ? Math.max(0, price - 0.01).toFixed(2) : '';
+                if (typeEl && typeEl.value === 'full_payment') {
+                    if (fullPriceEl) fullPriceEl.value = price > 0 ? '₦' + price.toLocaleString('en-US', {minimumFractionDigits: 2}) : '—';
+                    if (price > 0) {
+                        initial.value = price;
+                        amountPaid.value = price;
+                    }
+                } else {
+                    initial.max = price > 0 ? Math.max(0, price - 0.01).toFixed(2) : '';
+                }
             }
+            function toggleType() {
+                var isFull = typeEl.value === 'full_payment';
+                instRows.forEach(function(id){ var r = document.getElementById(id); if (r) r.style.display = isFull ? 'none' : ''; });
+                if (fullRow) fullRow.style.display = isFull ? '' : 'none';
+
+                var opt = property.options[property.selectedIndex];
+                var price = opt ? parseFloat(opt.getAttribute('data-price') || '0') : 0;
+                if (fullPriceEl) fullPriceEl.value = price > 0 ? '₦' + price.toLocaleString('en-US', {minimumFractionDigits: 2}) : '—';
+
+                if (isFull) {
+                    initial.removeAttribute('required');
+                    if (price > 0) {
+                        initial.value = price;
+                        amountPaid.value = price;
+                    }
+                    if (instAmount) { instAmount.value = '0'; instAmount.removeAttribute('required'); }
+                    if (instCount) { instCount.value = '0'; instCount.removeAttribute('required'); }
+                } else {
+                    initial.setAttribute('required', '');
+                    if (instAmount) instAmount.setAttribute('required', '');
+                    if (instCount) instCount.setAttribute('required', '');
+                    syncInitialCap();
+                }
+            }
+
             source.addEventListener('change', syncLeadMode);
             lead.addEventListener('change', fillFromLead);
-            property.addEventListener('change', syncInitialCap);
+            property.addEventListener('change', function(){
+                syncInitialCap();
+                if (typeEl.value === 'full_payment') toggleType();
+            });
+            typeEl.addEventListener('change', toggleType);
+
             syncLeadMode();
-            syncInitialCap();
+            toggleType();
         })();
         </script>
         <?php
@@ -182,11 +244,21 @@ class OFP_Property_Purchase_Admin {
         $amount_paid = max( 0.0, (float) ( $_POST['amount_paid'] ?? 0 ) );
         $payment_method = sanitize_key( $_POST['payment_method'] ?? 'bank_transfer' );
         $payment_reference = sanitize_text_field( wp_unslash( $_POST['payment_reference'] ?? '' ) );
+        $payment_type = sanitize_key( $_POST['payment_type'] ?? 'installment' );
+        $frequency = sanitize_key( $_POST['frequency'] ?? 'monthly' );
+        $is_full_payment = $payment_type === 'full_payment';
 
         $allowed_methods = [ 'bank_transfer', 'bank_deposit', 'cash', 'virtual_account', 'checkout', 'other' ];
 
         $property = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p}ofp_properties WHERE id = %d LIMIT 1", $property_id ) );
         $lead = $lead_id ? $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p}ofp_leads WHERE id = %d LIMIT 1", $lead_id ) ) : null;
+
+        if ( $is_full_payment && $property ) {
+            $initial_payment    = (float) $property->price;
+            $installment_amount = 0.0;
+            $installment_count  = 0;
+            $frequency          = 'one_time';
+        }
 
         $error = '';
         if ( ! $property ) $error = 'Property not found.';
@@ -196,9 +268,9 @@ class OFP_Property_Purchase_Admin {
         elseif ( ! $buyer_name || ! $buyer_phone ) $error = 'Buyer name and phone are required.';
         elseif ( $buyer_email !== '' && ! is_email( $buyer_email ) ) $error = 'Buyer email is invalid.';
         elseif ( (float) $property->price <= 0 ) $error = 'Property price is invalid.';
-        elseif ( $initial_payment < 0 || $initial_payment > (float) $property->price ) $error = 'Initial payment cannot exceed the property price.';
-        elseif ( $initial_payment < (float) $property->price && ( $installment_amount <= 0 || $installment_count <= 0 ) ) $error = 'Installment amount and count are required for partial payments.';
-        elseif ( $initial_payment < (float) $property->price && abs( ( (float) $property->price - $initial_payment ) - ( $installment_amount * $installment_count ) ) > 0.01 ) $error = 'The installment schedule must exactly cover the remaining property balance.';
+        elseif ( ! $is_full_payment && ( $initial_payment < 0 || $initial_payment > (float) $property->price ) ) $error = 'Initial payment cannot exceed the property price.';
+        elseif ( ! $is_full_payment && $initial_payment < (float) $property->price && ( $installment_amount <= 0 || $installment_count <= 0 ) ) $error = 'Installment amount and count are required for partial payments.';
+        elseif ( ! $is_full_payment && $initial_payment < (float) $property->price && abs( ( (float) $property->price - $initial_payment ) - ( $installment_amount * $installment_count ) ) > 0.01 ) $error = 'The installment schedule must exactly cover the remaining property balance.';
         elseif ( $amount_paid <= 0 ) $error = 'Amount paid must be greater than zero.';
         elseif ( $lead_id && ! $lead ) $error = 'Selected lead could not be found.';
         elseif ( $lead && $lead->property_id && (int) $lead->property_id !== $property_id ) $error = 'Selected lead belongs to a different property.';
@@ -219,6 +291,7 @@ class OFP_Property_Purchase_Admin {
             'initial_payment' => $initial_payment,
             'installment_amount' => $installment_amount,
             'installment_count' => $installment_count,
+            'frequency' => $frequency,
             'payment_method' => $payment_method,
         ]);
 

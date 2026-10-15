@@ -97,13 +97,15 @@ $status_message = [
     'declined' => 'This offer was declined. The seller may issue a new offer.',
     'expired' => 'This offer has expired. Please contact the seller for a new offer.',
 ];
+
+$is_full_payment = $offer && ( (int) $offer->installment_count === 0 || (float) $offer->initial_payment >= (float) $offer->total_price );
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo esc_html( $offer ? 'Installment Offer — ' . $offer->property_title : 'Installment Offer' ); ?></title>
+    <title><?php echo esc_html( $offer ? ( ( $is_full_payment ? 'Purchase Offer — ' : 'Installment Offer — ' ) . $offer->property_title ) : 'Purchase Offer' ); ?></title>
     <?php wp_head(); ?>
 </head>
 <body>
@@ -123,7 +125,7 @@ $status_message = [
             <?php endif; ?>
 
             <div class="ofp-offer-body">
-                <p class="ofp-muted" style="margin-top:0;">Installment Purchase Offer</p>
+                <p class="ofp-muted" style="margin-top:0;"><?php echo $is_full_payment ? 'Property Purchase Offer' : 'Installment Purchase Offer'; ?></p>
                 <h1 style="margin:0 0 8px;"><?php echo esc_html( $offer->property_title ); ?></h1>
                 <?php if ( $offer->location_text ) : ?>
                     <p class="ofp-muted">📍 <?php echo esc_html( $offer->location_text ); ?></p>
@@ -131,16 +133,23 @@ $status_message = [
 
                 <div class="ofp-grid" style="margin:24px 0;">
                     <div class="ofp-stat"><span>Total property price</span><strong>NGN <?php echo esc_html( number_format( (float) $offer->total_price, 2 ) ); ?></strong></div>
-                    <div class="ofp-stat"><span>Initial payment</span><strong>NGN <?php echo esc_html( number_format( (float) $offer->initial_payment, 2 ) ); ?></strong></div>
-                    <div class="ofp-stat"><span>Monthly installment</span><strong>NGN <?php echo esc_html( number_format( (float) $offer->installment_amount, 2 ) ); ?></strong></div>
-                    <div class="ofp-stat"><span>Number of installments</span><strong><?php echo esc_html( $offer->installment_count ); ?></strong></div>
-                    <div class="ofp-stat"><span>Payments start</span><strong><?php echo esc_html( $offer->payment_start_date ? wp_date( 'M j, Y', strtotime( $offer->payment_start_date ) ) : '—' ); ?></strong></div>
-                    <div class="ofp-stat"><span>First due date</span><strong><?php echo esc_html( $offer->first_due_date ? wp_date( 'M j, Y', strtotime( $offer->first_due_date ) ) : '—' ); ?></strong></div>
-                    <div class="ofp-stat"><span>Grace period</span><strong><?php echo esc_html( $offer->grace_period_days ); ?> days</strong></div>
+                    <?php if ( $is_full_payment ) : ?>
+                        <div class="ofp-stat"><span>Payment type</span><strong>100% Full Payment</strong></div>
+                        <?php if ( $offer->expires_at ) : ?>
+                            <div class="ofp-stat"><span>Offer expires</span><strong><?php echo esc_html( wp_date( 'M j, Y', strtotime( $offer->expires_at ) ) ); ?></strong></div>
+                        <?php endif; ?>
+                    <?php else : ?>
+                        <div class="ofp-stat"><span>Initial payment</span><strong>NGN <?php echo esc_html( number_format( (float) $offer->initial_payment, 2 ) ); ?></strong></div>
+                        <div class="ofp-stat"><span><?php echo esc_html( ucfirst( $offer->frequency ?: 'monthly' ) ); ?> installment</span><strong>NGN <?php echo esc_html( number_format( (float) $offer->installment_amount, 2 ) ); ?></strong></div>
+                        <div class="ofp-stat"><span>Number of installments</span><strong><?php echo esc_html( $offer->installment_count ); ?></strong></div>
+                        <div class="ofp-stat"><span>Payments start</span><strong><?php echo esc_html( $offer->payment_start_date ? wp_date( 'M j, Y', strtotime( $offer->payment_start_date ) ) : '—' ); ?></strong></div>
+                        <div class="ofp-stat"><span>First due date</span><strong><?php echo esc_html( $offer->first_due_date ? wp_date( 'M j, Y', strtotime( $offer->first_due_date ) ) : '—' ); ?></strong></div>
+                        <div class="ofp-stat"><span>Grace period</span><strong><?php echo esc_html( $offer->grace_period_days ); ?> days</strong></div>
+                    <?php endif; ?>
                 </div>
 
                 <?php if ( $offer->terms_text ) : ?>
-                    <h2 style="font-size:20px;">Installment Terms & Agreement</h2>
+                    <h2 style="font-size:20px;"><?php echo $is_full_payment ? 'Purchase Terms & Agreement' : 'Installment Terms & Agreement'; ?></h2>
                     <div class="ofp-terms"><?php echo wp_kses_post( wpautop( $offer->terms_text ) ); ?></div>
                 <?php endif; ?>
 
@@ -155,12 +164,12 @@ $status_message = [
                         <?php wp_nonce_field( 'ofp_offer_action_' . $offer->id, 'ofp_offer_nonce' ); ?>
                         <label class="ofp-check">
                             <input type="checkbox" name="accept_terms" value="1">
-                            <span>I have read and agree to the installment terms shown above and understand the payment schedule.</span>
+                            <span><?php echo $is_full_payment ? 'I have read and agree to the purchase terms shown above.' : 'I have read and agree to the installment terms shown above and understand the payment schedule.'; ?></span>
                         </label>
 
                         <div class="ofp-actions">
                             <button class="ofp-btn ofp-btn-primary" type="submit" name="ofp_offer_action" value="accept">Accept Offer</button>
-                            <button class="ofp-btn ofp-btn-danger" type="submit" name="ofp_offer_action" value="decline" onclick="return confirm('Decline this installment offer?');">Decline Offer</button>
+                            <button class="ofp-btn ofp-btn-danger" type="submit" name="ofp_offer_action" value="decline" onclick="return confirm('Decline this offer?');">Decline Offer</button>
                         </div>
                     </form>
                 <?php endif; ?>

@@ -60,6 +60,11 @@ while ( have_posts() ) : the_post();
 	$bathrooms     = (int) get_post_meta( $post_id, 'ofp_bathrooms', true );
 	$location      = get_post_meta( $post_id, 'ofp_location_text', true );
 	$status        = get_post_meta( $post_id, 'ofp_status', true ) ?: 'live';
+	$status_ctx    = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_status_context( $post_id ) : [
+		'label' => ucfirst( $status === 'live' ? 'Available' : $status ),
+		'bg_color' => $status === 'live' ? '#10b981' : '#64748b',
+		'is_taken' => ( $status === 'taken' ),
+	];
 	$gallery_ids   = json_decode( get_post_meta( $post_id, 'ofp_gallery_ids', true ) ?: '[]', true );
 	?>
 
@@ -71,8 +76,8 @@ while ( have_posts() ) : the_post();
 
 		<div class="ofp-property-single-header" style="margin-bottom:24px; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
 			<h1 style="margin:0; font-size:32px; font-weight:700; color:#0f172a;"><?php the_title(); ?></h1>
-			<span class="ofp-property-badge" style="background:<?php echo $status === 'live' ? '#10b981' : '#64748b'; ?>; color:white; padding:6px 12px; border-radius:100px; font-size:14px; font-weight:600;">
-				<?php echo esc_html( ucfirst( $status === 'live' ? 'Available' : $status ) ); ?>
+			<span class="ofp-property-badge" style="background:<?php echo esc_attr( $status_ctx['bg_color'] ); ?>; color:white; padding:6px 14px; border-radius:100px; font-size:14px; font-weight:700;">
+				● <?php echo esc_html( $status_ctx['label'] ); ?>
 			</span>
 		</div>
 
@@ -140,9 +145,15 @@ while ( have_posts() ) : the_post();
                     <?php endif; ?>
                 </ul>
 
+                <?php if ( ! empty( $status_ctx['is_taken'] ) ) : ?>
+                    <div style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:12px; border-radius:8px; font-size:13px; margin-bottom:16px; text-align:center;">
+                        <strong>Notice:</strong> This property has been sold / taken and is no longer available.
+                    </div>
+                <?php endif; ?>
+
                 <div class="ofp-property-single-contact">
-                    <a href="<?php echo esc_url( home_url( '/contact?property=' . $post_id ) ); ?>" style="display:block; width:100%; text-align:center; background:#2563eb; color:white; padding:12px; border-radius:8px; font-weight:600; text-decoration:none; transition:background 0.2s;">
-                        Contact Us
+                    <a href="<?php echo esc_url( home_url( '/contact?property=' . $post_id ) ); ?>" style="display:block; width:100%; text-align:center; background:<?php echo ! empty( $status_ctx['is_taken'] ) ? '#64748b' : '#2563eb'; ?>; color:white; padding:12px; border-radius:8px; font-weight:600; text-decoration:none; transition:background 0.2s;">
+                        <?php echo ! empty( $status_ctx['is_taken'] ) ? 'Inquire for Similar Properties' : 'Contact Us'; ?>
                     </a>
                 </div>
             </div>

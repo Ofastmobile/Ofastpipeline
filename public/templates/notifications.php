@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /notifications — client's full notifications page.
  *
@@ -78,20 +78,16 @@ $total_pages = ceil( $total / $per_page );
 
 <div class="ofp-container">
 
-    <div class="ofp-page-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <h1>Notifications</h1>
-            <p>Recent activity and alerts on your account.</p>
-        </div>
-        <?php if ( ! empty( $notifications ) ) : ?>
+    <?php if ( ! empty( $notifications ) ) : ?>
+        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 20px;">
             <form method="POST" style="margin: 0;">
                 <?php wp_nonce_field( 'ofp_notifications_action', 'ofp_notif_nonce' ); ?>
                 <button type="submit" name="ofp_mark_all_read" value="1" class="ofp-btn ofp-btn-secondary" style="font-size: 13px; padding: 8px 16px;">
                     ✓ Mark all as read
                 </button>
             </form>
-        <?php endif; ?>
-    </div>
+        </div>
+    <?php endif; ?>
 
     <?php if ( empty( $notifications ) ) : ?>
         <div class="ofp-empty-state">

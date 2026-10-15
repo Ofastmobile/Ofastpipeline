@@ -39,6 +39,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_client_p
         $payment_method = sanitize_key( $_POST['payment_method'] ?? 'bank_transfer' );
         $payment_reference = sanitize_text_field( wp_unslash( $_POST['payment_reference'] ?? '' ) );
         $frequency = sanitize_text_field( wp_unslash( $_POST['frequency'] ?? 'monthly' ) );
+        $payment_type = sanitize_key( $_POST['payment_type'] ?? 'installment' );
+        $is_full_payment = $payment_type === 'full_payment';
 
         $allowed_methods = [ 'bank_transfer', 'bank_deposit', 'cash', 'virtual_account', 'checkout', 'other' ];
 
@@ -46,6 +48,13 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_client_p
             "SELECT * FROM {$p}ofp_properties WHERE id = %d AND listing_type IN ('sale','land') LIMIT 1",
             $property_id
         ) );
+
+        if ( $is_full_payment && $property ) {
+            $initial            = (float) $property->price;
+            $installment_amount = 0.0;
+            $installment_count  = 0;
+            $frequency          = 'one_time';
+        }
 
         if ( ! $property ) {
             $error = 'Please choose one of your sale properties.';
@@ -60,11 +69,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_client_p
             $error = 'Buyer name and phone are required.';
         } elseif ( $buyer_email && ! is_email( $buyer_email ) ) {
             $error = 'Buyer email is invalid.';
-        } elseif ( $initial > (float) $property->price ) {
+        } elseif ( ! $is_full_payment && $initial > (float) $property->price ) {
             $error = 'Initial payment cannot exceed the property price.';
-        } elseif ( $initial < (float) $property->price && ( $installment_amount <= 0 || $installment_count <= 0 ) ) {
+        } elseif ( ! $is_full_payment && $initial < (float) $property->price && ( $installment_amount <= 0 || $installment_count <= 0 ) ) {
             $error = 'Installment amount and number of installments are required for partial payments.';
-        } elseif ( $initial < (float) $property->price && abs( ( (float) $property->price - $initial ) - ( $installment_amount * $installment_count ) ) > 0.01 ) {
+        } elseif ( ! $is_full_payment && $initial < (float) $property->price && abs( ( (float) $property->price - $initial ) - ( $installment_amount * $installment_count ) ) > 0.01 ) {
             $error = 'The installment schedule must exactly cover the remaining balance.';
         } elseif ( $amount_paid <= 0 ) {
             $error = 'Amount paid must be greater than zero.';
@@ -275,42 +284,150 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 <span>Back to Sales</span>
             </a>
         </div>
-        <div style="margin: 0 0 24px;">
-            <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
-                Sales &amp; Installments
-            </h1>
-            <p style="color:var(--text-muted); margin:0; font-size:14px;">Purchase details and installment payment schedule for Purchase #<?php echo esc_html( $detail_purchase->id ); ?>.</p>
-        </div>
 
         <?php $ofp_sales_tab = 'purchase'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:24px;">
-            <div class="ofp-card" style="padding:20px;">
-                <h3 style="margin:0 0 12px; font-size:16px;">Buyer Details</h3>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Name:</strong> <?php echo esc_html( $detail_purchase->buyer_name ); ?></p>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Phone:</strong> <?php echo esc_html( $detail_purchase->buyer_phone ); ?></p>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Email:</strong> <?php echo esc_html( $detail_purchase->buyer_email ?: '—' ); ?></p>
-                <?php
-                    $detail_status_styles = [
-                        'active'    => 'background:#dcfce7; color:#16a34a;',
-                        'completed' => 'background:#dbeafe; color:#2563eb;',
-                        'defaulted' => 'background:#fee2e2; color:#ef4444;',
-                        'cancelled' => 'background:rgba(128,128,128,0.1); color:var(--text-muted);'
-                    ];
-                    $detail_style = $detail_status_styles[ $detail_purchase->status ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
-                ?>
-                <p style="margin:6px 0;"><strong>Status:</strong> <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr($detail_style); ?>"><?php echo esc_html( ucfirst( $detail_purchase->status ) ); ?></span></p>
-                <p style="margin:6px 0; color:var(--text-muted); font-size:13px;"><strong>Created:</strong> <?php echo esc_html( wp_date( 'M j, Y', strtotime( $detail_purchase->created_at ) ) ); ?></p>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap:20px; margin-bottom:24px;">
+            <!-- Buyer Details Card -->
+            <div class="ofp-card" style="padding:22px; display:flex; flex-direction:column; justify-content:space-between; border-radius:14px;">
+                <div>
+                    <?php
+                        $detail_status_styles = [
+                            'active'    => 'background:#dcfce7; color:#16a34a;',
+                            'completed' => 'background:#dbeafe; color:#2563eb;',
+                            'defaulted' => 'background:#fee2e2; color:#ef4444;',
+                            'cancelled' => 'background:rgba(128,128,128,0.1); color:var(--text-muted);'
+                        ];
+                        $detail_style = $detail_status_styles[ $detail_purchase->status ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
+                        $b_initials = strtoupper( substr( trim( $detail_purchase->buyer_name ?: 'B' ), 0, 2 ) );
+                    ?>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; gap:12px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:42px; height:42px; border-radius:10px; background:linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(37, 99, 235, 0.22)); color:#2563eb; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; flex-shrink:0;">
+                                <?php echo esc_html( $b_initials ); ?>
+                            </div>
+                            <div>
+                                <h3 style="margin:0 0 2px; font-size:17px; font-weight:700; color:var(--text-main); letter-spacing:-0.01em;">
+                                    <?php echo esc_html( $detail_purchase->buyer_name ); ?>
+                                </h3>
+                                <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+                                    <span>Buyer Details</span>
+                                    <span>&bull;</span>
+                                    <span style="font-weight:600; color:var(--text-main);">Purchase #<?php echo esc_html( $detail_purchase->id ); ?></span>
+                                </div>
+                            </div>
+                        </div>
+                        <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.04em; <?php echo esc_attr( $detail_style ); ?>">
+                            <?php echo esc_html( ucfirst( $detail_purchase->status ) ); ?>
+                        </span>
+                    </div>
+
+                    <div style="font-size:13px; color:var(--text-muted); margin:0 0 16px; line-height:1.45; padding:9px 12px; background:var(--bg-body); border-radius:8px; border:1px solid var(--border-color);">
+                        Purchase details and installment payment schedule for Purchase #<?php echo esc_html( $detail_purchase->id ); ?>.
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div style="padding:10px 12px; background:var(--bg-body); border-radius:10px; border:1px solid var(--border-color);">
+                            <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); font-weight:600; margin-bottom:3px;">Phone Number</div>
+                            <div style="font-size:13px; font-weight:600; color:var(--text-main); word-break:break-all;">
+                                <a href="tel:<?php echo esc_attr( $detail_purchase->buyer_phone ); ?>" style="color:var(--text-main); text-decoration:none;">
+                                    <?php echo esc_html( $detail_purchase->buyer_phone ?: '—' ); ?>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div style="padding:10px 12px; background:var(--bg-body); border-radius:10px; border:1px solid var(--border-color);">
+                            <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); font-weight:600; margin-bottom:3px;">Email Address</div>
+                            <div style="font-size:13px; font-weight:600; color:var(--text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<?php echo esc_attr( $detail_purchase->buyer_email ); ?>">
+                                <?php if ( $detail_purchase->buyer_email ) : ?>
+                                    <a href="mailto:<?php echo esc_attr( $detail_purchase->buyer_email ); ?>" style="color:#2563eb; text-decoration:none;">
+                                        <?php echo esc_html( $detail_purchase->buyer_email ); ?>
+                                    </a>
+                                <?php else : ?>
+                                    <span style="color:var(--text-muted);">—</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-muted);">
+                    <span>Enrollment Date</span>
+                    <span style="font-weight:600; color:var(--text-main);"><?php echo esc_html( wp_date( 'M j, Y g:ia', strtotime( $detail_purchase->created_at ) ) ); ?></span>
+                </div>
             </div>
 
-            <div class="ofp-card" style="padding:20px;">
-                <h3 style="margin:0 0 12px; font-size:16px;">Property & Plan</h3>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Property:</strong> <?php echo esc_html( $detail_purchase->property_title ?: '—' ); ?></p>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Total Price:</strong> ₦<?php echo esc_html( number_format( (float) $detail_purchase->total_price, 2 ) ); ?></p>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Amount Paid:</strong> ₦<?php echo esc_html( number_format( (float) $detail_purchase->amount_paid, 2 ) ); ?></p>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Balance:</strong> <strong>₦<?php echo esc_html( number_format( (float) $detail_purchase->balance, 2 ) ); ?></strong></p>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Initial Payment:</strong> ₦<?php echo esc_html( number_format( (float) $detail_purchase->initial_payment, 2 ) ); ?></p>
-                <p style="margin:6px 0; color:var(--text-main);"><strong>Plan:</strong> <?php echo esc_html( $detail_purchase->installment_count ); ?> × ₦<?php echo esc_html( number_format( (float) $detail_purchase->installment_amount, 2 ) ); ?> (<?php echo esc_html( ucfirst( $detail_purchase->frequency ) ); ?>)</p>
+            <!-- Property & Plan Overview Card -->
+            <div class="ofp-card" style="padding:22px; display:flex; flex-direction:column; justify-content:space-between; border-radius:14px;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; gap:12px;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:42px; height:42px; border-radius:10px; background:linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.22)); color:#10b981; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                            </div>
+                            <div>
+                                <h3 style="margin:0 0 2px; font-size:17px; font-weight:700; color:var(--text-main); letter-spacing:-0.01em;">
+                                    <?php echo esc_html( $detail_purchase->property_title ?: 'Selected Property' ); ?>
+                                </h3>
+                                <div style="font-size:12px; color:var(--text-muted);">
+                                    Property &amp; Payment Plan
+                                </div>
+                            </div>
+                        </div>
+                        <?php if ( (int) $detail_purchase->installment_count === 0 || (float) $detail_purchase->initial_payment >= (float) $detail_purchase->total_price ) : ?>
+                            <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; background:#dbeafe; color:#2563eb; text-transform:uppercase; letter-spacing:0.04em;">
+                                Outright
+                            </span>
+                        <?php else : ?>
+                            <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; background:rgba(128,128,128,0.1); color:var(--text-main); text-transform:uppercase; letter-spacing:0.04em;">
+                                <?php echo (int) $detail_purchase->installment_count; ?> Installments
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Financial Metric Highlights -->
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:14px;">
+                        <div style="padding:10px 12px; background:var(--bg-body); border-radius:10px; border:1px solid var(--border-color);">
+                            <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); font-weight:600; margin-bottom:2px;">Total Price</div>
+                            <div style="font-size:14px; font-weight:700; color:var(--text-main);">₦<?php echo esc_html( number_format( (float) $detail_purchase->total_price ) ); ?></div>
+                        </div>
+
+                        <div style="padding:10px 12px; background:rgba(16, 185, 129, 0.08); border-radius:10px; border:1px solid rgba(16, 185, 129, 0.2);">
+                            <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#059669; font-weight:600; margin-bottom:2px;">Paid</div>
+                            <div style="font-size:14px; font-weight:700; color:#059669;">₦<?php echo esc_html( number_format( (float) $detail_purchase->amount_paid ) ); ?></div>
+                        </div>
+
+                        <div style="padding:10px 12px; background:<?php echo (float)$detail_purchase->balance > 0 ? 'rgba(239, 68, 68, 0.06)' : 'var(--bg-body)'; ?>; border-radius:10px; border:1px solid <?php echo (float)$detail_purchase->balance > 0 ? 'rgba(239, 68, 68, 0.2)' : 'var(--border-color)'; ?>;">
+                            <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:<?php echo (float)$detail_purchase->balance > 0 ? '#dc2626' : 'var(--text-muted)'; ?>; font-weight:600; margin-bottom:2px;">Balance</div>
+                            <div style="font-size:14px; font-weight:700; color:<?php echo (float)$detail_purchase->balance > 0 ? '#dc2626' : 'var(--text-main)'; ?>;">₦<?php echo esc_html( number_format( (float) $detail_purchase->balance ) ); ?></div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <?php 
+                        $pct_paid = (float) $detail_purchase->total_price > 0 ? min( 100, round( ((float) $detail_purchase->amount_paid / (float) $detail_purchase->total_price) * 100 ) ) : 0;
+                    ?>
+                    <div style="margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;">
+                            <span style="color:var(--text-muted); font-weight:500;">Payment Progress</span>
+                            <span style="font-weight:700; color:var(--text-main);"><?php echo (int) $pct_paid; ?>% Paid</span>
+                        </div>
+                        <div style="height:7px; background:var(--bg-body); border-radius:99px; overflow:hidden; border:1px solid var(--border-color);">
+                            <div style="height:100%; width:<?php echo (int) $pct_paid; ?>%; background:linear-gradient(90deg, #10b981, #059669); border-radius:99px; transition:width 0.4s ease;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-muted);">
+                    <span>Structure:</span>
+                    <span style="font-weight:600; color:var(--text-main);">
+                        <?php if ( (int) $detail_purchase->installment_count === 0 || (float) $detail_purchase->initial_payment >= (float) $detail_purchase->total_price ) : ?>
+                            100% Full Payment (Outright)
+                        <?php else : ?>
+                            Initial ₦<?php echo esc_html( number_format( (float) $detail_purchase->initial_payment ) ); ?> &bull; <?php echo (int) $detail_purchase->installment_count; ?> &times; ₦<?php echo esc_html( number_format( (float) $detail_purchase->installment_amount ) ); ?> (<?php echo esc_html( ucfirst( $detail_purchase->frequency ) ); ?>)
+                        <?php endif; ?>
+                    </span>
+                </div>
             </div>
         </div>
 
@@ -410,13 +527,13 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                                             $pmt_style = $pmt_styles[ $pmt->status ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
                                         ?>
                                         <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr($pmt_style); ?>">
-                                            <?php echo esc_html( ucfirst( str_replace( '_', ' ', $pmt->status ) ) ); ?>
+                                            <?php echo esc_html( $pmt->status === 'pending_verification' ? 'Pending' : ucfirst( str_replace( '_', ' ', $pmt->status ) ) ); ?>
                                         </span>
                                     </td>
                                     <td style="color:var(--text-muted); font-size:13px;"><?php echo esc_html( wp_date( 'M j, Y g:ia', strtotime( $pmt->created_at ) ) ); ?></td>
                                     <td>
                                         <?php if ( ! empty( $pmt->receipt_path ) && class_exists( 'OFP_Property_Receipt_Viewer' ) ) : ?>
-                                            <a href="<?php echo esc_url( OFP_Property_Receipt_Viewer::get_receipt_url( (int) $pmt->id, 'purchase' ) ); ?>" target="_blank" rel="noopener" class="ofp-btn ofp-btn-sm ofp-btn-ghost" style="padding:4px 10px; font-size:12px;">
+                                            <a href="<?php echo esc_url( OFP_Property_Receipt_Viewer::get_receipt_url( (int) $pmt->id, 'purchase' ) ); ?>" onclick="event.preventDefault(); ofpOpenProofModal(this.href);" class="ofp-btn ofp-btn-sm ofp-btn-ghost" style="padding:4px 10px; font-size:12px;">
                                                 View Receipt
                                             </a>
                                         <?php else : ?>
@@ -448,7 +565,14 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 <div class="ofp-form-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
                     <div class="ofp-field">
                         <label>Amount received</label>
-                        <input type="number" name="log_amount" step="0.01" min="0.01" max="<?php echo esc_attr( $detail_purchase->balance ); ?>" required style="width:100%;">
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="number" name="log_amount" id="ofp-log-amount" step="0.01" min="0.01" max="<?php echo esc_attr( $detail_purchase->balance ); ?>" required style="flex:1;">
+                            <?php if ( (float) $detail_purchase->balance > 0 ) : ?>
+                                <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" style="white-space:nowrap;padding:6px 12px;font-size:12px;font-weight:600;border:1px solid var(--border-light,#e2e8f0);border-radius:8px;" onclick="document.getElementById('ofp-log-amount').value='<?php echo esc_attr( number_format( (float) $detail_purchase->balance, 2, '.', '' ) ); ?>'">
+                                    Pay Full Balance (₦<?php echo esc_html( number_format( (float) $detail_purchase->balance, 2 ) ); ?>)
+                                </button>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     <div class="ofp-field">
                         <label>Reference <span class="ofp-hint" style="display:inline;margin:0;">(Optional)</span></label>
@@ -523,12 +647,6 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 <span>Back to Sales</span>
             </a>
         </div>
-        <div style="margin: 0 0 24px;">
-            <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
-                Sales &amp; Installments
-            </h1>
-            <p style="color:var(--text-muted); margin:0; font-size:14px;">Manage manual property purchases and installments for your buyers.</p>
-        </div>
 
         <?php $ofp_sales_tab = 'purchase'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
 
@@ -547,13 +665,20 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                     <div class="ofp-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap:16px;">
                         <div class="ofp-field">
                             <label>Property</label>
-                            <select name="property_id" required class="ofp-select" style="width:100%;">
+                            <select name="property_id" id="ofp-purchase-property" required class="ofp-select" style="width:100%;">
                                 <option value="" hidden>— Select sale property —</option>
                                 <?php foreach ( $my_properties as $property ) : ?>
-                                    <option value="<?php echo esc_attr( $property->id ); ?>">
+                                    <option value="<?php echo esc_attr( $property->id ); ?>" data-price="<?php echo esc_attr( (float) $property->price ); ?>">
                                         <?php echo esc_html( $property->title . ' — ₦' . number_format( (float) $property->price, 2 ) ); ?>
                                     </option>
                                 <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="ofp-field">
+                            <label>Payment Type</label>
+                            <select name="payment_type" id="ofp-purchase-payment-type" class="ofp-select" style="width:100%;">
+                                <option value="installment">Installment</option>
+                                <option value="full_payment">Full Payment</option>
                             </select>
                         </div>
                         <div class="ofp-field">
@@ -584,22 +709,27 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                             <label>Buyer Email <span class="ofp-hint" style="display:inline;margin:0;">(Optional)</span></label>
                             <input type="email" name="buyer_email" placeholder="Optional" style="width:100%;">
                         </div>
-                        <div class="ofp-field">
+                        <div class="ofp-field ofp-purchase-full-field" style="display:none;">
+                            <label>Amount Due (100% Full Payment)</label>
+                            <input type="text" id="ofp-purchase-full-price" readonly style="width:100%;font-weight:600;background:rgba(0,0,0,0.03);" value="—">
+                            <p class="ofp-hint">Outright purchase — buyer pays the property in full.</p>
+                        </div>
+                        <div class="ofp-field ofp-purchase-installment-field">
                             <label>Initial Payment (₦)</label>
-                            <input type="number" step="0.01" min="0" name="initial_payment" required style="width:100%;">
+                            <input type="number" step="0.01" min="0" name="initial_payment" id="ofp-purchase-initial" required style="width:100%;">
                         </div>
-                        <div class="ofp-field">
+                        <div class="ofp-field ofp-purchase-installment-field">
                             <label>Installment Amount (₦)</label>
-                            <input type="number" step="0.01" min="0" name="installment_amount" required style="width:100%;">
+                            <input type="number" step="0.01" min="0" name="installment_amount" id="ofp-purchase-inst-amount" style="width:100%;">
                         </div>
-                        <div class="ofp-field">
+                        <div class="ofp-field ofp-purchase-installment-field">
                             <label>Number of Installments</label>
-                            <input type="number" min="1" name="installment_count" required style="width:100%;">
+                            <input type="number" min="1" name="installment_count" id="ofp-purchase-inst-count" style="width:100%;">
                         </div>
                         <div class="ofp-field">
                             <label>Amount Paid (₦)</label>
-                            <input type="number" step="0.01" min="0" name="amount_paid" required style="width:100%;">
-                            <p class="ofp-hint">The amount already received (e.g. initial deposit).</p>
+                            <input type="number" step="0.01" min="0" name="amount_paid" id="ofp-purchase-amount-paid" required style="width:100%;">
+                            <p class="ofp-hint">The amount already received (e.g. initial deposit or full payment).</p>
                         </div>
                         <div class="ofp-field">
                             <label>Payment Method</label>
@@ -612,9 +742,9 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                                 <option value="other">Other</option>
                             </select>
                         </div>
-                        <div class="ofp-field">
+                        <div class="ofp-field ofp-purchase-installment-field">
                             <label>Payment Frequency</label>
-                            <select name="frequency" required class="ofp-select" style="width:100%;">
+                            <select name="frequency" class="ofp-select" style="width:100%;">
                                 <option value="daily">Daily</option>
                                 <option value="weekly">Weekly</option>
                                 <option value="monthly" selected>Monthly</option>
@@ -649,11 +779,103 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 (function(){
     var source = document.getElementById('ofp-buyer-source');
     var wrap = document.getElementById('ofp-lead-wrap');
-    if (!source || !wrap) return;
-    function toggle(){ wrap.style.display = source.value === 'lead' ? 'block' : 'none'; }
-    source.addEventListener('change', toggle); toggle();
+    if (source && wrap) {
+        function toggle(){ wrap.style.display = source.value === 'lead' ? 'block' : 'none'; }
+        source.addEventListener('change', toggle); toggle();
+    }
+
+    var typeEl = document.getElementById('ofp-purchase-payment-type');
+    var propEl = document.getElementById('ofp-purchase-property');
+    var initialEl = document.getElementById('ofp-purchase-initial');
+    var paidEl = document.getElementById('ofp-purchase-amount-paid');
+    var instAmountEl = document.getElementById('ofp-purchase-inst-amount');
+    var instCountEl = document.getElementById('ofp-purchase-inst-count');
+    var fullPriceEl = document.getElementById('ofp-purchase-full-price');
+    var instFields = document.querySelectorAll('.ofp-purchase-installment-field');
+    var fullFields = document.querySelectorAll('.ofp-purchase-full-field');
+
+    if (typeEl && propEl) {
+        function updatePrice() {
+            var sel = propEl.options[propEl.selectedIndex];
+            var price = sel && sel.dataset.price ? parseFloat(sel.dataset.price) : 0;
+            if (fullPriceEl) fullPriceEl.value = price > 0 ? '₦' + price.toLocaleString('en-US', {minimumFractionDigits: 2}) : '—';
+            if (typeEl.value === 'full_payment' && price > 0) {
+                if (initialEl) initialEl.value = price;
+                if (paidEl) paidEl.value = price;
+            }
+        }
+
+        function togglePurchaseType() {
+            var isFull = typeEl.value === 'full_payment';
+            instFields.forEach(function(el){ el.style.display = isFull ? 'none' : ''; });
+            fullFields.forEach(function(el){ el.style.display = isFull ? '' : 'none'; });
+
+            if (isFull) {
+                if (initialEl) initialEl.removeAttribute('required');
+                if (instAmountEl) { instAmountEl.value = '0'; instAmountEl.removeAttribute('required'); }
+                if (instCountEl) { instCountEl.value = '0'; instCountEl.removeAttribute('required'); }
+            } else {
+                if (initialEl) initialEl.setAttribute('required', '');
+                if (instAmountEl) instAmountEl.setAttribute('required', '');
+                if (instCountEl) instCountEl.setAttribute('required', '');
+            }
+            updatePrice();
+        }
+
+        typeEl.addEventListener('change', togglePurchaseType);
+        propEl.addEventListener('change', updatePrice);
+        togglePurchaseType();
+    }
 })();
+
+function ofpOpenProofModal(url) {
+    var iframe = document.getElementById('ofp-proof-iframe');
+    var ext = document.getElementById('ofp-proof-external-link');
+    if (iframe) iframe.src = url;
+    if (ext) ext.href = url;
+    var m = document.getElementById('ofp-modal-proof');
+    if (m) m.style.display = 'flex';
+}
+
+function ofpClosePaymentModal(id) {
+    var m = document.getElementById(id);
+    if (m) m.style.display = 'none';
+    if (id === 'ofp-modal-proof') {
+        var iframe = document.getElementById('ofp-proof-iframe');
+        if (iframe) iframe.src = 'about:blank';
+    }
+}
 </script>
+
+<!-- PROOF LIGHTBOX MODAL -->
+<div id="ofp-modal-proof" class="ofp-payment-modal-backdrop" style="display:none; position:fixed; inset:0; width:100vw; height:100vh; background:rgba(15,23,42,0.65); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:999999; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;" onclick="if(event.target===this) ofpClosePaymentModal('ofp-modal-proof');">
+    <div style="background:var(--bg-card, #ffffff); color:var(--text-main, #0f172a); width:100%; max-width:760px; max-height:90vh; border-radius:14px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid var(--border-color, #e2e8f0); overflow:hidden; box-sizing:border-box; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border-color, #e2e8f0); background:var(--bg-card, #ffffff);">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:36px; height:36px; border-radius:50%; background:#e0e7ff; color:#4338ca; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+                <div>
+                    <h3 style="margin:0; font-size:16px; font-weight:700; color:var(--text-main, #0f172a);">Payment Proof</h3>
+                    <div style="font-size:12px; color:var(--text-muted, #64748b);">Uploaded receipt / transfer proof preview</div>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:14px;">
+                <a id="ofp-proof-external-link" href="#" target="_blank" rel="noopener" style="font-size:12px; font-weight:600; color:#2563eb; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                    <span>Open original</span> &nearr;
+                </a>
+                <button type="button" onclick="ofpClosePaymentModal('ofp-modal-proof')" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-muted, #94a3b8); line-height:1; padding:0;">&times;</button>
+            </div>
+        </div>
+        <div style="padding:0; flex:1; min-height:480px; background:#0f172a; position:relative; overflow:hidden;">
+            <iframe id="ofp-proof-iframe" src="about:blank" style="width:100%; height:100%; min-height:480px; border:none; display:block;"></iframe>
+        </div>
+        <div style="display:flex; justify-content:flex-end; padding:14px 20px; background:var(--bg-body, #f8fafc); border-top:1px solid var(--border-color, #e2e8f0);">
+            <button type="button" onclick="ofpClosePaymentModal('ofp-modal-proof')" class="ofp-btn ofp-btn-sm" style="background:var(--bg-card, #ffffff); color:var(--text-main, #0f172a); border:1px solid var(--border-color, #cbd5e1); border-radius:8px; padding:7px 16px; font-weight:600; cursor:pointer;">Close</button>
+        </div>
+    </div>
+</div>
+
 <?php wp_footer(); ?>
 </body>
 </html>

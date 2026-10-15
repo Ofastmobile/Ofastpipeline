@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /funding
  *
@@ -274,10 +274,6 @@ $listing_prices = [
 
 <div class="ofp-container">
 <div class="ofp-funding-page">
-
-    <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 24px; letter-spacing:-0.01em;">
-        Account Funding
-    </h1>
 
     <?php if ( $success ) : ?>
         <div class="ofp-alert ofp-alert-success"><?php echo esc_html( $success ); ?></div>

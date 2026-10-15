@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /notification-settings
  * Client chooses how they want to receive notifications and views history.
@@ -74,9 +74,6 @@ $current_pref = $client->ofp_notification_pref ?? OFP_Notification::PREF_BOTH;
                 
                 <!-- Left Column: Settings -->
                 <div class="ofp-notif-main ofp-notif-panel active" id="panel-settings">
-                    <h1 style="font-size:22px; font-weight:700; color:var(--text-main); margin:0 0 24px; letter-spacing:-0.01em;">
-                        Notification Settings
-                    </h1>
 
                     <?php if ( $error ) : ?>
                         <div class="ofp-alert ofp-alert-error"><?php echo esc_html( $error ); ?></div>

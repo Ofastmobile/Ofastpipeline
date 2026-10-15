@@ -379,7 +379,20 @@ class OFP_Property_Commerce {
                 [ 'id' => $offer_id ]
             );
 
+            // Invalidate/expire all other pending offers for this property immediately
+            $wpdb->query( $wpdb->prepare(
+                "UPDATE {$p}ofp_property_offers SET status = 'expired', updated_at = %s WHERE property_id = %d AND id != %d AND status = 'pending'",
+                current_time( 'mysql' ),
+                (int) $offer->property_id,
+                $offer_id
+            ) );
+
             $wpdb->query( 'COMMIT' );
+
+            if ( class_exists( 'OFP_Property_CPT' ) ) {
+                OFP_Property_CPT::mark_taken( (int) $offer->property_id, 'taken' );
+            }
+
             do_action( 'ofp_property_purchase_created', $purchase_id, $offer->lead_id ? (int) $offer->lead_id : 0, $offer->client_id ? (int) $offer->client_id : 0, (int) $offer->property_id );
             return $purchase_id;
         } catch ( Throwable $e ) {

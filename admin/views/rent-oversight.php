@@ -93,6 +93,20 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_admin_action'] 
 
                     if ( false !== $updated ) {
                         $action_msg = 'Lease status updated to ' . ucwords( str_replace( '_', ' ', $new_status ) ) . '.';
+                        if ( class_exists( 'OFP_Property_CPT' ) ) {
+                            if ( $new_status === 'active' ) {
+                                OFP_Property_CPT::mark_taken( (int) $lease->property_id, 'occupied' );
+                            } elseif ( in_array( $new_status, [ 'expired', 'cancelled', 'completed' ], true ) ) {
+                                $remaining_active = $wpdb->get_var( $wpdb->prepare(
+                                    "SELECT COUNT(*) FROM {$p}ofp_property_leases WHERE property_id = %d AND status = 'active' AND id != %d",
+                                    (int) $lease->property_id,
+                                    (int) $lease->id
+                                ) );
+                                if ( (int) $remaining_active === 0 ) {
+                                    OFP_Property_CPT::mark_available( (int) $lease->property_id );
+                                }
+                            }
+                        }
                     } else {
                         $action_err = 'Failed to update lease status.';
                     }

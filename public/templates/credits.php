@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /credits
  * Credit balance display, subscription details, transaction history.
@@ -59,13 +59,9 @@ $transactions = $wpdb->get_results(
 
 <div class="ofp-container">
 
-    <div class="ofp-page-header">
-        <h1>Credits & Billing</h1>
-        <?php if ( ! empty( $ofp_return_msg ) ) : ?>
-            <div style="background:#ecfdf5;border:1px solid #6ee7b7;color:#065f46;padding:12px 16px;border-radius:8px;margin:0 0 16px;"><?php echo esc_html( $ofp_return_msg ); ?></div>
-        <?php endif; ?>
-        <p>Your credit balances, subscription status, and payment history.</p>
-    </div>
+    <?php if ( ! empty( $ofp_return_msg ) ) : ?>
+        <div style="background:#ecfdf5;border:1px solid #6ee7b7;color:#065f46;padding:12px 16px;border-radius:8px;margin:0 0 16px;"><?php echo esc_html( $ofp_return_msg ); ?></div>
+    <?php endif; ?>
 
     <?php if ( $credits && $credits->paused ) : ?>
         <div class="ofp-alert ofp-alert-error">

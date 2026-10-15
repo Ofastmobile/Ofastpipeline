@@ -43,11 +43,6 @@ $status_badges = [
 
 <div class="ofp-container">
 
-    <div class="ofp-page-header">
-        <h1>My Listing</h1>
-        <p>Your property listings on the <?php echo esc_html( OFP_Brand::name() ); ?> directory.</p>
-    </div>
-
     <div class="ofp-alert ofp-alert-info">
         📸 To add or update a listing, send your property details and photos to us directly
         and we will publish it to the directory within 24 hours.

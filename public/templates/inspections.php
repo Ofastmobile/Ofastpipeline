@@ -155,24 +155,6 @@ $client_properties = $wpdb->get_results( $wpdb->prepare(
 
     <div class="ofp-container">
         <div style="padding-bottom: 60px;">
-            
-            <!-- Page Header -->
-            <div style="margin: 0 0 24px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
-                <div>
-                    <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 6px; letter-spacing:-0.01em;">
-                        Property Inspections &amp; Bookings
-                    </h1>
-                    <p style="font-size:14px; color:var(--text-muted); margin:0;">
-                        Manage physical showings and WhatsApp video tour bookings requested by prospective buyers and tenants.
-                    </p>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <a href="<?php echo esc_url( home_url( '/properties' ) ); ?>" class="ofp-btn ofp-btn-secondary" style="font-size: 13px; font-weight: 600;">
-                        Browse My Listings
-                    </a>
-                </div>
-            </div>
-
             <!-- Flash Notices -->
             <?php if ( $success ) : ?>
                 <div class="ofp-alert ofp-alert-success" style="margin-bottom: 20px; border-radius: 12px; padding: 14px 18px; font-size: 13px; font-weight: 600;">

@@ -17,16 +17,36 @@ class OFP_Property_Receipt_Viewer {
     ];
 
     public static function init(): void {
+        add_action( 'init', [ __CLASS__, 'register_routes' ] );
+        add_filter( 'query_vars', [ __CLASS__, 'register_query_vars' ] );
+        add_action( 'template_redirect', [ __CLASS__, 'handle_public_route' ] );
         add_action( 'wp_ajax_ofp_view_receipt', [ __CLASS__, 'handle_view_receipt' ] );
         add_action( 'wp_ajax_nopriv_ofp_view_receipt', [ __CLASS__, 'handle_view_receipt' ] );
     }
 
+    public static function register_routes(): void {
+        add_rewrite_rule( '^property-receipt/?$', 'index.php?ofp_view_receipt=1', 'top' );
+    }
+
+    public static function register_query_vars( array $vars ): array {
+        $vars[] = 'ofp_view_receipt';
+        return $vars;
+    }
+
+    public static function handle_public_route(): void {
+        $path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+        if ( '1' === (string) get_query_var( 'ofp_view_receipt' ) || 'property-receipt' === $path ) {
+            self::handle_view_receipt();
+            exit;
+        }
+    }
+
     /**
-     * Helper to generate a secure receipt URL.
+     * Helper to generate a secure receipt URL using the public SaaS endpoint.
+     * Prevents exposing wp-admin/admin-ajax.php to clients, buyers, or tenants.
      */
     public static function get_receipt_url( int $payment_id, string $type = 'rent', ?string $token = null ): string {
         $params = [
-            'action'     => 'ofp_view_receipt',
             'payment_id' => $payment_id,
             'type'       => $type,
         ];
@@ -35,11 +55,7 @@ class OFP_Property_Receipt_Viewer {
         } else {
             $params['nonce'] = wp_create_nonce( 'ofp_view_receipt_' . $payment_id );
         }
-        $ajax = admin_url( 'admin-ajax.php' );
-        if ( ! is_admin() && ! empty( $_SERVER['HTTP_HOST'] ) ) {
-            $ajax = ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . wp_parse_url( $ajax, PHP_URL_PATH );
-        }
-        return add_query_arg( $params, $ajax );
+        return add_query_arg( $params, home_url( '/property-receipt/' ) );
     }
 
     public static function handle_view_receipt(): void {
@@ -86,7 +102,15 @@ class OFP_Property_Receipt_Viewer {
         // Auto-generate rent receipt on demand if file is missing or not yet generated
         $uploads_dir = wp_upload_dir();
         $base_dir    = $uploads_dir['basedir'];
-        $full_path   = ! empty( $payment->receipt_path ) ? ( $base_dir . '/' . $payment->receipt_path ) : '';
+        $receipt_raw = (string) ( $payment->receipt_path ?? '' );
+
+        if ( $receipt_raw !== '' && file_exists( $receipt_raw ) ) {
+            $full_path = $receipt_raw;
+        } elseif ( $receipt_raw !== '' && file_exists( $base_dir . '/' . ltrim( $receipt_raw, '/\\' ) ) ) {
+            $full_path = $base_dir . '/' . ltrim( $receipt_raw, '/\\' );
+        } else {
+            $full_path = $receipt_raw !== '' ? ( $base_dir . '/' . $receipt_raw ) : '';
+        }
 
         if ( 'rent' === $payment->receipt_category && ( empty( $payment->receipt_path ) || ! file_exists( $full_path ) ) ) {
             if ( class_exists( 'OFP_Property_Receipt_Generator' ) ) {
@@ -130,12 +154,9 @@ class OFP_Property_Receipt_Viewer {
             }
         }
 
-        // Nonce verification for portal users
+        // Nonce verification: secure time-limited signed token generated for this payment
         if ( ! empty( $nonce ) && wp_verify_nonce( $nonce, 'ofp_view_receipt_' . $payment->id ) ) {
-            $client = class_exists( 'OFP_Auth' ) ? OFP_Auth::current_client() : null;
-            if ( $client && (int) $payment->client_id === (int) $client->id ) {
-                return true;
-            }
+            return true;
         }
 
         // Session check for logged-in portal clients
@@ -148,16 +169,27 @@ class OFP_Property_Receipt_Viewer {
     }
 
     private static function deliver_receipt( object $payment ): void {
-        $receipt_path = $payment->receipt_path;
+        $receipt_path = (string) $payment->receipt_path;
         $uploads_dir  = wp_upload_dir();
         $base_dir     = $uploads_dir['basedir'];
-        $full_path    = $base_dir . '/' . $receipt_path;
+
+        if ( $receipt_path !== '' && file_exists( $receipt_path ) ) {
+            $full_path = $receipt_path;
+        } elseif ( $receipt_path !== '' && file_exists( $base_dir . '/' . ltrim( $receipt_path, '/\\' ) ) ) {
+            $full_path = $base_dir . '/' . ltrim( $receipt_path, '/\\' );
+        } else {
+            $full_path = $base_dir . '/' . $receipt_path;
+        }
 
         $real_path = realpath( $full_path );
         $real_base = realpath( $base_dir );
 
+        // Normalize slashes and casing for cross-platform (Windows & Linux) validation
+        $norm_path = $real_path ? str_replace( '\\', '/', strtolower( $real_path ) ) : '';
+        $norm_base = $real_base ? str_replace( '\\', '/', strtolower( $real_base ) ) : '';
+
         // Verify path is within uploads directory
-        if ( ! $real_path || ! $real_base || strpos( $real_path, $real_base ) !== 0 ) {
+        if ( ! $norm_path || ! $norm_base || ! str_starts_with( $norm_path, $norm_base ) ) {
             wp_die( 'Invalid receipt path.', 'Forbidden', [ 'response' => 403 ] );
         }
 
@@ -167,9 +199,9 @@ class OFP_Property_Receipt_Viewer {
         }
 
         $actual_size = filesize( $real_path );
-        $mime = ! empty( $payment->receipt_mime ) ? $payment->receipt_mime : 'text/html; charset=UTF-8';
+        $mime = ! empty( $payment->receipt_mime ) ? $payment->receipt_mime : 'application/octet-stream';
         $is_html = str_contains( strtolower( $mime ), 'html' );
-        $ext = $is_html ? 'html' : 'pdf';
+        $ext = pathinfo( $real_path, PATHINFO_EXTENSION ) ?: ( $is_html ? 'html' : 'pdf' );
 
         // Set security headers
         header( 'X-Content-Type-Options: nosniff' );

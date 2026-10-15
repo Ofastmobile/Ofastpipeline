@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /pipeline-settings
  * Client customises their own pipeline messages and IVR configuration.
@@ -121,16 +121,11 @@ $type_options = [
 
         <div class="ofp-pipeline-layout">
             <div class="ofp-pipeline-main">
-                <div class="ofp-page-header" style="padding: 16px 24px; margin-bottom: 24px;">
-                    <h1 style="font-size: 20px; margin-bottom: 6px;">Pipeline Settings</h1>
-                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px; color: var(--text-muted);">
-                        <span>Customise the automated messages sent to your leads.</span>
-                        <span style="color: var(--text-dark); opacity: 0.5;">|</span>
-                        <strong style="color: var(--text-main);">Placeholders:</strong>
-                        <span style="white-space: nowrap;"><code>{{name}}</code> &ndash; lead's name</span>
-                        <span style="white-space: nowrap;"><code>{{phone}}</code> &ndash; lead's phone</span>
-                        <span style="white-space: nowrap;"><code>{{business_name}}</code> &ndash; your business</span>
-                    </div>
+                <div class="ofp-card" style="padding: 14px 20px; margin-bottom: 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px; color: var(--text-muted);">
+                    <strong style="color: var(--text-main);">Available Placeholders:</strong>
+                    <span style="white-space: nowrap;"><code>{{name}}</code> &ndash; lead's name</span>
+                    <span style="white-space: nowrap;"><code>{{phone}}</code> &ndash; lead's phone</span>
+                    <span style="white-space: nowrap;"><code>{{business_name}}</code> &ndash; your business</span>
                 </div>
 
                 <?php if ( $saved ) : ?>

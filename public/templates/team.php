@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /team
  * Client's Team Management Page.
@@ -45,11 +45,7 @@ $free_plan     = ( $plan === 'free' );
 
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
-    <div class="ofp-team-header">
-        <div>
-            <h1 style="font-size:24px;font-weight:700;color:var(--text-main);margin-bottom:8px;">Team Members</h1>
-            <p style="color:var(--text-muted);font-size:14px;">Manage your team and control access permissions.</p>
-        </div>
+    <div class="ofp-team-header" style="justify-content: flex-end;">
         <div>
             <?php if ( $free_plan ) : ?>
                 <button class="ofp-btn" disabled style="opacity:0.5;" title="Upgrade to Pro or Gold to add team members">Upgrade to Add Team</button>

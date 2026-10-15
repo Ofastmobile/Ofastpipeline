@@ -101,8 +101,8 @@ if ( ! OFP_Brand::hide_plan_prompts( $client ) ) {
 }
 
 $nav_items[] = [
-    'label'  => 'Tenants',
-    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.75c0-1.243-1.343-2.25-3-2.25s-3 1.007-3 2.25m6 0a2.25 2.25 0 01-2.25 2.25h-1.5A2.25 2.25 0 0112 18.75m6 0v-1.5a3 3 0 00-3-3h-1.5a3 3 0 00-3 3v1.5M12 9a3 3 0 100-6 3 3 0 000 6z" /></svg>',
+    'label'  => 'Rent & Tenants',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>',
     'url'    => OFP_Property_Rent::can_manage( (int) $client->id ) ? home_url( '/tenants' ) : home_url( '/pricing' ),
     'slug'   => 'tenants',
     'locked' => ! OFP_Property_Rent::can_manage( (int) $client->id ),
@@ -217,7 +217,10 @@ svg { max-width: 100%; box-sizing: border-box; }
                 <div class="ofp-nav-group-label">Overview</div>
                 <ul>
                     <?php foreach ( $nav_items as $item ) :
-                        $is_active = ! $item['locked'] && $item['slug'] && strpos( $current_url, '/' . $item['slug'] ) !== false;
+                        $is_active = ! $item['locked'] && $item['slug'] && (
+                            strpos( $current_url, '/' . $item['slug'] ) !== false ||
+                            ( $item['slug'] === 'tenants' && strpos( $current_url, '/rent' ) !== false )
+                        );
                         $classes = 'ofp-nav-item';
                         if ( $is_active )      $classes .= ' active';
                         if ( $item['locked'] ) $classes .= ' locked';
@@ -240,8 +243,50 @@ svg { max-width: 100%; box-sizing: border-box; }
             </div>
         </nav>
 
-        <div class="ofp-sidebar-footer" style="padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.04); font-size: 12px; font-weight: 500; color: var(--text-muted); text-align: left; margin-top: auto;">
-            Version <?php echo esc_html( OFP_VERSION ); ?>
+        <div class="ofp-sidebar-footer">
+            <!-- Sidebar User Profile Widget -->
+            <div class="ofp-user-menu ofp-sidebar-user-card" id="ofp-user-menu">
+                <div class="ofp-sidebar-user-trigger" id="ofp-user-avatar">
+                    <div class="ofp-user-avatar">
+                        <?php if ( ! empty( $client->logo_url ) ) : ?>
+                            <img src="<?php echo esc_url( $client->logo_url ); ?>" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                        <?php else : ?>
+                            <?php echo esc_html( strtoupper( substr( $client->business_name, 0, 2 ) ) ); ?>
+                        <?php endif; ?>
+                    </div>
+                    <div class="ofp-sidebar-user-info">
+                        <strong class="ofp-sidebar-user-name"><?php echo esc_html( $client->owner_name ); ?></strong>
+                        <span class="ofp-sidebar-user-email"><?php echo esc_html( $client->email ); ?></span>
+                    </div>
+                    <div class="ofp-sidebar-user-chevron">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" /></svg>
+                    </div>
+                </div>
+                <div class="ofp-dropdown ofp-sidebar-dropdown">
+                    <div class="ofp-dropdown-header">
+                        <strong><?php echo esc_html( $client->owner_name ); ?></strong>
+                        <span><?php echo esc_html( $client->email ); ?></span>
+                    </div>
+                    <div class="ofp-dropdown-body">
+                        <a href="<?php echo esc_url( home_url( '/account' ) ); ?>" class="ofp-dropdown-item">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                            Profile Settings
+                        </a>
+                        <a href="<?php echo esc_url( home_url( '/notification-settings' ) ); ?>" class="ofp-dropdown-item">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>
+                            Notification Settings
+                        </a>
+                        <a href="<?php echo esc_url( home_url( '/api-settings' ) ); ?>" class="ofp-dropdown-item">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            API Settings
+                        </a>
+                        <a href="<?php echo esc_url( OFP_Client_Portal::logout_url() ); ?>" class="ofp-dropdown-item danger">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
+                            Sign out
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </aside>
 
@@ -273,16 +318,6 @@ svg { max-width: 100%; box-sizing: border-box; }
             <div class="ofp-topbar-spacer" style="flex:1;"></div>
 
             <div class="ofp-topbar-actions">
-                <!-- Theme Toggle Desktop Icon -->
-                <button class="ofp-icon-btn" id="ofp-theme-toggle" type="button" aria-label="Toggle Theme" title="Toggle Light/Dark Theme">
-                    <svg class="theme-toggle-moon" style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-                    </svg>
-                    <svg class="theme-toggle-sun" style="width:20px;height:20px;color:#f59e0b;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                    </svg>
-                </button>
-
                 <!-- Notification Dropdown Menu -->
                 <?php $ofp_unread = OFP_Notification::unread_count( $client->id ); ?>
                 <div class="ofp-user-menu" style="position:relative;">
@@ -336,40 +371,15 @@ svg { max-width: 100%; box-sizing: border-box; }
                     </div>
                 </div>
 
-                <!-- User Dropdown Menu -->
-                <div class="ofp-user-menu" id="ofp-user-menu">
-                    <div class="ofp-user-avatar" id="ofp-user-avatar">
-                        <?php if ( ! empty( $client->logo_url ) ) : ?>
-                            <img src="<?php echo esc_url( $client->logo_url ); ?>" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
-                        <?php else : ?>
-                            <?php echo esc_html( strtoupper( substr( $client->business_name, 0, 2 ) ) ); ?>
-                        <?php endif; ?>
-                    </div>
-                    <div class="ofp-dropdown">
-                        <div class="ofp-dropdown-header">
-                            <strong><?php echo esc_html( $client->owner_name ); ?></strong>
-                            <span><?php echo esc_html( $client->email ); ?></span>
-                        </div>
-                        <div class="ofp-dropdown-body">
-                            <a href="<?php echo esc_url( home_url( '/account' ) ); ?>" class="ofp-dropdown-item">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-                                Profile Settings
-                            </a>
-                            <a href="<?php echo esc_url( home_url( '/notification-settings' ) ); ?>" class="ofp-dropdown-item">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>
-                                Notification Settings
-                            </a>
-                            <a href="<?php echo esc_url( home_url( '/api-settings' ) ); ?>" class="ofp-dropdown-item">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                API Settings
-                            </a>
-                            <a href="<?php echo esc_url( OFP_Client_Portal::logout_url() ); ?>" class="ofp-dropdown-item danger">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
-                                Sign out
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                <!-- Theme Toggle Desktop Icon (L&D button sticks to the far right, after notification) -->
+                <button class="ofp-icon-btn" id="ofp-theme-toggle" type="button" aria-label="Toggle Theme" title="Toggle Light/Dark Theme">
+                    <svg class="theme-toggle-moon" style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                    <svg class="theme-toggle-sun" style="width:20px;height:20px;color:#f59e0b;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                </button>
             </div>
         </header>
 
@@ -583,12 +593,12 @@ svg { max-width: 100%; box-sizing: border-box; }
                     icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>'
                 },
                 {
-                    title: 'Tenants & Leases',
-                    desc: 'Manage active tenants, rent transactions and lease contracts',
+                    title: 'Rent & Tenants',
+                    desc: 'Manage active tenants, rental rates, lease agreements and rent payments',
                     url: '<?php echo esc_js( home_url( '/tenants' ) ); ?>',
                     cat: 'crm',
-                    badge: 'Tenants',
-                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" /></svg>'
+                    badge: 'Rent',
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>'
                 },
                 {
                     title: 'Communications & SMS',

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /api-settings
  * Client API Settings and Webhook Credentials.
@@ -23,11 +23,6 @@ OFP_Auth::require_active_subscription( $client );
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
     <div class="ofp-container">
-        <div class="ofp-page-header">
-            <h1>API Settings & Integration</h1>
-            <p>Manage your webhook credentials, forms, and custom domain integrations.</p>
-        </div>
-
         <div class="ofp-grid-2" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
             
             <!-- API Credentials Card -->

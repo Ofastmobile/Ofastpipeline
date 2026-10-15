@@ -260,6 +260,150 @@ body.ofp-portal-body {
     color: #fff;
 }
 
+/* ── Sidebar Footer & User Profile Card ──────────────────────────────────── */
+.ofp-sidebar-footer {
+    padding: 12px 14px 14px;
+    border-top: 1px solid var(--border-color);
+    margin-top: auto;
+    background: var(--bg-sidebar);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+
+.ofp-sidebar-user-card {
+    position: relative;
+    width: 100%;
+}
+
+.ofp-sidebar-user-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    cursor: pointer;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    transition: all 0.18s ease;
+    box-sizing: border-box;
+}
+
+.ofp-sidebar-user-trigger:hover,
+.ofp-sidebar-user-card.active .ofp-sidebar-user-trigger {
+    background: var(--bg-card-hover);
+    border-color: var(--border-color);
+}
+
+.ofp-sidebar-user-trigger .ofp-user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
+    color: var(--accent-orange);
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.ofp-sidebar-user-info {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+}
+
+.ofp-sidebar-user-name {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+}
+
+.ofp-sidebar-user-email {
+    display: block;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    margin-top: 1px;
+}
+
+.ofp-sidebar-user-chevron {
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.ofp-sidebar-user-card.active .ofp-sidebar-user-chevron {
+    transform: rotate(180deg);
+}
+
+/* Popping UPWARDS from bottom-left */
+.ofp-sidebar-user-card .ofp-dropdown {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    top: auto;
+    left: 0;
+    right: 0;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 0;
+    margin-bottom: 0;
+    transform: translateY(8px);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.15), 0 -4px 6px -4px rgba(0, 0, 0, 0.1);
+    z-index: 500;
+}
+
+.ofp-sidebar-user-card:hover .ofp-dropdown,
+.ofp-sidebar-user-card.active .ofp-dropdown {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+.ofp-sidebar-user-card .ofp-dropdown::before {
+    top: auto;
+    bottom: -10px;
+    left: 0;
+    right: 0;
+    height: 10px;
+}
+
+.ofp-sidebar-version {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 0 10px 2px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ofp-version-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+}
+
 /* ── Topbar (Inside Main) ─────────────────────────────────────────────────── */
 .ofp-topbar {
     height: 72px;
@@ -546,6 +690,50 @@ html.dark .ofp-hero-full-header {
 /* Glassmorphism Menus on Top-Right of Hero */
 .ofp-topbar-transparent .ofp-topbar-actions {
     gap: 12px;
+    margin-right: 34px;
+}
+
+/* Sticky Light & Dark (L&D) Theme Toggle Button - sticks close to right side on any scroll */
+#ofp-theme-toggle {
+    position: fixed !important;
+    top: 18px !important;
+    right: 14px !important;
+    z-index: 1050 !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.9) !important;
+    color: #1e293b !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important;
+    transition: all 0.2s ease !important;
+}
+
+#ofp-theme-toggle:hover {
+    background: #ffffff !important;
+    transform: translateY(-1px) scale(1.04) !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16) !important;
+}
+
+[data-theme="dark"] #ofp-theme-toggle,
+html.dark #ofp-theme-toggle {
+    background: rgba(15, 23, 42, 0.88) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+}
+
+[data-theme="dark"] #ofp-theme-toggle:hover,
+html.dark #ofp-theme-toggle:hover {
+    background: rgba(30, 41, 59, 0.95) !important;
+    transform: translateY(-1px) scale(1.04) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45) !important;
 }
 
 .ofp-topbar-transparent .ofp-topbar-actions .ofp-btn-balance {
@@ -3525,11 +3713,89 @@ html.light .ofp-back-link-left:active {
         }
         .ofp-modal-footer {
             display: flex;
+            align-items: center;
             justify-content: flex-end;
-            gap: 10px;
+            gap: 12px;
             margin-top: 24px;
-            padding-top: 18px;
+            padding-top: 20px;
             border-top: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        .ofp-modal-footer .ofp-btn-secondary,
+        .ofp-modal-footer .ofp-btn-form-cancel {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            padding: 10px 22px !important;
+            font-size: 13.5px !important;
+            font-weight: 600 !important;
+            border-radius: 10px !important;
+            background: var(--bg-card, #ffffff) !important;
+            color: var(--text-muted, #64748b) !important;
+            border: 1px solid var(--border-color, #cbd5e1) !important;
+            cursor: pointer !important;
+            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            min-height: 42px !important;
+            box-sizing: border-box !important;
+            line-height: 1.2 !important;
+            text-decoration: none !important;
+        }
+        .ofp-modal-footer .ofp-btn-secondary:hover,
+        .ofp-modal-footer .ofp-btn-form-cancel:hover {
+            color: var(--text-main, #0f172a) !important;
+            border-color: var(--text-muted, #94a3b8) !important;
+            background: var(--bg-card-hover, #f1f5f9) !important;
+            transform: translateY(-1px);
+        }
+        .ofp-modal-footer .ofp-btn-primary,
+        .ofp-modal-footer .ofp-btn-form-save {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            background: var(--accent-blue, #2563eb) !important;
+            color: #ffffff !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            padding: 10px 26px !important;
+            border-radius: 10px !important;
+            border: none !important;
+            cursor: pointer !important;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            min-height: 42px !important;
+            box-sizing: border-box !important;
+            line-height: 1.2 !important;
+            text-decoration: none !important;
+        }
+        .ofp-modal-footer .ofp-btn-primary:hover,
+        .ofp-modal-footer .ofp-btn-form-save:hover {
+            background: #1d4ed8 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45) !important;
+        }
+        .ofp-modal-footer .ofp-btn-secondary:active,
+        .ofp-modal-footer .ofp-btn-form-cancel:active,
+        .ofp-modal-footer .ofp-btn-primary:active,
+        .ofp-modal-footer .ofp-btn-form-save:active {
+            transform: translateY(0);
+        }
+        [data-theme="dark"] .ofp-modal-footer .ofp-btn-secondary,
+        [data-theme="dark"] .ofp-modal-footer .ofp-btn-form-cancel,
+        html.dark .ofp-modal-footer .ofp-btn-secondary,
+        html.dark .ofp-modal-footer .ofp-btn-form-cancel {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+            color: #cbd5e1 !important;
+        }
+        [data-theme="dark"] .ofp-modal-footer .ofp-btn-secondary:hover,
+        [data-theme="dark"] .ofp-modal-footer .ofp-btn-form-cancel:hover,
+        html.dark .ofp-modal-footer .ofp-btn-secondary:hover,
+        html.dark .ofp-modal-footer .ofp-btn-form-cancel:hover {
+            background: #334155 !important;
+            border-color: #475569 !important;
+            color: #ffffff !important;
         }
         .ofp-search-box {
             position: relative;

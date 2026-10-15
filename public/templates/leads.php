@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /leads
  * Client's leads list with filtering and status management.
@@ -99,11 +99,6 @@ $status_badges = [
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
 <div class="ofp-container">
-
-    <div class="ofp-page-header">
-        <h1>My Prospects</h1>
-        <p>All prospects captured through your pipeline.</p>
-    </div>
 
     <?php if ( $message === 'success' ) : ?>
         <div class="ofp-alert ofp-alert-success">✅ Prospect status updated.</div>

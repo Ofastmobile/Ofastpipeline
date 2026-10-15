@@ -422,6 +422,13 @@ class OFP_Property_Rent {
             $wpdb->update( "{$wpdb->prefix}ofp_property_leases", [ 'status' => 'expired', 'updated_at' => current_time( 'mysql' ) ], [ 'id' => $lease->id ] );
             return new WP_Error( 'lease_offer_expired', 'This lease offer has expired.' );
         }
+
+        // Prevent accepting if property is already actively occupied by another tenant
+        if ( (int) $lease->cycle_number <= 1 && self::property_is_occupied( (int) $lease->property_id ) ) {
+            $wpdb->update( "{$wpdb->prefix}ofp_property_leases", [ 'status' => 'expired', 'updated_at' => current_time( 'mysql' ) ], [ 'id' => $lease->id ] );
+            return new WP_Error( 'property_occupied', 'This property has already been leased to another tenant and is no longer available.' );
+        }
+
         $wpdb->update( "{$wpdb->prefix}ofp_property_leases", [
             'accepted_at'       => current_time( 'mysql' ),
             'terms_accepted_at' => current_time( 'mysql' ),
@@ -481,9 +488,50 @@ class OFP_Property_Rent {
             'status' => 'active', 'start_date' => $start, 'end_date' => $end, 'updated_at' => current_time( 'mysql' ),
         ], [ 'id' => $lease_id ] );
         if ( false === $updated ) return new WP_Error( 'lease_activation_failed', 'Unable to activate lease.' );
+
+        // Automatically expire any other pending lease offers on this property
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE {$wpdb->prefix}ofp_property_leases SET status = 'expired', updated_at = %s WHERE property_id = %d AND id != %d AND status = 'pending_offer'",
+            current_time( 'mysql' ),
+            (int) $lease->property_id,
+            $lease_id
+        ) );
+
         if ( class_exists( 'OFP_Property_CPT' ) ) {
             OFP_Property_CPT::mark_taken( (int) $lease->property_id, 'occupied' );
         }
+        return true;
+    }
+
+    /**
+     * Conclude or terminate a lease (e.g. tenant vacated or tenancy ended).
+     */
+    public static function terminate_lease( int $client_id, int $lease_id, string $reason = '' ) {
+        global $wpdb;
+        $lease = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}ofp_property_leases WHERE id = %d AND client_id = %d LIMIT 1",
+            $lease_id,
+            $client_id
+        ) );
+        if ( ! $lease ) return new WP_Error( 'lease_not_found', 'Lease not found.' );
+
+        $updated = $wpdb->update(
+            "{$wpdb->prefix}ofp_property_leases",
+            [
+                'status'     => 'completed',
+                'updated_at' => current_time( 'mysql' ),
+            ],
+            [ 'id' => $lease_id ]
+        );
+        if ( false === $updated ) {
+            return new WP_Error( 'lease_terminate_failed', 'Unable to conclude lease.' );
+        }
+
+        // If no other active lease remains on this property, restore property to available/live
+        if ( ! self::property_is_occupied( (int) $lease->property_id ) && class_exists( 'OFP_Property_CPT' ) ) {
+            OFP_Property_CPT::mark_available( (int) $lease->property_id );
+        }
+
         return true;
     }
 

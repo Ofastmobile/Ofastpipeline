@@ -155,6 +155,17 @@ class OFP_Property_Purchase_Service {
 
             $wpdb->query( 'COMMIT' );
 
+            // Invalidate/expire any pending offers for this property
+            $wpdb->query( $wpdb->prepare(
+                "UPDATE {$p}ofp_property_offers SET status = 'expired', updated_at = %s WHERE property_id = %d AND status = 'pending'",
+                current_time( 'mysql' ),
+                $property_id
+            ) );
+
+            if ( class_exists( 'OFP_Property_CPT' ) ) {
+                OFP_Property_CPT::mark_taken( $property_id, 'taken' );
+            }
+
             OFP_Property_Contact::ensure_for_purchase( $purchase_id );
 
             if ( $lead_id && class_exists( 'OFP_Lead' ) ) {
@@ -234,6 +245,8 @@ add_action( 'admin_footer', function (): void {
         document.querySelectorAll('form').forEach(function(form){
             if (form.querySelector('[name="frequency"]') || !form.querySelector('[name="installment_amount"]')) return;
             var row = document.createElement('tr');
+            row.id = 'ofp-row-frequency';
+            row.className = 'ofp-purchase-installment-field ofp-offer-installment-field';
             var th = document.createElement('th');
             th.textContent = 'Payment frequency';
             var td = document.createElement('td');
@@ -252,6 +265,14 @@ add_action( 'admin_footer', function (): void {
             var amountRow = form.querySelector('[name="installment_amount"]');
             var amountTr = amountRow && amountRow.closest('tr');
             if (amountTr) amountTr.parentNode.insertBefore(row, amountTr.nextSibling);
+
+            var typeSelect = form.querySelector('[name="payment_type"]');
+            if (typeSelect) {
+                if (typeSelect.value === 'full_payment') row.style.display = 'none';
+                typeSelect.addEventListener('change', function(){
+                    row.style.display = this.value === 'full_payment' ? 'none' : '';
+                });
+            }
         });
     })();
     </script>
@@ -269,6 +290,8 @@ add_action( 'wp_footer', function (): void {
         document.querySelectorAll('form').forEach(function(form){
             if (form.querySelector('[name="frequency"]') || !form.querySelector('[name="installment_amount"]')) return;
             var box = document.createElement('div');
+            box.id = 'ofp-box-frequency';
+            box.className = 'ofp-purchase-installment-field ofp-offer-installment-field';
             box.style.marginTop = '12px';
             var label = document.createElement('label');
             label.textContent = 'Payment frequency';
@@ -291,6 +314,14 @@ add_action( 'wp_footer', function (): void {
                 submit.parentNode.insertBefore(box, submit);
             } else {
                 form.appendChild(box);
+            }
+
+            var typeSelect = form.querySelector('[name="payment_type"]');
+            if (typeSelect) {
+                if (typeSelect.value === 'full_payment') box.style.display = 'none';
+                typeSelect.addEventListener('change', function(){
+                    box.style.display = this.value === 'full_payment' ? 'none' : '';
+                });
             }
         });
     })();

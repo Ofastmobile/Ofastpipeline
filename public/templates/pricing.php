@@ -28,10 +28,6 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
 
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
-    <div class="ofp-header-area" style="margin-bottom: 24px;">
-        <h1 style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Plans & Pricing</h1>
-        <p style="color: var(--text-muted); font-size: 15px;">Choose the right tools to grow your business.</p>
-    </div>
     <div class="ofp-pricing-grid">
         
         <?php

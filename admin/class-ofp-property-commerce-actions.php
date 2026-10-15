@@ -2,9 +2,10 @@
 /**
  * Property commerce creation actions.
  *
- * Adds an admin "Create Installment Offer" page under Properties and a
- * client-accessible helper link target. Existing offer/purchase list screens
- * remain in OFP_Property_Commerce_Admin.
+ * Adds an admin "Create Offer" page under Properties and a
+ * client-accessible helper link target. Supports both full-payment and
+ * installment offers. Existing offer/purchase list screens remain in
+ * OFP_Property_Commerce_Admin.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -22,7 +23,7 @@ class OFP_Property_Commerce_Actions {
 
         add_submenu_page(
             null,
-            'Create Installment Offer',
+            'Create Offer',
             'Create Offer',
             'manage_options',
             'ofp-property-create-offer',
@@ -53,8 +54,8 @@ class OFP_Property_Commerce_Actions {
         $error   = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
         ?>
         <div class="wrap">
-            <h1>Create Installment Offer</h1>
-            <p>Create an offer for a buyer against an existing sale property. No buyer account or payment account is created at this stage.</p>
+            <h1>Create Offer</h1>
+            <p>Create a full-payment or installment offer for a buyer against an existing sale property. No buyer account or payment account is created at this stage.</p>
 
             <?php if ( $message ) : ?><div class="notice notice-success"><p><?php echo esc_html( $message ); ?></p></div><?php endif; ?>
             <?php if ( $error ) : ?><div class="notice notice-error"><p><?php echo esc_html( $error ); ?></p></div><?php endif; ?>
@@ -68,17 +69,25 @@ class OFP_Property_Commerce_Actions {
                         <select name="property_id" id="property_id" required style="min-width:360px;">
                             <option value="">Select property</option>
                             <?php foreach ( $properties as $property ) : ?>
-                                <option value="<?php echo esc_attr( $property->id ); ?>">
+                                <option value="<?php echo esc_attr( $property->id ); ?>" data-price="<?php echo esc_attr( (float) $property->price ); ?>">
                                     <?php echo esc_html( $property->title . ' — NGN ' . number_format( (float) $property->price, 0 ) ); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </td></tr>
+                    <tr><th><label for="payment_type">Payment type</label></th><td>
+                        <select id="payment_type" name="payment_type">
+                            <option value="installment">Installment</option>
+                            <option value="full_payment">Full Payment</option>
+                        </select>
+                        <p class="description">Full Payment sets initial payment to the full property price with no installments.</p>
+                    </td></tr>
                     <tr><th><label for="buyer_name">Buyer name</label></th><td><input class="regular-text" id="buyer_name" name="buyer_name" required></td></tr>
                     <tr><th><label for="buyer_phone">Buyer phone</label></th><td><input class="regular-text" id="buyer_phone" name="buyer_phone" required></td></tr>
                     <tr><th><label for="buyer_email">Buyer email</label></th><td><input type="email" class="regular-text" id="buyer_email" name="buyer_email"></td></tr>
-                    <tr><th><label for="initial_payment">Initial payment</label></th><td><input type="number" step="0.01" min="0" id="initial_payment" name="initial_payment" required></td></tr>
-                    <tr><th><label for="frequency">Payment frequency</label></th><td>
+                    <tr id="ofp-row-full-price" style="display:none;"><th><label>Amount due</label></th><td><input class="regular-text" id="ofp-full-price" readonly style="font-weight:600;background:rgba(0,0,0,0.03);" value="—"><p class="description">100% full payment upon acceptance.</p></td></tr>
+                    <tr id="ofp-row-initial"><th><label for="initial_payment">Initial payment</label></th><td><input type="number" step="0.01" min="0" id="initial_payment" name="initial_payment" required></td></tr>
+                    <tr id="ofp-row-frequency"><th><label for="frequency">Payment frequency</label></th><td>
                         <select id="frequency" name="frequency">
                             <option value="daily">Daily</option>
                             <option value="weekly">Weekly</option>
@@ -87,18 +96,64 @@ class OFP_Property_Commerce_Actions {
                             <option value="yearly">Yearly</option>
                         </select>
                     </td></tr>
-                    <tr><th><label for="installment_amount">Installment amount</label></th><td><input type="number" step="0.01" min="0" id="installment_amount" name="installment_amount" required></td></tr>
-                    <tr><th><label for="installment_count">Number of installments</label></th><td><input type="number" min="1" id="installment_count" name="installment_count" required></td></tr>
-                    <tr><th><label for="payment_start_date">Payment starts</label></th><td><input type="date" id="payment_start_date" name="payment_start_date" required></td></tr>
-                    <tr><th><label for="first_due_date">First due date</label></th><td><input type="date" id="first_due_date" name="first_due_date" required></td></tr>
-                    <tr><th><label for="grace_period_days">Grace period (days)</label></th><td><input type="number" min="0" max="365" value="7" id="grace_period_days" name="grace_period_days"></td></tr>
+                    <tr id="ofp-row-inst-amount"><th><label for="installment_amount">Installment amount</label></th><td><input type="number" step="0.01" min="0" id="installment_amount" name="installment_amount"></td></tr>
+                    <tr id="ofp-row-inst-count"><th><label for="installment_count">Number of installments</label></th><td><input type="number" min="1" id="installment_count" name="installment_count"></td></tr>
+                    <tr id="ofp-row-start"><th><label for="payment_start_date">Payment starts</label></th><td><input type="date" id="payment_start_date" name="payment_start_date" required></td></tr>
+                    <tr id="ofp-row-due"><th><label for="first_due_date">First due date</label></th><td><input type="date" id="first_due_date" name="first_due_date" required></td></tr>
+                    <tr id="ofp-row-grace"><th><label for="grace_period_days">Grace period (days)</label></th><td><input type="number" min="0" max="365" value="7" id="grace_period_days" name="grace_period_days"></td></tr>
                     <tr><th><label for="offer_expires">Offer expires</label></th><td><input type="date" id="offer_expires" name="offer_expires"></td></tr>
-                    <tr><th><label for="terms_text">Installment terms / agreement</label></th><td><textarea class="large-text" rows="10" id="terms_text" name="terms_text"></textarea><p class="description">Use approved seller/legal wording. The accepted version is stored with the purchase.</p></td></tr>
+                    <tr><th><label for="terms_text">Terms / agreement</label></th><td><textarea class="large-text" rows="10" id="terms_text" name="terms_text"></textarea><p class="description">Use approved seller/legal wording. The accepted version is stored with the purchase.</p></td></tr>
                 </table>
 
                 <?php submit_button( 'Create Offer' ); ?>
             </form>
         </div>
+        <script>
+        (function(){
+            var typeEl = document.getElementById('payment_type');
+            var propEl = document.getElementById('property_id');
+            var initialEl = document.getElementById('initial_payment');
+            var instAmountEl = document.getElementById('installment_amount');
+            var instCountEl = document.getElementById('installment_count');
+            var startEl = document.getElementById('payment_start_date');
+            var dueEl = document.getElementById('first_due_date');
+            var fullPriceEl = document.getElementById('ofp-full-price');
+            var fullRow = document.getElementById('ofp-row-full-price');
+            var instRows = ['ofp-row-initial','ofp-row-frequency','ofp-row-inst-amount','ofp-row-inst-count','ofp-row-start','ofp-row-due','ofp-row-grace'];
+
+            function updatePrice() {
+                var sel = propEl ? propEl.options[propEl.selectedIndex] : null;
+                var price = sel && sel.dataset.price ? parseFloat(sel.dataset.price) : 0;
+                if (fullPriceEl) fullPriceEl.value = price > 0 ? '₦' + price.toLocaleString('en-US', {minimumFractionDigits: 2}) : '—';
+                if (initialEl && typeEl.value === 'full_payment' && price > 0) initialEl.value = price;
+            }
+
+            function toggle() {
+                var isFull = typeEl.value === 'full_payment';
+                instRows.forEach(function(id){ var r = document.getElementById(id); if(r) r.style.display = isFull ? 'none' : ''; });
+                if (fullRow) fullRow.style.display = isFull ? '' : 'none';
+
+                if (isFull) {
+                    if (initialEl) initialEl.removeAttribute('required');
+                    if (instAmountEl) { instAmountEl.value = '0'; instAmountEl.removeAttribute('required'); }
+                    if (instCountEl) { instCountEl.value = '0'; instCountEl.removeAttribute('required'); }
+                    if (startEl) startEl.removeAttribute('required');
+                    if (dueEl) dueEl.removeAttribute('required');
+                } else {
+                    if (initialEl) initialEl.setAttribute('required','');
+                    if (instAmountEl) instAmountEl.setAttribute('required','');
+                    if (instCountEl) instCountEl.setAttribute('required','');
+                    if (startEl) startEl.setAttribute('required','');
+                    if (dueEl) dueEl.setAttribute('required','');
+                }
+                updatePrice();
+            }
+
+            typeEl.addEventListener('change', toggle);
+            if (propEl) propEl.addEventListener('change', updatePrice);
+            toggle();
+        })();
+        </script>
         <?php
     }
 
@@ -133,6 +188,20 @@ class OFP_Property_Commerce_Actions {
             $property_id
         ) );
 
+        $payment_type = sanitize_key( $_POST['payment_type'] ?? 'installment' );
+        $is_full_payment = $payment_type === 'full_payment';
+
+        // For full payment: force values so the backend creates a single-installment purchase.
+        if ( $is_full_payment && $property ) {
+            $initial_payment    = (float) $property->price;
+            $installment_amount = 0.0;
+            $installment_count  = 0;
+            $payment_start_date = current_time( 'Y-m-d' );
+            $first_due_date     = $expiry_date ?: current_time( 'Y-m-d' );
+            $grace_days         = 0;
+            $frequency          = 'one_time';
+        }
+
         $error = '';
         if ( ! $property ) $error = 'Property not found.';
         elseif ( ! OFP_Property_CPT::is_sale_like( (string) $property->listing_type ) ) $error = 'Offers are only available for sale or land properties.';
@@ -141,12 +210,12 @@ class OFP_Property_Commerce_Actions {
         elseif ( ! $buyer_name || ! $buyer_phone ) $error = 'Buyer name and phone are required.';
         elseif ( $buyer_email !== '' && ! is_email( $buyer_email ) ) $error = 'Buyer email is invalid.';
         elseif ( (float) $property->price <= 0 ) $error = 'Property price is invalid.';
-        elseif ( $initial_payment < 0 || $initial_payment >= (float) $property->price ) $error = 'Initial payment must be less than the property price.';
-        elseif ( $installment_amount <= 0 || $installment_count <= 0 ) $error = 'Installment amount and count are required.';
-        elseif ( abs( ( (float) $property->price - $initial_payment ) - ( $installment_amount * $installment_count ) ) > 0.01 ) $error = 'The installment schedule must exactly cover the remaining property balance.';
-        elseif ( ! $payment_start_date || strtotime( $payment_start_date ) === false ) $error = 'Payment start date is required.';
-        elseif ( ! $first_due_date || strtotime( $first_due_date ) === false ) $error = 'First due date is required.';
-        elseif ( strtotime( $first_due_date ) < strtotime( $payment_start_date ) ) $error = 'First due date cannot be before the payment start date.';
+        elseif ( ! $is_full_payment && ( $initial_payment < 0 || $initial_payment >= (float) $property->price ) ) $error = 'Initial payment must be less than the property price.';
+        elseif ( ! $is_full_payment && ( $installment_amount <= 0 || $installment_count <= 0 ) ) $error = 'Installment amount and count are required.';
+        elseif ( ! $is_full_payment && abs( ( (float) $property->price - $initial_payment ) - ( $installment_amount * $installment_count ) ) > 0.01 ) $error = 'The installment schedule must exactly cover the remaining property balance.';
+        elseif ( ! $is_full_payment && ( ! $payment_start_date || strtotime( $payment_start_date ) === false ) ) $error = 'Payment start date is required.';
+        elseif ( ! $is_full_payment && ( ! $first_due_date || strtotime( $first_due_date ) === false ) ) $error = 'First due date is required.';
+        elseif ( ! $is_full_payment && strtotime( $first_due_date ) < strtotime( $payment_start_date ) ) $error = 'First due date cannot be before the payment start date.';
 
         if ( $error ) {
             wp_safe_redirect( add_query_arg( 'error', rawurlencode( $error ), admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-create-offer' ) ) );

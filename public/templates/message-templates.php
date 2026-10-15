@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /message-templates
  * Client Communications Hub — mirrors the admin communications page.
@@ -104,11 +104,6 @@ $type_badges = [
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
 <div class="ofp-container">
-
-    <div class="ofp-page-header">
-        <h1>Communications</h1>
-        <p>Communications log, broadcasts, and reusable message templates.</p>
-    </div>
 
     <!-- Tabs -->
     <div class="ofp-tabs" style="margin-bottom: 24px; border-bottom: 1px solid var(--border-color);">

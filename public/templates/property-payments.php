@@ -37,13 +37,6 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 ?>
 <div class="ofp-container">
     <div style="padding-bottom: 60px;">
-        <div style="margin: 0 0 24px;">
-            <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 8px; letter-spacing:-0.01em;">
-                Sales &amp; Installments
-            </h1>
-            <p style="color:var(--text-muted); margin:0; font-size:14px;">Transactions and payment records for purchases belonging to your properties and installment schedules.</p>
-        </div>
-        
         <?php $ofp_sales_tab = 'payments'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
 
         <div class="ofp-card">

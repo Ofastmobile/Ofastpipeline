@@ -51,6 +51,8 @@ class OFP_Property_Tenant_Portal {
             $error = 'This lease link is invalid or has expired.';
         } elseif ( $lease->status === 'pending_offer' && $lease->offer_expires_at && strtotime( $lease->offer_expires_at ) < time() ) {
             $error = 'This lease offer has expired. Please contact your property manager to request a new offer.';
+        } elseif ( $lease->status === 'pending_offer' && (int) $lease->cycle_number <= 1 && class_exists( 'OFP_Property_Rent' ) && OFP_Property_Rent::property_is_occupied( (int) $lease->property_id ) ) {
+            $error = 'This property has already been leased to another tenant and is no longer available. This offer has expired.';
         }
 
         $online = OFP_Bank_Account::online_payments_enabled();

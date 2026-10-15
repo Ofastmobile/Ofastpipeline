@@ -196,6 +196,7 @@ class OFP_Property_Manual_Payment {
         $uploads = wp_upload_dir();
         $dir = trailingslashit( $uploads['basedir'] ) . 'ofp-private-receipts';
         if ( ! wp_mkdir_p( $dir ) ) return new WP_Error( 'receipt_dir', 'Could not create secure receipt storage.' );
+        self::protect_receipt_dir( $dir );
         $name = wp_unique_filename( $dir, wp_generate_uuid4() . '.' . strtolower( pathinfo( sanitize_file_name( $file['name'] ), PATHINFO_EXTENSION ) ) );
         $destination = trailingslashit( $dir ) . $name;
         if ( ! move_uploaded_file( $file['tmp_name'], $destination ) ) return new WP_Error( 'receipt_store', 'Could not store the receipt.' );
@@ -204,6 +205,17 @@ class OFP_Property_Manual_Payment {
 
     public static function delete_receipt( string $path ): void {
         if ( $path && is_file( $path ) ) @unlink( $path );
+    }
+
+    public static function protect_receipt_dir( string $dir ): void {
+        $htaccess = trailingslashit( $dir ) . '.htaccess';
+        if ( ! file_exists( $htaccess ) ) {
+            @file_put_contents( $htaccess, "# Deny all direct web access to private receipts\n<IfModule mod_authz_core.c>\n    Require all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\n    Deny from all\n</IfModule>\nOptions -Indexes\n" );
+        }
+        $index = trailingslashit( $dir ) . 'index.php';
+        if ( ! file_exists( $index ) ) {
+            @file_put_contents( $index, "<?php\n// Silence is golden.\nhttp_response_code(403);\nexit;\n" );
+        }
     }
 }
 

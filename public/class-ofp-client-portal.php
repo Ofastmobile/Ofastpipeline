@@ -42,6 +42,7 @@ class OFP_Client_Portal {
         'team-invite' => 'team-invite.php',
         'message-templates' => 'message-templates.php',
         'tenants' => 'tenants.php',
+        'rent' => 'tenants.php',
         'property-sales' => 'property-sales.php',
         'property-purchases' => 'property-purchases.php',
         'property-payments' => 'property-payments.php',

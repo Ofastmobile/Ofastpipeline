@@ -262,6 +262,25 @@ if ( $can_rent && $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             }
         }
     }
+
+    // 7. Conclude / End Lease (Tenant Vacated)
+    elseif ( $action === 'terminate_lease' ) {
+        if ( ! wp_verify_nonce( $_POST['ofp_rent_nonce'] ?? '', 'ofp_rent_terminate_lease' ) ) {
+            $error = 'Security check failed. Please refresh and try again.';
+        } else {
+            $lease_id = absint( $_POST['lease_id'] ?? 0 );
+            $terminated = OFP_Property_Rent::terminate_lease( (int) $client->id, $lease_id );
+            if ( is_wp_error( $terminated ) ) {
+                $error = $terminated->get_error_message();
+            } else {
+                wp_safe_redirect( add_query_arg( [
+                    'success' => 'lease_terminated',
+                    'tab'     => 'leases',
+                ], home_url( '/tenants' ) ) );
+                exit;
+            }
+        }
+    }
 }
 
 // Flash messages from query parameters
@@ -272,6 +291,7 @@ if ( isset( $_GET['success'] ) ) {
     if ( $s === 'payment_recorded' ) $notice = 'Cash payment successfully recorded and applied to lease balance.';
     if ( $s === 'payment_approved' ) $notice = 'Payment approved. It was applied to the lease and the tenant was told.';
     if ( $s === 'payment_rejected' ) $notice = 'Payment rejected. The tenant was told the reason.';
+    if ( $s === 'lease_terminated' ) $notice = 'Tenancy concluded successfully. The property has been restored to Available status.';
     if ( $s === 'rent_adjusted' ) $notice = 'Rent revision successfully recorded into audit log. Future renewals for this tenancy will reflect the updated rate.';
     if ( $s === 'lease_renewed' ) {
         $token = sanitize_text_field( wp_unslash( $_GET['token'] ?? '' ) );
@@ -401,34 +421,23 @@ if ( $can_rent ) {
 <div class="ofp-container">
     <div style="padding-bottom: 60px;">
 
-        <!-- ── Page Header ── -->
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
-            <div>
-                <h1 style="font-size:24px; font-weight:700; color:var(--text-main); margin:0 0 6px; letter-spacing:-0.01em;">
-                    Tenants &amp; Rent Management
-                </h1>
-                <p style="color:var(--text-muted); margin:0; font-size:14px;">
-                    Track tenants, configure property rent rates, send digital lease offers, and collect rent cycles.
-                </p>
+        <!-- ── Page Actions ── -->
+        <?php if ( $can_rent ) : ?>
+            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:10px;">
+                <button type="button" onclick="ofpOpenModal('ofp-modal-offer')" class="ofp-btn ofp-btn-primary" style="display:inline-flex; align-items:center; gap:8px;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    New Lease Offer
+                </button>
+                <button type="button" onclick="ofpOpenModal('ofp-modal-rate')" class="ofp-btn" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color); display:inline-flex; align-items:center; gap:8px;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Add Rent Rate
+                </button>
+                <button type="button" onclick="ofpOpenModal('ofp-modal-payment')" class="ofp-btn" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color); display:inline-flex; align-items:center; gap:8px;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Record Payment
+                </button>
             </div>
-
-            <?php if ( $can_rent ) : ?>
-                <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <button type="button" onclick="ofpOpenModal('ofp-modal-offer')" class="ofp-btn ofp-btn-primary" style="display:inline-flex; align-items:center; gap:8px;">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        New Lease Offer
-                    </button>
-                    <button type="button" onclick="ofpOpenModal('ofp-modal-rate')" class="ofp-btn" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color); display:inline-flex; align-items:center; gap:8px;">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        Add Rent Rate
-                    </button>
-                    <button type="button" onclick="ofpOpenModal('ofp-modal-payment')" class="ofp-btn" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color); display:inline-flex; align-items:center; gap:8px;">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        Record Payment
-                    </button>
-                </div>
-            <?php endif; ?>
-        </div>
+        <?php endif; ?>
 
         <!-- ── Alerts & Notifications ── -->
         <?php if ( $notice ) : ?>
@@ -693,6 +702,17 @@ if ( $can_rent ) {
                                                             Renew
                                                         </button>
                                                     <?php endif; ?>
+
+                                                    <?php if ( $l->status === 'active' ) : ?>
+                                                        <form method="post" style="display:inline;" onsubmit="return confirm('Conclude this tenancy? If the tenant has vacated, this will mark the lease completed and restore the property to Available status.');">
+                                                            <?php wp_nonce_field( 'ofp_rent_terminate_lease', 'ofp_rent_nonce' ); ?>
+                                                            <input type="hidden" name="ofp_rent_action" value="terminate_lease">
+                                                            <input type="hidden" name="lease_id" value="<?php echo (int) $l->id; ?>">
+                                                            <button type="submit" class="ofp-btn ofp-btn-sm" style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;">
+                                                                End Tenancy
+                                                            </button>
+                                                        </form>
+                                                    <?php endif; ?>
                                                 </div>
                                             </td>
                                         </tr>
@@ -907,7 +927,7 @@ if ( $can_rent ) {
                                                 <?php if ( $p_row->status === 'successful' ) : ?>
                                                     <span class="ofp-badge" style="background:rgba(16, 185, 129, 0.15); color:#10b981;">Verified</span>
                                                 <?php else : ?>
-                                                    <span class="ofp-badge" style="background:rgba(245, 158, 11, 0.15); color:#f59e0b;"><?php echo esc_html( [ 'pending_verification' => 'Pending approval', 'rejected' => 'Rejected', 'failed' => 'Failed', 'cancelled' => 'Cancelled' ][ $p_row->status ] ?? ucfirst( $p_row->status ) ); ?></span>
+                                                    <span class="ofp-badge" style="background:rgba(245, 158, 11, 0.15); color:#f59e0b;"><?php echo esc_html( [ 'pending_verification' => 'Pending', 'rejected' => 'Rejected', 'failed' => 'Failed', 'cancelled' => 'Cancelled' ][ $p_row->status ] ?? ucfirst( $p_row->status ) ); ?></span>
                                                 <?php endif; ?>
                                             </td>
                                             <td style="text-align:right;">
@@ -929,11 +949,11 @@ if ( $can_rent ) {
                                                                 <?php wp_nonce_field( 'ofp_rent_approve_payment', 'ofp_rent_nonce' ); ?>
                                                                 <button type="submit" class="ofp-btn ofp-btn-sm" style="background:#10b981; color:#fff;" onclick="return confirm('Approve this payment? Only do this after you see the money in your bank.');">Approve</button>
                                                             </form>
-                                                            <form method="post" style="display:inline-flex; gap:4px;">
+                                                            <form method="post" style="display:inline-flex;" onsubmit="var r = prompt('Please enter the reason for rejecting this payment (the tenant will see this):'); if (r === null) { return false; } if (!r.trim()) { alert('A rejection reason is required.'); return false; } this.querySelector('input[name=reason]').value = r.trim(); return true;">
                                                                 <input type="hidden" name="ofp_rent_action" value="reject_payment">
                                                                 <input type="hidden" name="payment_id" value="<?php echo (int) $p_row->id; ?>">
+                                                                <input type="hidden" name="reason" value="">
                                                                 <?php wp_nonce_field( 'ofp_rent_reject_payment', 'ofp_rent_nonce' ); ?>
-                                                                <input type="text" name="reason" maxlength="150" placeholder="Reason (tenant sees it)" style="padding:4px 8px; font-size:12px; width:140px;">
                                                                 <button type="submit" class="ofp-btn ofp-btn-sm" style="background:#ef4444; color:#fff;">Reject</button>
                                                             </form>
                                                         </div>
@@ -1059,8 +1079,12 @@ if ( $can_rent ) {
                 <label for="ofp-offer-prop-id"><span>Select Rental Property <span class="req">*</span></span></label>
                 <select name="property_id" id="ofp-offer-prop-id" required class="ofp-select ofp-native-select" onchange="ofpUpdateRateOptionsForProperty(this.value)">
                     <option value="">— Choose property —</option>
-                    <?php foreach ( $rental_properties as $rp ) : ?>
-                        <option value="<?php echo esc_attr( $rp->id ); ?>"><?php echo esc_html( $rp->title ); ?></option>
+                    <?php foreach ( $rental_properties as $rp ) : 
+                        $is_occ = class_exists( 'OFP_Property_Rent' ) && OFP_Property_Rent::property_is_occupied( (int) $rp->id );
+                    ?>
+                        <option value="<?php echo esc_attr( $rp->id ); ?>" <?php if ( $is_occ ) echo 'disabled style="color:var(--text-muted); background:var(--bg-card);"'; ?>>
+                            <?php echo esc_html( $rp->title . ( $is_occ ? ' — (Currently Occupied)' : '' ) ); ?>
+                        </option>
                     <?php endforeach; ?>
                 </select>
                 <?php if ( empty( $rental_properties ) ) : ?>
@@ -1165,8 +1189,14 @@ if ( $can_rent ) {
             </div>
 
             <div class="ofp-modal-footer">
-                <button type="button" onclick="ofpCloseModal('ofp-modal-offer')" class="ofp-btn ofp-btn-secondary">Cancel</button>
-                <button type="submit" class="ofp-btn ofp-btn-primary">Generate Offer Link</button>
+                <button type="button" onclick="ofpCloseModal('ofp-modal-offer')" class="ofp-btn-form-cancel">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    Cancel
+                </button>
+                <button type="submit" class="ofp-btn-form-save">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    <span>Generate Offer Link</span>
+                </button>
             </div>
         </form>
     </div>
@@ -1220,8 +1250,14 @@ if ( $can_rent ) {
             </div>
 
             <div class="ofp-modal-footer">
-                <button type="button" onclick="ofpCloseModal('ofp-modal-rate')" class="ofp-btn ofp-btn-secondary">Cancel</button>
-                <button type="submit" class="ofp-btn ofp-btn-primary">Save Rent Rate</button>
+                <button type="button" onclick="ofpCloseModal('ofp-modal-rate')" class="ofp-btn-form-cancel">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    Cancel
+                </button>
+                <button type="submit" class="ofp-btn-form-save">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/></svg>
+                    <span>Save Rent Rate</span>
+                </button>
             </div>
         </form>
     </div>
@@ -1279,8 +1315,14 @@ if ( $can_rent ) {
             </div>
 
             <div class="ofp-modal-footer">
-                <button type="button" onclick="ofpCloseModal('ofp-modal-payment')" class="ofp-btn ofp-btn-secondary">Cancel</button>
-                <button type="submit" class="ofp-btn ofp-btn-primary">Record Payment</button>
+                <button type="button" onclick="ofpCloseModal('ofp-modal-payment')" class="ofp-btn-form-cancel">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    Cancel
+                </button>
+                <button type="submit" class="ofp-btn-form-save" style="background:#059669; box-shadow:0 4px 14px rgba(5, 150, 105, 0.35);">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Record Payment</span>
+                </button>
             </div>
         </form>
     </div>
@@ -1343,8 +1385,14 @@ if ( $can_rent ) {
             </div>
 
             <div class="ofp-modal-footer">
-                <button type="button" onclick="ofpCloseModal('ofp-modal-adjust-rent')" class="ofp-btn ofp-btn-secondary">Cancel</button>
-                <button type="submit" class="ofp-btn ofp-btn-primary">Save Rent Adjustment</button>
+                <button type="button" onclick="ofpCloseModal('ofp-modal-adjust-rent')" class="ofp-btn-form-cancel">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    Cancel
+                </button>
+                <button type="submit" class="ofp-btn-form-save">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/></svg>
+                    <span>Save Rent Adjustment</span>
+                </button>
             </div>
         </form>
     </div>
@@ -1402,8 +1450,14 @@ if ( $can_rent ) {
             </div>
 
             <div class="ofp-modal-footer">
-                <button type="button" onclick="ofpCloseModal('ofp-modal-renew')" class="ofp-btn ofp-btn-secondary">Cancel</button>
-                <button type="submit" class="ofp-btn ofp-btn-primary">Generate Renewal Link</button>
+                <button type="button" onclick="ofpCloseModal('ofp-modal-renew')" class="ofp-btn-form-cancel">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    Cancel
+                </button>
+                <button type="submit" class="ofp-btn-form-save">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span>Generate Renewal Link</span>
+                </button>
             </div>
         </form>
     </div>

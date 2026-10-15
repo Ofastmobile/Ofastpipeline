@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /account
  * Client profile and password management.
@@ -258,7 +258,6 @@ if ( isset( $_GET['success'] ) && $_GET['success'] === 'logo' ) {
 
 <div class="ofp-container">
     <div class="ofp-settings-dashboard">
-        <h1 class="ofp-page-title">Account Settings</h1>
 
         <?php if ( $success ) : ?>
             <div class="ofp-notice success">

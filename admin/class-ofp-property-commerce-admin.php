@@ -431,24 +431,153 @@ class OFP_Property_Commerce_Admin {
             <h1>Purchase Details: #<?php echo esc_html( $purchase->id ); ?></h1>
             <p><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-purchases' ) ); ?>">← Back to Purchases</a></p>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
-                <div class="postbox" style="padding:16px;">
-                    <h2 style="margin-top:0;">Buyer Details</h2>
-                    <p><strong>Name:</strong> <?php echo esc_html( $purchase->buyer_name ); ?></p>
-                    <p><strong>Phone:</strong> <?php echo esc_html( $purchase->buyer_phone ); ?></p>
-                    <p><strong>Email:</strong> <?php echo esc_html( $purchase->buyer_email ?: '—' ); ?></p>
-                    <p><strong>Status:</strong> <?php echo esc_html( ucfirst( $purchase->status ) ); ?></p>
-                    <p><strong>Date:</strong> <?php echo esc_html( wp_date( 'M j, Y', strtotime( $purchase->created_at ) ) ); ?></p>
+            <?php
+            $names = preg_split( '/\s+/', trim( (string) $purchase->buyer_name ) );
+            $initials = '';
+            foreach ( array_slice( $names, 0, 2 ) as $n ) {
+                $initials .= mb_strtoupper( mb_substr( $n, 0, 1 ) );
+            }
+            if ( ! $initials ) {
+                $initials = 'BY';
+            }
+            $detail_styles = [
+                'active'    => 'background:#dbeafe; color:#2563eb;',
+                'completed' => 'background:#dcfce7; color:#16a34a;',
+                'cancelled' => 'background:#fee2e2; color:#ef4444;',
+                'defaulted' => 'background:#fee2e2; color:#ef4444;',
+                'pending'   => 'background:#fef3c7; color:#d97706;',
+            ];
+            $detail_style = $detail_styles[ strtolower( $purchase->status ) ] ?? 'background:#f1f5f9; color:#64748b;';
+            $pct_paid = (float) $purchase->total_price > 0 ? min( 100, round( ((float) $purchase->amount_paid / (float) $purchase->total_price) * 100 ) ) : 0;
+            ?>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:20px; margin-bottom:24px;">
+                <!-- Buyer Details Card -->
+                <div class="postbox" style="padding:22px; margin:0; border-radius:12px; border:1px solid #c3c4c7; box-shadow:0 1px 3px rgba(0,0,0,0.04); display:flex; flex-direction:column; justify-content:space-between; background:#fff;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; gap:12px;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg, #3b82f6, #1d4ed8); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; letter-spacing:0.02em; flex-shrink:0; box-shadow:0 2px 6px rgba(59, 130, 246, 0.3);">
+                                    <?php echo esc_html( $initials ); ?>
+                                </div>
+                                <div>
+                                    <h3 style="margin:0 0 2px; font-size:17px; font-weight:700; color:#1e293b; letter-spacing:-0.01em;">
+                                        <?php echo esc_html( $purchase->buyer_name ); ?>
+                                    </h3>
+                                    <div style="font-size:12px; color:#64748b; display:flex; align-items:center; gap:6px;">
+                                        <span>Buyer Details</span>
+                                        <span>&bull;</span>
+                                        <span style="font-weight:600; color:#0f172a;">Purchase #<?php echo esc_html( $purchase->id ); ?></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.04em; <?php echo esc_attr( $detail_style ); ?>">
+                                <?php echo esc_html( ucfirst( $purchase->status ) ); ?>
+                            </span>
+                        </div>
+
+                        <div style="font-size:13px; color:#475569; margin:0 0 16px; line-height:1.45; padding:9px 12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+                            Purchase details and installment payment schedule for Purchase #<?php echo esc_html( $purchase->id ); ?>.
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div style="padding:10px 12px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
+                                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:600; margin-bottom:3px;">Phone Number</div>
+                                <div style="font-size:13px; font-weight:600; color:#0f172a; word-break:break-all;">
+                                    <a href="tel:<?php echo esc_attr( $purchase->buyer_phone ); ?>" style="color:#0f172a; text-decoration:none;">
+                                        <?php echo esc_html( $purchase->buyer_phone ?: '—' ); ?>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div style="padding:10px 12px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
+                                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:600; margin-bottom:3px;">Email Address</div>
+                                <div style="font-size:13px; font-weight:600; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<?php echo esc_attr( $purchase->buyer_email ); ?>">
+                                    <?php if ( $purchase->buyer_email ) : ?>
+                                        <a href="mailto:<?php echo esc_attr( $purchase->buyer_email ); ?>" style="color:#2563eb; text-decoration:none;">
+                                            <?php echo esc_html( $purchase->buyer_email ); ?>
+                                        </a>
+                                    <?php else : ?>
+                                        <span style="color:#64748b;">—</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:16px; padding-top:12px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b;">
+                        <span>Enrollment Date</span>
+                        <span style="font-weight:600; color:#0f172a;"><?php echo esc_html( wp_date( 'M j, Y g:ia', strtotime( $purchase->created_at ) ) ); ?></span>
+                    </div>
                 </div>
-                
-                <div class="postbox" style="padding:16px;">
-                    <h2 style="margin-top:0;">Property & Plan</h2>
-                    <p><strong>Property:</strong> <?php echo esc_html( $purchase->property_title ?: '—' ); ?> (<?php echo esc_html( $purchase->business_name ?: 'Platform' ); ?>)</p>
-                    <p><strong>Total Price:</strong> NGN <?php echo esc_html( number_format( (float) $purchase->total_price, 2 ) ); ?></p>
-                    <p><strong>Amount Paid:</strong> NGN <?php echo esc_html( number_format( (float) $purchase->amount_paid, 2 ) ); ?></p>
-                    <p><strong>Balance:</strong> NGN <?php echo esc_html( number_format( (float) $purchase->balance, 2 ) ); ?></p>
-                    <p><strong>Initial Payment:</strong> NGN <?php echo esc_html( number_format( (float) $purchase->initial_payment, 2 ) ); ?></p>
-                    <p><strong>Plan:</strong> <?php echo esc_html( $purchase->installment_count ); ?> × NGN <?php echo esc_html( number_format( (float) $purchase->installment_amount, 2 ) ); ?> (<?php echo esc_html( ucfirst( $purchase->frequency ) ); ?>)</p>
+
+                <!-- Property & Plan Overview Card -->
+                <div class="postbox" style="padding:22px; margin:0; border-radius:12px; border:1px solid #c3c4c7; box-shadow:0 1px 3px rgba(0,0,0,0.04); display:flex; flex-direction:column; justify-content:space-between; background:#fff;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; gap:12px;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="width:42px; height:42px; border-radius:10px; background:linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.22)); color:#10b981; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                                </div>
+                                <div>
+                                    <h3 style="margin:0 0 2px; font-size:17px; font-weight:700; color:#1e293b; letter-spacing:-0.01em;">
+                                        <?php echo esc_html( $purchase->property_title ?: 'Selected Property' ); ?>
+                                    </h3>
+                                    <div style="font-size:12px; color:#64748b;">
+                                        <?php echo esc_html( $purchase->business_name ?: 'Platform' ); ?> &bull; Payment Plan
+                                    </div>
+                                </div>
+                            </div>
+                            <?php if ( (int) $purchase->installment_count === 0 || (float) $purchase->initial_payment >= (float) $purchase->total_price ) : ?>
+                                <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; background:#dbeafe; color:#2563eb; text-transform:uppercase; letter-spacing:0.04em;">
+                                    Outright
+                                </span>
+                            <?php else : ?>
+                                <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; background:#f1f5f9; color:#0f172a; text-transform:uppercase; letter-spacing:0.04em;">
+                                    <?php echo (int) $purchase->installment_count; ?> Installments
+                                </span>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Financial Metric Highlights -->
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:14px;">
+                            <div style="padding:10px 12px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
+                                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:600; margin-bottom:2px;">Total Price</div>
+                                <div style="font-size:14px; font-weight:700; color:#0f172a;">₦<?php echo esc_html( number_format( (float) $purchase->total_price ) ); ?></div>
+                            </div>
+
+                            <div style="padding:10px 12px; background:rgba(16, 185, 129, 0.08); border-radius:10px; border:1px solid rgba(16, 185, 129, 0.25);">
+                                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#059669; font-weight:600; margin-bottom:2px;">Paid</div>
+                                <div style="font-size:14px; font-weight:700; color:#059669;">₦<?php echo esc_html( number_format( (float) $purchase->amount_paid ) ); ?></div>
+                            </div>
+
+                            <div style="padding:10px 12px; background:<?php echo (float)$purchase->balance > 0 ? 'rgba(239, 68, 68, 0.06)' : '#f8fafc'; ?>; border-radius:10px; border:1px solid <?php echo (float)$purchase->balance > 0 ? 'rgba(239, 68, 68, 0.25)' : '#e2e8f0'; ?>;">
+                                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:<?php echo (float)$purchase->balance > 0 ? '#dc2626' : '#64748b'; ?>; font-weight:600; margin-bottom:2px;">Balance</div>
+                                <div style="font-size:14px; font-weight:700; color:<?php echo (float)$purchase->balance > 0 ? '#dc2626' : '#0f172a'; ?>;">₦<?php echo esc_html( number_format( (float) $purchase->balance ) ); ?></div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div style="margin-bottom:8px;">
+                            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;">
+                                <span style="color:#64748b; font-weight:500;">Payment Progress</span>
+                                <span style="font-weight:700; color:#0f172a;"><?php echo (int) $pct_paid; ?>% Paid</span>
+                            </div>
+                            <div style="height:7px; background:#e2e8f0; border-radius:99px; overflow:hidden;">
+                                <div style="height:100%; width:<?php echo (int) $pct_paid; ?>%; background:linear-gradient(90deg, #10b981, #059669); border-radius:99px; transition:width 0.4s ease;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:14px; padding-top:12px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b;">
+                        <span>Structure:</span>
+                        <span style="font-weight:600; color:#0f172a;">
+                            <?php if ( (int) $purchase->installment_count === 0 || (float) $purchase->initial_payment >= (float) $purchase->total_price ) : ?>
+                                100% Full Payment (Outright)
+                            <?php else : ?>
+                                Initial ₦<?php echo esc_html( number_format( (float) $purchase->initial_payment ) ); ?> &bull; <?php echo (int) $purchase->installment_count; ?> &times; ₦<?php echo esc_html( number_format( (float) $purchase->installment_amount ) ); ?> (<?php echo esc_html( ucfirst( $purchase->frequency ) ); ?>)
+                            <?php endif; ?>
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -527,17 +656,17 @@ class OFP_Property_Commerce_Admin {
                                     <td><code><?php echo esc_html( $pmt->gateway_reference ?: ( $pmt->payer_reference ?: '—' ) ); ?></code></td>
                                     <td>
                                         <?php if ( in_array( $pmt->status, [ 'successful', 'verified' ], true ) ) : ?>
-                                            <span style="color:green;font-weight:bold;"><?php echo esc_html( ucfirst( $pmt->status ) ); ?></span>
+                                            <span style="color:#16a34a;font-weight:600;background:#dcfce7;padding:3px 8px;border-radius:12px;font-size:11.5px;"><?php echo esc_html( ucfirst( $pmt->status ) ); ?></span>
                                         <?php elseif ( $pmt->status === 'pending_verification' ) : ?>
-                                            <span style="color:#d97706;font-weight:bold;">Pending Verification</span>
+                                            <span style="color:#d97706;font-weight:600;background:#fef3c7;padding:3px 8px;border-radius:12px;font-size:11.5px;">Pending</span>
                                         <?php else : ?>
-                                            <span style="color:red;font-weight:bold;"><?php echo esc_html( ucfirst( $pmt->status ) ); ?></span>
+                                            <span style="color:#ef4444;font-weight:600;background:#fee2e2;padding:3px 8px;border-radius:12px;font-size:11.5px;"><?php echo esc_html( ucfirst( $pmt->status ) ); ?></span>
                                         <?php endif; ?>
                                     </td>
                                     <td><?php echo esc_html( wp_date( 'M j, Y g:ia', strtotime( $pmt->created_at ) ) ); ?></td>
                                     <td>
                                         <?php if ( ! empty( $pmt->receipt_path ) && class_exists( 'OFP_Property_Receipt_Viewer' ) ) : ?>
-                                            <a href="<?php echo esc_url( OFP_Property_Receipt_Viewer::get_receipt_url( (int) $pmt->id, 'purchase' ) ); ?>" target="_blank" rel="noopener" class="button button-small">
+                                            <a href="<?php echo esc_url( OFP_Property_Receipt_Viewer::get_receipt_url( (int) $pmt->id, 'purchase' ) ); ?>" onclick="event.preventDefault(); ofpOpenProofModal(this.href);" class="button button-small">
                                                 View Receipt
                                             </a>
                                         <?php else : ?>
@@ -550,6 +679,54 @@ class OFP_Property_Commerce_Admin {
                     </table>
                 </div>
             <?php endif; ?>
+
+            <!-- PROOF LIGHTBOX MODAL -->
+            <div id="ofp-modal-proof" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; height:100vh; background:rgba(15,23,42,0.65); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:999999; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;" onclick="if(event.target===this) ofpClosePaymentModal('ofp-modal-proof');">
+                <div style="background:#ffffff; color:#0f172a; width:100%; max-width:760px; max-height:90vh; border-radius:14px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0; overflow:hidden; box-sizing:border-box; display:flex; flex-direction:column;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #e2e8f0; background:#ffffff;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="width:36px; height:36px; border-radius:50%; background:#e0e7ff; color:#4338ca; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            </div>
+                            <div>
+                                <h3 style="margin:0; font-size:16px; font-weight:700;">Payment Proof</h3>
+                                <div style="font-size:12px; color:#64748b;">Uploaded receipt / transfer proof preview</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:14px;">
+                            <a id="ofp-proof-external-link" href="#" target="_blank" rel="noopener" style="font-size:12px; font-weight:600; color:#2563eb; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                                <span>Open original</span> &nearr;
+                            </a>
+                            <button type="button" onclick="ofpClosePaymentModal('ofp-modal-proof')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8; line-height:1; padding:0;">&times;</button>
+                        </div>
+                    </div>
+                    <div style="padding:0; flex:1; min-height:480px; background:#0f172a; position:relative; overflow:hidden;">
+                        <iframe id="ofp-proof-iframe" src="about:blank" style="width:100%; height:100%; min-height:480px; border:none; display:block;"></iframe>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; padding:14px 20px; background:#f8fafc; border-top:1px solid #e2e8f0;">
+                        <button type="button" onclick="ofpClosePaymentModal('ofp-modal-proof')" class="button">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+            function ofpOpenProofModal(url) {
+                var iframe = document.getElementById('ofp-proof-iframe');
+                var ext = document.getElementById('ofp-proof-external-link');
+                if (iframe) iframe.src = url;
+                if (ext) ext.href = url;
+                var m = document.getElementById('ofp-modal-proof');
+                if (m) m.style.display = 'flex';
+            }
+            function ofpClosePaymentModal(id) {
+                var m = document.getElementById(id);
+                if (m) m.style.display = 'none';
+                if (id === 'ofp-modal-proof') {
+                    var iframe = document.getElementById('ofp-proof-iframe');
+                    if (iframe) iframe.src = 'about:blank';
+                }
+            }
+            </script>
 
             <?php if ( 'completed' !== $purchase->status ) : ?>
             <div class="postbox" style="padding:16px;margin-top:20px;">
