@@ -129,7 +129,7 @@
                     studioContent.value = text.substring(0, start) + insertion + text.substring(end);
                     studioContent.selectionStart = studioContent.selectionEnd = start + insertion.length;
                 } else if (tool === 'features') {
-                    var template = "\n\n✨ Key Architectural Highlights:\n• Exquisite master suite with custom walk-in closet\n• Fully equipped chef's kitchen with premium imported fittings\n• 24/7 dedicated security surveillance and access control\n• Prime neighborhood with high rental yield and capital appreciation\n";
+                    var template = "\n\nKey Architectural Highlights:\n• Exquisite master suite with custom walk-in closet\n• Fully equipped chef's kitchen with premium imported fittings\n• 24/7 dedicated security surveillance and access control\n• Prime neighborhood with high rental yield and capital appreciation\n";
                     studioContent.value = text + template;
                 }
                 studioContent.focus();
@@ -256,10 +256,15 @@
         var propertyTypeSelect = document.getElementById('ofp_property_type_select');
         var landNotice = document.getElementById('ofp_land_notice');
         var buildingSpecs = document.getElementById('ofp_building_specs_section');
+        var landSpecs = document.getElementById('ofp_land_specs_section');
         var previewTypePill = document.getElementById('ofp-preview-type-pill');
         var previewBedSpec = document.getElementById('ofp-preview-bed-spec');
         var previewBathSpec = document.getElementById('ofp-preview-bath-spec');
         var previewCarSpec = document.getElementById('ofp-preview-car-spec');
+        var previewPlotsSpec = document.getElementById('ofp-preview-plots-spec');
+        var previewPlotsVal = document.getElementById('ofp-preview-plots-val');
+        var plotsInput = document.getElementById('ofp_plots_count_input');
+        var adminPlotHint = document.getElementById('ofp_admin_plot_hint');
 
         function syncListingTypes() {
             if (!listingTypeSelect) return;
@@ -288,18 +293,22 @@
             if (isLand) {
                 if (landNotice) landNotice.style.display = 'flex';
                 if (buildingSpecs) buildingSpecs.style.display = 'none';
+                if (landSpecs) landSpecs.style.display = 'block';
                 if (previewBedSpec) previewBedSpec.style.display = 'none';
                 if (previewBathSpec) previewBathSpec.style.display = 'none';
                 if (previewCarSpec) previewCarSpec.style.display = 'none';
+                if (previewPlotsSpec) previewPlotsSpec.style.display = '';
                 if (propertyTypeSelect && lt === 'land') {
                     propertyTypeSelect.value = 'land';
                 }
             } else {
                 if (landNotice) landNotice.style.display = 'none';
                 if (buildingSpecs) buildingSpecs.style.display = 'block';
+                if (landSpecs) landSpecs.style.display = 'none';
                 if (previewBedSpec) previewBedSpec.style.display = '';
                 if (previewBathSpec) previewBathSpec.style.display = '';
                 if (previewCarSpec) previewCarSpec.style.display = '';
+                if (previewPlotsSpec) previewPlotsSpec.style.display = 'none';
             }
 
             markDirty();
@@ -325,13 +334,115 @@
         var previewParkingVal = document.getElementById('ofp-preview-parking-val');
         var previewSqmVal = document.getElementById('ofp-preview-sqm-val');
 
+        var adminSqmLiveText = document.getElementById('ofp_admin_sqm_live_text');
+
+        function computePlotDescription(sqm, plots) {
+            if (sqm <= 0 && plots <= 0) {
+                return 'Standard Lagos Plot = 600 SQM (60ft × 120ft)';
+            }
+            if (sqm <= 0 && plots > 0) sqm = plots * 600;
+            if (plots <= 0 && sqm > 0) plots = sqm / 600;
+
+            if (sqm >= 280 && sqm <= 325) {
+                return 'Half Plot (~300 SQM / 50ft × 60ft)';
+            } else if (sqm >= 580 && sqm <= 650) {
+                return '1 Standard Plot (~600 SQM / 60ft × 120ft)';
+            } else if (sqm >= 880 && sqm <= 950) {
+                return '1.5 Plots (~900 SQM)';
+            } else if (sqm >= 1150 && sqm <= 1300) {
+                return '2 Standard Plots (~1,200 SQM / 120ft × 120ft)';
+            } else if (sqm >= 1700 && sqm <= 1900) {
+                return '3 Standard Plots (~1,800 SQM)';
+            } else if (sqm >= 2300 && sqm <= 2500) {
+                return '4 Standard Plots (~2,400 SQM)';
+            } else if (sqm >= 3900 && sqm <= 4200) {
+                return '1 Acre (~6 Standard Plots / 4,047 SQM)';
+            } else if (sqm >= 7800 && sqm <= 8400) {
+                return '2 Acres (~12 Standard Plots)';
+            } else if (sqm >= 9800 && sqm <= 10500) {
+                return '1 Hectare (~16.7 Plots / 10,000 SQM)';
+            } else {
+                var roundedPlots = Math.round(plots * 10) / 10;
+                return roundedPlots + ' Plot(s) (' + Math.round(sqm).toLocaleString() + ' SQM)';
+            }
+        }
+
+        function updatePlotHint(plots, sqm) {
+            var desc = computePlotDescription(sqm, plots);
+            if (adminSqmLiveText) adminSqmLiveText.textContent = desc;
+            if (adminPlotHint) {
+                if (plots > 0 && sqm > 0) {
+                    adminPlotHint.textContent = plots + ' Plot(s) = ' + sqm.toLocaleString() + ' SQM (~' + Math.round(sqm * 10.764).toLocaleString() + ' Sq Ft).';
+                } else {
+                    adminPlotHint.textContent = desc;
+                }
+            }
+            if (previewPlotsVal) {
+                if (plots > 0) {
+                    previewPlotsVal.textContent = plots + ' Plot' + (plots == 1 ? '' : 's');
+                } else if (sqm > 0) {
+                    var est = (sqm / 600).toFixed(1).replace('.0', '');
+                    previewPlotsVal.textContent = est + ' Plot' + (est == 1 ? '' : 's');
+                } else {
+                    previewPlotsVal.textContent = 'Plot(s)';
+                }
+            }
+        }
+
+        // Quick Plot Preset clickers in admin studio
+        document.querySelectorAll('.ofp-admin-sqm-preset-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var s = parseFloat(btn.dataset.sqm) || 0;
+                var p = parseFloat(btn.dataset.plots) || 0;
+                if (sqmInput) {
+                    sqmInput.value = s;
+                    sqmInput.dataset.autoCalc = '1';
+                }
+                if (plotsInput) {
+                    plotsInput.value = p;
+                    plotsInput.dataset.autoCalc = '1';
+                }
+                syncSpecs();
+            });
+        });
+
         function syncSpecs() {
             if (bedsInput && previewBedsVal) previewBedsVal.textContent = bedsInput.value || '0';
             if (bathsInput && previewBathsVal) previewBathsVal.textContent = bathsInput.value || '0';
             if (parkingInput && previewParkingVal) previewParkingVal.textContent = parkingInput.value || '0';
             if (sqmInput && previewSqmVal) previewSqmVal.textContent = sqmInput.value || '0';
+            updatePlotHint(parseFloat(plotsInput ? plotsInput.value : 0) || 0, parseFloat(sqmInput ? sqmInput.value : 0) || 0);
             markDirty();
             updateReadinessScore();
+        }
+
+        if (plotsInput && sqmInput) {
+            plotsInput.addEventListener('input', function() {
+                var p = parseFloat(plotsInput.value);
+                if (!isNaN(p) && p > 0) {
+                    if (!sqmInput.value || sqmInput.dataset.autoCalc === '1') {
+                        sqmInput.value = Math.round(p * 600);
+                        sqmInput.dataset.autoCalc = '1';
+                        if (previewSqmVal) previewSqmVal.textContent = sqmInput.value;
+                    }
+                }
+                syncSpecs();
+            });
+
+            sqmInput.addEventListener('input', function() {
+                sqmInput.dataset.autoCalc = '0';
+                var s = parseFloat(sqmInput.value);
+                if (!isNaN(s) && s > 0 && (!plotsInput.value || plotsInput.dataset.autoCalc === '1')) {
+                    var derivedPlots = Math.round((s / 600) * 10) / 10;
+                    plotsInput.value = derivedPlots;
+                    plotsInput.dataset.autoCalc = '1';
+                }
+                syncSpecs();
+            });
+        } else if (sqmInput) {
+            sqmInput.addEventListener('input', function() {
+                syncSpecs();
+            });
         }
 
         [bedsInput, bathsInput, parkingInput, sqmInput].forEach(function (inp) {

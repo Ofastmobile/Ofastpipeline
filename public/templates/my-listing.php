@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /my-listing
  * Client's property listing management page (v2.1).
@@ -24,6 +24,7 @@ $properties = $wpdb->get_results(
 $status_badges = [
     'pending_upload' => '<span class="ofp-badge ofp-badge-yellow">Pending Upload</span>',
     'live'           => '<span class="ofp-badge ofp-badge-green">Live</span>',
+    'occupied'       => '<span class="ofp-badge ofp-badge-purple">Occupied</span>',
     'taken'          => '<span class="ofp-badge ofp-badge-grey">Taken</span>',
     'expired'        => '<span class="ofp-badge ofp-badge-red">Expired</span>',
 ];

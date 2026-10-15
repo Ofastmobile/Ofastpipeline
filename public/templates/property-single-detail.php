@@ -49,6 +49,12 @@ $baths         = get_post_meta( $post_id, 'ofp_bathrooms', true );
 $parking       = get_post_meta( $post_id, 'ofp_parking', true );
 $sqm           = get_post_meta( $post_id, 'ofp_area_sqm', true );
 $status        = get_post_meta( $post_id, 'ofp_status', true ) ?: 'live';
+$status_ctx    = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_status_context( $post_id ) : [
+    'key' => $status, 'label' => ucfirst($status), 'full_label' => ucfirst($status),
+    'is_occupied' => false, 'is_taken' => ( $status === 'taken' ), 'is_available' => ( $status === 'live' ),
+    'tw_badge' => 'bg-emerald-600 text-white', 'tw_text' => 'text-emerald-600 dark:text-emerald-400'
+];
+$is_featured   = ( '1' === (string) get_post_meta( $post_id, 'ofp_is_featured', true ) );
 $title_doc     = get_post_meta( $post_id, 'ofp_title_document', true );
 $condition     = get_post_meta( $post_id, 'ofp_condition', true );
 $furnishing    = get_post_meta( $post_id, 'ofp_furnishing', true );
@@ -60,6 +66,9 @@ $insp_days     = get_post_meta( $post_id, 'ofp_inspection_days', true ) ?: 'Mond
 $insp_hours    = get_post_meta( $post_id, 'ofp_inspection_hours', true ) ?: '10:00 AM - 5:00 PM';
 $insp_notice   = get_post_meta( $post_id, 'ofp_inspection_notice', true );
 $allow_installment = ( '1' === (string) get_post_meta( $post_id, 'ofp_allow_installment', true ) || 'yes' === (string) get_post_meta( $post_id, 'ofp_allow_installment', true ) );
+
+// Nigerian Land Sizing & Plot Metrics
+$land_metrics = class_exists( 'OFP_Property_Land' ) ? OFP_Property_Land::get_breakdown( $post_id ) : [];
 
 // Dynamic Map Location
 $raw_address       = trim( (string) get_post_meta( $post_id, 'ofp_location_text', true ) );
@@ -625,12 +634,23 @@ if ( empty( $gallery_urls ) ) {
             <!-- Tags -- top-left -->
             <div class="absolute top-4 left-4 z-20 flex items-center gap-2 flex-wrap">
                 <span class="bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg"><?php echo esc_html( $listing_label ); ?></span>
-                <?php if ( $status === 'taken' ) : ?>
-                    <span class="bg-rose-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg">
-                        ● <?php echo ( $listing_type === 'rent' || $listing_type === 'shortlet' ) ? 'Taken / Leased' : 'Sold Out'; ?>
+                <?php if ( $is_featured ) : ?>
+                    <span class="bg-amber-400 text-slate-950 text-[10px] font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                        <svg class="w-3 h-3 text-slate-950" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                        Featured
                     </span>
-                <?php elseif ( $status === 'under_offer' ) : ?>
-                    <span class="bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg">
+                <?php endif; ?>
+                <?php if ( ! empty( $status_ctx['is_occupied'] ) ) : ?>
+                    <span class="bg-purple-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        Occupied
+                    </span>
+                <?php elseif ( ! empty( $status_ctx['is_taken'] ) ) : ?>
+                    <span class="bg-rose-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                        ● <?php echo esc_html( $status_ctx['label'] ); ?>
+                    </span>
+                <?php elseif ( ! empty( $status_ctx['key'] ) && $status_ctx['key'] === 'under_offer' ) : ?>
+                    <span class="bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
                         ● Under Offer
                     </span>
                 <?php else : ?>
@@ -731,6 +751,23 @@ if ( empty( $gallery_urls ) ) {
                         <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Bathrooms</span>
                         <span class="font-bold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_bathrooms', true ) ?: '-' ); ?> Baths</span>
                     </div>
+                    <?php else : ?>
+                    <div class="w-px h-10 bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
+                    <div class="flex flex-col items-center flex-1 min-w-[80px]">
+                        <svg class="w-6 h-6 text-emerald-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                        </svg>
+                        <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Plot Count</span>
+                        <span class="font-bold text-emerald-600 dark:text-emerald-400"><?php echo esc_html( ! empty( $land_metrics['plot_short'] ) && $land_metrics['plot_short'] !== '-' ? $land_metrics['plot_short'] : ( $land_metrics['plots_formatted'] !== '-' ? $land_metrics['plots_formatted'] . ' Plot(s)' : 'On Request' ) ); ?></span>
+                    </div>
+                    <div class="w-px h-10 bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
+                    <div class="flex flex-col items-center flex-1 min-w-[80px]">
+                        <svg class="w-6 h-6 text-amber-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Land Title</span>
+                        <span class="font-bold truncate max-w-[120px] text-center" title="<?php echo esc_attr( $title_doc ?: 'Pending' ); ?>"><?php echo esc_html( $title_doc ?: 'On Request' ); ?></span>
+                    </div>
                     <?php endif; ?>
                     <div class="w-px h-10 bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
                     <div class="flex flex-col items-center flex-1 min-w-[80px]">
@@ -739,8 +776,8 @@ if ( empty( $gallery_urls ) ) {
                                 d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4">
                             </path>
                         </svg>
-                        <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider"><?php echo $listing_type === 'land' ? 'Plot Size' : 'Area Size'; ?></span>
-                        <span class="font-bold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_area_sqm', true ) ?: '-' ); ?> SQM</span>
+                        <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider"><?php echo $listing_type === 'land' ? 'Total Area' : 'Area Size'; ?></span>
+                        <span class="font-bold"><?php echo esc_html( ! empty( $land_metrics['sqm_formatted'] ) && $land_metrics['sqm_formatted'] !== '-' ? $land_metrics['sqm_formatted'] . ' SQM' : ( get_post_meta( get_the_ID(), 'ofp_area_sqm', true ) ? get_post_meta( get_the_ID(), 'ofp_area_sqm', true ) . ' SQM' : 'On Request' ) ); ?></span>
                     </div>
                 </div>
 
@@ -781,7 +818,7 @@ if ( empty( $gallery_urls ) ) {
                             <div><span class="text-slate-500 block mb-1">Property ID:</span><span
                                     class="font-semibold"><?php the_ID(); ?></span></div>
                             <div><span class="text-slate-500 block mb-1">Status:</span><span
-                                    class="font-semibold text-emerald-600"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_status', true ) === 'live' ? 'Live / Available' : 'Unavailable' ); ?></span></div>
+                                    class="font-semibold <?php echo esc_attr( $status_ctx['tw_text'] ); ?>"><?php echo esc_html( $status_ctx['full_label'] ); ?></span></div>
                             <div><span class="text-slate-500 block mb-1">Title Document:</span><span
                                     class="font-semibold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_title_document', true ) ?: 'N/A' ); ?></span></div>
                             <?php if ( $listing_type !== 'land' ) : ?>
@@ -793,6 +830,145 @@ if ( empty( $gallery_urls ) ) {
                             <?php endif; ?>
                         </div>
                     </div>
+
+                    <!-- Nigerian Land Sizing & Plot Breakdown -->
+                    <?php if ( $listing_type === 'land' || ( ! empty( $land_metrics['has_data'] ) && $land_metrics['sqm'] > 0 ) ) : ?>
+                    <div class="my-8 bg-gradient-to-br from-emerald-950/20 via-slate-900/40 to-slate-900/60 dark:from-emerald-950/30 dark:via-slate-900 dark:to-slate-900 rounded-3xl p-6 sm:p-8 border border-emerald-500/20 dark:border-emerald-500/30 shadow-lg relative overflow-hidden">
+                        <!-- Glow highlight -->
+                        <div class="absolute -top-24 -right-24 w-60 h-60 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                        <div class="relative z-10">
+                            <!-- Card Header -->
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200/60 dark:border-slate-800">
+                                <div>
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                                                Land Sizing &amp; Plot Breakdown
+                                                <span class="text-[11px] font-semibold tracking-wide uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                                                    NG Market Standard
+                                                </span>
+                                            </h3>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                                Calibrated to Lagos &amp; Nigerian real estate benchmarks (1 Standard Plot = 600 SQM / 60ft × 120ft).
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php if ( ! empty( $land_metrics['survey_status'] ) ) : ?>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold border border-emerald-200 dark:border-emerald-800 self-start sm:self-auto">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                    <?php echo esc_html( $land_metrics['survey_status'] ); ?>
+                                </span>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Key Metrics Grid -->
+                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+                                <!-- 1. Plot Equivalent -->
+                                <div class="p-4 rounded-2xl bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 backdrop-blur-sm">
+                                    <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                                        Plot Count
+                                    </span>
+                                    <div class="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                                        <?php echo esc_html( ! empty( $land_metrics['plot_short'] ) && $land_metrics['plot_short'] !== '-' ? $land_metrics['plot_short'] : ( $land_metrics['plots_formatted'] !== '-' ? $land_metrics['plots_formatted'] . ' Plot(s)' : 'On Request' ) ); ?>
+                                    </div>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">
+                                        <?php echo esc_html( ! empty( $land_metrics['plot_label'] ) ? $land_metrics['plot_label'] : 'Benchmark 600 SQM' ); ?>
+                                    </span>
+                                </div>
+
+                                <!-- 2. Total Area in SQM & Sq Ft -->
+                                <div class="p-4 rounded-2xl bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 backdrop-blur-sm">
+                                    <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                                        Land Area
+                                    </span>
+                                    <div class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                                        <?php echo esc_html( ! empty( $land_metrics['sqm_formatted'] ) && $land_metrics['sqm_formatted'] !== '-' ? $land_metrics['sqm_formatted'] . ' SQM' : 'On Request' ); ?>
+                                    </div>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">
+                                        <?php echo esc_html( ! empty( $land_metrics['sqft_formatted'] ) && $land_metrics['sqft_formatted'] !== '-' ? '~' . $land_metrics['sqft_formatted'] . ' Sq Ft' : 'Area size on request' ); ?>
+                                    </span>
+                                </div>
+
+                                <!-- 3. Rate per Plot -->
+                                <div class="p-4 rounded-2xl bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 backdrop-blur-sm">
+                                    <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                                        Rate per Plot
+                                    </span>
+                                    <div class="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight truncate">
+                                        <?php echo esc_html( ! empty( $land_metrics['price_per_plot_fmt'] ) && $land_metrics['price_per_plot_fmt'] !== '-' ? $land_metrics['price_per_plot_fmt'] : ( $price > 0 ? '₦' . number_format( $price ) : 'On Request' ) ); ?>
+                                    </div>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">
+                                        <?php echo ( ! empty( $land_metrics['price_per_plot'] ) && $land_metrics['price_per_plot'] > 0 ) ? 'Per standard 600 SQM' : 'Based on asking price'; ?>
+                                    </span>
+                                </div>
+
+                                <!-- 4. Rate per SQM -->
+                                <div class="p-4 rounded-2xl bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 backdrop-blur-sm">
+                                    <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                                        Rate per SQM
+                                    </span>
+                                    <div class="text-lg sm:text-xl font-black text-blue-600 dark:text-blue-400 tracking-tight truncate">
+                                        <?php echo esc_html( ! empty( $land_metrics['price_per_sqm_fmt'] ) && $land_metrics['price_per_sqm_fmt'] !== '-' ? $land_metrics['price_per_sqm_fmt'] . ' / m²' : 'On Request' ); ?>
+                                    </div>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">
+                                        Land valuation rate
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Physical Due Diligence & Technical Specifications -->
+                            <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-700/40">
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3.5">
+                                    Physical &amp; Legal Specifications
+                                </h4>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                        <span class="text-xs text-slate-500 dark:text-slate-400 block mb-0.5">Dimensions:</span>
+                                        <span class="font-semibold text-slate-900 dark:text-white">
+                                            <?php echo esc_html( ! empty( $land_metrics['dimensions'] ) ? $land_metrics['dimensions'] : 'Standard layout' ); ?>
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs text-slate-500 dark:text-slate-400 block mb-0.5">Topography:</span>
+                                        <span class="font-semibold text-emerald-600 dark:text-emerald-400">
+                                            <?php echo esc_html( ! empty( $land_metrics['topography'] ) ? $land_metrics['topography'] : '100% Dry Land' ); ?>
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs text-slate-500 dark:text-slate-400 block mb-0.5">Zoning / Use:</span>
+                                        <span class="font-semibold text-slate-900 dark:text-white">
+                                            <?php echo esc_html( ! empty( $land_metrics['zoning'] ) ? $land_metrics['zoning'] : ( $property_type ? ucfirst( str_replace( '-', ' ', $property_type ) ) : 'Residential' ) ); ?>
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs text-slate-500 dark:text-slate-400 block mb-0.5">Survey &amp; Boundaries:</span>
+                                        <span class="font-semibold text-slate-900 dark:text-white">
+                                            <?php echo esc_html( ! empty( $land_metrics['survey_status'] ) ? $land_metrics['survey_status'] : 'Registered Survey' ); ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Nigerian Land Unit Reference Guide -->
+                            <div class="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+                                <span class="font-medium text-slate-700 dark:text-slate-300">Nigerian Plot Benchmarks:</span>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium">Half Plot: 300 SQM</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium">1 Plot: 600 SQM</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium">1 Acre: ~6 Plots (4,047 SQM)</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium">1 Hectare: ~16.7 Plots (10,000 SQM)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- Property Video Tour -->
                     <?php if ( ! empty( $video_url ) ) : ?>
@@ -1138,6 +1314,27 @@ if ( empty( $gallery_urls ) ) {
                             </svg>
                             <span>SCHEDULE INSPECTION &amp; INQUIRY</span>
                         </div>
+
+                        <?php if ( ! empty( $status_ctx['is_occupied'] ) || ! empty( $status_ctx['is_taken'] ) ) : ?>
+                            <div class="mb-3.5 p-3 rounded-2xl <?php echo ! empty( $status_ctx['is_occupied'] ) ? 'bg-purple-950/60 border border-purple-500/40 text-purple-200' : 'bg-rose-950/60 border border-rose-500/40 text-rose-200'; ?> text-xs">
+                                <div class="flex items-center gap-1.5 font-bold mb-1 <?php echo ! empty( $status_ctx['is_occupied'] ) ? 'text-purple-300' : 'text-rose-300'; ?>">
+                                    <?php if ( ! empty( $status_ctx['is_occupied'] ) ) : ?>
+                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                        <span>Notice: Property Currently Occupied</span>
+                                    <?php else : ?>
+                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <span>Notice: Listing Marked as <?php echo esc_html( $status_ctx['label'] ); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <p class="text-[11px] opacity-90 leading-relaxed">
+                                    <?php if ( ! empty( $status_ctx['is_occupied'] ) ) : ?>
+                                        This unit is actively leased. Inquire below to connect with <?php echo esc_html( $agent_name ); ?> for waitlisting or similar vacant units.
+                                    <?php else : ?>
+                                        This property is no longer available. Inquire below to connect with <?php echo esc_html( $agent_name ); ?> for alternative listings.
+                                    <?php endif; ?>
+                                </p>
+                            </div>
+                        <?php endif; ?>
 
                         <!-- Inspection Schedule Notice Badge -->
                         <div class="bg-blue-950/40 border border-blue-900/40 rounded-xl p-2.5 mb-3.5 text-[11px] text-slate-300">

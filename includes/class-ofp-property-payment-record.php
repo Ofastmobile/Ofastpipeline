@@ -48,6 +48,7 @@ class OFP_Property_Payment_Record {
             $wpdb->update( "{$p}ofp_property_payments", [ 'status' => 'successful', 'verified_by' => $verified_by ?: null, 'verified_at' => current_time( 'mysql' ), 'updated_at' => current_time( 'mysql' ) ], [ 'id' => $payment_id ] );
         }
         $allocation = OFP_Property_Commerce::allocate_payment( $payment_id );
+        OFP_Property_Commerce::sync_purchase_totals( (int) $payment->purchase_id );
         if ( $newly_successful ) {
             do_action( 'ofp_property_payment_processed', (int) $payment->purchase_id, 0, (float) $payment->amount, $allocation, (string) $payment->gateway, (string) ( $payment->gateway_reference ?: $payment->payer_reference ) );
         }

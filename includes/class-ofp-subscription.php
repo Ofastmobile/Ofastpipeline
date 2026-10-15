@@ -843,6 +843,15 @@ class OFP_Subscription {
         // Send payment confirmation email.
         OFP_Mailer::send_payment_confirmed( $client, $amount, $type );
 
+        // Clean up stale 'pending' rows for the same client+type so the
+        // dashboard "Pay Now" banner no longer fires after a real payment.
+        $wpdb->query( $wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}ofp_subscriptions
+             WHERE client_id = %d AND type = %s AND status = 'pending'",
+            $client_id,
+            $type
+        ) );
+
         if ( class_exists( 'OFP_Logger' ) ) {
             OFP_Logger::log( 'Payment successful', $client_id, [
                 'amount'    => $amount,
@@ -1334,7 +1343,7 @@ class OFP_Subscription {
         return $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT * FROM {$wpdb->prefix}ofp_subscriptions
-                 WHERE client_id = %d AND status = 'underpaid'
+                 WHERE client_id = %d AND status = 'underpaid' AND type = 'listing'
                  ORDER BY created_at DESC",
                 $client_id
             )
@@ -1356,7 +1365,12 @@ class OFP_Subscription {
      * plan is never touched.
      */
     public static function cleanup_free_pending_once(): void {
-        if ( get_option( 'ofp_free_pending_cleanup' ) === '1' && get_option( 'ofp_pending_review_cleanup' ) === '1' ) {
+        $free_done    = get_option( 'ofp_free_pending_cleanup' ) === '1';
+        $review_done  = get_option( 'ofp_pending_review_cleanup' ) === '1';
+        $crm_done     = get_option( 'ofp_crm_pending_cleanup' ) === '1';
+        $paid_done    = get_option( 'ofp_paid_pending_cleanup' ) === '1';
+
+        if ( $free_done && $review_done && $crm_done && $paid_done ) {
             return;
         }
         global $wpdb;
@@ -1364,34 +1378,65 @@ class OFP_Subscription {
 
         // Self-serve signups no longer wait for review. Move any old ones that
         // are still waiting to active, on the Free plan they signed up with.
-        if ( get_option( 'ofp_pending_review_cleanup' ) !== '1' ) {
+        if ( ! $review_done ) {
             $wpdb->query( "UPDATE {$p}ofp_clients SET status = 'active', updated_at = NOW() WHERE status = 'pending_review'" );
             update_option( 'ofp_pending_review_cleanup', '1', false );
         }
-        if ( get_option( 'ofp_free_pending_cleanup' ) === '1' ) {
-            return;
-        }
+
         if ( ! $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $p . 'ofp_subscriptions' ) ) ) ) {
             return;
         }
-        $wpdb->query(
-            "DELETE s FROM {$p}ofp_subscriptions s
-             INNER JOIN {$p}ofp_clients c ON c.id = s.client_id
-             WHERE s.status = 'pending'
-               AND s.payment_method = 'pending'
-               AND ( s.plan IS NULL OR s.plan IN ('', 'free', 'bronze') )
-               AND c.plan = 'free'"
-        );
-        update_option( 'ofp_free_pending_cleanup', '1', false );
+
+        if ( ! $free_done ) {
+            $wpdb->query(
+                "DELETE s FROM {$p}ofp_subscriptions s
+                 INNER JOIN {$p}ofp_clients c ON c.id = s.client_id
+                 WHERE s.status = 'pending'
+                   AND s.payment_method = 'pending'
+                   AND ( s.plan IS NULL OR s.plan IN ('', 'free', 'bronze') )
+                   AND c.plan = 'free'"
+            );
+            update_option( 'ofp_free_pending_cleanup', '1', false );
+        }
+
+        // CRM is no longer a separate product (unified plan). Purge all
+        // orphan CRM-type pending rows so they don't trigger "Pay Now".
+        if ( ! $crm_done ) {
+            $wpdb->query(
+                "DELETE FROM {$p}ofp_subscriptions
+                 WHERE type = 'crm' AND status IN ('pending','underpaid')
+                   AND payment_method = 'pending'"
+            );
+            update_option( 'ofp_crm_pending_cleanup', '1', false );
+        }
+
+        // Clients who already paid still had orphan 'pending' listing rows
+        // left behind by record_payment() (which inserted a new 'paid' row
+        // without deleting the old 'pending' one). Remove them.
+        if ( ! $paid_done ) {
+            $wpdb->query(
+                "DELETE pend FROM {$p}ofp_subscriptions pend
+                 WHERE pend.type = 'listing' AND pend.status = 'pending'
+                   AND EXISTS (
+                       SELECT 1 FROM (
+                           SELECT client_id FROM {$p}ofp_subscriptions
+                           WHERE type = 'listing' AND status = 'paid'
+                       ) paid_clients
+                       WHERE paid_clients.client_id = pend.client_id
+                   )"
+            );
+            update_option( 'ofp_paid_pending_cleanup', '1', false );
+        }
     }
 
     public static function has_unpaid( int $client_id ): bool {
         global $wpdb;
 
+        // Only listing rows matter — CRM is no longer a separate product.
         return (bool) $wpdb->get_var(
             $wpdb->prepare(
                 "SELECT id FROM {$wpdb->prefix}ofp_subscriptions
-                 WHERE client_id = %d AND status IN ('pending','underpaid')
+                 WHERE client_id = %d AND status IN ('pending','underpaid') AND type = 'listing'
                  LIMIT 1",
                 $client_id
             )

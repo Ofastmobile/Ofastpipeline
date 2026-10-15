@@ -244,7 +244,9 @@ class OFP_Property_Commerce_Admin {
 
         $created = isset( $_GET['created'] ) && '1' === $_GET['created'];
         $resent  = isset( $_GET['resent'] ) && '1' === $_GET['resent'];
-        $offer_url = isset( $_GET['offer_url'] ) ? rawurldecode( wp_unslash( $_GET['offer_url'] ) ) : '';
+        if ( class_exists( 'OFP_Property_Commerce' ) ) {
+            OFP_Property_Commerce::sync_purchase_totals();
+        }
 
         $purchases = $wpdb->get_results(
             "SELECT pu.*, p.title AS property_title, c.business_name, o.expires_at AS offer_expires,
@@ -397,9 +399,27 @@ class OFP_Property_Commerce_Admin {
         if ( ! $purchase ) {
             wp_die( 'Purchase not found.' );
         }
+
+        // Dynamic sync of amount_paid & balance from payments and installments
+        if ( class_exists( 'OFP_Property_Commerce' ) ) {
+            OFP_Property_Commerce::sync_purchase_totals( $purchase_id );
+            $purchase = $wpdb->get_row( $wpdb->prepare(
+                "SELECT pu.*, p.title AS property_title, c.business_name
+                 FROM {$p}ofp_property_purchases pu
+                 LEFT JOIN {$p}ofp_properties p ON p.id = pu.property_id
+                 LEFT JOIN {$p}ofp_clients c ON c.id = pu.client_id
+                 WHERE pu.id = %d LIMIT 1",
+                $purchase_id
+            ) );
+        }
         
         $installments = $wpdb->get_results( $wpdb->prepare(
             "SELECT * FROM {$p}ofp_property_installments WHERE purchase_id = %d ORDER BY installment_no ASC",
+            $purchase_id
+        ) );
+
+        $recorded_payments = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM {$p}ofp_property_payments WHERE purchase_id = %d ORDER BY created_at DESC",
             $purchase_id
         ) );
 
@@ -470,6 +490,56 @@ class OFP_Property_Commerce_Admin {
                                         <?php if ( $ins->status !== 'paid' && class_exists( 'OFP_Property_Checkout' ) ) : ?>
                                             <input type="hidden" value="<?php echo esc_attr( OFP_Property_Checkout::payment_link( (int) $purchase->id ) ); ?>">
                                             <button type="button" class="button button-small" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);alert('Payment Link copied!')">Copy Payment Link</button>
+                                        <?php else : ?>
+                                            —
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+
+            <h2>Payment History &amp; Receipts</h2>
+            <?php if ( empty( $recorded_payments ) ) : ?>
+                <div class="notice notice-info"><p>No payments recorded yet for this purchase.</p></div>
+            <?php else : ?>
+                <div style="overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;border:1px solid #dcdcde;margin-bottom:20px;">
+                    <table class="widefat striped" style="margin:0;">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Reference</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Receipt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( $recorded_payments as $idx => $pmt ) : ?>
+                                <tr>
+                                    <td><?php echo (int) ( count( $recorded_payments ) - $idx ); ?></td>
+                                    <td><strong>NGN <?php echo esc_html( number_format( (float) $pmt->amount, 2 ) ); ?></strong></td>
+                                    <td><?php echo esc_html( ucfirst( str_replace( '_', ' ', $pmt->payment_method ) ) ); ?></td>
+                                    <td><code><?php echo esc_html( $pmt->gateway_reference ?: ( $pmt->payer_reference ?: '—' ) ); ?></code></td>
+                                    <td>
+                                        <?php if ( in_array( $pmt->status, [ 'successful', 'verified' ], true ) ) : ?>
+                                            <span style="color:green;font-weight:bold;"><?php echo esc_html( ucfirst( $pmt->status ) ); ?></span>
+                                        <?php elseif ( $pmt->status === 'pending_verification' ) : ?>
+                                            <span style="color:#d97706;font-weight:bold;">Pending Verification</span>
+                                        <?php else : ?>
+                                            <span style="color:red;font-weight:bold;"><?php echo esc_html( ucfirst( $pmt->status ) ); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?php echo esc_html( wp_date( 'M j, Y g:ia', strtotime( $pmt->created_at ) ) ); ?></td>
+                                    <td>
+                                        <?php if ( ! empty( $pmt->receipt_path ) && class_exists( 'OFP_Property_Receipt_Viewer' ) ) : ?>
+                                            <a href="<?php echo esc_url( OFP_Property_Receipt_Viewer::get_receipt_url( (int) $pmt->id, 'purchase' ) ); ?>" target="_blank" rel="noopener" class="button button-small">
+                                                View Receipt
+                                            </a>
                                         <?php else : ?>
                                             —
                                         <?php endif; ?>

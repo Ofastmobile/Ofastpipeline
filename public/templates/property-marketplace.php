@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 $current_listing_type = sanitize_text_field( $_GET['listing_type'] ?? 'all' );
 $current_sort         = sanitize_text_field( $_GET['sort'] ?? 'featured' );
 $current_verified     = ! empty( $_GET['verified'] );
@@ -614,6 +614,7 @@ $marketplace_query = new WP_Query( $args );
                     $is_verified  = get_post_meta( get_the_ID(), 'ofp_status', true ) === 'live';
                     $client_id    = get_post_meta( get_the_ID(), 'ofp_client_id', true );
                     $is_featured  = get_post_meta( get_the_ID(), 'ofp_is_featured', true );
+                    $status_ctx   = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_status_context( get_the_ID() ) : null;
                     
                     $agent_name = 'Admin';
                     $agent_company = '';
@@ -662,16 +663,33 @@ $marketplace_query = new WP_Query( $args );
                         <?php endif; ?>
                     </a>
                     <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none"></div>
-                    <div class="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none">
-                        <div class="flex items-center gap-1.5">
+                    <div class="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none flex-wrap gap-1.5">
+                        <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="bg-[#00875A] text-white text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">
                                 <?php echo esc_html( $listing_label ); ?>
                             </span>
+                            <?php if ( $status_ctx && ! empty( $status_ctx['is_occupied'] ) ) : ?>
+                                <span class="bg-purple-700 text-white text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                    Occupied
+                                </span>
+                            <?php elseif ( $status_ctx && ! empty( $status_ctx['is_taken'] ) ) : ?>
+                                <span class="bg-rose-600 text-white text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">
+                                    <?php echo esc_html( $status_ctx['label'] ); ?>
+                                </span>
+                            <?php elseif ( $status_ctx && ! empty( $status_ctx['key'] ) && $status_ctx['key'] === 'under_offer' ) : ?>
+                                <span class="bg-amber-600 text-white text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">
+                                    Under Offer
+                                </span>
+                            <?php endif; ?>
                             <?php if ( $is_featured ) : ?>
-                            <span class="bg-slate-900/40 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-0.5 rounded-full border border-white/20">Featured</span>
+                                <span class="bg-amber-400 text-slate-950 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                                    <svg class="w-2.5 h-2.5 text-slate-950" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                    Featured
+                                </span>
                             <?php endif; ?>
                         </div>
-                        <?php if ( $is_verified ) : ?>
+                        <?php if ( $is_verified && ( ! $status_ctx || $status_ctx['is_available'] ) ) : ?>
                         <span class="bg-emerald-950/70 text-emerald-400 border border-emerald-500/50 backdrop-blur-md text-[11px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
                             <svg class="w-3 h-3 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" /></svg> Verified
                         </span>
@@ -701,16 +719,22 @@ $marketplace_query = new WP_Query( $args );
                         </p>
                     </div>
 
-<?php if ( $listing_type === 'land' ) : ?>
-                    <!-- Land specs: plot size and title document -->
-                    <div class="grid grid-cols-2 gap-2 py-3 border-y border-slate-100 dark:border-white/5 my-1">
+<?php if ( $listing_type === 'land' ) : 
+                    $land_b = class_exists( 'OFP_Property_Land' ) ? OFP_Property_Land::get_breakdown( get_the_ID() ) : [];
+?>
+                    <!-- Land specs: Plot benchmark, Total Area, and Title document -->
+                    <div class="grid grid-cols-3 gap-2 py-3 border-y border-slate-100 dark:border-white/5 my-1">
                         <div class="leading-none">
-                            <span class="text-[13px] font-bold text-slate-900 dark:text-white block"><?php echo esc_html( $sqm ? number_format_i18n( (float) $sqm ) . ' SQM' : '-' ); ?></span>
-                            <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Plot Size</span>
+                            <span class="text-[13px] font-bold text-emerald-600 dark:text-emerald-400 block truncate"><?php echo esc_html( ! empty( $land_b['plot_short'] ) && $land_b['plot_short'] !== '-' ? $land_b['plot_short'] : 'On Request' ); ?></span>
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Plot Sizing</span>
                         </div>
                         <div class="leading-none">
-                            <span class="text-[13px] font-bold text-slate-900 dark:text-white block"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_title_document', true ) ?: '-' ); ?></span>
-                            <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Title</span>
+                            <span class="text-[13px] font-bold text-slate-900 dark:text-white block truncate"><?php echo esc_html( ! empty( $land_b['sqm_formatted'] ) && $land_b['sqm_formatted'] !== '-' ? $land_b['sqm_formatted'] . ' SQM' : ( $sqm ? number_format( (float) $sqm ) . ' SQM' : 'On Request' ) ); ?></span>
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Total Area</span>
+                        </div>
+                        <div class="leading-none">
+                            <span class="text-[13px] font-bold text-slate-900 dark:text-white block truncate" title="<?php echo esc_attr( get_post_meta( get_the_ID(), 'ofp_title_document', true ) ?: 'On Request' ); ?>"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_title_document', true ) ?: 'On Request' ); ?></span>
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Title Doc</span>
                         </div>
                     </div>
 <?php else : ?>

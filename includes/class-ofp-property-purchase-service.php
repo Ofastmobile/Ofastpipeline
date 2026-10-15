@@ -29,6 +29,16 @@ class OFP_Property_Purchase_Service {
 
         if ( ! $property ) return new WP_Error( 'property_not_found', 'Property not found.' );
         if ( ! OFP_Property_CPT::is_sale_like( (string) $property->listing_type ) ) return new WP_Error( 'property_not_for_sale', 'Only sale or land properties can have installment purchases.' );
+        if ( 'taken' === $property->status ) return new WP_Error( 'property_already_sold', 'This property has already been sold.' );
+
+        // Prevent a property from being bought more than once
+        $existing_purchase = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$p}ofp_property_purchases WHERE property_id = %d AND status IN ('active', 'completed')",
+            $property_id
+        ) );
+        if ( $existing_purchase > 0 ) {
+            return new WP_Error( 'property_already_purchased', 'This property already has an active or completed purchase.' );
+        }
 
         $buyer_name         = sanitize_text_field( $data['buyer_name'] ?? '' );
         $buyer_phone        = OFP_Security::sanitize_phone( $data['buyer_phone'] ?? '' );
@@ -49,6 +59,18 @@ class OFP_Property_Purchase_Service {
 
         if ( ! $buyer_name || ! $buyer_phone ) return new WP_Error( 'buyer_required', 'Buyer name and phone are required.' );
         if ( $buyer_email && ! is_email( $buyer_email ) ) return new WP_Error( 'invalid_buyer_email', 'Buyer email is invalid.' );
+
+        // Prevent the same buyer from purchasing the same property twice
+        $buyer_where = $buyer_email ? "(buyer_phone = %s OR buyer_email = %s)" : "buyer_phone = %s";
+        $buyer_params = $buyer_email ? [ $buyer_phone, $buyer_email ] : [ $buyer_phone ];
+        $duplicate_buyer = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$p}ofp_property_purchases WHERE property_id = %d AND {$buyer_where} AND status IN ('active', 'completed')",
+            $property_id,
+            ...$buyer_params
+        ) );
+        if ( $duplicate_buyer > 0 ) {
+            return new WP_Error( 'buyer_already_purchased', 'This buyer already has an active or completed purchase for this property.' );
+        }
 
         // Default payment dates if not provided.
         if ( ! $payment_start_date ) {
@@ -121,6 +143,8 @@ class OFP_Property_Purchase_Service {
 
             if ( $initial_payment > 0 ) {
                 self::insert_installment( $purchase_id, $number++, $first_due_date, $initial_payment, $grace_days, 'due' );
+            } elseif ( $installment_count <= 0 ) {
+                self::insert_installment( $purchase_id, $number++, $first_due_date, $total_price, $grace_days, 'due' );
             }
 
             for ( $i = 0; $i < $installment_count; $i++ ) {

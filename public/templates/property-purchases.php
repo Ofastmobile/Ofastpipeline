@@ -51,6 +51,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_client_p
             $error = 'Please choose one of your sale properties.';
         } elseif ( (int) $property->client_id !== (int) $client->id ) {
             $error = 'You can only create purchases for your own properties.';
+        } elseif ( 'taken' === $property->status ) {
+            $error = 'This property has already been sold or is unavailable.';
+        } elseif ( class_exists( 'OFP_Property_CPT' ) && OFP_Property_CPT::property_has_active_purchase( (int) $property->id ) ) {
+            $error = 'This property already has an active or completed purchase.';
+
         } elseif ( ! $buyer_name || ! $buyer_phone ) {
             $error = 'Buyer name and phone are required.';
         } elseif ( $buyer_email && ! is_email( $buyer_email ) ) {
@@ -212,7 +217,19 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_log_manual_paym
 
 // --- Purchase Details View ---
 $detail_purchase_id = absint( $_GET['purchase_id'] ?? ( $_GET['purchase'] ?? 0 ) );
+if ( ! $detail_purchase_id && ( isset( $_GET['purchase'] ) || isset( $_GET['purchase_id'] ) ) ) {
+    $detail_purchase_id = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT id FROM {$p}ofp_property_purchases WHERE client_id = %d ORDER BY id DESC LIMIT 1",
+        (int) $client->id
+    ) );
+}
+
 if ( $detail_purchase_id ) {
+    // Dynamic sync of amount_paid & balance from recorded payments and installments
+    if ( class_exists( 'OFP_Property_Commerce' ) ) {
+        OFP_Property_Commerce::sync_purchase_totals( $detail_purchase_id );
+    }
+
     $detail_purchase = $wpdb->get_row( $wpdb->prepare(
         "SELECT pu.*, p.title AS property_title
          FROM {$p}ofp_property_purchases pu
@@ -224,8 +241,14 @@ if ( $detail_purchase_id ) {
     if ( ! $detail_purchase ) {
         wp_die( 'Purchase not found or access denied.' );
     }
+
     $installments = $wpdb->get_results( $wpdb->prepare(
         "SELECT * FROM {$p}ofp_property_installments WHERE purchase_id = %d ORDER BY installment_no ASC",
+        $detail_purchase_id
+    ) );
+
+    $recorded_payments = $wpdb->get_results( $wpdb->prepare(
+        "SELECT * FROM {$p}ofp_property_payments WHERE purchase_id = %d ORDER BY created_at DESC",
         $detail_purchase_id
     ) );
 ?>
@@ -306,6 +329,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                                 <th>Due Date</th>
                                 <th>Status</th>
                                 <th>Paid At</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -331,6 +355,74 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                                         </span>
                                     </td>
                                     <td style="color:var(--text-muted); font-size:13px;"><?php echo $ins->paid_at ? esc_html( wp_date( 'M j, Y', strtotime( $ins->paid_at ) ) ) : '—'; ?></td>
+                                    <td>
+                                        <?php if ( $ins->status !== 'paid' && class_exists( 'OFP_Property_Checkout' ) ) : ?>
+                                            <input type="hidden" value="<?php echo esc_attr( OFP_Property_Checkout::payment_link( (int) $detail_purchase->id ) ); ?>">
+                                            <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="var link=this.previousElementSibling.value; if(navigator.clipboard &amp;&amp; navigator.clipboard.writeText){ navigator.clipboard.writeText(link); } else { prompt('Copy this payment link:', link); } var b=this, t=b.innerHTML; b.innerHTML='Copied!'; setTimeout(function(){ b.innerHTML=t; }, 2000);">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:13px;height:13px;display:inline-block;vertical-align:middle;margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>Copy Link
+                                            </button>
+                                        <?php else : ?>
+                                            <span style="color:var(--text-muted); font-size:13px;">—</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="ofp-card" style="margin-top:20px;">
+            <h3 style="margin:0 0 16px; font-size:16px;">Payment History &amp; Receipts</h3>
+            <?php if ( empty( $recorded_payments ) ) : ?>
+                <p class="ofp-hint">No payments logged yet for this purchase.</p>
+            <?php else : ?>
+                <div class="ofp-table-responsive">
+                    <table class="ofp-table" style="width:100%;">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Reference</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Receipt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( $recorded_payments as $idx => $pmt ) : ?>
+                                <tr>
+                                    <td style="color:var(--text-muted);"><?php echo (int) ( count( $recorded_payments ) - $idx ); ?></td>
+                                    <td style="color:var(--text-main); font-weight:600;">₦<?php echo esc_html( number_format( (float) $pmt->amount, 2 ) ); ?></td>
+                                    <td style="color:var(--text-main);"><?php echo esc_html( ucfirst( str_replace( '_', ' ', $pmt->payment_method ) ) ); ?></td>
+                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo esc_html( $pmt->gateway_reference ?: ( $pmt->payer_reference ?: '—' ) ); ?></td>
+                                    <td>
+                                        <?php
+                                            $pmt_styles = [
+                                                'successful'           => 'background:#dcfce7; color:#16a34a;',
+                                                'verified'             => 'background:#dcfce7; color:#16a34a;',
+                                                'pending_verification' => 'background:#fef3c7; color:#d97706;',
+                                                'failed'               => 'background:#fee2e2; color:#ef4444;',
+                                                'rejected'             => 'background:#fee2e2; color:#ef4444;',
+                                            ];
+                                            $pmt_style = $pmt_styles[ $pmt->status ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
+                                        ?>
+                                        <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr($pmt_style); ?>">
+                                            <?php echo esc_html( ucfirst( str_replace( '_', ' ', $pmt->status ) ) ); ?>
+                                        </span>
+                                    </td>
+                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo esc_html( wp_date( 'M j, Y g:ia', strtotime( $pmt->created_at ) ) ); ?></td>
+                                    <td>
+                                        <?php if ( ! empty( $pmt->receipt_path ) && class_exists( 'OFP_Property_Receipt_Viewer' ) ) : ?>
+                                            <a href="<?php echo esc_url( OFP_Property_Receipt_Viewer::get_receipt_url( (int) $pmt->id, 'purchase' ) ); ?>" target="_blank" rel="noopener" class="ofp-btn ofp-btn-sm ofp-btn-ghost" style="padding:4px 10px; font-size:12px;">
+                                                View Receipt
+                                            </a>
+                                        <?php else : ?>
+                                            <span style="color:var(--text-muted); font-size:13px;">—</span>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -388,6 +480,25 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 <?php
     return; // Stop here — don't render the main page below.
 }
+
+$my_properties = $wpdb->get_results( $wpdb->prepare(
+    "SELECT pr.* FROM {$p}ofp_properties pr
+     WHERE pr.client_id = %d
+       AND pr.listing_type IN ('sale', 'land')
+       AND pr.status != 'taken'
+       AND NOT EXISTS (
+           SELECT 1 FROM {$p}ofp_property_purchases pu
+           WHERE pu.property_id = pr.id
+             AND pu.status IN ('active', 'completed')
+       )
+     ORDER BY pr.title ASC",
+    (int) $client->id
+) ) ?: [];
+
+$my_leads = $wpdb->get_results( $wpdb->prepare(
+    "SELECT id, name, phone, email, property_id FROM {$p}ofp_leads WHERE client_id = %d ORDER BY id DESC",
+    (int) $client->id
+) ) ?: [];
 ?>
 <!DOCTYPE html>
 <html lang="en">

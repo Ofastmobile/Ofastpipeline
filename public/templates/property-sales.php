@@ -53,6 +53,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_create_property
             $error = 'Property not found or you do not have access to it.';
         } elseif ( ! OFP_Property_CPT::is_sale_like( (string) $property->listing_type ) ) {
             $error = 'Installment purchase offers can only be created for properties listed for sale.';
+        } elseif ( 'taken' === $property->status ) {
+            $error = 'This property has already been sold or is unavailable.';
+        } elseif ( class_exists( 'OFP_Property_CPT' ) && OFP_Property_CPT::property_has_active_purchase( (int) $property->id ) ) {
+            $error = 'This property already has an active or completed purchase.';
+
         } elseif ( ! $buyer_name || ! $buyer_phone ) {
             $error = 'Buyer name and phone are required.';
         } elseif ( ! is_email( $buyer_email ) && $buyer_email !== '' ) {
@@ -145,9 +150,40 @@ $total_balance = 0;
 $active_deals = 0;
 
 foreach ( $my_purchases as $pu ) {
-    $total_sales_volume += (float) $pu->total_price;
-    $total_paid += (float) $pu->amount_paid;
-    $total_balance += (float) $pu->balance;
+    $real_paid = (float) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COALESCE(SUM(amount), 0) FROM {$p}ofp_property_payments WHERE purchase_id = %d AND status IN ('successful', 'verified')",
+        (int) $pu->id
+    ) );
+    $ins_paid = (float) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COALESCE(SUM(amount_paid), 0) FROM {$p}ofp_property_installments WHERE purchase_id = %d",
+        (int) $pu->id
+    ) );
+    $effective_paid = max( (float) $pu->amount_paid, $real_paid, $ins_paid );
+    $effective_balance = max( 0.0, (float) $pu->total_price - $effective_paid );
+
+    if ( abs( (float) $pu->amount_paid - $effective_paid ) > 0.001 || abs( (float) $pu->balance - $effective_balance ) > 0.001 ) {
+        $pu->amount_paid = $effective_paid;
+        $pu->balance     = $effective_balance;
+        if ( $effective_balance <= 0.00001 && $pu->status === 'active' ) {
+            $pu->status = 'completed';
+        }
+        $wpdb->update(
+            "{$p}ofp_property_purchases",
+            [
+                'amount_paid' => $effective_paid,
+                'balance'     => $effective_balance,
+                'status'      => $pu->status,
+                'updated_at'  => current_time( 'mysql' ),
+            ],
+            [ 'id' => (int) $pu->id ]
+        );
+    }
+
+    if ( $pu->status !== 'cancelled' ) {
+        $total_sales_volume += (float) $pu->total_price;
+        $total_paid += (float) $pu->amount_paid;
+        $total_balance += (float) $pu->balance;
+    }
     if ( $pu->status === 'active' ) {
         $active_deals++;
     }
@@ -390,7 +426,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                             <select name="property_id" required class="ofp-select" style="width:100%;">
                                 <option value="" hidden>— Select property —</option>
                                 <?php foreach ( $properties as $property ) : ?>
-                                    <?php if ( ! OFP_Property_CPT::is_sale_like( (string) $property->listing_type ) ) continue; ?>
+                                    <?php if ( ! OFP_Property_CPT::is_sale_like( (string) $property->listing_type ) || 'taken' === $property->status || ( class_exists( 'OFP_Property_CPT' ) && OFP_Property_CPT::property_has_active_purchase( (int) $property->id ) ) ) continue; ?>
                                     <option value="<?php echo esc_attr( $property->id ); ?>">
                                         <?php echo esc_html( $property->title . ' — ₦' . number_format( (float) $property->price, 0 ) ); ?>
                                     </option>

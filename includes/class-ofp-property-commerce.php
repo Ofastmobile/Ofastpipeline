@@ -243,6 +243,47 @@ class OFP_Property_Commerce {
             return new WP_Error( 'offer_expired', 'This installment offer has expired.' );
         }
 
+        // Check if property is still available for purchase
+        $property = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id, status FROM {$p}ofp_properties WHERE id = %d LIMIT 1",
+            (int) $offer->property_id
+        ) );
+        if ( ! $property || 'taken' === $property->status ) {
+            $wpdb->update(
+                "{$p}ofp_property_offers",
+                [ 'status' => 'expired', 'updated_at' => current_time( 'mysql' ) ],
+                [ 'id' => $offer_id ]
+            );
+            return new WP_Error( 'property_unavailable', 'This property has already been sold or is no longer available.' );
+        }
+
+        // Prevent property from being purchased more than once
+        $has_purchase = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$p}ofp_property_purchases WHERE property_id = %d AND status IN ('active', 'completed')",
+            (int) $offer->property_id
+        ) );
+        if ( $has_purchase > 0 ) {
+            $wpdb->update(
+                "{$p}ofp_property_offers",
+                [ 'status' => 'expired', 'updated_at' => current_time( 'mysql' ) ],
+                [ 'id' => $offer_id ]
+            );
+            return new WP_Error( 'property_already_purchased', 'This property already has an active or completed purchase.' );
+        }
+
+        // Prevent the same buyer from purchasing twice
+        $buyer_phone_clean = OFP_Security::sanitize_phone( $offer->buyer_phone );
+        $buyer_where = ! empty( $offer->buyer_email ) ? "(buyer_phone = %s OR buyer_email = %s)" : "buyer_phone = %s";
+        $buyer_params = ! empty( $offer->buyer_email ) ? [ $buyer_phone_clean, $offer->buyer_email ] : [ $buyer_phone_clean ];
+        $duplicate_buyer = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$p}ofp_property_purchases WHERE property_id = %d AND {$buyer_where} AND status IN ('active', 'completed')",
+            (int) $offer->property_id,
+            ...$buyer_params
+        ) );
+        if ( $duplicate_buyer > 0 ) {
+            return new WP_Error( 'buyer_already_purchased', 'This buyer already has an active or completed purchase for this property.' );
+        }
+
         $wpdb->query( 'START TRANSACTION' );
 
         try {
@@ -419,6 +460,7 @@ class OFP_Property_Commerce {
         $paid_ids  = [];
 
         if ( $remaining <= 0 ) {
+            self::sync_purchase_totals( (int) $payment->purchase_id );
             return [ 'allocated' => $already, 'unallocated' => 0.0, 'installments_paid' => [] ];
         }
 
@@ -476,37 +518,78 @@ class OFP_Property_Commerce {
 
         $allocated = (float) $payment->amount - $remaining;
 
-        // Recalculate purchase totals from allocations, never by trusting a
-        // client-supplied balance value.
-        $purchase_paid = (float) $wpdb->get_var( $wpdb->prepare(
-            "SELECT COALESCE(SUM(amount),0) FROM {$p}ofp_property_payment_allocations a
-             INNER JOIN {$p}ofp_property_payments pmt ON pmt.id = a.payment_id
-             WHERE pmt.purchase_id = %d AND pmt.status = 'successful'",
-            (int) $payment->purchase_id
-        ) );
-
-        $total_price = (float) $wpdb->get_var( $wpdb->prepare(
-            "SELECT total_price FROM {$p}ofp_property_purchases WHERE id = %d",
-            (int) $payment->purchase_id
-        ) );
-
-        $balance = max( 0.0, $total_price - $purchase_paid );
-
-        $wpdb->update(
-            "{$p}ofp_property_purchases",
-            [
-                'amount_paid' => $purchase_paid,
-                'balance' => $balance,
-                'status' => $balance <= 0.00001 ? 'completed' : 'active',
-                'updated_at' => current_time( 'mysql' ),
-            ],
-            [ 'id' => (int) $payment->purchase_id ]
-        );
+        self::sync_purchase_totals( (int) $payment->purchase_id );
 
         return [
             'allocated' => $allocated,
             'unallocated' => max( 0.0, $remaining ),
             'installments_paid' => $paid_ids,
         ];
+    }
+
+    /**
+     * Synchronize a purchase's amount_paid, balance, and completion status
+     * from recorded successful/verified payments, allocations, and installments.
+     * If $purchase_id is 0, all purchases are synchronized.
+     */
+    public static function sync_purchase_totals( int $purchase_id = 0 ): void {
+        global $wpdb;
+        $p = $wpdb->prefix;
+
+        $purchases = $purchase_id > 0
+            ? $wpdb->get_results( $wpdb->prepare( "SELECT id, total_price, amount_paid, balance, status FROM {$p}ofp_property_purchases WHERE id = %d", $purchase_id ) )
+            : $wpdb->get_results( "SELECT id, total_price, amount_paid, balance, status FROM {$p}ofp_property_purchases" );
+
+        if ( empty( $purchases ) ) {
+            return;
+        }
+
+        foreach ( $purchases as $pu ) {
+            $pid = (int) $pu->id;
+            $payments_total = (float) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COALESCE(SUM(amount), 0) FROM {$p}ofp_property_payments
+                 WHERE purchase_id = %d AND status IN ('successful', 'verified')",
+                $pid
+            ) );
+            $allocations_total = (float) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COALESCE(SUM(a.amount), 0) FROM {$p}ofp_property_payment_allocations a
+                 INNER JOIN {$p}ofp_property_payments pmt ON pmt.id = a.payment_id
+                 WHERE pmt.purchase_id = %d AND pmt.status IN ('successful', 'verified')",
+                $pid
+            ) );
+            $installments_total = (float) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COALESCE(SUM(amount_paid), 0) FROM {$p}ofp_property_installments
+                 WHERE purchase_id = %d",
+                $pid
+            ) );
+
+            $real_paid    = max( (float) $pu->amount_paid, $payments_total, $allocations_total, $installments_total );
+            $total_price  = (float) $pu->total_price;
+            $real_balance = max( 0.0, $total_price - $real_paid );
+            $new_status   = $real_balance <= 0.00001 ? 'completed' : ( $pu->status === 'completed' ? 'completed' : 'active' );
+
+            if ( abs( (float) $pu->amount_paid - $real_paid ) > 0.001 || abs( (float) $pu->balance - $real_balance ) > 0.001 || $pu->status !== $new_status ) {
+                $wpdb->update(
+                    "{$p}ofp_property_purchases",
+                    [
+                        'amount_paid' => $real_paid,
+                        'balance'     => $real_balance,
+                        'status'      => $new_status,
+                        'updated_at'  => current_time( 'mysql' ),
+                    ],
+                    [ 'id' => $pid ]
+                );
+
+                if ( $real_balance <= 0.00001 ) {
+                    $prop_id = (int) $wpdb->get_var( $wpdb->prepare(
+                        "SELECT property_id FROM {$p}ofp_property_purchases WHERE id = %d",
+                        $pid
+                    ) );
+                    if ( $prop_id && class_exists( 'OFP_Property_CPT' ) ) {
+                        OFP_Property_CPT::mark_taken( $prop_id );
+                    }
+                }
+            }
+        }
     }
 }

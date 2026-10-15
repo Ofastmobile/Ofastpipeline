@@ -365,90 +365,131 @@
 }
 
 /* ── 5. Modern Studio Navigation Tabs ─────────────────────────────────────── */
-.ofp-studio-nav-tabs {
-    display: flex;
+/* ── 5. Modern Vertical Studio Navigation Layout ─────────────────────────── */
+.ofp-studio-vertical-layout {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
+}
+
+.ofp-studio-nav-vertical {
     background: #ffffff;
     border: 1px solid var(--ofp-border);
-    border-radius: var(--ofp-radius) var(--ofp-radius) 0 0;
-    border-bottom: 2px solid #e2e8f0;
-    padding: 4px 8px 0;
-    overflow-x: auto;
-    scrollbar-width: thin;
+    border-radius: var(--ofp-radius);
+    padding: 8px;
+    box-shadow: var(--ofp-shadow-sm);
+    display: flex;
+    flex-direction: column;
     gap: 4px;
+    position: sticky;
+    top: 32px;
+    z-index: 10;
+}
+
+.ofp-vertical-nav-header {
+    padding: 8px 12px 6px;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 4px;
+}
+
+.ofp-vertical-nav-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
 }
 
 .ofp-studio-tab-btn {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 12px 16px;
-    border: none;
+    width: 100%;
+    gap: 10px;
+    padding: 11px 14px;
+    border: 1px solid transparent;
+    border-radius: 8px;
     background: transparent;
-    color: var(--ofp-text-muted);
+    color: #475569;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    transition: all 0.15s ease-in-out;
-    white-space: nowrap;
-    position: relative;
+    text-align: left;
+    transition: all 0.16s ease-in-out;
     outline: none;
-    border-radius: 6px 6px 0 0;
+    position: relative;
+    box-sizing: border-box;
 }
 
 .ofp-studio-tab-btn:hover {
     color: var(--ofp-primary);
-    background: rgba(37, 99, 235, 0.04);
+    background: #f8fafc;
+    border-color: #e2e8f0;
 }
 
 .ofp-studio-tab-btn.is-active {
     color: var(--ofp-primary);
-    border-bottom-color: var(--ofp-primary);
-    background: #ffffff;
+    background: #eff6ff;
+    border-color: #bfdbfe;
     font-weight: 700;
+    box-shadow: inset 3px 0 0 var(--ofp-primary);
 }
 
 .ofp-studio-tab-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
-    opacity: 0.75;
+    color: #94a3b8;
+    transition: color 0.16s ease-in-out;
+}
+
+.ofp-studio-tab-btn:hover svg {
+    color: var(--ofp-primary);
 }
 
 .ofp-studio-tab-btn.is-active svg {
-    opacity: 1;
     color: var(--ofp-primary);
+}
+
+.ofp-studio-tab-btn .ofp-tab-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .ofp-nav-count {
     background: #e2e8f0;
     color: #475569;
     font-size: 11px;
-    padding: 1px 7px;
+    padding: 2px 7px;
     border-radius: 999px;
     font-weight: 600;
+    margin-left: auto;
 }
 
 .ofp-studio-tab-btn.is-active .ofp-nav-count {
-    background: var(--ofp-primary-light);
-    color: var(--ofp-primary);
+    background: #dbeafe;
+    color: #1d4ed8;
 }
 
 .ofp-count-highlight {
-    background: var(--ofp-warning-light);
+    background: #fef3c7;
     color: #b45309;
     border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 /* ── 6. Tab Panels & Form Styles ─────────────────────────────────────────── */
+.ofp-studio-panels-container {
+    min-width: 0;
+}
+
 .ofp-studio-panel {
     display: none;
     padding: 26px 28px;
     background: #ffffff;
     border: 1px solid var(--ofp-border);
-    border-top: none;
-    border-radius: 0 0 var(--ofp-radius) var(--ofp-radius);
+    border-radius: var(--ofp-radius);
     box-shadow: var(--ofp-shadow-sm);
     animation: ofpFadeIn 0.18s ease-in-out;
 }
@@ -945,6 +986,24 @@
     color: #1e293b;
 }
 
+.ofp-amenity-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ofp-amenity-card-label svg {
+    width: 17px;
+    height: 17px;
+    color: #64748b;
+    flex-shrink: 0;
+    transition: color 0.15s ease;
+}
+
+.ofp-amenity-card.is-selected .ofp-amenity-card-label svg {
+    color: #db2777;
+}
+
 /* ── Owner & Deals ───────────────────────────────────────────────────────── */
 .ofp-owner-card {
     display: flex;
@@ -1239,7 +1298,14 @@
 .ofp-card-spec-item {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
+    gap: 4px;
+}
+
+.ofp-card-spec-item svg {
+    width: 13px;
+    height: 13px;
+    color: #64748b;
+    flex-shrink: 0;
 }
 
 /* ── Listing Readiness Gauge & Checklist ─────────────────────────────────── */
@@ -1506,12 +1572,45 @@
 }
 
 /* ── Responsive Studio Layout ─────────────────────────────────────────────── */
+@media (max-width: 1240px) {
+    .ofp-studio-vertical-layout {
+        grid-template-columns: 210px minmax(0, 1fr);
+        gap: 16px;
+    }
+}
+
 @media (max-width: 1120px) {
     .ofp-studio-workspace {
         grid-template-columns: 1fr;
     }
     .ofp-studio-sidebar-col {
         position: static;
+    }
+}
+
+@media (max-width: 960px) {
+    .ofp-studio-vertical-layout {
+        grid-template-columns: 1fr;
+    }
+    .ofp-studio-nav-vertical {
+        flex-direction: row;
+        overflow-x: auto;
+        position: static;
+        padding: 6px;
+    }
+    .ofp-vertical-nav-header {
+        display: none;
+    }
+    .ofp-studio-tab-btn {
+        width: auto;
+        white-space: nowrap;
+        box-shadow: none !important;
+        border-bottom: 2px solid transparent;
+        border-radius: 6px;
+    }
+    .ofp-studio-tab-btn.is-active {
+        border-bottom-color: var(--ofp-primary);
+        background: #eff6ff;
     }
 }
 

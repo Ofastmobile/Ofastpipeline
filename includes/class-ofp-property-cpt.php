@@ -248,6 +248,11 @@ class OFP_Property_CPT {
             'ofp_bathrooms'       => get_post_meta( $post->ID, 'ofp_bathrooms',       true ),
             'ofp_parking'         => get_post_meta( $post->ID, 'ofp_parking',         true ),
             'ofp_area_sqm'        => get_post_meta( $post->ID, 'ofp_area_sqm',        true ),
+            'ofp_plots_count'     => get_post_meta( $post->ID, 'ofp_plots_count',     true ),
+            'ofp_land_topography' => get_post_meta( $post->ID, 'ofp_land_topography', true ),
+            'ofp_land_zoning'     => get_post_meta( $post->ID, 'ofp_land_zoning',     true ),
+            'ofp_land_dimensions' => get_post_meta( $post->ID, 'ofp_land_dimensions', true ),
+            'ofp_survey_status'   => get_post_meta( $post->ID, 'ofp_survey_status',   true ),
             'ofp_title_document'  => get_post_meta( $post->ID, 'ofp_title_document',  true ),
             'ofp_condition'       => get_post_meta( $post->ID, 'ofp_condition',       true ),
             'ofp_furnishing'      => get_post_meta( $post->ID, 'ofp_furnishing',      true ),
@@ -472,34 +477,48 @@ class OFP_Property_CPT {
                         </div>
                     </div>
 
-                    <!-- Modern Studio Navigation Tabs -->
-                    <div class="ofp-studio-nav-tabs" role="tablist">
-                        <button type="button" class="ofp-studio-tab-btn is-active" data-tab="overview" role="tab">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-                            <span>Overview &amp; Story</span>
-                        </button>
-                        <button type="button" class="ofp-studio-tab-btn" data-tab="pricing" role="tab">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            <span>Pricing &amp; Terms</span>
-                        </button>
-                        <button type="button" class="ofp-studio-tab-btn" data-tab="specs" role="tab">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2                        <button type="button" class="ofp-studio-tab-btn" data-tab="amenities" role="tab">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
-                            <span>Amenities</span>
-                            <span class="ofp-nav-count" id="ofp-amenities-count-badge"><?php echo count( $meta['ofp_amenities'] ); ?></span>
-                        </button>
-                        <button type="button" class="ofp-studio-tab-btn" data-tab="ownership" role="tab">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-                            <span>Ownership &amp; Bank</span>
-                        </button>
-                        <button type="button" class="ofp-studio-tab-btn" data-tab="deals" role="tab">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6H2.25m0 0v10.5m0-10.5A.75.75 0 013 4.5h.75m0 0h16.5m0 0h.75A.75.75 0 0121 6v10.5m0-10.5a.75.75 0 00-.75-.75h-.75m0 0v10.5m-15 0h15" /></svg>
-                            <span>Deals &amp; Pipeline</span>
-                            <?php if ( $total_deals_count > 0 ) : ?>
-                                <span class="ofp-nav-count ofp-count-highlight"><?php echo (int) $total_deals_count; ?></span>
-                            <?php endif; ?>
-                        </button>
-                    </div>
+                    <!-- Modern Vertical Studio Navigation Layout -->
+                    <div class="ofp-studio-vertical-layout">
+                        <nav class="ofp-studio-nav-vertical" role="tablist" aria-label="Property Studio Sections">
+                            <div class="ofp-vertical-nav-header">
+                                <span class="ofp-vertical-nav-title">Studio Sections</span>
+                            </div>
+                            <button type="button" class="ofp-studio-tab-btn is-active" data-tab="overview" role="tab" aria-selected="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                                <span class="ofp-tab-label">Overview &amp; Story</span>
+                            </button>
+                            <button type="button" class="ofp-studio-tab-btn" data-tab="pricing" role="tab" aria-selected="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <span class="ofp-tab-label">Pricing &amp; Terms</span>
+                            </button>
+                            <button type="button" class="ofp-studio-tab-btn" data-tab="specs" role="tab" aria-selected="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+                                <span class="ofp-tab-label">Building &amp; Land Specs</span>
+                            </button>
+                            <button type="button" class="ofp-studio-tab-btn" data-tab="media" role="tab" aria-selected="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+                                <span class="ofp-tab-label">Media &amp; Gallery</span>
+                                <span class="ofp-nav-count" id="ofp-media-count-badge"><?php echo count( (array) $meta['ofp_gallery_ids'] ); ?></span>
+                            </button>
+                            <button type="button" class="ofp-studio-tab-btn" data-tab="amenities" role="tab" aria-selected="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                                <span class="ofp-tab-label">Amenities</span>
+                                <span class="ofp-nav-count" id="ofp-amenities-count-badge"><?php echo count( (array) $meta['ofp_amenities'] ); ?></span>
+                            </button>
+                            <button type="button" class="ofp-studio-tab-btn" data-tab="ownership" role="tab" aria-selected="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                                <span class="ofp-tab-label">Ownership &amp; Bank</span>
+                            </button>
+                            <button type="button" class="ofp-studio-tab-btn" data-tab="deals" role="tab" aria-selected="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6H2.25m0 0v10.5m0-10.5A.75.75 0 013 4.5h.75m0 0h16.5m0 0h.75A.75.75 0 0121 6v10.5m0-10.5a.75.75 0 00-.75-.75h-.75m0 0v10.5m-15 0h15" /></svg>
+                                <span class="ofp-tab-label">Deals &amp; Pipeline</span>
+                                <?php if ( $total_deals_count > 0 ) : ?>
+                                    <span class="ofp-nav-count ofp-count-highlight"><?php echo (int) $total_deals_count; ?></span>
+                                <?php endif; ?>
+                            </button>
+                        </nav>
+
+                        <div class="ofp-studio-panels-container">
 
                     <!-- ── TAB 1: Overview & Story ────────────────────────────── -->
                     <div class="ofp-studio-panel is-active" data-panel="overview">
@@ -547,7 +566,9 @@ class OFP_Property_CPT {
                                 </label>
                                 <div class="ofp-desc-tools">
                                     <button type="button" class="ofp-desc-tool-btn" data-tool="bullet">• Add Bullet</button>
-                                    <button type="button" class="ofp-desc-tool-btn" data-tool="features">✨ Key Features Template</button>
+                                    <button type="button" class="ofp-desc-tool-btn" data-tool="features">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="vertical-align:middle;margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>Key Features Template
+                                    </button>
                                     <span class="ofp-desc-word-count" id="ofp-desc-word-count">0 words</span>
                                 </div>
                             </div>
@@ -708,11 +729,11 @@ class OFP_Property_CPT {
                         <div class="ofp-land-notice" id="ofp_land_notice">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
                             <div>
-                                <strong>Land listing active:</strong> Room counts, bathrooms, parking spaces, and furnishing specifications are automatically hidden. Land sizing (SQM) and Title Document apply.
+                                <strong>Land listing active:</strong> Room counts, bathrooms, parking spaces, and furnishing specifications are hidden. Nigerian Land Sizing (Plots, SQM, Topography, Zoning) and Title Document apply.
                             </div>
                         </div>
 
-                        <!-- Building Specs -->
+                        <!-- Building Specs (Hidden when listing is Land) -->
                         <div id="ofp_building_specs_section">
                             <div class="ofp-form-grid-4" style="margin-bottom:20px;">
                                 <div class="ofp-form-group">
@@ -764,12 +785,106 @@ class OFP_Property_CPT {
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Dedicated Nigerian Land Specs Section -->
+                        <div id="ofp_land_specs_section" style="<?php echo ( $meta['ofp_listing_type'] === 'land' ) ? 'display:block;' : 'display:none;'; ?> margin-bottom:20px; padding:18px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                                <strong style="color:#166534; font-size:13.5px; display:flex; align-items:center; gap:6px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                                    Nigerian Land Sizing &amp; Plot Breakdown
+                                </strong>
+                                <span style="font-size:11px; background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:12px; font-weight:600;">Standard Lagos Plot = 600 SQM</span>
+                            </div>
+
+                            <div class="ofp-form-grid-2" style="margin-bottom:16px;">
+                                <div class="ofp-form-group">
+                                    <label class="ofp-form-label">Number of Plots (e.g. 1, 0.5, 2, 6)</label>
+                                    <input type="number" step="0.1" min="0" name="ofp_plots_count" id="ofp_plots_count_input" class="ofp-input-number"
+                                           value="<?php echo esc_attr( $meta['ofp_plots_count'] ); ?>" placeholder="e.g. 1">
+                                    <span class="ofp-field-hint" id="ofp_admin_plot_hint">1 plot ≈ 600 SQM (~60ft × 120ft). Auto-syncs with Area SQM.</span>
+                                </div>
 
                                 <div class="ofp-form-group">
-                                    <label class="ofp-form-label">Total Area (SQM)</label>
-                                    <input type="number" min="0" name="ofp_area_sqm" id="ofp_area_sqm_input" class="ofp-input-number"
-                                           value="<?php echo esc_attr( $meta['ofp_area_sqm'] ); ?>" placeholder="e.g. 450">
-                                    <span class="ofp-field-hint">Standard Lagos plot is approx. 600 - 648 SQM (~6,900 Sq Ft).</span>
+                                    <label class="ofp-form-label">Topography</label>
+                                    <select name="ofp_land_topography" class="ofp-input-select">
+                                        <option value="">-- Select Topography --</option>
+                                        <?php
+                                        $topos = [ '100% Dry Land', 'Dry Table Land', 'Mixed / Firm Land', 'Sandfilling Required', 'Waterfront Land' ];
+                                        foreach ( $topos as $t ) :
+                                        ?>
+                                            <option value="<?php echo esc_attr( $t ); ?>" <?php selected( $meta['ofp_land_topography'], $t ); ?>><?php echo esc_html( $t ); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="ofp-form-grid-3">
+                                <div class="ofp-form-group">
+                                    <label class="ofp-form-label">Zoning / Land Use</label>
+                                    <select name="ofp_land_zoning" class="ofp-input-select">
+                                        <option value="">-- Select Zoning --</option>
+                                        <?php
+                                        $zonings = [ 'Residential', 'Commercial', 'Mixed-Use', 'Industrial', 'Agricultural' ];
+                                        foreach ( $zonings as $z ) :
+                                        ?>
+                                            <option value="<?php echo esc_attr( $z ); ?>" <?php selected( $meta['ofp_land_zoning'], $z ); ?>><?php echo esc_html( $z ); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div class="ofp-form-group">
+                                    <label class="ofp-form-label">Land Dimensions</label>
+                                    <input type="text" name="ofp_land_dimensions" class="ofp-input-text"
+                                           value="<?php echo esc_attr( $meta['ofp_land_dimensions'] ); ?>" placeholder="e.g. 60ft × 120ft">
+                                </div>
+
+                                <div class="ofp-form-group">
+                                    <label class="ofp-form-label">Survey &amp; Boundaries</label>
+                                    <select name="ofp_survey_status" class="ofp-input-select">
+                                        <option value="">-- Select Survey Status --</option>
+                                        <?php
+                                        $surveys = [ 'Registered Survey with Coordinates', 'Provisional Survey / Layout', 'Perimeter Fenced & Gated', 'Beaconed / Pegged', 'Survey in Progress' ];
+                                        foreach ( $surveys as $s ) :
+                                        ?>
+                                            <option value="<?php echo esc_attr( $s ); ?>" <?php selected( $meta['ofp_survey_status'], $s ); ?>><?php echo esc_html( $s ); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Area (SQM) - Prominently Available for all listing types -->
+                        <div class="ofp-form-grid-2" style="margin-bottom:20px;">
+                            <div class="ofp-form-group">
+                                <label class="ofp-form-label">Total Area (SQM)</label>
+                                <input type="number" min="0" name="ofp_area_sqm" id="ofp_area_sqm_input" class="ofp-input-number"
+                                       value="<?php echo esc_attr( $meta['ofp_area_sqm'] ); ?>" placeholder="e.g. 600">
+
+                                <?php
+                                $admin_sqm   = (float) ( $meta['ofp_area_sqm'] ?? 0 );
+                                $admin_plots = (float) ( $meta['ofp_plots_count'] ?? 0 );
+                                $admin_label = 'Standard Lagos Plot = 600 SQM (60ft × 120ft)';
+                                if ( $admin_sqm > 0 || $admin_plots > 0 ) {
+                                    $abk = class_exists( 'OFP_Property_Land' ) ? OFP_Property_Land::calculate( $admin_sqm, 0, $admin_plots ) : [];
+                                    if ( ! empty( $abk['plot_label'] ) ) {
+                                        $admin_label = $abk['plot_label'];
+                                    }
+                                }
+                                ?>
+                                <div id="ofp_admin_sqm_plot_badge" style="margin-top:8px; padding:7px 11px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; font-size:12px; font-weight:600; color:#15803d; display:flex; align-items:center; gap:6px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                                    <span id="ofp_admin_sqm_live_text"><?php echo esc_html( $admin_label ); ?></span>
+                                </div>
+
+                                <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                                    <span style="font-size:11px; color:#64748b; font-weight:600;">Plot Presets:</span>
+                                    <button type="button" class="ofp-admin-sqm-preset-btn" data-sqm="300" data-plots="0.5" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:5px; padding:3px 8px; font-size:11px; font-weight:600; color:#334155; cursor:pointer;">Half Plot (300m²)</button>
+                                    <button type="button" class="ofp-admin-sqm-preset-btn" data-sqm="600" data-plots="1" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:5px; padding:3px 8px; font-size:11px; font-weight:600; color:#334155; cursor:pointer;">1 Plot (600m²)</button>
+                                    <button type="button" class="ofp-admin-sqm-preset-btn" data-sqm="1200" data-plots="2" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:5px; padding:3px 8px; font-size:11px; font-weight:600; color:#334155; cursor:pointer;">2 Plots (1,200m²)</button>
+                                    <button type="button" class="ofp-admin-sqm-preset-btn" data-sqm="1800" data-plots="3" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:5px; padding:3px 8px; font-size:11px; font-weight:600; color:#334155; cursor:pointer;">3 Plots (1,800m²)</button>
+                                    <button type="button" class="ofp-admin-sqm-preset-btn" data-sqm="4047" data-plots="6.7" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:5px; padding:3px 8px; font-size:11px; font-weight:600; color:#334155; cursor:pointer;">1 Acre (4,047m²)</button>
                                 </div>
                             </div>
                         </div>
@@ -863,16 +978,46 @@ class OFP_Property_CPT {
 
                         <?php
                         $amenities_catalog = [
-                            'swimming_pool'   => [ 'label' => 'Swimming Pool',            'icon' => '🏊' ],
-                            'smart_home'      => [ 'label' => 'Smart Home Automation',    'icon' => '🏠' ],
-                            'power_247'       => [ 'label' => '24/7 Electricity / Gen',   'icon' => '⚡' ],
-                            'cctv_security'   => [ 'label' => 'CCTV & Uniformed Security','icon' => '🛡️' ],
-                            'gym'             => [ 'label' => 'Gym / Fitness Center',     'icon' => '🏋️' ],
-                            'elevator'        => [ 'label' => 'Elevator / Lift',          'icon' => '🛗' ],
-                            'playground'      => [ 'label' => "Children's Play Area",     'icon' => '🛝' ],
-                            'bq'              => [ 'label' => 'Boys Quarters (BQ)',       'icon' => '🏡' ],
-                            'water_treatment' => [ 'label' => 'Water Treatment Plant',    'icon' => '💧' ],
-                            'fitted_kitchen'  => [ 'label' => 'Fully Fitted Kitchen',     'icon' => '🍳' ],
+                            'swimming_pool'   => [
+                                'label' => 'Swimming Pool',
+                                'svg'   => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5c1.125 0 2.25-.45 3.375-1.35 1.125.9 2.25 1.35 3.375 1.35s2.25-.45 3.375-1.35c1.125.9 2.25 1.35 3.375 1.35M3.75 18c1.125 0 2.25-.45 3.375-1.35 1.125.9 2.25 1.35 3.375 1.35s2.25-.45 3.375-1.35c1.125.9 2.25 1.35 3.375 1.35M12 6a3 3 0 100-6 3 3 0 000 6z" /></svg>',
+                            ],
+                            'smart_home'      => [
+                                'label' => 'Smart Home Automation',
+                                'svg'   => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V10.53a1.875 1.875 0 00-.67-1.442l-6.75-5.4a1.875 1.875 0 00-2.36 0l-6.75 5.4a1.875 1.875 0 00-.67 1.442V21h4.5z" /></svg>',
+                            ],
+                            'power_247'       => [
+                                'label' => '24/7 Electricity / Gen',
+                                'svg'   => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>',
+                            ],
+                            'cctv_security'   => [
+                                'label' => 'CCTV & Uniformed Security',
+                                'svg'   => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>',
+                            ],
+                            'gym'             => [
+                                'label' => 'Gym / Fitness Center',
+                                'svg'   => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-15-4.5h1.5v9h-1.5zm12 0h1.5v9h-1.5zM2.25 9.75h1.5v4.5h-1.5zm18 0h1.5v4.5h-1.5z" /></svg>',
+                            ],
+                            'elevator'        => [
+                                'label' => 'Elevator / Lift',
+                                'svg'   => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4.5h18v15H3zM8.25 9.75l2.25-2.25 2.25 2.25M12.75 14.25l-2.25 2.25-2.25-2.25" /></svg>',
+                            ],
+                            'playground'      => [
+                                'label' => "Children's Play Area",
+                                'svg'   => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>',
+                            ],
+                            'bq'              => [
+                                'label' => 'Boys Quarters (BQ)',
+                                'svg'   => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m-6-13.5h1.5m-1.5 4.5h1.5m-1.5 4.5h1.5m7.5-9h1.5m-1.5 4.5h1.5m-1.5 4.5h1.5" /></svg>',
+                            ],
+                            'water_treatment' => [
+                                'label' => 'Water Treatment Plant',
+                                'svg'   => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2.25c-5.385 7.18-7.5 10.686-7.5 13.5a7.5 7.5 0 1015 0c0-2.814-2.115-6.32-7.5-13.5z" /></svg>',
+                            ],
+                            'fitted_kitchen'  => [
+                                'label' => 'Fully Fitted Kitchen',
+                                'svg'   => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.5 6.5H7.5L5 14.5m14 0H5" /></svg>',
+                            ],
                         ];
                         $selected_amenities = is_array( $meta['ofp_amenities'] ) ? $meta['ofp_amenities'] : [];
                         ?>
@@ -885,7 +1030,7 @@ class OFP_Property_CPT {
                                     <input type="checkbox" name="ofp_amenities[]" value="<?php echo esc_attr( $akey ); ?>"
                                         <?php checked( $is_checked ); ?>>
                                     <span class="ofp-amenity-card-label">
-                                        <span><?php echo esc_html( $data['icon'] ); ?></span>
+                                        <span class="ofp-amenity-icon"><?php echo $data['svg']; ?></span>
                                         <span><?php echo esc_html( $data['label'] ); ?></span>
                                     </span>
                                 </label>
@@ -919,7 +1064,10 @@ class OFP_Property_CPT {
                                             <option selected><?php echo esc_html( $c_owner ?: 'Client #' . $meta['ofp_client_id'] ); ?></option>
                                         <?php endif; ?>
                                     </select>
-                                    <p style="color:#ef4444;font-size:12px;margin:5px 0 0;font-weight:600;">🔒 Owner locked — active financial transactions exist for this property.</p>
+                                    <p style="color:#ef4444;font-size:12px;margin:5px 0 0;font-weight:600;display:flex;align-items:center;gap:4px;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                                        Owner locked — active financial transactions exist for this property.
+                                    </p>
                                 <?php else : ?>
                                     <select name="ofp_client_id" id="ofp_client_id_select" class="ofp-input-select">
                                         <option value="">— Select Owner / Client —</option>
@@ -973,8 +1121,9 @@ class OFP_Property_CPT {
                                 <div style="font-weight:600;font-size:14px;color:#1e293b;margin-bottom:4px;">No active transactions yet</div>
                                 <div style="font-size:12.5px;">When buyers purchase or submit offers, or when tenants are leased this property, transactions will be tracked here.</div>
                                 <?php if ( $inquiry_count > 0 ) : ?>
-                                    <p style="margin-top:12px;font-weight:600;color:#2563eb;">
-                                        📩 <?php echo (int) $inquiry_count; ?> inquiry / lead(s) recorded for this listing.
+                                    <p style="margin-top:12px;font-weight:600;color:#2563eb;display:flex;align-items:center;gap:6px;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
+                                        <span><?php echo (int) $inquiry_count; ?> inquiry / lead(s) recorded for this listing.</span>
                                         <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-leads' ) ); ?>">View Leads &rarr;</a>
                                     </p>
                                 <?php endif; ?>
@@ -1053,7 +1202,9 @@ class OFP_Property_CPT {
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
-                    </div>
+                    </div> <!-- /[data-panel="deals"] -->
+                        </div> <!-- /.ofp-studio-panels-container -->
+                    </div> <!-- /.ofp-studio-vertical-layout -->
                 </div> <!-- /.ofp-studio-main-col -->
 
                 <!-- ── Column 2: Live Command & Preview Sidebar (Right ~32%) ── -->
@@ -1102,16 +1253,24 @@ class OFP_Property_CPT {
                                 </div>
                                 <div class="ofp-card-specs-row" id="ofp-preview-specs-row">
                                     <span class="ofp-card-spec-item" id="ofp-preview-bed-spec" title="Bedrooms">
-                                        🛏️ <strong id="ofp-preview-beds-val"><?php echo (int) $meta['ofp_bedrooms']; ?></strong> Beds
+                                        <svg class="ofp-spec-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12V6a2.25 2.25 0 012.25-2.25h15A2.25 2.25 0 0121.75 6v6m-19.5 0v6.75A2.25 2.25 0 004.5 21h15a2.25 2.25 0 002.25-2.25V12m-19.5 0h19.5M3.75 9.75h4.5a1.5 1.5 0 011.5 1.5v.75m4.5-2.25h4.5a1.5 1.5 0 011.5 1.5v.75" /></svg>
+                                        <strong id="ofp-preview-beds-val"><?php echo (int) $meta['ofp_bedrooms']; ?></strong> Beds
                                     </span>
                                     <span class="ofp-card-spec-item" id="ofp-preview-bath-spec" title="Bathrooms">
-                                        🚿 <strong id="ofp-preview-baths-val"><?php echo (int) $meta['ofp_bathrooms']; ?></strong> Baths
+                                        <svg class="ofp-spec-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-15 0a4.5 4.5 0 009 0m-9 0V7.5a3 3 0 013-3h3a3 3 0 013 3V12m3 0v4.5a3 3 0 01-3 3H7.5a3 3 0 01-3-3V12" /></svg>
+                                        <strong id="ofp-preview-baths-val"><?php echo (int) $meta['ofp_bathrooms']; ?></strong> Baths
                                     </span>
                                     <span class="ofp-card-spec-item" id="ofp-preview-car-spec" title="Parking Spaces">
-                                        🚗 <strong id="ofp-preview-parking-val"><?php echo (int) $meta['ofp_parking']; ?></strong> Cars
+                                        <svg class="ofp-spec-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h7.5m-7.5 0H4.5A2.25 2.25 0 012.25 16.5v-3.75a2.25 2.25 0 012.25-2.25h1.294a3.75 3.75 0 013.342 2.053l.314.628h5.6l.314-.628A3.75 3.75 0 0118.456 10.5H19.5A2.25 2.25 0 0121.75 12.75v3.75a2.25 2.25 0 01-2.25 2.25h-1.5m-3 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-6 0h6" /></svg>
+                                        <strong id="ofp-preview-parking-val"><?php echo (int) $meta['ofp_parking']; ?></strong> Cars
+                                    </span>
+                                    <span class="ofp-card-spec-item" id="ofp-preview-plots-spec" style="<?php echo ( $meta['ofp_listing_type'] === 'land' ) ? '' : 'display:none;'; ?>" title="Plot Breakdown">
+                                        <svg class="ofp-spec-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                                        <strong id="ofp-preview-plots-val"><?php echo esc_html( $meta['ofp_plots_count'] ? $meta['ofp_plots_count'] . ' Plot(s)' : '1 Plot' ); ?></strong>
                                     </span>
                                     <span class="ofp-card-spec-item" id="ofp-preview-sqm-spec" title="Total Area">
-                                        📐 <strong id="ofp-preview-sqm-val"><?php echo (int) $meta['ofp_area_sqm']; ?></strong> SQM
+                                        <svg class="ofp-spec-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v16.5h16.5M6 16.5v-3m3 3v-1.5m3 1.5v-3m3 3v-1.5m3 1.5v-3" /></svg>
+                                        <strong id="ofp-preview-sqm-val"><?php echo (int) $meta['ofp_area_sqm']; ?></strong> SQM
                                     </span>
                                 </div>
                             </div>
@@ -1329,6 +1488,11 @@ class OFP_Property_CPT {
             'ofp_bathrooms'       => 'absint',
             'ofp_parking'         => 'absint',
             'ofp_area_sqm'        => 'absint',
+            'ofp_plots_count'     => 'floatval',
+            'ofp_land_topography' => 'sanitize_text_field',
+            'ofp_land_zoning'     => 'sanitize_text_field',
+            'ofp_land_dimensions' => 'sanitize_text_field',
+            'ofp_survey_status'   => 'sanitize_text_field',
             'ofp_title_document'  => 'sanitize_text_field',
             'ofp_condition'       => 'sanitize_text_field',
             'ofp_furnishing'      => 'sanitize_text_field',
@@ -1390,6 +1554,11 @@ class OFP_Property_CPT {
             update_post_meta( $post_id, 'ofp_bedrooms', 0 );
             update_post_meta( $post_id, 'ofp_bathrooms', 0 );
             update_post_meta( $post_id, 'ofp_parking', 0 );
+            $plots_val = (float) ( $_POST['ofp_plots_count'] ?? 0 );
+            $sqm_val   = (int) ( $_POST['ofp_area_sqm'] ?? 0 );
+            if ( $sqm_val <= 0 && $plots_val > 0 ) {
+                update_post_meta( $post_id, 'ofp_area_sqm', (int) round( $plots_val * 600 ) );
+            }
         }
 
         // Lock client_id if property has commerce activity.
@@ -1714,17 +1883,13 @@ class OFP_Property_CPT {
                 break;
 
             case 'ofp_status':
-                $status  = get_post_meta( $post_id, 'ofp_status', true );
-                $colors  = [
-                    'live'           => '#22c55e',
-                    'pending_upload' => '#f59e0b',
-                    'taken'          => '#6b7280',
-                    'expired'        => '#ef4444',
-                ];
-                $color = $colors[ $status ] ?? '#9ca3af';
-                echo '<span style="color:' . esc_attr( $color ) . ';font-weight:600;">'
-                    . esc_html( ucwords( str_replace( '_', ' ', $status ?: 'unknown' ) ) )
+                $ctx = self::get_status_context( $post_id );
+                echo '<span style="display:inline-flex;align-items:center;gap:5px;font-weight:700;color:' . esc_attr( $ctx['bg_color'] ) . ';">'
+                    . '● ' . esc_html( $ctx['label'] )
                     . '</span>';
+                if ( get_post_meta( $post_id, 'ofp_is_featured', true ) === '1' ) {
+                    echo '<br><span style="display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:100px;background:#fef3c7;color:#b45309;margin-top:4px;">★ Featured</span>';
+                }
                 break;
         }
     }
@@ -1967,5 +2132,131 @@ class OFP_Property_CPT {
 
     public static function is_owned_by( int $post_id, int $client_id ): bool {
         return (int) get_post_meta( $post_id, 'ofp_client_id', true ) === $client_id;
+    }
+
+    /**
+     * Resolves the comprehensive occupancy and commercial status of a property.
+     * Accurately reflects Occupied vs Taken vs Available instead of generic fallbacks.
+     *
+     * @param int $post_id
+     * @return array
+     */
+    public static function get_status_context( int $post_id ): array {
+        $db_status    = get_post_meta( $post_id, 'ofp_status', true ) ?: 'live';
+        $listing_type = get_post_meta( $post_id, 'ofp_listing_type', true ) ?: 'sale';
+        $post_status  = get_post_status( $post_id );
+
+        // Check if property is actively occupied via leases table
+        global $wpdb;
+        $has_active_lease = class_exists( 'OFP_Property_Rent' ) && OFP_Property_Rent::wp_property_is_occupied( $post_id );
+        $prop_id          = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}ofp_properties WHERE wp_post_id = %d LIMIT 1", $post_id ) );
+        $has_purchase     = $prop_id ? self::property_has_active_purchase( $prop_id ) : false;
+        $is_rental        = in_array( $listing_type, [ 'rent', 'shortlet', 'commercial' ], true );
+
+        if ( $has_active_lease || ( $db_status === 'taken' && $is_rental ) || $db_status === 'occupied' ) {
+            $status_key  = 'occupied';
+            $badge_label = 'Occupied';
+            $full_label  = 'Occupied / Leased';
+            $bg_color    = '#8b5cf6';
+            $tw_badge    = 'bg-purple-600 text-white';
+            $tw_text     = 'text-purple-600 dark:text-purple-400';
+        } elseif ( $db_status === 'taken' || $has_purchase ) {
+            $status_key  = 'taken';
+            $badge_label = ( $listing_type === 'sale' || $listing_type === 'land' ) ? 'Sold Out' : 'Taken';
+            $full_label  = ( $listing_type === 'sale' || $listing_type === 'land' ) ? 'Sold / Taken' : 'Taken / Leased';
+            $bg_color    = '#ef4444';
+            $tw_badge    = 'bg-rose-600 text-white';
+            $tw_text     = 'text-rose-600 dark:text-rose-400';
+        } elseif ( $db_status === 'under_offer' ) {
+            $status_key  = 'under_offer';
+            $badge_label = 'Under Offer';
+            $full_label  = 'Under Offer';
+            $bg_color    = '#f59e0b';
+            $tw_badge    = 'bg-amber-500 text-white';
+            $tw_text     = 'text-amber-600 dark:text-amber-400';
+        } elseif ( $db_status === 'pending_upload' || $post_status === 'pending' ) {
+            $status_key  = 'pending_upload';
+            $badge_label = 'Pending Review';
+            $full_label  = 'Pending Review';
+            $bg_color    = '#f59e0b';
+            $tw_badge    = 'bg-amber-600 text-white';
+            $tw_text     = 'text-amber-600 dark:text-amber-400';
+        } elseif ( $db_status === 'expired' ) {
+            $status_key  = 'expired';
+            $badge_label = 'Expired';
+            $full_label  = 'Expired';
+            $bg_color    = '#ef4444';
+            $tw_badge    = 'bg-red-600 text-white';
+            $tw_text     = 'text-red-600 dark:text-red-400';
+        } else {
+            $status_key  = 'live';
+            $badge_label = 'Available';
+            $full_label  = 'Live / Available';
+            $bg_color    = '#10b981';
+            $tw_badge    = 'bg-emerald-600 text-white';
+            $tw_text     = 'text-emerald-600 dark:text-emerald-400';
+        }
+
+        return [
+            'key'          => $status_key,
+            'label'        => $badge_label,
+            'full_label'   => $full_label,
+            'is_occupied'  => ( $status_key === 'occupied' ),
+            'is_taken'     => ( $status_key === 'taken' ),
+            'is_available' => ( $status_key === 'live' ),
+            'is_rental'    => $is_rental,
+            'bg_color'     => $bg_color,
+            'tw_badge'     => $tw_badge,
+            'tw_text'      => $tw_text,
+        ];
+    }
+
+    /**
+     * Mark a property as taken / sold across the database and WP post meta.
+     */
+    public static function mark_taken( int $property_id, string $meta_status = 'taken' ): void {
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $wpdb->update(
+            "{$p}ofp_properties",
+            [ 'status' => 'taken', 'updated_at' => current_time( 'mysql' ) ],
+            [ 'id' => $property_id ]
+        );
+
+        $wp_post_id = $wpdb->get_var( $wpdb->prepare(
+            "SELECT wp_post_id FROM {$p}ofp_properties WHERE id = %d LIMIT 1",
+            $property_id
+        ) );
+        if ( $wp_post_id ) {
+            update_post_meta( (int) $wp_post_id, 'ofp_status', $meta_status );
+        }
+    }
+
+    /**
+     * Check if a property currently has an active or completed purchase.
+     */
+    public static function property_has_active_purchase( int $property_id ): bool {
+        global $wpdb;
+        $p = $wpdb->prefix;
+        return (bool) $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$p}ofp_property_purchases WHERE property_id = %d AND status IN ('active', 'completed') LIMIT 1",
+            $property_id
+        ) );
+    }
+
+    /**
+     * Check if a property is currently eligible for sale or installment.
+     */
+    public static function is_property_available_for_sale( int $property_id ): bool {
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $property = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id, status, listing_type FROM {$p}ofp_properties WHERE id = %d LIMIT 1",
+            $property_id
+        ) );
+        if ( ! $property ) return false;
+        if ( ! self::is_sale_like( (string) $property->listing_type ) ) return false;
+        if ( 'taken' === $property->status ) return false;
+        return ! self::property_has_active_purchase( $property_id );
     }
 }

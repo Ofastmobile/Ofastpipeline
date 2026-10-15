@@ -68,19 +68,25 @@ if ( ! empty( $client_properties ) ) {
         $ltype     = get_post_meta( $p_id, 'ofp_listing_type', true ) ?: 'sale';
         $db_status = get_post_meta( $p_id, 'ofp_status', true ) ?: 'live';
         $thumb     = get_the_post_thumbnail_url( $p_id, 'medium' ) ?: OFP_URL . 'assets/images/dashboard-hero-banner.jpg';
-        $is_occupied = class_exists( 'OFP_Property_Rent' ) && OFP_Property_Rent::wp_property_is_occupied( $p_id );
+        $status_ctx = class_exists( 'OFP_Property_CPT' )
+            ? OFP_Property_CPT::get_status_context( $p_id )
+            : [
+                'key'   => $db_status,
+                'label' => ucfirst( $db_status ),
+            ];
 
         $prop_obj = [
-            'id'        => $p_id,
-            'title'     => $p_post->post_title,
-            'price'     => $price_val > 0 ? '₦' . number_format( $price_val ) : '—',
-            'location'  => $loc_clean,
-            'short_loc' => explode( ',', $loc_clean )[0],
-            'type'      => ucfirst( $ltype ),
-            'is_rent'   => in_array( $ltype, [ 'rent', 'shortlet' ], true ),
-            'status'    => $is_occupied ? 'Occupied' : ( $db_status === 'live' ? 'Available' : ucfirst( $db_status ) ),
-            'thumb'     => $thumb,
-            'link'      => get_permalink( $p_id ),
+            'id'         => $p_id,
+            'title'      => $p_post->post_title,
+            'price'      => $price_val > 0 ? '₦' . number_format( $price_val ) : '—',
+            'location'   => $loc_clean,
+            'short_loc'  => explode( ',', $loc_clean )[0],
+            'type'       => ucfirst( $ltype ),
+            'is_rent'    => in_array( $ltype, [ 'rent', 'shortlet' ], true ),
+            'status'     => $status_ctx['label'],
+            'status_key' => $status_ctx['key'],
+            'thumb'      => $thumb,
+            'link'       => get_permalink( $p_id ),
         ];
 
         if ( ! isset( $properties_by_loc[ $loc_clean ] ) ) {
@@ -464,7 +470,17 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                             <div class="ofp-recent-prop-sub">
                                 <span><?php echo $p_item['is_rent'] ? 'Monthly rent: ' . esc_html( $p_item['price'] ) : 'Type: ' . esc_html( $p_item['type'] ); ?></span>
                                 <div style="display:inline-flex; align-items:center; gap:6px;">
-                                    <span class="ofp-kpi-badge <?php echo $p_item['status'] === 'Occupied' ? 'badge-hero' : 'badge-green'; ?>" style="font-size:10px;padding:2px 8px;">
+                                    <?php 
+                                    $badge_style = 'background:rgba(16, 185, 129, 0.12); color:#10b981; border:1px solid rgba(16, 185, 129, 0.25);';
+                                    if ( ( $p_item['status_key'] ?? '' ) === 'occupied' ) {
+                                        $badge_style = 'background:rgba(139, 92, 246, 0.14); color:#8b5cf6; border:1px solid rgba(139, 92, 246, 0.28);';
+                                    } elseif ( ( $p_item['status_key'] ?? '' ) === 'taken' || ( $p_item['status_key'] ?? '' ) === 'expired' ) {
+                                        $badge_style = 'background:rgba(239, 68, 68, 0.12); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.25);';
+                                    } elseif ( ( $p_item['status_key'] ?? '' ) === 'pending_upload' || ( $p_item['status_key'] ?? '' ) === 'under_offer' ) {
+                                        $badge_style = 'background:rgba(245, 158, 11, 0.14); color:#d97706; border:1px solid rgba(245, 158, 11, 0.25);';
+                                    }
+                                    ?>
+                                    <span class="ofp-kpi-badge" style="font-size:10px;padding:2px 8px;font-weight:700;<?php echo esc_attr( $badge_style ); ?>">
                                         <?php echo esc_html( $p_item['status'] ); ?>
                                     </span>
                                     <button type="button" 

@@ -68,8 +68,8 @@ require_once OFP_PATH . 'includes/class-ofp-property-transfer-reminders.php';
 require_once OFP_PATH . 'includes/class-ofp-property-tenant-portal.php';
 require_once OFP_PATH . 'includes/class-ofp-property-receipt-generator.php';
 require_once OFP_PATH . 'includes/class-ofp-property-receipt-viewer.php';
-require_once OFP_PATH . 'includes/class-ofp-property-lease-reminders.php';
 require_once OFP_PATH . 'includes/class-ofp-property-inquiry.php';
+require_once OFP_PATH . 'includes/class-ofp-property-land.php';
 
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-paystack.php';

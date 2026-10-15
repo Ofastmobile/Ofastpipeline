@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Secure buyer installment offer page.
  * Buyers do not need an OFastpipeline account.
@@ -35,6 +35,14 @@ if ( ! $offer ) {
         [ 'id' => (int) $offer->id ]
     );
     $offer->status = 'expired';
+} elseif ( $offer->status === 'pending' && class_exists( 'OFP_Property_CPT' ) && ( ! OFP_Property_CPT::is_property_available_for_sale( (int) $offer->property_id ) ) ) {
+    $wpdb->update(
+        "{$p}ofp_property_offers",
+        [ 'status' => 'expired', 'updated_at' => current_time( 'mysql' ) ],
+        [ 'id' => (int) $offer->id ]
+    );
+    $offer->status = 'expired';
+    $error = 'This property is no longer available as it has already been sold or committed to another purchase.';
 }
 
 if ( $offer && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_offer_action'] ) ) {

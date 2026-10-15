@@ -323,6 +323,9 @@ class OFP_Property_Rent {
         if ( is_wp_error( $property ) ) return $property;
 
         $is_renewal = ! empty( $data['is_renewal'] );
+        if ( 'taken' === $property->status ) {
+            return new WP_Error( 'property_unavailable', 'This property is marked as taken / unavailable.' );
+        }
         if ( ! $is_renewal && self::property_is_occupied( $property_id ) ) {
             return new WP_Error( 'property_occupied', 'This property already has an active lease. To extend or renew tenancy, use the Renew Lease action.' );
         }
@@ -333,6 +336,16 @@ class OFP_Property_Rent {
             $client_id
         ) );
         if ( ! $tenant ) return new WP_Error( 'tenant_not_found', 'Tenant not found for this client.' );
+
+        // Prevent duplicate active lease or pending offer for the same tenant on this property
+        $existing_tenant_lease = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}ofp_property_leases WHERE property_id = %d AND tenant_id = %d AND status IN ('active', 'pending_offer') LIMIT 1",
+            $property_id,
+            $tenant_id
+        ) );
+        if ( ! $is_renewal && $existing_tenant_lease ) {
+            return new WP_Error( 'tenant_lease_exists', 'This tenant already has an active lease or pending offer for this property.' );
+        }
         $option = $wpdb->get_row( $wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}ofp_property_rent_options WHERE id = %d AND property_id = %d AND client_id = %d AND is_active = 1 LIMIT 1",
             $option_id,
@@ -467,7 +480,11 @@ class OFP_Property_Rent {
         $updated = $wpdb->update( "{$wpdb->prefix}ofp_property_leases", [
             'status' => 'active', 'start_date' => $start, 'end_date' => $end, 'updated_at' => current_time( 'mysql' ),
         ], [ 'id' => $lease_id ] );
-        return false === $updated ? new WP_Error( 'lease_activation_failed', 'Unable to activate lease.' ) : true;
+        if ( false === $updated ) return new WP_Error( 'lease_activation_failed', 'Unable to activate lease.' );
+        if ( class_exists( 'OFP_Property_CPT' ) ) {
+            OFP_Property_CPT::mark_taken( (int) $lease->property_id, 'occupied' );
+        }
+        return true;
     }
 
     public static function calculate_end_date( string $start, string $period, int $custom_days = 0 ): string {

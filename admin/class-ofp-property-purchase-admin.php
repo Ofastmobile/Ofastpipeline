@@ -191,6 +191,8 @@ class OFP_Property_Purchase_Admin {
         $error = '';
         if ( ! $property ) $error = 'Property not found.';
         elseif ( ! OFP_Property_CPT::is_sale_like( (string) $property->listing_type ) ) $error = 'Only sale or land properties can become purchases.';
+        elseif ( 'taken' === $property->status ) $error = 'This property has already been sold or is unavailable.';
+        elseif ( class_exists( 'OFP_Property_CPT' ) && OFP_Property_CPT::property_has_active_purchase( (int) $property->id ) ) $error = 'This property already has an active or completed purchase.';
         elseif ( ! $buyer_name || ! $buyer_phone ) $error = 'Buyer name and phone are required.';
         elseif ( $buyer_email !== '' && ! is_email( $buyer_email ) ) $error = 'Buyer email is invalid.';
         elseif ( (float) $property->price <= 0 ) $error = 'Property price is invalid.';

@@ -172,6 +172,20 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                 update_post_meta( $post_id, 'ofp_parking', $parking );
                 update_post_meta( $post_id, 'ofp_area_sqm', $area_sqm );
                 update_post_meta( $post_id, 'ofp_title_document', $title_doc );
+
+                // Nigerian Land fields
+                $plots_count     = isset( $_POST['plots_count'] ) && $_POST['plots_count'] !== '' ? (float) $_POST['plots_count'] : 0.0;
+                $land_topography = sanitize_text_field( $_POST['land_topography'] ?? '' );
+                $land_zoning     = sanitize_text_field( $_POST['land_zoning'] ?? '' );
+                $land_dimensions = sanitize_text_field( $_POST['land_dimensions'] ?? '' );
+                $survey_status   = sanitize_text_field( $_POST['survey_status'] ?? '' );
+
+                update_post_meta( $post_id, 'ofp_plots_count', $plots_count );
+                update_post_meta( $post_id, 'ofp_land_topography', $land_topography );
+                update_post_meta( $post_id, 'ofp_land_zoning', $land_zoning );
+                update_post_meta( $post_id, 'ofp_land_dimensions', $land_dimensions );
+                update_post_meta( $post_id, 'ofp_survey_status', $survey_status );
+
                 $bank_pick = (int) ( $_POST['bank_account_id'] ?? 0 );
                 if ( $bank_pick && ! OFP_Bank_Account::get( $bank_pick, (int) $client->id ) ) {
                     $bank_pick = 0;
@@ -533,8 +547,13 @@ $prop_tabs = [
                                         $beds         = get_post_meta( $prop_id, 'ofp_bedrooms', true );
                                         $baths        = get_post_meta( $prop_id, 'ofp_bathrooms', true );
                                         $area         = get_post_meta( $prop_id, 'ofp_area_sqm', true );
-                                        $db_status    = get_post_meta( $prop_id, 'ofp_status', true ) ?: 'pending_upload';
-                                        $is_occupied  = class_exists( 'OFP_Property_Rent' ) && OFP_Property_Rent::wp_property_is_occupied( $prop_id );
+                                        $is_featured  = ( '1' === (string) get_post_meta( $prop_id, 'ofp_is_featured', true ) );
+                                        $status_ctx   = class_exists( 'OFP_Property_CPT' )
+                                            ? OFP_Property_CPT::get_status_context( $prop_id )
+                                            : [
+                                                'key'   => ( get_post_meta( $prop_id, 'ofp_status', true ) ?: 'pending_upload' ),
+                                                'label' => ucfirst( get_post_meta( $prop_id, 'ofp_status', true ) ?: 'pending_upload' ),
+                                            ];
 
                                         // Badge style for listing type
                                         $ltype_colors = [
@@ -547,18 +566,18 @@ $prop_tabs = [
                                         $ltype_badge_style = $ltype_colors[ $ltype ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
 
                                         // Status badge
-                                        if ( $is_occupied ) {
-                                            $status_html = '<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:#ede9fe;color:#7c3aed;">Occupied</span>';
-                                        } elseif ( $property->post_status === 'pending' || $db_status === 'pending_upload' ) {
-                                            $status_html = '<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:#fef3c7;color:#d97706;">Pending Review</span>';
-                                        } elseif ( $db_status === 'live' ) {
-                                            $status_html = '<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:#dcfce7;color:#16a34a;">Live</span>';
-                                        } elseif ( $db_status === 'taken' ) {
-                                            $status_html = '<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:rgba(128,128,128,0.12);color:var(--text-muted);">Taken</span>';
-                                        } elseif ( $db_status === 'expired' ) {
-                                            $status_html = '<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:#fee2e2;color:#ef4444;">Expired</span>';
+                                        if ( $status_ctx['key'] === 'occupied' ) {
+                                            $status_html = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:100px;background:rgba(139,92,246,0.14);color:#8b5cf6;border:1px solid rgba(139,92,246,0.28);"><span style="width:6px;height:6px;border-radius:50%;background:#8b5cf6;"></span>' . esc_html( $status_ctx['label'] ) . '</span>';
+                                        } elseif ( $status_ctx['key'] === 'taken' ) {
+                                            $status_html = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:100px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.28);"><span style="width:6px;height:6px;border-radius:50%;background:#ef4444;"></span>' . esc_html( $status_ctx['label'] ) . '</span>';
+                                        } elseif ( $status_ctx['key'] === 'under_offer' ) {
+                                            $status_html = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:100px;background:rgba(245,158,11,0.14);color:#d97706;border:1px solid rgba(245,158,11,0.28);"><span style="width:6px;height:6px;border-radius:50%;background:#d97706;"></span>' . esc_html( $status_ctx['label'] ) . '</span>';
+                                        } elseif ( $status_ctx['key'] === 'pending_upload' ) {
+                                            $status_html = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:100px;background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.2);"><span style="width:6px;height:6px;border-radius:50%;background:#d97706;"></span>' . esc_html( $status_ctx['label'] ) . '</span>';
+                                        } elseif ( $status_ctx['key'] === 'expired' ) {
+                                            $status_html = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:100px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.28);"><span style="width:6px;height:6px;border-radius:50%;background:#ef4444;"></span>' . esc_html( $status_ctx['label'] ) . '</span>';
                                         } else {
-                                            $status_html = '<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:rgba(128,128,128,0.12);color:var(--text-muted);">' . esc_html( ucfirst($db_status) ) . '</span>';
+                                            $status_html = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:100px;background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.28);"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;"></span>' . esc_html( $status_ctx['label'] ) . '</span>';
                                         }
 
                                         $period_labels = [ 'sales' => '', 'year' => '/ yr', '2years' => '/ 2 yrs', 'month' => '/ mo' ];
@@ -583,6 +602,12 @@ $prop_tabs = [
                                                         <a href="<?php echo esc_url( get_permalink( $prop_id ) ); ?>" target="_blank" class="ofp-prop-meta-title" title="<?php echo esc_attr( $property->post_title ); ?>">
                                                             <?php echo esc_html( $property->post_title ); ?>
                                                         </a>
+                                                        <?php if ( $is_featured ) : ?>
+                                                            <span style="display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:100px;background:rgba(245,158,11,0.15);color:#d97706;border:1px solid rgba(245,158,11,0.3);margin-left:5px;vertical-align:middle;" title="Featured Listing">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:10px;height:10px;"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                                                Featured
+                                                            </span>
+                                                        <?php endif; ?>
                                                         <div class="ofp-prop-meta-loc">
                                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:13px;height:13px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
                                                             <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?php echo esc_html( $loc ); ?></span>
@@ -849,59 +874,295 @@ $prop_tabs = [
                                 </div>
                             </div>
 
-                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:18px;">
-                                <div class="ofp-field">
-                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Bedrooms</label>
-                                    <input type="number" name="bedrooms" min="0" placeholder="e.g. 4"
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_bedrooms', true ) : '' ); ?>"
-                                           style="width:100%; padding:11px 14px; border-radius:8px;">
+                            <!-- Spec Counter Cards: Bedrooms, Bathrooms, Parking -->
+                            <div class="ofp-specs-card-grid">
+                                <div class="ofp-field ofp-spec-counter-card">
+                                    <div class="ofp-spec-card-head">
+                                        <div class="ofp-spec-card-icon is-blue">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h5 class="ofp-spec-card-title">Bedrooms</h5>
+                                            <p class="ofp-spec-card-sub">En-suite or standard</p>
+                                        </div>
+                                    </div>
+                                    <div class="ofp-spec-stepper-wrap">
+                                        <button type="button" class="ofp-spec-stepper-btn ofp-stepper-minus" aria-label="Decrease bedrooms">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" /></svg>
+                                        </button>
+                                        <input type="number" name="bedrooms" min="0" placeholder="0" class="ofp-spec-number-input"
+                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_bedrooms', true ) : '' ); ?>">
+                                        <button type="button" class="ofp-spec-stepper-btn ofp-stepper-plus" aria-label="Increase bedrooms">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                        </button>
+                                    </div>
+                                    <div class="ofp-spec-chips-row">
+                                        <button type="button" class="ofp-spec-chip" data-val="1">1</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="2">2</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="3">3</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="4">4</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="5">5</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="6+">6+</button>
+                                    </div>
                                 </div>
 
-                                <div class="ofp-field">
-                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Bathrooms</label>
-                                    <input type="number" name="bathrooms" min="0" placeholder="e.g. 4"
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_bathrooms', true ) : '' ); ?>"
-                                           style="width:100%; padding:11px 14px; border-radius:8px;">
+                                <div class="ofp-field ofp-spec-counter-card">
+                                    <div class="ofp-spec-card-head">
+                                        <div class="ofp-spec-card-icon is-purple">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M9 6 6.5 3.5a1.5 1.5 0 0 0-2.1 2.1l2.5 2.5"/><path d="M2 12h20"/><path d="M4 12v5a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-5"/><path d="M6 20v2"/><path d="M18 20v2"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h5 class="ofp-spec-card-title">Bathrooms</h5>
+                                            <p class="ofp-spec-card-sub">Baths &amp; guest toilets</p>
+                                        </div>
+                                    </div>
+                                    <div class="ofp-spec-stepper-wrap">
+                                        <button type="button" class="ofp-spec-stepper-btn ofp-stepper-minus" aria-label="Decrease bathrooms">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" /></svg>
+                                        </button>
+                                        <input type="number" name="bathrooms" min="0" placeholder="0" class="ofp-spec-number-input"
+                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_bathrooms', true ) : '' ); ?>">
+                                        <button type="button" class="ofp-spec-stepper-btn ofp-stepper-plus" aria-label="Increase bathrooms">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                        </button>
+                                    </div>
+                                    <div class="ofp-spec-chips-row">
+                                        <button type="button" class="ofp-spec-chip" data-val="1">1</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="2">2</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="3">3</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="4">4</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="5">5</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="6+">6+</button>
+                                    </div>
                                 </div>
 
-                                <div class="ofp-field">
-                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Parking Spaces</label>
-                                    <input type="number" name="parking" min="0" placeholder="e.g. 3"
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_parking', true ) : '' ); ?>"
-                                           style="width:100%; padding:11px 14px; border-radius:8px;">
-                                </div>
-
-                                <div class="ofp-field">
-                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Area (SQM)</label>
-                                    <input type="number" name="area_sqm" min="0" placeholder="e.g. 450"
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_area_sqm', true ) : '' ); ?>"
-                                           style="width:100%; padding:11px 14px; border-radius:8px;">
+                                <div class="ofp-field ofp-spec-counter-card">
+                                    <div class="ofp-spec-card-head">
+                                        <div class="ofp-spec-card-icon is-orange">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <rect x="3" y="11" width="18" height="9" rx="2"/><circle cx="7.5" cy="16.5" r="1.5"/><circle cx="16.5" cy="16.5" r="1.5"/><path d="M5 11l2-5h10l2 5"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h5 class="ofp-spec-card-title">Parking Spaces</h5>
+                                            <p class="ofp-spec-card-sub">Secured bays / garage</p>
+                                        </div>
+                                    </div>
+                                    <div class="ofp-spec-stepper-wrap">
+                                        <button type="button" class="ofp-spec-stepper-btn ofp-stepper-minus" aria-label="Decrease parking spaces">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" /></svg>
+                                        </button>
+                                        <input type="number" name="parking" min="0" placeholder="0" class="ofp-spec-number-input"
+                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_parking', true ) : '' ); ?>">
+                                        <button type="button" class="ofp-spec-stepper-btn ofp-stepper-plus" aria-label="Increase parking spaces">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                        </button>
+                                    </div>
+                                    <div class="ofp-spec-chips-row">
+                                        <button type="button" class="ofp-spec-chip" data-val="1">1</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="2">2</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="3">3</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="4">4</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="5">5</button>
+                                        <button type="button" class="ofp-spec-chip" data-val="6+">6+</button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px;">
-                                <div class="ofp-field">
-                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Condition</label>
+                            <!-- Sizing & Land Footprint Card -->
+                            <div class="ofp-field ofp-sizing-card">
+                                <div class="ofp-sizing-card-header">
+                                    <div class="ofp-sizing-card-title-group">
+                                        <div class="ofp-spec-card-icon is-green">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="12" y1="7" x2="12" y2="17"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h5 class="ofp-spec-card-title">Total Area &amp; Land Footprint</h5>
+                                            <p class="ofp-spec-card-sub">Gross built area or land footprint in square meters</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <?php
+                                    $curr_sqm   = $editing_post ? (float) get_post_meta( $editing_post->ID, 'ofp_area_sqm', true ) : 0;
+                                    $curr_plots = $editing_post ? (float) get_post_meta( $editing_post->ID, 'ofp_plots_count', true ) : 0;
+                                    $init_label = 'Standard Lagos Plot = 600 SQM (60ft × 120ft)';
+                                    if ( $curr_sqm > 0 || $curr_plots > 0 ) {
+                                        $bk = class_exists( 'OFP_Property_Land' ) ? OFP_Property_Land::calculate( $curr_sqm, 0, $curr_plots ) : [];
+                                        if ( ! empty( $bk['plot_label'] ) ) {
+                                            $init_label = $bk['plot_label'];
+                                        }
+                                    }
+                                    ?>
+                                    <!-- Live Nigerian Plot Benchmark Badge -->
+                                    <div id="ofp-sqm-live-badge" class="ofp-benchmark-live-badge">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                                        </svg>
+                                        <span id="ofp-sqm-live-text"><?php echo esc_html( $init_label ); ?></span>
+                                    </div>
+                                </div>
+
+                                <div class="ofp-input-unit-wrap">
+                                    <input type="number" name="area_sqm" min="0" placeholder="e.g. 600"
+                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_area_sqm', true ) : '' ); ?>">
+                                    <div class="ofp-input-unit-tag">SQM (m²)</div>
+                                </div>
+
+                                <!-- Quick Plot Preset Clickers -->
+                                <div class="ofp-preset-clickers-row">
+                                    <span class="ofp-preset-label">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                        Plot Presets:
+                                    </span>
+                                    <button type="button" class="ofp-sqm-preset-btn" data-sqm="300" data-plots="0.5">Half Plot (300m²)</button>
+                                    <button type="button" class="ofp-sqm-preset-btn" data-sqm="600" data-plots="1">1 Plot (600m²)</button>
+                                    <button type="button" class="ofp-sqm-preset-btn" data-sqm="1200" data-plots="2">2 Plots (1,200m²)</button>
+                                    <button type="button" class="ofp-sqm-preset-btn" data-sqm="1800" data-plots="3">3 Plots (1,800m²)</button>
+                                    <button type="button" class="ofp-sqm-preset-btn" data-sqm="4047" data-plots="6.7">1 Acre (4,047m²)</button>
+                                    <button type="button" class="ofp-sqm-preset-btn" data-sqm="10000" data-plots="16.7">1 Hectare (10,000m²)</button>
+                                </div>
+                            </div>
+
+                            <!-- Condition & Furnishing Grid -->
+                            <div class="ofp-condition-furnishing-grid">
+                                <div class="ofp-field ofp-meta-picker-card">
+                                    <div class="ofp-spec-card-head">
+                                        <div class="ofp-spec-card-icon is-blue">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h5 class="ofp-spec-card-title">Construction Condition</h5>
+                                            <p class="ofp-spec-card-sub">State of build and finishes</p>
+                                        </div>
+                                    </div>
                                     <?php $current_condition = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_condition', true ) : ''; ?>
-                                    <select name="condition" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
+                                    <select name="condition" class="ofp-select-custom">
                                         <option value="">-- Select Condition --</option>
-                                        <option value="Newly Built" <?php selected( $current_condition, 'Newly Built' ); ?>>Newly Built</option>
-                                        <option value="Fairly Used" <?php selected( $current_condition, 'Fairly Used' ); ?>>Fairly Used</option>
-                                        <option value="Renovation Needed" <?php selected( $current_condition, 'Renovation Needed' ); ?>>Renovation Needed</option>
-                                        <option value="Under Construction" <?php selected( $current_condition, 'Under Construction' ); ?>>Under Construction</option>
-                                        <option value="Off-Plan" <?php selected( $current_condition, 'Off-Plan' ); ?>>Off-Plan</option>
+                                        <option value="Newly Built" <?php selected( $current_condition, 'Newly Built' ); ?>>Newly Built (Turnkey / Mint)</option>
+                                        <option value="Fairly Used" <?php selected( $current_condition, 'Fairly Used' ); ?>>Fairly Used (Move-in Ready)</option>
+                                        <option value="Renovation Needed" <?php selected( $current_condition, 'Renovation Needed' ); ?>>Renovation Needed (Distressed / TLC)</option>
+                                        <option value="Under Construction" <?php selected( $current_condition, 'Under Construction' ); ?>>Under Construction (Ongoing Build)</option>
+                                        <option value="Off-Plan" <?php selected( $current_condition, 'Off-Plan' ); ?>>Off-Plan (Pre-construction)</option>
                                     </select>
                                 </div>
 
-                                <div class="ofp-field">
-                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Furnishing</label>
+                                <div class="ofp-field ofp-meta-picker-card">
+                                    <div class="ofp-spec-card-head">
+                                        <div class="ofp-spec-card-icon is-purple">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 11v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H7v-2a2 2 0 0 0-4 0Z"/><path d="M5 18v2"/><path d="M19 18v2"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h5 class="ofp-spec-card-title">Furnishing Grade</h5>
+                                            <p class="ofp-spec-card-sub">Fixtures, appliances &amp; interiors</p>
+                                        </div>
+                                    </div>
                                     <?php $current_furnishing = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_furnishing', true ) : ''; ?>
-                                    <select name="furnishing" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
+                                    <select name="furnishing" class="ofp-select-custom">
                                         <option value="">-- Select Furnishing --</option>
-                                        <option value="Furnished" <?php selected( $current_furnishing, 'Furnished' ); ?>>Furnished</option>
-                                        <option value="Semi-Furnished" <?php selected( $current_furnishing, 'Semi-Furnished' ); ?>>Semi-Furnished</option>
-                                        <option value="Unfurnished" <?php selected( $current_furnishing, 'Unfurnished' ); ?>>Unfurnished</option>
+                                        <option value="Furnished" <?php selected( $current_furnishing, 'Furnished' ); ?>>Fully Furnished (Turnkey)</option>
+                                        <option value="Semi-Furnished" <?php selected( $current_furnishing, 'Semi-Furnished' ); ?>>Semi-Furnished (Kitchen / Wardrobes / ACs)</option>
+                                        <option value="Unfurnished" <?php selected( $current_furnishing, 'Unfurnished' ); ?>>Unfurnished (Bare Shell)</option>
                                     </select>
+                                </div>
+                            </div>
+
+                            <!-- Dedicated Nigerian Land Breakdown Fields (visible when Land is selected) -->
+                            <?php
+                            $current_plots   = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_plots_count', true ) : '';
+                            $current_topo    = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_land_topography', true ) : '';
+                            $current_zoning  = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_land_zoning', true ) : '';
+                            $current_dims    = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_land_dimensions', true ) : '';
+                            $current_survey  = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_survey_status', true ) : '';
+                            $is_land_listing = ( $editing_post && get_post_meta( $editing_post->ID, 'ofp_listing_type', true ) === 'land' );
+                            ?>
+                            <div id="ofp-land-specifics-box" class="ofp-land-studio-box" style="<?php echo $is_land_listing ? 'display:block;' : 'display:none;'; ?>">
+                                <div class="ofp-land-studio-header">
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <div class="ofp-spec-card-icon is-green">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h5 class="ofp-spec-card-title">Nigerian Land Sizing &amp; Boundary Specs</h5>
+                                            <p class="ofp-spec-card-sub">Registry parameters, zoning, topography &amp; survey beacons</p>
+                                        </div>
+                                    </div>
+                                    <span class="ofp-land-studio-badge">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        Lagos / NG Standard (1 Plot = 600 SQM)
+                                    </span>
+                                </div>
+
+                                <div class="ofp-land-grid">
+                                    <div class="ofp-field">
+                                        <label style="font-size:12.5px; font-weight:700; color:var(--text-main); margin-bottom:6px; display:block;">
+                                            Number of Plots <span class="ofp-hint" style="display:inline; margin:0; font-size:11px; color:var(--text-muted);">(e.g. 1, 0.5, 2, 6)</span>
+                                        </label>
+                                        <div class="ofp-input-unit-wrap">
+                                            <input type="number" step="0.1" min="0" name="plots_count" id="ofp_portal_plots_input" placeholder="e.g. 1"
+                                                   value="<?php echo esc_attr( $current_plots ); ?>">
+                                            <div class="ofp-input-unit-tag">Plots</div>
+                                        </div>
+                                        <span style="display:block; font-size:11.5px; color:var(--text-muted); margin-top:6px;" id="ofp_plots_hint_preview">
+                                            Auto-syncs with Area (SQM)
+                                        </span>
+                                    </div>
+
+                                    <div class="ofp-field">
+                                        <label style="font-size:12.5px; font-weight:700; color:var(--text-main); margin-bottom:6px; display:block;">Topography</label>
+                                        <select name="land_topography" class="ofp-select-custom">
+                                            <option value="">-- Select Topography --</option>
+                                            <option value="100% Dry Land" <?php selected( $current_topo, '100% Dry Land' ); ?>>100% Dry Land</option>
+                                            <option value="Dry Table Land" <?php selected( $current_topo, 'Dry Table Land' ); ?>>Dry Table Land</option>
+                                            <option value="Mixed / Firm Land" <?php selected( $current_topo, 'Mixed / Firm Land' ); ?>>Mixed / Firm Land</option>
+                                            <option value="Sandfilling Required" <?php selected( $current_topo, 'Sandfilling Required' ); ?>>Sandfilling Required</option>
+                                            <option value="Waterfront Land" <?php selected( $current_topo, 'Waterfront Land' ); ?>>Waterfront Land</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="ofp-field">
+                                        <label style="font-size:12.5px; font-weight:700; color:var(--text-main); margin-bottom:6px; display:block;">Zoning / Land Use</label>
+                                        <select name="land_zoning" class="ofp-select-custom">
+                                            <option value="">-- Select Zoning --</option>
+                                            <option value="Residential" <?php selected( $current_zoning, 'Residential' ); ?>>Residential</option>
+                                            <option value="Commercial" <?php selected( $current_zoning, 'Commercial' ); ?>>Commercial</option>
+                                            <option value="Mixed-Use" <?php selected( $current_zoning, 'Mixed-Use' ); ?>>Mixed-Use (Commercial &amp; Residential)</option>
+                                            <option value="Industrial" <?php selected( $current_zoning, 'Industrial' ); ?>>Industrial</option>
+                                            <option value="Agricultural" <?php selected( $current_zoning, 'Agricultural' ); ?>>Agricultural / Farm</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="ofp-field">
+                                        <label style="font-size:12.5px; font-weight:700; color:var(--text-main); margin-bottom:6px; display:block;">Land Dimensions</label>
+                                        <div class="ofp-input-unit-wrap">
+                                            <input type="text" name="land_dimensions" placeholder="e.g. 60ft × 120ft (18m × 36m)"
+                                                   value="<?php echo esc_attr( $current_dims ); ?>">
+                                        </div>
+                                    </div>
+
+                                    <div class="ofp-field ofp-field-full">
+                                        <label style="font-size:12.5px; font-weight:700; color:var(--text-main); margin-bottom:6px; display:block;">Survey &amp; Boundary Status</label>
+                                        <select name="survey_status" class="ofp-select-custom">
+                                            <option value="">-- Select Survey / Boundary Status --</option>
+                                            <option value="Registered Survey with Coordinates" <?php selected( $current_survey, 'Registered Survey with Coordinates' ); ?>>Registered Survey with Coordinates</option>
+                                            <option value="Provisional Survey / Layout" <?php selected( $current_survey, 'Provisional Survey / Layout' ); ?>>Provisional Survey / Layout</option>
+                                            <option value="Perimeter Fenced &amp; Gated" <?php selected( $current_survey, 'Perimeter Fenced &amp; Gated' ); ?>>Perimeter Fenced &amp; Gated</option>
+                                            <option value="Beaconed / Pegged" <?php selected( $current_survey, 'Beaconed / Pegged' ); ?>>Beaconed / Pegged</option>
+                                            <option value="Survey in Progress" <?php selected( $current_survey, 'Survey in Progress' ); ?>>Survey in Progress</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1168,11 +1429,15 @@ $prop_tabs = [
     var form = document.querySelector('select[name="listing_type"]');
     if (!form) return;
     function field(name){ var e = document.querySelector('[name="' + name + '"]'); return e ? e.closest('.ofp-field') : null; }
+    var landBox = document.getElementById('ofp-land-specifics-box');
+
     function sync(){
         var land = form.value === 'land';
-        ['bedrooms','bathrooms','parking','furnishing'].forEach(function(n){
+        ['bedrooms','bathrooms','parking','furnishing','condition'].forEach(function(n){
             var f = field(n); if (f) f.style.display = land ? 'none' : '';
         });
+        if (landBox) landBox.style.display = land ? 'block' : 'none';
+
         var pt = document.querySelector('select[name="property_type"]');
         var pp = document.querySelector('select[name="price_period"]');
         if (land) {
@@ -1182,6 +1447,197 @@ $prop_tabs = [
     }
     form.addEventListener('change', sync);
     sync();
+
+    // Auto-calculate SQM <-> Plots (1 standard Lagos plot = 600 SQM)
+    var plotsInput = document.getElementById('ofp_portal_plots_input');
+    var sqmInput = document.querySelector('input[name="area_sqm"]');
+    var plotsHint = document.getElementById('ofp_plots_hint_preview');
+    var sqmLiveText = document.getElementById('ofp-sqm-live-text');
+
+    function computePlotDescription(sqm, plots) {
+        if (sqm <= 0 && plots <= 0) {
+            return 'Standard Lagos Plot = 600 SQM (60ft × 120ft)';
+        }
+        if (sqm <= 0 && plots > 0) sqm = plots * 600;
+        if (plots <= 0 && sqm > 0) plots = sqm / 600;
+
+        if (sqm >= 280 && sqm <= 325) {
+            return 'Half Plot (~300 SQM / ~3,229 Sq Ft / 50ft × 60ft)';
+        } else if (sqm >= 580 && sqm <= 650) {
+            return '1 Standard Plot (~600 SQM / ~6,458 Sq Ft / 60ft × 120ft)';
+        } else if (sqm >= 880 && sqm <= 950) {
+            return '1.5 Plots (~900 SQM)';
+        } else if (sqm >= 1150 && sqm <= 1300) {
+            return '2 Standard Plots (~1,200 SQM / ~12,917 Sq Ft / 120ft × 120ft)';
+        } else if (sqm >= 1700 && sqm <= 1900) {
+            return '3 Standard Plots (~1,800 SQM)';
+        } else if (sqm >= 2300 && sqm <= 2500) {
+            return '4 Standard Plots (~2,400 SQM)';
+        } else if (sqm >= 3900 && sqm <= 4200) {
+            return '1 Acre (~6 Standard Plots / 4,047 SQM)';
+        } else if (sqm >= 7800 && sqm <= 8400) {
+            return '2 Acres (~12 Standard Plots)';
+        } else if (sqm >= 9800 && sqm <= 10500) {
+            return '1 Hectare (~16.7 Plots / 10,000 SQM)';
+        } else {
+            var roundedPlots = Math.round(plots * 10) / 10;
+            return roundedPlots + ' Plot(s) (' + Math.round(sqm).toLocaleString() + ' SQM)';
+        }
+    }
+
+    function updatePlotHint(plots, sqm) {
+        var desc = computePlotDescription(sqm, plots);
+        if (sqmLiveText) sqmLiveText.textContent = desc;
+        if (plotsHint) {
+            if (plots > 0 && sqm > 0) {
+                plotsHint.textContent = plots + ' Plot(s) = ' + sqm.toLocaleString() + ' SQM (~' + Math.round(sqm * 10.764).toLocaleString() + ' Sq Ft)';
+            } else {
+                plotsHint.textContent = desc;
+            }
+        }
+    }
+
+    // Quick Plot Preset clickers
+    document.querySelectorAll('.ofp-sqm-preset-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var s = parseFloat(btn.dataset.sqm) || 0;
+            var p = parseFloat(btn.dataset.plots) || 0;
+            if (sqmInput) {
+                sqmInput.value = s;
+                sqmInput.dataset.autoCalc = '1';
+            }
+            if (plotsInput) {
+                plotsInput.value = p;
+                plotsInput.dataset.autoCalc = '1';
+            }
+            updatePlotHint(p, s);
+        });
+    });
+
+    if (plotsInput && sqmInput) {
+        plotsInput.addEventListener('input', function() {
+            var p = parseFloat(plotsInput.value);
+            if (!isNaN(p) && p > 0) {
+                if (!sqmInput.value || sqmInput.dataset.autoCalc === '1') {
+                    sqmInput.value = Math.round(p * 600);
+                    sqmInput.dataset.autoCalc = '1';
+                }
+            }
+            updatePlotHint(parseFloat(plotsInput.value) || 0, parseFloat(sqmInput.value) || 0);
+        });
+
+        sqmInput.addEventListener('input', function() {
+            sqmInput.dataset.autoCalc = '0';
+            var s = parseFloat(sqmInput.value);
+            if (!isNaN(s) && s > 0 && (!plotsInput.value || plotsInput.dataset.autoCalc === '1')) {
+                var derivedPlots = Math.round((s / 600) * 10) / 10;
+                plotsInput.value = derivedPlots;
+                plotsInput.dataset.autoCalc = '1';
+            }
+            updatePlotHint(parseFloat(plotsInput.value) || 0, parseFloat(sqmInput.value) || 0);
+        });
+
+        updatePlotHint(parseFloat(plotsInput.value) || 0, parseFloat(sqmInput.value) || 0);
+    } else if (sqmInput) {
+        sqmInput.addEventListener('input', function() {
+            var s = parseFloat(sqmInput.value) || 0;
+            updatePlotHint(0, s);
+        });
+        updatePlotHint(0, parseFloat(sqmInput.value) || 0);
+    }
+})();
+
+// ── Room Spec Steppers & Quick Chips Synchronizer ──
+(function(){
+    document.querySelectorAll('.ofp-spec-counter-card').forEach(function(card) {
+        var input = card.querySelector('.ofp-spec-number-input');
+        var minusBtn = card.querySelector('.ofp-stepper-minus');
+        var plusBtn = card.querySelector('.ofp-stepper-plus');
+        var chips = card.querySelectorAll('.ofp-spec-chip');
+        if (!input) return;
+
+        function syncChips(val) {
+            var num = parseInt(val, 10);
+            chips.forEach(function(chip) {
+                var cVal = chip.dataset.val;
+                if (cVal === '6+') {
+                    chip.classList.toggle('is-active', !isNaN(num) && num >= 6);
+                } else {
+                    chip.classList.toggle('is-active', !isNaN(num) && num === parseInt(cVal, 10));
+                }
+            });
+        }
+
+        if (minusBtn) {
+            minusBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                var cur = parseInt(input.value, 10) || 0;
+                var next = Math.max(0, cur - 1);
+                input.value = next > 0 ? next : '';
+                syncChips(input.value);
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        }
+
+        if (plusBtn) {
+            plusBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                var cur = parseInt(input.value, 10) || 0;
+                var next = cur + 1;
+                input.value = next;
+                syncChips(next);
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        }
+
+        chips.forEach(function(chip) {
+            chip.addEventListener('click', function(e) {
+                e.preventDefault();
+                var val = chip.dataset.val;
+                if (val === '6+') {
+                    var cur = parseInt(input.value, 10) || 0;
+                    input.value = cur >= 6 ? cur : 6;
+                } else {
+                    input.value = val;
+                }
+                syncChips(input.value);
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        });
+
+        input.addEventListener('input', function() {
+            syncChips(input.value);
+        });
+
+        // Initialize state on page load
+        if (input.value) {
+            syncChips(input.value);
+        }
+    });
+
+    // Also highlight active plot preset button
+    var sqmInput = document.querySelector('input[name="area_sqm"]');
+    var presetBtns = document.querySelectorAll('.ofp-sqm-preset-btn');
+    function syncPresetBtns() {
+        if (!sqmInput) return;
+        var curSqm = parseFloat(sqmInput.value) || 0;
+        presetBtns.forEach(function(b) {
+            var bSqm = parseFloat(b.dataset.sqm) || 0;
+            b.classList.toggle('is-active', Math.abs(curSqm - bSqm) < 2);
+        });
+    }
+    if (sqmInput) {
+        sqmInput.addEventListener('input', syncPresetBtns);
+        presetBtns.forEach(function(b) {
+            b.addEventListener('click', function() {
+                setTimeout(syncPresetBtns, 10);
+            });
+        });
+        syncPresetBtns();
+    }
 })();
 
 // ── Multi-Photo Uploader Logic ──

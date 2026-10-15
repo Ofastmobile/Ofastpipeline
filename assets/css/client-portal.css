@@ -5226,4 +5226,454 @@ html.dark .ofp-search-hint-kbd kbd {
     color: #e2e8f0;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   SPECIFICATIONS & FEATURES STUDIO (SECTION 3 REDESIGN)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Grid of Counter Cards (Bedrooms, Bathrooms, Parking) */
+.ofp-specs-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+/* Individual Counter Card (also acts as .ofp-field) */
+.ofp-spec-counter-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 14px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.ofp-spec-counter-card:hover {
+    border-color: var(--border-highlight);
+    box-shadow: var(--shadow-md);
+}
+
+/* Header inside counter card */
+.ofp-spec-card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ofp-spec-card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.ofp-spec-counter-card:hover .ofp-spec-card-icon {
+    transform: scale(1.06);
+}
+
+.ofp-spec-card-icon.is-blue {
+    background: rgba(59, 130, 246, 0.12);
+    color: var(--accent-blue);
+}
+
+.ofp-spec-card-icon.is-purple {
+    background: rgba(139, 92, 246, 0.12);
+    color: var(--accent-purple);
+}
+
+.ofp-spec-card-icon.is-orange {
+    background: rgba(245, 158, 11, 0.12);
+    color: var(--accent-orange);
+}
+
+.ofp-spec-card-icon.is-green {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--accent-green);
+}
+
+.ofp-spec-card-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 2px 0;
+    line-height: 1.2;
+}
+
+.ofp-spec-card-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.2;
+}
+
+/* Stepper Box: [-] [ Input ] [+] */
+.ofp-spec-stepper-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 4px;
+    transition: border-color 0.2s ease;
+}
+
+.ofp-spec-stepper-wrap:focus-within {
+    border-color: var(--accent-blue);
+}
+
+.ofp-spec-stepper-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.ofp-spec-stepper-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+.ofp-spec-stepper-btn:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+}
+
+.ofp-spec-stepper-btn:active {
+    transform: scale(0.93);
+}
+
+.ofp-spec-number-input {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    border: none;
+    background: transparent;
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--text-main);
+    padding: 4px 0;
+    outline: none;
+    font-family: inherit;
+    -moz-appearance: textfield;
+}
+
+.ofp-spec-number-input::-webkit-outer-spin-button,
+.ofp-spec-number-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Quick Select Pills */
+.ofp-spec-chips-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.ofp-spec-chip {
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 6px;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    line-height: 1.2;
+}
+
+.ofp-spec-chip:hover {
+    color: var(--text-main);
+    border-color: var(--border-highlight);
+    background: var(--bg-card-hover);
+}
+
+.ofp-spec-chip.is-active {
+    background: var(--accent-blue);
+    color: #ffffff;
+    border-color: var(--accent-blue);
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+
+/* ── Sizing Studio Card (Total Area SQM) ─────────────────────────────────── */
+.ofp-sizing-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ofp-sizing-card:hover {
+    border-color: var(--border-highlight);
+    box-shadow: var(--shadow-md);
+}
+
+.ofp-sizing-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.ofp-sizing-card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Live Nigerian Plot Benchmark Badge */
+.ofp-benchmark-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent-green);
+    letter-spacing: 0.1px;
+}
+
+.ofp-benchmark-live-badge svg {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+}
+
+/* Input with Unit Suffix */
+.ofp-input-unit-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.ofp-input-unit-wrap:focus-within {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.ofp-input-unit-wrap input {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 16px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: inherit;
+}
+
+.ofp-input-unit-tag {
+    padding: 0 16px;
+    height: 100%;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.03);
+    border-left: 1px solid var(--border-color);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    user-select: none;
+}
+
+[data-theme="dark"] .ofp-input-unit-tag,
+html.dark .ofp-input-unit-tag {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* Quick Plot Preset Buttons Row */
+.ofp-preset-clickers-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.ofp-preset-label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ofp-sqm-preset-btn {
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    user-select: none;
+}
+
+.ofp-sqm-preset-btn:hover {
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+    background: rgba(16, 185, 129, 0.08);
+    transform: translateY(-1px);
+}
+
+.ofp-sqm-preset-btn:active {
+    transform: translateY(0);
+}
+
+.ofp-sqm-preset-btn.is-active {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+    font-weight: 700;
+}
+
+/* ── Condition & Furnishing Grid ─────────────────────────────────────────── */
+.ofp-condition-furnishing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.ofp-meta-picker-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ofp-meta-picker-card:hover {
+    border-color: var(--border-highlight);
+    box-shadow: var(--shadow-md);
+}
+
+.ofp-select-custom {
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 9px;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    font-size: 13.5px;
+    font-weight: 600;
+    outline: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.ofp-select-custom:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* ── Dedicated Nigerian Land Specifics Studio Box ────────────────────────── */
+.ofp-land-studio-box {
+    margin-top: 24px;
+    padding: 22px;
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.01) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 16px;
+    position: relative;
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.05);
+}
+
+.ofp-land-studio-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.ofp-land-studio-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--accent-green);
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.2px;
+}
+
+.ofp-land-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.ofp-land-grid .ofp-field-full {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+    .ofp-specs-card-grid,
+    .ofp-condition-furnishing-grid,
+    .ofp-land-grid {
+        grid-template-columns: 1fr;
+    }
+    .ofp-sizing-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 
