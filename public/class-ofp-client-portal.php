@@ -30,6 +30,7 @@ class OFP_Client_Portal {
         'credits' => 'credits.php',
         'reports' => 'reports.php',
         'account' => 'account.php',
+        'profile' => 'account.php',
         'my-listing' => 'my-listing.php',
         'properties' => 'properties.php',
         'inspections' => 'inspections.php',
@@ -148,6 +149,15 @@ class OFP_Client_Portal {
             [],
             OFP_VERSION
         );
+
+        if ( in_array( $route, [ 'account', 'profile' ], true ) ) {
+            wp_enqueue_style(
+                'ofp-profile',
+                OFP_URL . 'assets/css/profile.css',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION
+            );
+        }
 
         $js_deps = [];
         if ( in_array( $route, [ 'dashboard', 'leads', 'reports' ], true ) ) {

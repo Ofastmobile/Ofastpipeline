@@ -57,6 +57,7 @@ html[data-theme="dark"] .theme-toggle-moon,
 html:not(.light):not([data-theme="light"]) .theme-toggle-moon {
     display: none !important;
 }
+
 html.dark .theme-toggle-sun,
 html[data-theme="dark"] .theme-toggle-sun,
 html:not(.light):not([data-theme="light"]) .theme-toggle-sun {
@@ -67,6 +68,7 @@ html.light .theme-toggle-moon,
 html[data-theme="light"] .theme-toggle-moon {
     display: block !important;
 }
+
 html.light .theme-toggle-sun,
 html[data-theme="light"] .theme-toggle-sun {
     display: none !important;
@@ -86,19 +88,24 @@ html[data-theme="light"] .theme-toggle-sun {
     width: 6px;
     height: 6px;
 }
+
 ::-webkit-scrollbar-track {
     background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
 }
+
 [data-theme="light"] ::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.15);
 }
+
 [data-theme="light"] ::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.25);
 }
@@ -873,9 +880,11 @@ html.dark .ofp-hero-greeting-pill {
     0% {
         box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
     }
+
     70% {
         box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
     }
+
     100% {
         box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
     }
@@ -1071,28 +1080,34 @@ html.dark .ofp-hero-btn-export {
         padding: 0 16px;
         height: 64px;
     }
+
     .ofp-dashboard-page .ofp-topbar-actions {
         gap: 8px;
     }
+
     .ofp-dashboard-page .ofp-hero-topbar {
         height: auto;
         min-height: 320px;
         padding-top: 70px;
         border-radius: 0 0 18px 18px;
     }
+
     .ofp-dashboard-page .ofp-hero-topbar-overlay {
         padding: 16px;
         padding-top: 74px;
     }
+
     .ofp-hero-topbar-controls {
         flex-direction: column;
         align-items: stretch;
         gap: 12px;
     }
+
     .ofp-hero-search-box {
         max-width: 100%;
         min-width: 0;
     }
+
     .ofp-hero-action-buttons {
         justify-content: flex-end;
         flex-wrap: wrap;
@@ -1485,12 +1500,12 @@ html.dark .ofp-hero-btn-export {
     transition: 0.3s;
 }
 
-.ofp-toggle-switch input:checked + .ofp-toggle-slider {
+.ofp-toggle-switch input:checked+.ofp-toggle-slider {
     background-color: rgba(59, 130, 246, 0.2);
     border-color: var(--accent-blue);
 }
 
-.ofp-toggle-switch input:checked + .ofp-toggle-slider::before {
+.ofp-toggle-switch input:checked+.ofp-toggle-slider::before {
     transform: translateX(18px);
     background-color: var(--accent-blue);
 }
@@ -1793,6 +1808,7 @@ input[type="date"].ofp-input,
 .ofp-field input[type="date"] {
     color-scheme: dark;
 }
+
 [data-theme="light"] input[type="date"].ofp-input,
 [data-theme="light"] .ofp-field input[type="date"] {
     color-scheme: light;
@@ -1871,11 +1887,13 @@ input[type="date"].ofp-input,
     margin-top: 16px;
     border-radius: 8px;
 }
+
 .ofp-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
 }
+
 .ofp-table th {
     text-align: left;
     padding: 16px;
@@ -1887,18 +1905,22 @@ input[type="date"].ofp-input,
     border-bottom: 1px solid rgba(128, 128, 128, 0.05);
     background: rgba(128, 128, 128, 0.02);
 }
+
 .ofp-table td {
     padding: 16px;
     border-bottom: 1px solid rgba(128, 128, 128, 0.05);
     color: var(--text-main);
     vertical-align: middle;
 }
+
 .ofp-table tbody tr:last-child td {
     border-bottom: none;
 }
+
 .ofp-table tbody tr {
     transition: background-color 0.2s ease;
 }
+
 .ofp-table tbody tr:hover {
     background: rgba(255, 255, 255, 0.03);
 }
@@ -1908,12 +1930,14 @@ input[type="date"].ofp-input,
     display: flex;
     flex-direction: column;
 }
+
 .ofp-credit-bar-label {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
 }
+
 .ofp-credit-bar-track {
     width: 100%;
     height: 10px;
@@ -1922,19 +1946,23 @@ input[type="date"].ofp-input,
     overflow: hidden;
     border: 1px solid var(--border-color);
 }
+
 .ofp-credit-bar-fill {
     height: 100%;
     border-radius: 10px;
     transition: width 0.4s ease;
 }
+
 .ofp-credit-bar-fill.high {
     background: linear-gradient(90deg, #059669, #10b981);
     box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
 }
+
 .ofp-credit-bar-fill.medium {
     background: linear-gradient(90deg, #d97706, #f59e0b);
     box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
 }
+
 .ofp-credit-bar-fill.low {
     background: linear-gradient(90deg, #dc2626, #ef4444);
     box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
@@ -2103,15 +2131,15 @@ input[type="date"].ofp-input,
     background-color: #ffffff;
     border-radius: 50%;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.ofp-toggle input[type="checkbox"]:checked + .ofp-toggle-slider {
+.ofp-toggle input[type="checkbox"]:checked+.ofp-toggle-slider {
     background-color: var(--accent-green);
     border-color: var(--accent-green);
 }
 
-.ofp-toggle input[type="checkbox"]:checked + .ofp-toggle-slider::after {
+.ofp-toggle input[type="checkbox"]:checked+.ofp-toggle-slider::after {
     transform: translateX(20px);
 }
 
@@ -2420,6 +2448,7 @@ input[type="date"].ofp-input,
     gap: 12px;
     margin-bottom: 16px;
 }
+
 .ofp-plan-option {
     border: 2px solid var(--border-color);
     border-radius: 8px;
@@ -2429,23 +2458,28 @@ input[type="date"].ofp-input,
     transition: border-color 0.15s, background 0.15s;
     background: var(--bg-card);
 }
+
 .ofp-plan-option:has(input:checked) {
     border-color: var(--accent-blue);
     background: rgba(59, 130, 246, 0.05);
 }
+
 .ofp-plan-option input {
     display: none;
 }
+
 .ofp-plan-name {
     font-weight: 700;
     font-size: 14px;
     color: var(--text-main);
 }
+
 .ofp-plan-price {
     font-size: 12px;
     color: var(--text-muted);
     margin-top: 4px;
 }
+
 .ofp-plan-leads {
     font-size: 11px;
     color: var(--text-muted);
@@ -2492,8 +2526,13 @@ input[type="date"].ofp-input,
 }
 
 @keyframes fadeInOverlay {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .ofp-spinner {
@@ -2506,16 +2545,16 @@ input[type="date"].ofp-input,
 }
 
 @keyframes spinner {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .ofp-skeleton {
-    background: linear-gradient(
-        90deg,
-        var(--bg-card-hover) 25%,
-        var(--border-color) 50%,
-        var(--bg-card-hover) 75%
-    );
+    background: linear-gradient(90deg,
+            var(--bg-card-hover) 25%,
+            var(--border-color) 50%,
+            var(--bg-card-hover) 75%);
     background-size: 400% 100%;
     animation: skeletonPulse 1.5s ease-in-out infinite;
     border-radius: 6px;
@@ -2525,13 +2564,18 @@ input[type="date"].ofp-input,
     user-select: none;
 }
 
-.ofp-skeleton > * {
+.ofp-skeleton>* {
     opacity: 0 !important;
 }
 
 @keyframes skeletonPulse {
-    0% { background-position: 100% 50%; }
-    100% { background-position: 0 50%; }
+    0% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0 50%;
+    }
 }
 
 .ofp-skeleton-card {
@@ -2539,28 +2583,34 @@ input[type="date"].ofp-input,
     width: 100%;
     border-radius: 20px;
     margin-bottom: 20px;
-}/* -- Notification Layout ---------------------------------------------------- */
+}
+
+/* -- Notification Layout ---------------------------------------------------- */
 .ofp-notif-layout {
     display: flex;
     gap: 32px;
     align-items: flex-start;
 }
+
 .ofp-notif-main {
     flex: 1;
     min-width: 0;
 }
+
 .ofp-notif-sidebar {
     width: 400px;
     flex-shrink: 0;
     position: sticky;
     top: 96px;
 }
+
 .ofp-notif-tabs {
     display: none;
     gap: 16px;
     margin-bottom: 24px;
     border-bottom: 1px solid var(--border-color);
 }
+
 .ofp-notif-tab {
     background: none;
     border: none;
@@ -2572,6 +2622,7 @@ input[type="date"].ofp-input,
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
 }
+
 .ofp-notif-tab.active {
     color: var(--text-main);
     border-bottom-color: var(--accent-blue);
@@ -2580,6 +2631,7 @@ input[type="date"].ofp-input,
 .ofp-notif-item {
     padding: 16px 24px;
 }
+
 .ofp-notif-item.unread {
     background: rgba(59, 130, 246, 0.04);
 }
@@ -2588,15 +2640,19 @@ input[type="date"].ofp-input,
     .ofp-notif-layout {
         display: block;
     }
+
     .ofp-notif-tabs {
         display: flex;
     }
+
     .ofp-notif-panel {
         display: none;
     }
+
     .ofp-notif-panel.active {
         display: block;
     }
+
     .ofp-notif-sidebar {
         width: 100%;
         position: static;
@@ -2607,8 +2663,10 @@ input[type="date"].ofp-input,
 /* ── Modal ───────────────────────────────────────────────────────────────── */
 .ofp-modal-backdrop {
     position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(4px);
     z-index: 9999;
@@ -2631,8 +2689,15 @@ input[type="date"].ofp-input,
 }
 
 @keyframes ofpModalIn {
-    from { opacity: 0; transform: translateY(16px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .ofp-modal-header {
@@ -2787,6 +2852,7 @@ input[type="date"].ofp-input,
     .ofp-cards-grid {
         grid-template-columns: 1fr;
     }
+
     .ofp-modal {
         max-width: 100% !important;
     }
@@ -2795,711 +2861,1034 @@ input[type="date"].ofp-input,
 
 /* ── Template-Specific Component Styles (extracted from inline <style> blocks) ─── */
 
-/* --- account --- */.ofp-settings-dashboard {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 40px 20px;
-    }
-    .ofp-page-title {
-        font-size: 28px;
-        font-weight: 700;
-        color: var(--text-main);
-        margin-bottom: 40px;
-        letter-spacing: -0.02em;
-    }
+/* --- account --- */
+.ofp-settings-dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
 
-    /* Grid Layout */
+.ofp-page-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 40px;
+    letter-spacing: -0.02em;
+}
+
+/* Grid Layout */
+.ofp-settings-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 40px;
+    align-items: start;
+}
+
+/* Cards */
+.ofp-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-md);
+}
+
+.ofp-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Avatar Section */
+.ofp-avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.ofp-avatar-lg {
+    width: 160px;
+    height: 160px;
+    border-radius: 20px;
+    object-fit: cover;
+    margin-bottom: 20px;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+.ofp-upload-btn {
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 10px 24px;
+    border-radius: 100px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+}
+
+.ofp-upload-btn:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-highlight);
+}
+
+/* Forms */
+.ofp-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.ofp-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ofp-form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.ofp-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.ofp-input {
+    width: 100%;
+    height: 48px;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0 16px;
+    color: var(--text-main);
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.ofp-input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.ofp-input[readonly] {
+    opacity: 0.6;
+    background: var(--bg-card);
+    cursor: not-allowed;
+}
+
+textarea.ofp-input {
+    height: auto;
+    padding-top: 16px;
+    resize: vertical;
+    min-height: 120px;
+}
+
+/* Buttons */
+.ofp-btn-primary {
+    background: var(--btn-primary);
+    border: none;
+    color: #fff;
+    padding: 0 32px;
+    height: 48px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ofp-btn:hover {
+    background: var(--btn-primary-hover);
+}
+
+.ofp-btn-secondary {
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 0 32px;
+    height: 48px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ofp-btn-secondary:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-highlight);
+}
+
+.ofp-logout-link {
+    color: var(--accent-red);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-block;
+    margin-top: 16px;
+    text-align: center;
+    width: 100%;
+}
+
+.ofp-logout-link:hover {
+    text-decoration: underline;
+}
+
+/* Notices */
+.ofp-notice {
+    padding: 16px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ofp-notice.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--accent-green);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.ofp-notice.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--accent-red);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Mobile Fallback */
+@media (max-width: 900px) {
     .ofp-settings-grid {
-        display: grid;
-        grid-template-columns: 320px 1fr;
-        gap: 40px;
-        align-items: start;
+        grid-template-columns: 1fr;
     }
 
-    /* Cards */
-    .ofp-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 20px;
-        padding: 32px;
-        margin-bottom: 32px;
-        box-shadow: var(--shadow-md);
-    }
-    .ofp-card-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--text-main);
-        margin-bottom: 24px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    /* Avatar Section */
-    .ofp-avatar-section {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-    .ofp-avatar-lg {
-        width: 160px;
-        height: 160px;
-        border-radius: 20px;
-        object-fit: cover;
-        margin-bottom: 20px;
-        background: var(--bg-body);
-        border: 1px solid var(--border-color);
-        box-shadow: var(--shadow-md);
-    }
-    .ofp-upload-btn {
-        background: var(--bg-body);
-        border: 1px solid var(--border-color);
-        color: var(--text-main);
-        padding: 10px 24px;
-        border-radius: 100px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: inline-block;
-    }
-    .ofp-upload-btn:hover {
-        background: var(--bg-card-hover);
-        border-color: var(--border-highlight);
-    }
-
-    /* Forms */
     .ofp-form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 24px;
+        grid-template-columns: 1fr;
     }
-    .ofp-form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .ofp-form-group.full-width {
-        grid-column: 1 / -1;
-    }
-    .ofp-label {
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--text-muted);
-    }
-    .ofp-input {
-        width: 100%;
-        height: 48px;
-        background: var(--bg-body);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 0 16px;
-        color: var(--text-main);
-        font-size: 14px;
-        transition: all 0.2s;
-    }
-    .ofp-input:focus {
-        outline: none;
-        border-color: var(--accent-blue);
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
-    .ofp-input[readonly] {
-        opacity: 0.6;
-        background: var(--bg-card);
-        cursor: not-allowed;
-    }
-    textarea.ofp-input {
-        height: auto;
-        padding-top: 16px;
-        resize: vertical;
-        min-height: 120px;
-    }
+}
 
-    /* Buttons */
-    .ofp-btn-primary {
-        background: var(--btn-primary);
-        border: none;
-        color: #fff;
-        padding: 0 32px;
-        height: 48px;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .ofp-btn:hover {
-        background: var(--btn-primary-hover);
-    }
-    
-    .ofp-btn-secondary {
-        background: var(--bg-body);
-        border: 1px solid var(--border-color);
-        color: var(--text-main);
-        padding: 0 32px;
-        height: 48px;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        width: 100%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .ofp-btn-secondary:hover {
-        background: var(--bg-card-hover);
-        border-color: var(--border-highlight);
+/* --- funding --- */
+/* ── Funding-page specific styles ── */
+.ofp-funding-page {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 0 0 60px;
+}
+
+/* Tabs */
+.ofp-funding-tabs {
+    display: flex;
+    gap: 8px;
+    background: var(--bg-card-hover);
+    padding: 6px;
+    border-radius: 14px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+}
+
+.ofp-funding-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.ofp-funding-tab.active {
+    background: var(--bg-card);
+    color: var(--text-main);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ofp-funding-tab:hover:not(.active) {
+    color: var(--text-main);
+    background: var(--border-color);
+}
+
+.ofp-funding-pane {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.ofp-funding-pane.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
     }
 
-    .ofp-logout-link {
-        color: var(--accent-red);
-        font-size: 14px;
-        font-weight: 500;
-        text-decoration: none;
-        display: inline-block;
-        margin-top: 16px;
-        text-align: center;
-        width: 100%;
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
-    .ofp-logout-link:hover {
-        text-decoration: underline;
+}
+
+.ofp-funding-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 28px 28px 32px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-lg);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ofp-funding-card-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.ofp-funding-card-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 6px;
+}
+
+.ofp-funding-card-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    line-height: 1.55;
+}
+
+.ofp-funding-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+}
+
+.ofp-funding-detail-row:last-child {
+    border-bottom: none;
+}
+
+.ofp-funding-detail-label {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.ofp-funding-detail-value {
+    color: var(--text-main);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ofp-copy-btn {
+    padding: 3px 12px;
+    background: var(--bg-card-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 100px;
+    color: var(--text-main);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.ofp-copy-btn:hover {
+    background: var(--border-color);
+}
+
+.ofp-auto-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--accent-green);
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    margin-top: 14px;
+}
+
+.ofp-section-divider {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-align: center;
+    margin: 28px 0 20px;
+    opacity: 0.6;
+}
+
+.ofp-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.ofp-form-grid .ofp-form-row {
+    margin-bottom: 0;
+}
+
+@media (max-width: 480px) {
+    .ofp-form-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
     }
+}
 
-    /* Notices */
-    .ofp-notice {
-        padding: 16px 20px;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 500;
-        margin-bottom: 24px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    .ofp-notice.success {
-        background: rgba(16, 185, 129, 0.1);
-        color: var(--accent-green);
-        border: 1px solid rgba(16, 185, 129, 0.2);
-    }
-    .ofp-notice.error {
-        background: rgba(239, 68, 68, 0.1);
-        color: var(--accent-red);
-        border: 1px solid rgba(239, 68, 68, 0.2);
-    }
+.ofp-form-row {
+    margin-bottom: 18px;
+}
 
-    /* Mobile Fallback */
-    @media (max-width: 900px) {
-        .ofp-settings-grid {
-            grid-template-columns: 1fr;
-        }
-        .ofp-form-grid {
-            grid-template-columns: 1fr;
-        }
-    }
+.ofp-form-row label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 7px;
+    letter-spacing: 0.04em;
+}
 
-/* --- funding --- *//* ── Funding-page specific styles ── */
-        .ofp-funding-page { max-width: 560px; margin: 0 auto; padding: 0 0 60px; }
+.ofp-form-input {
+    width: 100%;
+    height: 48px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0 16px;
+    font-size: 14px;
+    color: var(--text-main);
+    background: transparent;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
 
-        /* Tabs */
-        .ofp-funding-tabs {
-            display: flex;
-            gap: 8px;
-            background: var(--bg-card-hover);
-            padding: 6px;
-            border-radius: 14px;
-            margin-bottom: 24px;
-            border: 1px solid var(--border-color);
-        }
-        .ofp-funding-tab {
-            flex: 1;
-            text-align: center;
-            padding: 10px 16px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-muted);
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .ofp-funding-tab.active {
-            background: var(--bg-card);
-            color: var(--text-main);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .ofp-funding-tab:hover:not(.active) {
-            color: var(--text-main);
-            background: var(--border-color);
-        }
-        .ofp-funding-pane {
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-        .ofp-funding-pane.active {
-            display: block;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+.ofp-form-input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    background: var(--bg-card);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
 
-        .ofp-funding-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 28px 28px 32px;
-            margin-bottom: 20px;
-            box-shadow: var(--shadow-lg);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
+select.ofp-form-input {
+    cursor: pointer;
+}
 
-        .ofp-funding-card-label {
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-        }
+textarea.ofp-form-input {
+    height: auto;
+    padding: 12px 16px;
+    resize: vertical;
+    line-height: 1.5;
+}
 
-        .ofp-funding-card-title {
-            font-size: 17px;
-            font-weight: 700;
-            color: var(--text-main);
-            margin-bottom: 6px;
-        }
+.ofp-submit-btn {
+    width: 100%;
+    height: 52px;
+    background: var(--btn-primary);
+    border: 1px solid var(--btn-primary-hover);
+    border-radius: 14px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.2s;
+}
 
-        .ofp-funding-card-desc {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-            line-height: 1.55;
-        }
+.ofp-submit-btn:hover {
+    background: var(--btn-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
 
-        .ofp-funding-detail-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 14px;
-        }
-        .ofp-funding-detail-row:last-child { border-bottom: none; }
-        .ofp-funding-detail-label { color: var(--text-muted); font-weight: 500; }
-        .ofp-funding-detail-value { color: var(--text-main); font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.ofp-alert {
+    border-radius: 12px;
+    font-size: 13px;
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
 
-        .ofp-copy-btn {
-            padding: 3px 12px;
-            background: var(--bg-card-hover);
-            border: 1px solid var(--border-color);
-            border-radius: 100px;
-            color: var(--text-main);
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-        .ofp-copy-btn:hover { background: var(--border-color); }
+.ofp-alert-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--accent-green);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
 
-        .ofp-auto-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            background: rgba(16,185,129,0.12);
-            color: var(--accent-green);
-            border-radius: 100px;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 4px 10px;
-            margin-top: 14px;
-        }
+.ofp-alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--accent-red);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
 
-        .ofp-section-divider {
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            text-align: center;
-            margin: 28px 0 20px;
-            opacity: 0.6;
-        }
+/* ── Plan selector for auto-funding listing card ── */
+.ofp-plan-selector-row {
+    margin-bottom: 16px;
+}
 
-        .ofp-form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 18px;
-        }
-        .ofp-form-grid .ofp-form-row {
-            margin-bottom: 0;
-        }
-        @media (max-width: 480px) {
-            .ofp-form-grid {
-                grid-template-columns: 1fr;
-                gap: 18px;
-            }
-        }
-        
-        .ofp-form-row {
-            margin-bottom: 18px;
-        }
-        .ofp-form-row label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 7px;
-            letter-spacing: 0.04em;
-        }
-        .ofp-form-input {
-            width: 100%;
-            height: 48px;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 0 16px;
-            font-size: 14px;
-            color: var(--text-main);
-            background: transparent;
-            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-            box-sizing: border-box;
-        }
-        .ofp-form-input:focus {
-            outline: none;
-            border-color: var(--accent-blue);
-            background: var(--bg-card);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-        }
-        select.ofp-form-input { cursor: pointer; }
-        textarea.ofp-form-input {
-            height: auto;
-            padding: 12px 16px;
-            resize: vertical;
-            line-height: 1.5;
-        }
+.ofp-plan-selector-row label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 7px;
+    letter-spacing: 0.04em;
+}
 
-        .ofp-submit-btn {
-            width: 100%;
-            height: 52px;
-            background: var(--btn-primary);
-            border: 1px solid var(--btn-primary-hover);
-            border-radius: 14px;
-            color: #fff;
-            font-size: 15px;
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            cursor: pointer;
-            margin-top: 8px;
-            transition: all 0.2s;
-        }
-        .ofp-submit-btn:hover {
-            background: var(--btn-primary-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
+.ofp-plan-selector {
+    width: 100%;
+    height: 48px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0 16px;
+    font-size: 14px;
+    color: var(--text-main);
+    background: transparent;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+}
 
-        .ofp-alert {
-            border-radius: 12px;
-            font-size: 13px;
-            padding: 12px 18px;
-            margin-bottom: 20px;
-            font-weight: 500;
-        }
-        .ofp-alert-success {
-            background: rgba(16,185,129,0.1);
-            color: var(--accent-green);
-            border: 1px solid rgba(16,185,129,0.2);
-        }
-        .ofp-alert-error {
-            background: rgba(239,68,68,0.1);
-            color: var(--accent-red);
-            border: 1px solid rgba(239,68,68,0.2);
-        }
-        /* ── Plan selector for auto-funding listing card ── */
-        .ofp-plan-selector-row {
-            margin-bottom: 16px;
-        }
-        .ofp-plan-selector-row label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 7px;
-            letter-spacing: 0.04em;
-        }
-        .ofp-plan-selector {
-            width: 100%;
-            height: 48px;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 0 16px;
-            font-size: 14px;
-            color: var(--text-main);
-            background: transparent;
-            cursor: pointer;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            box-sizing: border-box;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 14px center;
-            padding-right: 36px;
-        }
-        .ofp-plan-selector:focus {
-            outline: none;
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-        }
+.ofp-plan-selector:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
 
-        /* Disabled option styling in manual form */
-        select.ofp-form-input option:disabled {
-            color: var(--text-muted);
-            opacity: 0.5;
-        }
+/* Disabled option styling in manual form */
+select.ofp-form-input option:disabled {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
 
-/* --- pricing --- */.ofp-pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 24px;
-            margin-top: 32px;
-        }
-        .ofp-pricing-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 32px;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .ofp-pricing-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
-            border-color: var(--accent-blue);
-        }
-        .ofp-pricing-header {
-            margin-bottom: 24px;
-            text-align: center;
-        }
-        .ofp-pricing-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-main);
-            margin-bottom: 8px;
-        }
-        .ofp-pricing-price {
-            font-size: 36px;
-            font-weight: 700;
-            color: var(--text-main);
-            margin-bottom: 8px;
-        }
-        .ofp-pricing-price span {
-            font-size: 16px;
-            font-weight: 400;
-            color: var(--text-muted);
-        }
-        .ofp-pricing-desc {
-            font-size: 14px;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
-        .ofp-pricing-features {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 32px 0;
-            flex: 1;
-        }
-        .ofp-pricing-features li {
-            font-size: 14px;
-            color: var(--text-main);
-            margin-bottom: 16px;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-        }
-        .ofp-pricing-features li svg {
-            width: 18px;
-            height: 18px;
-            color: var(--accent-green);
-            flex-shrink: 0;
-            margin-top: 2px;
-        }
-        .ofp-pricing-action {
-            text-align: center;
-            margin-top: auto;
-        }
-        .ofp-pricing-action .ofp-btn-accent {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            font-size: 15px;
-            text-align: center;
-        }
-        .ofp-active-badge {
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--accent-green);
-            color: #fff;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .ofp-pricing-card.is-active {
-            border-color: var(--accent-green);
-        }
-        .ofp-pricing-card.is-active:hover {
-            border-color: var(--accent-green);
-        }
+/* --- pricing --- */
+.ofp-pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    margin-top: 32px;
+}
 
-/* --- properties --- */.property-title-link {
-                                color: #ffffff;
-                                text-decoration: none;
-                                transition: color 0.2s ease;
-                            }
-                            .property-title-link:hover {
-                                color: #3b82f6;
-                            }
+.ofp-pricing-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
 
-/* --- property-homepage --- */body,
-        .font-system,
-        .font-sans {
-            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
-        }
+.ofp-pricing-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    border-color: var(--accent-blue);
+}
 
-        /* Hero background: white overlay on light mode, dark overlay on dark mode */
-        .hero-bg {
-            background-image: 
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.65) 40%, rgba(255, 255, 255, 0.95) 85%, #ffffff 100%),
-                url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=2000&q=80');
-            background-size: cover;
-            background-position: center;
-            background-attachment: scroll !important;
-        }
+.ofp-pricing-header {
+    margin-bottom: 24px;
+    text-align: center;
+}
 
-        html.dark .hero-bg {
-            background-image: 
-                linear-gradient(to bottom, rgba(11, 17, 32, 0.5) 0%, rgba(11, 17, 32, 0.8) 50%, rgba(2, 6, 23, 0.95) 100%),
-                url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=2000&q=80');
-        }
+.ofp-pricing-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 8px;
+}
 
-/* --- property-marketplace --- */body,
-        .font-system,
-        .font-sans {
-            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
-        }
+.ofp-pricing-price {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 8px;
+}
 
-        /* Hero background: white overlay on light mode, dark overlay on dark mode */
-        .hero-bg {
-            background-image: 
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.65) 40%, rgba(255, 255, 255, 0.95) 85%, #ffffff 100%),
-                url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=85');
-            background-size: cover;
-            background-position: center;
-            background-attachment: scroll !important;
-        }
+.ofp-pricing-price span {
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--text-muted);
+}
 
-        html.dark .hero-bg {
-            background-image: 
-                linear-gradient(to bottom, rgba(11, 17, 32, 0.5) 0%, rgba(11, 17, 32, 0.8) 50%, rgba(2, 6, 23, 0.95) 100%),
-                url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=85');
-        }
+.ofp-pricing-desc {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
 
-/* --- property-offer --- */.ofp-offer-wrap{max-width:900px;margin:40px auto;padding:0 20px;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#0f172a}.ofp-offer-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,.06)}.ofp-offer-image{width:100%;height:280px;object-fit:cover;background:#f1f5f9}.ofp-offer-body{padding:28px}.ofp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.ofp-stat{border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#f8fafc}.ofp-stat span{display:block;font-size:12px;color:#64748b;margin-bottom:4px}.ofp-stat strong{font-size:17px}.ofp-terms{border:1px solid #e5e7eb;border-radius:10px;padding:18px;background:#fff;max-height:320px;overflow:auto;white-space:normal}.ofp-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.ofp-btn{border:0;border-radius:8px;padding:12px 18px;font-weight:600;cursor:pointer}.ofp-btn-primary{background:#1a73e8;color:#fff}.ofp-btn-danger{background:#ef4444;color:#fff}.ofp-alert{padding:14px 16px;border-radius:9px;margin-bottom:18px}.ofp-alert-error{background:#fef2f2;color:#991b1b}.ofp-alert-success{background:#ecfdf5;color:#065f46}.ofp-muted{color:#64748b}.ofp-check{display:flex;gap:9px;align-items:flex-start;margin-top:16px;font-size:14px}.ofp-check input{margin-top:3px}
+.ofp-pricing-features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 32px 0;
+    flex: 1;
+}
 
-/* --- property-single-detail --- */body,
-        .font-system,
-        .font-sans {
-            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
-        }
+.ofp-pricing-features li {
+    font-size: 14px;
+    color: var(--text-main);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
 
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
+.ofp-pricing-features li svg {
+    width: 18px;
+    height: 18px;
+    color: var(--accent-green);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
 
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+.ofp-pricing-action {
+    text-align: center;
+    margin-top: auto;
+}
 
-        [x-cloak] {
-            display: none !important;
-        }
+.ofp-pricing-action .ofp-btn-accent {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    text-align: center;
+}
 
-        /* Custom Mortgage Range Slider */
-        .mortgage-range {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 100%;
-            height: 8px;
-            border-radius: 9999px;
-            outline: none;
-            cursor: pointer;
-        }
+.ofp-active-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent-green);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
 
-        .mortgage-range::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: #2563eb;
-            border: 3px solid #ffffff;
-            box-shadow: 0 0 10px rgba(37, 99, 235, 0.7);
-            cursor: pointer;
-            transition: transform 0.15s ease, background-color 0.15s ease;
-        }
+.ofp-pricing-card.is-active {
+    border-color: var(--accent-green);
+}
 
-        .mortgage-range::-webkit-slider-thumb:hover {
-            transform: scale(1.15);
-            background: #1d4ed8;
-        }
+.ofp-pricing-card.is-active:hover {
+    border-color: var(--accent-green);
+}
 
-        .mortgage-range::-moz-range-thumb {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: #2563eb;
-            border: 3px solid #ffffff;
-            box-shadow: 0 0 10px rgba(37, 99, 235, 0.7);
-            cursor: pointer;
-        }
+/* --- properties --- */
+.property-title-link {
+    color: #ffffff;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
 
-/* --- team --- */.ofp-team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .ofp-team-table { width: 100%; border-collapse: collapse; background: var(--bg-card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); }
-        .ofp-team-table th, .ofp-team-table td { padding: 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
-        .ofp-team-table th { font-weight: 600; color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .ofp-team-table tr:last-child td { border-bottom: none; }
-        .ofp-badge-pending { background: #fef08a; color: #854d0e; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-        .ofp-badge-active { background: #bbf7d0; color: #166534; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-        
-        .ofp-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
-        .ofp-modal.active { display: flex; }
-        .ofp-modal-content { background: var(--bg-card); width: 100%; max-width: 500px; border-radius: 12px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid var(--border-color); }
-        .ofp-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .ofp-modal-title { font-size: 18px; font-weight: 700; color: var(--text-main); }
-        .ofp-modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
-        .ofp-form-group { margin-bottom: 16px; }
-        .ofp-form-group label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--text-main); }
-        .ofp-form-group input, .ofp-form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-body); color: var(--text-main); }
-        
-        .ofp-permissions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-        .ofp-permission-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-main); }
+.property-title-link:hover {
+    color: #3b82f6;
+}
+
+/* --- property-homepage --- */
+body,
+.font-system,
+.font-sans {
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+}
+
+/* Hero background: white overlay on light mode, dark overlay on dark mode */
+.hero-bg {
+    background-image:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.65) 40%, rgba(255, 255, 255, 0.95) 85%, #ffffff 100%),
+        url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=2000&q=80');
+    background-size: cover;
+    background-position: center;
+    background-attachment: scroll !important;
+}
+
+html.dark .hero-bg {
+    background-image:
+        linear-gradient(to bottom, rgba(11, 17, 32, 0.5) 0%, rgba(11, 17, 32, 0.8) 50%, rgba(2, 6, 23, 0.95) 100%),
+        url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=2000&q=80');
+}
+
+/* --- property-marketplace --- */
+body,
+.font-system,
+.font-sans {
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+}
+
+/* Hero background: white overlay on light mode, dark overlay on dark mode */
+.hero-bg {
+    background-image:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.65) 40%, rgba(255, 255, 255, 0.95) 85%, #ffffff 100%),
+        url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=85');
+    background-size: cover;
+    background-position: center;
+    background-attachment: scroll !important;
+}
+
+html.dark .hero-bg {
+    background-image:
+        linear-gradient(to bottom, rgba(11, 17, 32, 0.5) 0%, rgba(11, 17, 32, 0.8) 50%, rgba(2, 6, 23, 0.95) 100%),
+        url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=85');
+}
+
+/* --- property-offer --- */
+.ofp-offer-wrap {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #0f172a
+}
+
+.ofp-offer-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, .06)
+}
+
+.ofp-offer-image {
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+    background: #f1f5f9
+}
+
+.ofp-offer-body {
+    padding: 28px
+}
+
+.ofp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px
+}
+
+.ofp-stat {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 14px;
+    background: #f8fafc
+}
+
+.ofp-stat span {
+    display: block;
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 4px
+}
+
+.ofp-stat strong {
+    font-size: 17px
+}
+
+.ofp-terms {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 18px;
+    background: #fff;
+    max-height: 320px;
+    overflow: auto;
+    white-space: normal
+}
+
+.ofp-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 22px
+}
+
+.ofp-btn {
+    border: 0;
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-weight: 600;
+    cursor: pointer
+}
+
+.ofp-btn-primary {
+    background: #1a73e8;
+    color: #fff
+}
+
+.ofp-btn-danger {
+    background: #ef4444;
+    color: #fff
+}
+
+.ofp-alert {
+    padding: 14px 16px;
+    border-radius: 9px;
+    margin-bottom: 18px
+}
+
+.ofp-alert-error {
+    background: #fef2f2;
+    color: #991b1b
+}
+
+.ofp-alert-success {
+    background: #ecfdf5;
+    color: #065f46
+}
+
+.ofp-muted {
+    color: #64748b
+}
+
+.ofp-check {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    margin-top: 16px;
+    font-size: 14px
+}
+
+.ofp-check input {
+    margin-top: 3px
+}
+
+/* --- property-single-detail --- */
+body,
+.font-system,
+.font-sans {
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* Custom Mortgage Range Slider */
+.mortgage-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 9999px;
+    outline: none;
+    cursor: pointer;
+}
+
+.mortgage-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #2563eb;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.7);
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.mortgage-range::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    background: #1d4ed8;
+}
+
+.mortgage-range::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #2563eb;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.7);
+    cursor: pointer;
+}
+
+/* --- team --- */
+.ofp-team-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.ofp-team-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-card);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.ofp-team-table th,
+.ofp-team-table td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ofp-team-table th {
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ofp-team-table tr:last-child td {
+    border-bottom: none;
+}
+
+.ofp-badge-pending {
+    background: #fef08a;
+    color: #854d0e;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.ofp-badge-active {
+    background: #bbf7d0;
+    color: #166534;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.ofp-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.ofp-modal.active {
+    display: flex;
+}
+
+.ofp-modal-content {
+    background: var(--bg-card);
+    width: 100%;
+    max-width: 500px;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+}
+
+.ofp-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.ofp-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.ofp-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.ofp-form-group {
+    margin-bottom: 16px;
+}
+
+.ofp-form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.ofp-form-group input,
+.ofp-form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-body);
+    color: var(--text-main);
+}
+
+.ofp-permissions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.ofp-permission-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-main);
+}
 
 /* --- Tabs Navigation System --- */
 .ofp-tab-btn {
@@ -3519,22 +3908,27 @@ input[type="date"].ofp-input,
     margin-bottom: -1px;
     white-space: nowrap;
 }
+
 .ofp-tab-btn svg {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
     transition: transform 0.2s ease;
 }
+
 .ofp-tab-btn:hover {
     color: var(--text-main);
 }
+
 .ofp-tab-btn:hover svg {
     transform: translateY(-1px);
 }
+
 .ofp-tab-btn.active {
     color: var(--accent-blue) !important;
     border-bottom: 2px solid var(--accent-blue) !important;
 }
+
 .ofp-tab-badge {
     background: var(--bg-card-hover);
     color: var(--text-muted);
@@ -3543,6 +3937,7 @@ input[type="date"].ofp-input,
     font-size: 11px;
     font-weight: 600;
 }
+
 .ofp-tab-btn.active .ofp-tab-badge {
     background: rgba(59, 130, 246, 0.15);
     color: var(--accent-blue);
@@ -3571,12 +3966,14 @@ input[type="date"].ofp-input,
     outline: none !important;
     margin-right: auto !important;
 }
+
 .ofp-back-link-left svg,
 .ofp-back-link-left:hover svg {
     transform: none !important;
     transition: none !important;
     color: inherit !important;
 }
+
 [data-theme="light"] .ofp-back-link-left,
 [data-theme="light"] .ofp-back-link-left:hover,
 [data-theme="light"] .ofp-back-link-left:focus,
@@ -3592,241 +3989,278 @@ html.light .ofp-back-link-left:active {
     box-shadow: none !important;
     transition: none !important;
 }
-        .ofp-kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-        .ofp-kpi-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 18px 20px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        .ofp-kpi-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-        .ofp-kpi-icon svg {
-            width: 22px;
-            height: 22px;
-        }
-        .ofp-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(6px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-        }
-        .ofp-modal-content {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            width: 100%;
-            max-width: 540px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.5);
-            padding: 24px 28px;
-            animation: ofpModalPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes ofpModalPopIn {
-            from { opacity: 0; transform: translateY(14px) scale(0.97); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        .ofp-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 14px;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .ofp-modal-title {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text-main);
-            letter-spacing: -0.01em;
-        }
-        .ofp-modal-close-btn {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 22px;
-            line-height: 1;
-            padding: 4px;
-            border-radius: 6px;
-            transition: color 0.15s, background 0.15s;
-        }
-        .ofp-modal-close-btn:hover {
-            color: var(--text-main);
-            background: var(--bg-card-hover);
-        }
-        .ofp-field {
-            margin-bottom: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .ofp-field label {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-main);
-            margin: 0;
-        }
-        .ofp-field label .req {
-            color: var(--accent-red);
-            margin-left: 2px;
-        }
-        .ofp-field label .sub {
-            font-size: 11px;
-            font-weight: normal;
-            color: var(--text-muted);
-        }
-        .ofp-field-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-        @media (max-width: 580px) {
-            .ofp-field-row {
-                grid-template-columns: 1fr;
-            }
-        }
-        .ofp-modal-footer {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 12px;
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border-color);
-            flex-wrap: wrap;
-        }
-        .ofp-modal-footer .ofp-btn-secondary,
-        .ofp-modal-footer .ofp-btn-form-cancel {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            gap: 6px !important;
-            padding: 10px 22px !important;
-            font-size: 13.5px !important;
-            font-weight: 600 !important;
-            border-radius: 10px !important;
-            background: var(--bg-card, #ffffff) !important;
-            color: var(--text-muted, #64748b) !important;
-            border: 1px solid var(--border-color, #cbd5e1) !important;
-            cursor: pointer !important;
-            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
-            min-height: 42px !important;
-            box-sizing: border-box !important;
-            line-height: 1.2 !important;
-            text-decoration: none !important;
-        }
-        .ofp-modal-footer .ofp-btn-secondary:hover,
-        .ofp-modal-footer .ofp-btn-form-cancel:hover {
-            color: var(--text-main, #0f172a) !important;
-            border-color: var(--text-muted, #94a3b8) !important;
-            background: var(--bg-card-hover, #f1f5f9) !important;
-            transform: translateY(-1px);
-        }
-        .ofp-modal-footer .ofp-btn-primary,
-        .ofp-modal-footer .ofp-btn-form-save {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            gap: 8px !important;
-            background: var(--accent-blue, #2563eb) !important;
-            color: #ffffff !important;
-            font-size: 14px !important;
-            font-weight: 700 !important;
-            padding: 10px 26px !important;
-            border-radius: 10px !important;
-            border: none !important;
-            cursor: pointer !important;
-            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-            min-height: 42px !important;
-            box-sizing: border-box !important;
-            line-height: 1.2 !important;
-            text-decoration: none !important;
-        }
-        .ofp-modal-footer .ofp-btn-primary:hover,
-        .ofp-modal-footer .ofp-btn-form-save:hover {
-            background: #1d4ed8 !important;
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45) !important;
-        }
-        .ofp-modal-footer .ofp-btn-secondary:active,
-        .ofp-modal-footer .ofp-btn-form-cancel:active,
-        .ofp-modal-footer .ofp-btn-primary:active,
-        .ofp-modal-footer .ofp-btn-form-save:active {
-            transform: translateY(0);
-        }
-        [data-theme="dark"] .ofp-modal-footer .ofp-btn-secondary,
-        [data-theme="dark"] .ofp-modal-footer .ofp-btn-form-cancel,
-        html.dark .ofp-modal-footer .ofp-btn-secondary,
-        html.dark .ofp-modal-footer .ofp-btn-form-cancel {
-            background: #1e293b !important;
-            border-color: #334155 !important;
-            color: #cbd5e1 !important;
-        }
-        [data-theme="dark"] .ofp-modal-footer .ofp-btn-secondary:hover,
-        [data-theme="dark"] .ofp-modal-footer .ofp-btn-form-cancel:hover,
-        html.dark .ofp-modal-footer .ofp-btn-secondary:hover,
-        html.dark .ofp-modal-footer .ofp-btn-form-cancel:hover {
-            background: #334155 !important;
-            border-color: #475569 !important;
-            color: #ffffff !important;
-        }
-        .ofp-search-box {
-            position: relative;
-            width: 260px;
-        }
-        .ofp-search-box input {
-            padding-left: 36px !important;
-            height: 38px;
-            font-size: 13px;
-        }
-        .ofp-search-box svg {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-        }
-        .ofp-progress-track {
-            background: var(--bg-body);
-            border-radius: 999px;
-            height: 6px;
-            overflow: hidden;
-            width: 100%;
-            margin-top: 4px;
-        }
-        .ofp-progress-bar {
-            background: var(--accent-green);
-            height: 100%;
-            border-radius: 999px;
-            transition: width 0.3s ease;
-        }
+
+.ofp-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.ofp-kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.ofp-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ofp-kpi-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.ofp-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.ofp-modal-content {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 540px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.5);
+    padding: 24px 28px;
+    animation: ofpModalPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ofpModalPopIn {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.ofp-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ofp-modal-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+    letter-spacing: -0.01em;
+}
+
+.ofp-modal-close-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.ofp-modal-close-btn:hover {
+    color: var(--text-main);
+    background: var(--bg-card-hover);
+}
+
+.ofp-field {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ofp-field label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.ofp-field label .req {
+    color: var(--accent-red);
+    margin-left: 2px;
+}
+
+.ofp-field label .sub {
+    font-size: 11px;
+    font-weight: normal;
+    color: var(--text-muted);
+}
+
+.ofp-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+@media (max-width: 580px) {
+    .ofp-field-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ofp-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+.ofp-modal-footer .ofp-btn-secondary,
+.ofp-modal-footer .ofp-btn-form-cancel {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 10px 22px !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    background: var(--bg-card, #ffffff) !important;
+    color: var(--text-muted, #64748b) !important;
+    border: 1px solid var(--border-color, #cbd5e1) !important;
+    cursor: pointer !important;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    min-height: 42px !important;
+    box-sizing: border-box !important;
+    line-height: 1.2 !important;
+    text-decoration: none !important;
+}
+
+.ofp-modal-footer .ofp-btn-secondary:hover,
+.ofp-modal-footer .ofp-btn-form-cancel:hover {
+    color: var(--text-main, #0f172a) !important;
+    border-color: var(--text-muted, #94a3b8) !important;
+    background: var(--bg-card-hover, #f1f5f9) !important;
+    transform: translateY(-1px);
+}
+
+.ofp-modal-footer .ofp-btn-primary,
+.ofp-modal-footer .ofp-btn-form-save {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    background: var(--accent-blue, #2563eb) !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    padding: 10px 26px !important;
+    border-radius: 10px !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    min-height: 42px !important;
+    box-sizing: border-box !important;
+    line-height: 1.2 !important;
+    text-decoration: none !important;
+}
+
+.ofp-modal-footer .ofp-btn-primary:hover,
+.ofp-modal-footer .ofp-btn-form-save:hover {
+    background: #1d4ed8 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45) !important;
+}
+
+.ofp-modal-footer .ofp-btn-secondary:active,
+.ofp-modal-footer .ofp-btn-form-cancel:active,
+.ofp-modal-footer .ofp-btn-primary:active,
+.ofp-modal-footer .ofp-btn-form-save:active {
+    transform: translateY(0);
+}
+
+[data-theme="dark"] .ofp-modal-footer .ofp-btn-secondary,
+[data-theme="dark"] .ofp-modal-footer .ofp-btn-form-cancel,
+html.dark .ofp-modal-footer .ofp-btn-secondary,
+html.dark .ofp-modal-footer .ofp-btn-form-cancel {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .ofp-modal-footer .ofp-btn-secondary:hover,
+[data-theme="dark"] .ofp-modal-footer .ofp-btn-form-cancel:hover,
+html.dark .ofp-modal-footer .ofp-btn-secondary:hover,
+html.dark .ofp-modal-footer .ofp-btn-form-cancel:hover {
+    background: #334155 !important;
+    border-color: #475569 !important;
+    color: #ffffff !important;
+}
+
+.ofp-search-box {
+    position: relative;
+    width: 260px;
+}
+
+.ofp-search-box input {
+    padding-left: 36px !important;
+    height: 38px;
+    font-size: 13px;
+}
+
+.ofp-search-box svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.ofp-progress-track {
+    background: var(--bg-body);
+    border-radius: 999px;
+    height: 6px;
+    overflow: hidden;
+    width: 100%;
+    margin-top: 4px;
+}
+
+.ofp-progress-bar {
+    background: var(--accent-green);
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
 
 /* ── Zentra Dashboard Components ─────────────────────────────────────────── */
 
@@ -4202,9 +4636,20 @@ html.dark .ofp-stylized-map-box {
 }
 
 @keyframes ofpPulsePin {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
-    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7);
+    }
+
+    70% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(139, 92, 246, 0);
+    }
+
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+    }
 }
 
 /* Recent Properties List */
@@ -4280,6 +4725,7 @@ html.dark .ofp-stylized-map-box {
     .ofp-zentra-kpi-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+
     .ofp-zentra-analytics-grid,
     .ofp-zentra-bottom-grid {
         grid-template-columns: 1fr;
@@ -4296,9 +4742,11 @@ html.dark .ofp-stylized-map-box {
 .ofp-property-row {
     transition: background 0.15s ease;
 }
+
 .ofp-property-row:hover {
     background: var(--bg-card-hover) !important;
 }
+
 .ofp-prop-thumb-wrap {
     width: 68px;
     height: 52px;
@@ -4311,12 +4759,14 @@ html.dark .ofp-stylized-map-box {
     align-items: center;
     justify-content: center;
 }
+
 .ofp-prop-thumb-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
 }
+
 .ofp-prop-thumb-placeholder {
     width: 100%;
     height: 100%;
@@ -4326,11 +4776,13 @@ html.dark .ofp-stylized-map-box {
     color: var(--text-muted);
     background: rgba(255, 255, 255, 0.03);
 }
+
 .ofp-prop-info-cell {
     display: flex;
     align-items: center;
     gap: 14px;
 }
+
 .ofp-prop-meta-title {
     font-size: 14px;
     font-weight: 600;
@@ -4341,9 +4793,11 @@ html.dark .ofp-stylized-map-box {
     margin-bottom: 3px;
     transition: color 0.15s ease;
 }
+
 .ofp-prop-meta-title:hover {
     color: var(--accent-blue);
 }
+
 .ofp-prop-meta-loc {
     font-size: 12px;
     color: var(--text-muted);
@@ -4351,6 +4805,7 @@ html.dark .ofp-stylized-map-box {
     align-items: center;
     gap: 4px;
 }
+
 .ofp-spec-pill {
     display: inline-flex;
     align-items: center;
@@ -4359,6 +4814,7 @@ html.dark .ofp-stylized-map-box {
     font-weight: 500;
     color: var(--text-muted);
 }
+
 .ofp-table-action-icon {
     display: inline-flex;
     align-items: center;
@@ -4373,11 +4829,13 @@ html.dark .ofp-stylized-map-box {
     text-decoration: none;
     cursor: pointer;
 }
+
 .ofp-table-action-icon:hover {
     color: var(--text-main);
     border-color: var(--accent-blue);
     background: rgba(59, 130, 246, 0.08);
 }
+
 .ofp-table-action-icon.danger:hover {
     color: #ef4444;
     border-color: #ef4444;
@@ -4392,6 +4850,7 @@ html.dark .ofp-stylized-map-box {
     padding: 24px;
     margin-bottom: 24px;
 }
+
 .ofp-form-section-header {
     display: flex;
     align-items: center;
@@ -4400,6 +4859,7 @@ html.dark .ofp-stylized-map-box {
     margin-bottom: 20px;
     border-bottom: 1px solid var(--border-color);
 }
+
 .ofp-form-section-icon {
     width: 38px;
     height: 38px;
@@ -4411,17 +4871,20 @@ html.dark .ofp-stylized-map-box {
     justify-content: center;
     flex-shrink: 0;
 }
+
 .ofp-form-section-title {
     font-size: 16px;
     font-weight: 700;
     color: var(--text-main);
     margin: 0 0 2px 0;
 }
+
 .ofp-form-section-desc {
     font-size: 13px;
     color: var(--text-muted);
     margin: 0;
 }
+
 .ofp-amenity-card {
     display: flex;
     align-items: center;
@@ -4436,15 +4899,18 @@ html.dark .ofp-stylized-map-box {
     color: var(--text-main);
     user-select: none;
 }
+
 .ofp-amenity-card:hover {
     border-color: var(--accent-blue);
 }
+
 .ofp-amenity-card input[type="checkbox"] {
     accent-color: var(--accent-blue);
     width: 16px;
     height: 16px;
     cursor: pointer;
 }
+
 .ofp-file-dropzone {
     border: 2px dashed var(--border-color);
     border-radius: 12px;
@@ -4455,11 +4921,13 @@ html.dark .ofp-stylized-map-box {
     cursor: pointer;
     position: relative;
 }
+
 .ofp-file-dropzone:hover,
 .ofp-file-dropzone.ofp-dropzone-dragover {
     border-color: var(--accent-blue);
     background: rgba(37, 99, 235, 0.04);
 }
+
 .ofp-file-dropzone.ofp-dropzone-dragover {
     box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
 }
@@ -4471,6 +4939,7 @@ html.dark .ofp-stylized-map-box {
     gap: 14px;
     margin-top: 16px;
 }
+
 .ofp-photo-preview-card {
     position: relative;
     border-radius: 10px;
@@ -4481,20 +4950,24 @@ html.dark .ofp-stylized-map-box {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
     transition: all 0.2s ease;
 }
+
 .ofp-photo-preview-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
 }
+
 .ofp-photo-preview-card.is-primary {
     border: 2px solid #10b981;
     box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
+
 .ofp-photo-preview-card img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
 }
+
 .ofp-photo-remove-btn {
     position: absolute;
     top: 5px;
@@ -4512,14 +4985,16 @@ html.dark .ofp-stylized-map-box {
     font-size: 15px;
     line-height: 1;
     font-weight: 700;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     transition: all 0.15s ease;
     z-index: 5;
 }
+
 .ofp-photo-remove-btn:hover {
     background: #dc2626;
     transform: scale(1.12);
 }
+
 .ofp-photo-badge {
     position: absolute;
     bottom: 5px;
@@ -4533,21 +5008,25 @@ html.dark .ofp-stylized-map-box {
     transition: all 0.15s ease;
     user-select: none;
 }
+
 .ofp-badge-main {
     background: #10b981;
     color: #ffffff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
 }
+
 .ofp-badge-set-main {
     background: rgba(15, 23, 42, 0.75);
     color: #ffffff;
     opacity: 0.88;
 }
+
 .ofp-badge-set-main:hover {
     background: var(--accent-blue);
     opacity: 1;
     transform: scale(1.05);
 }
+
 .ofp-photo-info {
     position: absolute;
     top: 5px;
@@ -4563,6 +5042,7 @@ html.dark .ofp-stylized-map-box {
     text-overflow: ellipsis;
     pointer-events: none;
 }
+
 .ofp-existing-photo-card {
     position: relative;
     border-radius: 10px;
@@ -4573,10 +5053,12 @@ html.dark .ofp-stylized-map-box {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
     transition: all 0.2s ease;
 }
+
 .ofp-existing-photo-card.is-main {
     border: 2px solid var(--accent-blue);
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
+
 .ofp-existing-photo-card img {
     width: 100%;
     height: 100%;
@@ -4600,6 +5082,7 @@ html.dark .ofp-stylized-map-box {
     margin-bottom: 24px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
+
 .ofp-segmented-tab {
     display: inline-flex;
     align-items: center;
@@ -4614,28 +5097,34 @@ html.dark .ofp-stylized-map-box {
     white-space: nowrap;
     border: 1px solid transparent;
 }
+
 .ofp-segmented-tab svg {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
     transition: transform 0.2s ease;
 }
+
 .ofp-segmented-tab:hover {
     color: var(--text-main);
     background: rgba(255, 255, 255, 0.04);
 }
+
 .ofp-segmented-tab:hover svg {
     transform: translateY(-1px);
 }
+
 .ofp-segmented-tab.active {
     background: var(--accent-blue, #2563eb) !important;
     color: #ffffff !important;
     border-color: var(--accent-blue, #2563eb) !important;
     box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
 }
+
 .ofp-segmented-tab.active svg {
     color: #ffffff;
 }
+
 .ofp-segmented-tab .ofp-tab-badge {
     font-size: 11px;
     font-weight: 700;
@@ -4645,6 +5134,7 @@ html.dark .ofp-stylized-map-box {
     color: var(--text-muted);
     transition: all 0.2s ease;
 }
+
 .ofp-segmented-tab.active .ofp-tab-badge {
     background: rgba(255, 255, 255, 0.25);
     color: #ffffff;
@@ -4667,11 +5157,13 @@ html.dark .ofp-stylized-map-box {
     transition: all 0.2s ease;
     cursor: pointer;
 }
+
 .ofp-btn-header-add:hover {
     background: var(--btn-primary-hover, #0d655e);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
+
 .ofp-btn-header-add:active {
     transform: translateY(0);
 }
@@ -4690,22 +5182,26 @@ html.dark .ofp-stylized-map-box {
     border: none;
     padding: 0;
 }
+
 .ofp-table-action-btn.view {
     background: var(--bg-card);
     color: var(--text-muted);
     border: 1px solid var(--border-color);
 }
+
 .ofp-table-action-btn.view:hover {
     color: var(--text-main);
     border-color: var(--text-muted);
     background: var(--bg-card-hover);
     transform: translateY(-1px);
 }
+
 .ofp-table-action-btn.edit {
     background: rgba(59, 130, 246, 0.1);
     color: var(--accent-blue, #3b82f6);
     border: 1px solid rgba(59, 130, 246, 0.25);
 }
+
 .ofp-table-action-btn.edit:hover {
     background: var(--accent-blue, #3b82f6);
     color: #ffffff;
@@ -4713,6 +5209,7 @@ html.dark .ofp-stylized-map-box {
     transform: translateY(-1px);
     box-shadow: 0 3px 8px rgba(59, 130, 246, 0.35);
 }
+
 /* Solid Red Delete Button (Exact match from the HomeVista monitor image) */
 .ofp-table-action-btn.delete {
     background: #ef4444 !important;
@@ -4720,11 +5217,13 @@ html.dark .ofp-stylized-map-box {
     border: none !important;
     box-shadow: 0 2px 5px rgba(239, 68, 68, 0.3);
 }
+
 .ofp-table-action-btn.delete:hover {
     background: #dc2626 !important;
     transform: translateY(-1px);
     box-shadow: 0 4px 10px rgba(220, 38, 38, 0.45);
 }
+
 .ofp-table-action-btn.delete:active {
     transform: translateY(0);
 }
@@ -4737,6 +5236,7 @@ html.dark .ofp-stylized-map-box {
     margin-top: 28px;
     flex-wrap: wrap;
 }
+
 .ofp-btn-form-save {
     display: inline-flex;
     align-items: center;
@@ -4752,11 +5252,13 @@ html.dark .ofp-stylized-map-box {
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .ofp-btn-form-save:hover {
     background: #1d4ed8;
     transform: translateY(-1px);
     box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
 }
+
 .ofp-btn-form-save:active {
     transform: translateY(0);
 }
@@ -4776,6 +5278,7 @@ html.dark .ofp-stylized-map-box {
     cursor: pointer;
     transition: all 0.15s ease;
 }
+
 .ofp-btn-form-cancel:hover {
     color: var(--text-main) !important;
     border-color: var(--text-muted);
@@ -4798,6 +5301,7 @@ html.dark .ofp-stylized-map-box {
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
     transition: all 0.15s ease;
 }
+
 .ofp-btn-form-delete:hover {
     background: #dc2626;
     box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
@@ -4818,6 +5322,7 @@ html.dark .ofp-stylized-map-box {
     margin-top: 10px;
     transition: all 0.15s ease;
 }
+
 .ofp-btn-browse-photos:hover {
     background: var(--accent-blue);
     color: #ffffff;
@@ -4840,6 +5345,7 @@ html.dark .ofp-stylized-map-box {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     cursor: pointer;
 }
+
 .ofp-btn-plan-action svg {
     width: 15px;
     height: 15px;
@@ -4847,6 +5353,7 @@ html.dark .ofp-stylized-map-box {
     color: var(--accent-blue, #2563eb);
     transition: transform 0.25s ease;
 }
+
 .ofp-btn-plan-action:hover {
     background: var(--accent-blue, #2563eb);
     color: #ffffff !important;
@@ -4854,19 +5361,23 @@ html.dark .ofp-stylized-map-box {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
 }
+
 .ofp-btn-plan-action:hover svg {
     color: #ffffff !important;
     transform: rotate(45deg);
 }
+
 .ofp-btn-plan-action.primary {
     background: var(--accent-blue, #2563eb);
     color: #ffffff !important;
     border-color: var(--accent-blue, #2563eb);
     box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
+
 .ofp-btn-plan-action.primary svg {
     color: #ffffff;
 }
+
 .ofp-btn-plan-action.primary:hover {
     background: #1d4ed8;
     transform: translateY(-1px);
@@ -4887,6 +5398,7 @@ html.dark .ofp-stylized-map-box {
     margin-bottom: 12px;
     -webkit-overflow-scrolling: touch;
 }
+
 .ofp-location-pill-btn {
     display: inline-flex;
     align-items: center;
@@ -4902,10 +5414,12 @@ html.dark .ofp-stylized-map-box {
     white-space: nowrap;
     transition: all 0.15s ease;
 }
+
 .ofp-location-pill-btn:hover {
     color: var(--text-main);
     border-color: #8b5cf6;
 }
+
 .ofp-location-pill-btn.active {
     background: #8b5cf6;
     color: #ffffff !important;
@@ -4928,6 +5442,7 @@ html.dark .ofp-stylized-map-box {
     background: var(--bg-body);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
+
 .ofp-google-map-wrap iframe {
     width: 100%;
     height: 100%;
@@ -4954,6 +5469,7 @@ html.dark .ofp-stylized-map-box {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
     pointer-events: none;
 }
+
 .ofp-beacon-dot-wrap {
     position: relative;
     display: flex;
@@ -4963,6 +5479,7 @@ html.dark .ofp-stylized-map-box {
     height: 10px;
     flex-shrink: 0;
 }
+
 .ofp-beacon-ping {
     width: 10px;
     height: 10px;
@@ -4971,6 +5488,7 @@ html.dark .ofp-stylized-map-box {
     opacity: 0.75;
     animation: ofpBeaconPulse 1.8s infinite;
 }
+
 .ofp-beacon-core {
     position: absolute;
     width: 6px;
@@ -4978,17 +5496,31 @@ html.dark .ofp-stylized-map-box {
     border-radius: 50%;
     background: #10b981;
 }
+
 @keyframes ofpBeaconPulse {
-    0% { transform: scale(0.9); opacity: 0.9; }
-    50% { transform: scale(1.6); opacity: 0.2; }
-    100% { transform: scale(0.9); opacity: 0.9; }
+    0% {
+        transform: scale(0.9);
+        opacity: 0.9;
+    }
+
+    50% {
+        transform: scale(1.6);
+        opacity: 0.2;
+    }
+
+    100% {
+        transform: scale(0.9);
+        opacity: 0.9;
+    }
 }
+
 .ofp-map-badge-title {
     font-size: 11.5px;
     font-weight: 700;
     line-height: 1.2;
     color: #ffffff;
 }
+
 .ofp-map-badge-sub {
     font-size: 9.5px;
     opacity: 0.75;
@@ -5003,6 +5535,7 @@ html.dark .ofp-stylized-map-box {
     right: 10px;
     z-index: 10;
 }
+
 .ofp-map-external-link-btn {
     display: inline-flex;
     align-items: center;
@@ -5018,17 +5551,20 @@ html.dark .ofp-stylized-map-box {
     border: 1px solid rgba(0, 0, 0, 0.08);
     transition: all 0.15s ease;
 }
+
 .ofp-map-external-link-btn:hover {
     background: #ffffff;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
 }
+
 [data-theme="dark"] .ofp-map-external-link-btn,
 html.dark .ofp-map-external-link-btn {
     background: rgba(30, 41, 59, 0.96);
     color: #f8fafc;
     border-color: rgba(255, 255, 255, 0.12);
 }
+
 [data-theme="dark"] .ofp-map-external-link-btn:hover,
 html.dark .ofp-map-external-link-btn:hover {
     background: #1e293b;
@@ -5049,19 +5585,23 @@ html.dark .ofp-map-external-link-btn:hover {
     transition: all 0.15s ease;
     padding: 0;
 }
+
 .ofp-btn-card-locate:hover {
     background: #8b5cf6;
     color: #ffffff;
     transform: scale(1.1);
 }
+
 .ofp-map-pin:hover {
     transform: translate(-50%, -50%) scale(1.1);
     z-index: 20;
 }
+
 .ofp-map-pin.active {
     transform: translate(-50%, -50%) scale(1.15);
     z-index: 25;
 }
+
 .ofp-map-pin-circle {
     width: 20px;
     height: 20px;
@@ -5072,17 +5612,28 @@ html.dark .ofp-map-external-link-btn:hover {
     animation: ofpPulsePin 2s infinite;
     transition: all 0.2s ease;
 }
+
 .ofp-map-pin.active .ofp-map-pin-circle {
     background: #6366f1;
     border-color: #ffffff;
     box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.35), 0 6px 16px rgba(99, 102, 241, 0.5);
     animation: ofpPulseActive 1.4s infinite;
 }
+
 @keyframes ofpPulseActive {
-    0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
-    70% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+    0% {
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 12px rgba(99, 102, 241, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    }
 }
+
 .ofp-map-pin-label {
     margin-top: 4px;
     background: rgba(15, 23, 42, 0.88);
@@ -5100,12 +5651,14 @@ html.dark .ofp-map-external-link-btn:hover {
     pointer-events: auto;
     transition: all 0.2s ease;
 }
+
 .ofp-map-pin.active .ofp-map-pin-label {
     background: #6366f1;
     color: #ffffff;
     font-weight: 700;
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }
+
 .ofp-map-pin-label .ofp-pin-count {
     background: rgba(255, 255, 255, 0.25);
     padding: 1px 5px;
@@ -5127,6 +5680,7 @@ html.dark .ofp-map-external-link-btn:hover {
     font-size: 12px;
     font-weight: 600;
 }
+
 .ofp-loc-filter-badge button {
     background: none;
     border: none;
@@ -5139,6 +5693,7 @@ html.dark .ofp-map-external-link-btn:hover {
     display: flex;
     align-items: center;
 }
+
 .ofp-loc-filter-badge button:hover {
     color: #ef4444;
 }
@@ -5153,6 +5708,7 @@ html.dark .ofp-map-external-link-btn:hover {
     border-radius: 10px;
     border: 1px dashed var(--border-color);
 }
+
 .ofp-location-empty-state button {
     margin-top: 10px;
     background: rgba(139, 92, 246, 0.12);
@@ -5164,6 +5720,7 @@ html.dark .ofp-map-external-link-btn:hover {
     font-weight: 600;
     cursor: pointer;
 }
+
 .ofp-location-empty-state button:hover {
     background: #8b5cf6;
     color: #ffffff;
@@ -5931,15 +6488,15 @@ html.dark .ofp-input-unit-tag {
 }
 
 @media (max-width: 640px) {
+
     .ofp-specs-card-grid,
     .ofp-condition-furnishing-grid,
     .ofp-land-grid {
         grid-template-columns: 1fr;
     }
+
     .ofp-sizing-card-header {
         flex-direction: column;
         align-items: flex-start;
     }
 }
-
-

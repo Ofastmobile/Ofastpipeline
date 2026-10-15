@@ -180,6 +180,14 @@ if ( $current_user && empty( $current_user->is_team_member ) && ! OFP_Brand::hid
     ];
 }
 
+$nav_items[] = [
+    'label'  => 'Profile',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>',
+    'url'    => home_url( '/profile' ),
+    'slug'   => 'profile',
+    'locked' => false,
+];
+
 // Plans & Pricing: hidden for solo companies, they have no plan to choose
 if ( ! OFP_Brand::hide_plan_prompts( $client ) ) {
 $nav_items[] = [
@@ -219,7 +227,8 @@ svg { max-width: 100%; box-sizing: border-box; }
                     <?php foreach ( $nav_items as $item ) :
                         $is_active = ! $item['locked'] && $item['slug'] && (
                             strpos( $current_url, '/' . $item['slug'] ) !== false ||
-                            ( $item['slug'] === 'tenants' && strpos( $current_url, '/rent' ) !== false )
+                            ( $item['slug'] === 'tenants' && strpos( $current_url, '/rent' ) !== false ) ||
+                            ( $item['slug'] === 'profile' && strpos( $current_url, '/account' ) !== false )
                         );
                         $classes = 'ofp-nav-item';
                         if ( $is_active )      $classes .= ' active';
@@ -402,68 +411,89 @@ svg { max-width: 100%; box-sizing: border-box; }
                         </svg>
                     </button>
 
-                    <a href="<?php echo esc_url( home_url( '/reports' ) ); ?>" class="ofp-hero-btn-export">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:16px;height:16px;">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                        </svg>
-                        <span>Export Report</span>
-                    </a>
-
                     <?php
-                    $banner_btn_label   = 'Add New Property';
-                    $banner_btn_url     = home_url( '/properties' );
-                    $banner_btn_onclick = '';
-                    $banner_btn_icon    = 'plus';
-
-                    if ( ! empty( $ofp_banner_btn['label'] ) && ! empty( $ofp_banner_btn['url'] ) ) {
-                        $banner_btn_label   = $ofp_banner_btn['label'];
-                        $banner_btn_url     = $ofp_banner_btn['url'];
-                        $banner_btn_onclick = $ofp_banner_btn['onclick'] ?? '';
-                        $banner_btn_icon    = $ofp_banner_btn['icon'] ?? 'plus';
-                    } elseif (
-                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'team' ) !== false ||
-                        strpos( $current_url, '/team' ) !== false
-                    ) {
-                        $banner_btn_label   = '+ Invite Member';
-                        $banner_btn_url     = home_url( '/team-invite' );
-                        $banner_btn_onclick = "if(typeof openInviteModal==='function'){ openInviteModal(); return false; }";
-                        $banner_btn_icon    = 'none'; // Plus is already included in label
-                    } elseif (
-                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'communication' ) !== false ||
-                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'message-templates' ) !== false ||
-                        strpos( $current_url, '/communications' ) !== false ||
-                        strpos( $current_url, '/message-templates' ) !== false
-                    ) {
-                        $banner_btn_label = 'Email Brand & Layout';
-                        $banner_btn_url   = home_url( '/message-templates?tab=branding' );
-                        $banner_btn_icon  = 'branding';
-                    } elseif (
-                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-sales' ) !== false ||
-                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-purchases' ) !== false ||
-                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-payments' ) !== false ||
-                        strpos( $current_url, '/property-sales' ) !== false ||
-                        strpos( $current_url, '/property-purchases' ) !== false ||
-                        strpos( $current_url, '/property-payments' ) !== false ||
-                        isset( $ofp_sales_tab )
-                    ) {
-                        $banner_btn_label = 'Add Purchase';
-                        $banner_btn_url   = home_url( '/property-purchases' );
-                    }
+                    $ofp_is_profile_page = (
+                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'profile' ) !== false ||
+                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'account' ) !== false ||
+                        strpos( $current_url, '/profile' ) !== false ||
+                        strpos( $current_url, '/account' ) !== false
+                    );
                     ?>
-                    <a href="<?php echo esc_url( $banner_btn_url ); ?>" 
-                       <?php if ( ! empty( $banner_btn_onclick ) ) : ?>onclick="<?php echo esc_attr( $banner_btn_onclick ); ?>"<?php endif; ?>
-                       class="ofp-hero-btn-add">
-                        <?php if ( $banner_btn_icon === 'branding' ) : ?>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
+
+                    <?php if ( $ofp_is_profile_page ) : ?>
+                        <a href="<?php echo esc_url( home_url( '/agent/' . ( $client->profile_slug ?: 'agent-' . $client->id ) ) ); ?>" target="_blank" class="ofp-hero-btn-export" title="View Public Landing Page">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                            <span>Public Profile</span>
+                        </a>
+
+                        <a href="#" onclick="if(typeof openEditModal==='function'){ openEditModal(); } return false;" class="ofp-hero-btn-add">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            <span>Edit Profile</span>
+                        </a>
+                    <?php else : ?>
+                        <a href="<?php echo esc_url( home_url( '/reports' ) ); ?>" class="ofp-hero-btn-export">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:16px;height:16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                             </svg>
-                        <?php elseif ( $banner_btn_icon !== 'none' ) : ?>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:16px;height:16px;">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                            </svg>
-                        <?php endif; ?>
-                        <span><?php echo esc_html( $banner_btn_label ); ?></span>
-                    </a>
+                            <span>Export Report</span>
+                        </a>
+
+                        <?php
+                        $banner_btn_label   = 'Add New Property';
+                        $banner_btn_url     = home_url( '/properties' );
+                        $banner_btn_onclick = '';
+                        $banner_btn_icon    = 'plus';
+
+                        if ( ! empty( $ofp_banner_btn['label'] ) && ! empty( $ofp_banner_btn['url'] ) ) {
+                            $banner_btn_label   = $ofp_banner_btn['label'];
+                            $banner_btn_url     = $ofp_banner_btn['url'];
+                            $banner_btn_onclick = $ofp_banner_btn['onclick'] ?? '';
+                            $banner_btn_icon    = $ofp_banner_btn['icon'] ?? 'plus';
+                        } elseif (
+                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'team' ) !== false ||
+                            strpos( $current_url, '/team' ) !== false
+                        ) {
+                            $banner_btn_label   = '+ Invite Member';
+                            $banner_btn_url     = home_url( '/team-invite' );
+                            $banner_btn_onclick = "if(typeof openInviteModal==='function'){ openInviteModal(); return false; }";
+                            $banner_btn_icon    = 'none'; // Plus is already included in label
+                        } elseif (
+                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'communication' ) !== false ||
+                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'message-templates' ) !== false ||
+                            strpos( $current_url, '/communications' ) !== false ||
+                            strpos( $current_url, '/message-templates' ) !== false
+                        ) {
+                            $banner_btn_label = 'Email Brand & Layout';
+                            $banner_btn_url   = home_url( '/message-templates?tab=branding' );
+                            $banner_btn_icon  = 'branding';
+                        } elseif (
+                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-sales' ) !== false ||
+                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-purchases' ) !== false ||
+                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-payments' ) !== false ||
+                            strpos( $current_url, '/property-sales' ) !== false ||
+                            strpos( $current_url, '/property-purchases' ) !== false ||
+                            strpos( $current_url, '/property-payments' ) !== false ||
+                            isset( $ofp_sales_tab )
+                        ) {
+                            $banner_btn_label = 'Add Purchase';
+                            $banner_btn_url   = home_url( '/property-purchases' );
+                        }
+                        ?>
+                        <a href="<?php echo esc_url( $banner_btn_url ); ?>" 
+                           <?php if ( ! empty( $banner_btn_onclick ) ) : ?>onclick="<?php echo esc_attr( $banner_btn_onclick ); ?>"<?php endif; ?>
+                           class="ofp-hero-btn-add">
+                            <?php if ( $banner_btn_icon === 'branding' ) : ?>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
+                                </svg>
+                            <?php elseif ( $banner_btn_icon !== 'none' ) : ?>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:16px;height:16px;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                </svg>
+                            <?php endif; ?>
+                            <span><?php echo esc_html( $banner_btn_label ); ?></span>
+                        </a>
+                    <?php endif; ?>
                 </div>
             </div>
             </div> <!-- .ofp-hero-full-header-overlay -->
