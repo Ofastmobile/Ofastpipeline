@@ -302,20 +302,35 @@
         });
     }
 
-    // ── User Dropdown Toggle ─────────────────────────────────────────────────
+    // ── User & Notification Dropdown Toggle ─────────────────────────────────
     function initUserDropdown() {
-        var menu = document.getElementById('ofp-user-menu');
-        var avatar = document.getElementById('ofp-user-avatar');
-        if ( ! menu || ! avatar ) return;
+        var userMenu = document.getElementById('ofp-user-menu');
+        var avatar   = document.getElementById('ofp-user-avatar');
+        var notifMenu    = document.getElementById('ofp-notif-menu');
+        var notifTrigger = document.getElementById('ofp-notif-trigger');
 
-        avatar.addEventListener('click', function (e) {
-            e.stopPropagation();
-            menu.classList.toggle('active');
-        });
+        if ( avatar && userMenu ) {
+            avatar.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if ( notifMenu ) notifMenu.classList.remove('active');
+                userMenu.classList.toggle('active');
+            });
+        }
+
+        if ( notifTrigger && notifMenu ) {
+            notifTrigger.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if ( userMenu ) userMenu.classList.remove('active');
+                notifMenu.classList.toggle('active');
+            });
+        }
 
         document.addEventListener('click', function (e) {
-            if ( ! menu.contains(e.target) ) {
-                menu.classList.remove('active');
+            if ( userMenu && ! userMenu.contains(e.target) ) {
+                userMenu.classList.remove('active');
+            }
+            if ( notifMenu && ! notifMenu.contains(e.target) ) {
+                notifMenu.classList.remove('active');
             }
         });
     }

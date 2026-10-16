@@ -1,0 +1,1289 @@
+/* ==========================================================================
+   OFast Pipeline — Modern Admin Portal Stylesheet
+   Designed based on Design #2 (Deep Emerald / Forest Sidebar + Clean SaaS Dashboard)
+   Supports Light & Dark Modes seamlessly
+   ========================================================================== */
+
+:root {
+    --ofp-admin-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+    /* Emerald Theme Colors */
+    --ofp-primary: #10b981;
+    --ofp-primary-hover: #059669;
+    --ofp-primary-light: rgba(16, 185, 129, 0.12);
+    --ofp-primary-border: rgba(16, 185, 129, 0.25);
+
+    /* Sidebar (Deep Forest Green) */
+    --ofp-sb-bg: #09261f;
+    --ofp-sb-bg-darker: #061c16;
+    --ofp-sb-border: rgba(255, 255, 255, 0.08);
+    --ofp-sb-text: #94a3b8;
+    --ofp-sb-text-active: #ffffff;
+    --ofp-sb-item-hover: rgba(255, 255, 255, 0.06);
+    --ofp-sb-item-active: rgba(16, 185, 129, 0.15);
+
+    /* Light Mode Palette (Default) */
+    --ofp-body-bg: #f8fafc;
+    --ofp-card-bg: #ffffff;
+    --ofp-card-border: #e2e8f0;
+    --ofp-text-main: #0f172a;
+    --ofp-text-muted: #64748b;
+    --ofp-text-light: #94a3b8;
+    --ofp-input-bg: #ffffff;
+    --ofp-input-border: #cbd5e1;
+    --ofp-table-stripe: #f8fafc;
+    --ofp-table-hover: #f1f5f9;
+    --ofp-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+    --ofp-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07);
+}
+
+/* Dark Mode Palette */
+body.ofp-dark-mode,
+.ofp-portal-wrapper.ofp-dark-mode {
+    --ofp-body-bg: #0b1120;
+    --ofp-card-bg: #131c2e;
+    --ofp-card-border: #1e293b;
+    --ofp-text-main: #f8fafc;
+    --ofp-text-muted: #94a3b8;
+    --ofp-text-light: #64748b;
+    --ofp-input-bg: #1e293b;
+    --ofp-input-border: #334155;
+    --ofp-table-stripe: #172236;
+    --ofp-table-hover: #1e293b;
+    --ofp-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+    --ofp-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+}
+
+/* Global Reset for Admin Portal */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body.ofp-admin-portal-body {
+    background: var(--ofp-body-bg);
+    color: var(--ofp-text-main);
+    font-family: var(--ofp-admin-font);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+.ofp-portal-wrapper {
+    display: flex;
+    min-height: 100vh;
+    background: var(--ofp-body-bg);
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SIDEBAR (Design #2 Deep Emerald Aesthetics - Sleek Executive Navbar)
+   ───────────────────────────────────────────────────────────────────────── */
+.ofp-sb {
+    width: 240px;
+    background: var(--ofp-sb-bg);
+    color: var(--ofp-sb-text);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    border-right: 1px solid var(--ofp-sb-border);
+    transition: width 0.3s ease, transform 0.3s ease;
+    z-index: 50;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.ofp-sb::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ofp-sb::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+
+.ofp-sb-header {
+    padding: 16px 14px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--ofp-sb-border);
+}
+
+.ofp-sb-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: #ffffff;
+}
+
+.ofp-sb-logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 14.5px;
+    font-weight: 800;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+}
+
+.ofp-sb-brand-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.ofp-sb-brand-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #ffffff;
+    line-height: 1.15;
+}
+
+.ofp-sb-brand-badge {
+    font-size: 10px;
+    color: #34d399;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.ofp-sb-collapse-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: none;
+    color: #94a3b8;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.ofp-sb-collapse-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+/* Sidebar Search Box (⌘F) */
+.ofp-sb-search-wrap {
+    padding: 12px 10px 6px;
+}
+
+.ofp-sb-search {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 6.5px 10px;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.ofp-sb-search:focus-within {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(16, 185, 129, 0.5);
+}
+
+.ofp-sb-search input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    font-size: 12.5px;
+    width: 100%;
+}
+
+.ofp-sb-search input::placeholder {
+    color: #64748b;
+}
+
+.ofp-sb-search kbd {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    color: #94a3b8;
+    font-size: 10px;
+    padding: 1px 4px;
+    font-family: inherit;
+}
+
+/* Nav Menu Sections */
+.ofp-sb-nav {
+    flex: 1;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.ofp-nav-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.ofp-nav-group-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    padding: 0 10px 6px;
+    margin: 0;
+}
+
+.ofp-nav-list {
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ofp-nav-item {
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.ofp-nav-item a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: var(--ofp-sb-text);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.18s ease;
+    position: relative;
+}
+
+.ofp-nav-item a:hover {
+    background: var(--ofp-sb-item-hover);
+    color: #ffffff;
+}
+
+.ofp-nav-item.active a {
+    background: var(--ofp-sb-item-active);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.ofp-nav-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    opacity: 0.85;
+}
+
+.ofp-nav-item.active .ofp-nav-icon {
+    color: #34d399;
+    opacity: 1;
+}
+
+.ofp-nav-badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+}
+
+.ofp-nav-badge.warning {
+    background: rgba(245, 158, 11, 0.25);
+    color: #fbbf24;
+}
+
+/* Sidebar Footer (Admin User & Return to WP Admin) */
+.ofp-sb-footer {
+    padding: 14px 14px;
+    border-top: 1px solid var(--ofp-sb-border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--ofp-sb-bg-darker);
+}
+
+.ofp-wp-switch-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.07);
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 12.5px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    transition: all 0.2s;
+}
+
+.ofp-wp-switch-btn:hover {
+    background: #10b981;
+    border-color: #10b981;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.ofp-sb-user-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 2px;
+}
+
+.ofp-sb-user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(16, 185, 129, 0.4);
+}
+
+.ofp-sb-user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ofp-sb-user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ofp-sb-user-role {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.ofp-sb-logout {
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: color 0.2s;
+}
+
+.ofp-sb-logout:hover {
+    color: #ef4444;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   MAIN CONTENT CONTAINER
+   ───────────────────────────────────────────────────────────────────────── */
+.ofp-portal-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--ofp-body-bg);
+}
+
+/* Top Header Bar */
+.ofp-portal-header {
+    height: 66px;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--ofp-card-bg);
+    border-bottom: 1px solid var(--ofp-card-border);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+}
+
+.ofp-portal-header-left {
+    display: flex;
+    flex-direction: column;
+}
+
+.ofp-page-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ofp-text-main);
+    line-height: 1.25;
+}
+
+.ofp-page-subtitle {
+    font-size: 12.5px;
+    color: var(--ofp-text-muted);
+}
+
+.ofp-portal-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Header Action Buttons */
+.ofp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.ofp-btn-primary {
+    background: var(--ofp-primary);
+    color: #ffffff;
+}
+
+.ofp-btn-primary:hover {
+    background: var(--ofp-primary-hover);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.ofp-btn-outline {
+    background: transparent;
+    border-color: var(--ofp-card-border);
+    color: var(--ofp-text-main);
+}
+
+.ofp-btn-outline:hover {
+    background: var(--ofp-table-hover);
+}
+
+.ofp-btn-wp {
+    background: #0f172a;
+    color: #ffffff;
+}
+
+body.ofp-dark-mode .ofp-btn-wp {
+    background: #1e293b;
+    border: 1px solid #334155;
+}
+
+.ofp-btn-wp:hover {
+    background: #10b981;
+    color: #ffffff;
+}
+
+/* Theme Toggle Button */
+.ofp-theme-toggle {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    border: 1px solid var(--ofp-card-border);
+    background: var(--ofp-card-bg);
+    color: var(--ofp-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.ofp-theme-toggle:hover {
+    color: var(--ofp-text-main);
+    border-color: var(--ofp-primary);
+}
+
+/* Notifications Button */
+.ofp-notif-btn {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    border: 1px solid var(--ofp-card-border);
+    background: var(--ofp-card-bg);
+    color: var(--ofp-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.ofp-notif-btn:hover {
+    color: var(--ofp-text-main);
+}
+
+.ofp-notif-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    background: #ef4444;
+    border-radius: 50%;
+    border: 2px solid var(--ofp-card-bg);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BODY CONTENT & DASHBOARD SECTIONS (Matching Design #2)
+   ───────────────────────────────────────────────────────────────────────── */
+.ofp-portal-content {
+    padding: 28px 32px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* 4 Top KPI Metric Cards */
+.ofp-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.ofp-kpi-card {
+    background: var(--ofp-card-bg);
+    border: 1px solid var(--ofp-card-border);
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: var(--ofp-shadow);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+
+.ofp-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--ofp-shadow-lg);
+}
+
+.ofp-kpi-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.ofp-kpi-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ofp-text-muted);
+}
+
+.ofp-kpi-icon-wrap {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--ofp-primary-light);
+    color: var(--ofp-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ofp-kpi-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--ofp-text-main);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin-bottom: 12px;
+}
+
+.ofp-kpi-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--ofp-card-border);
+    padding-top: 12px;
+    font-size: 12px;
+    color: var(--ofp-text-muted);
+}
+
+.ofp-kpi-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.ofp-kpi-pill.positive {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+
+.ofp-kpi-pill.warning {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+}
+
+.ofp-kpi-arrow {
+    color: var(--ofp-text-light);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.ofp-kpi-arrow:hover {
+    color: var(--ofp-primary);
+}
+
+/* Middle Analytics Row (Area Chart + Pipeline Funnel) */
+.ofp-middle-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.ofp-card {
+    background: var(--ofp-card-bg);
+    border: 1px solid var(--ofp-card-border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--ofp-shadow);
+}
+
+.ofp-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.ofp-card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ofp-text-main);
+}
+
+.ofp-card-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ofp-select {
+    background: var(--ofp-input-bg);
+    border: 1px solid var(--ofp-input-border);
+    color: var(--ofp-text-main);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    outline: none;
+    cursor: pointer;
+}
+
+/* SVG Chart Container */
+.ofp-chart-container {
+    height: 240px;
+    width: 100%;
+    position: relative;
+}
+
+.ofp-chart-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+/* Pipeline Conversion List (Design #2 Right Card) */
+.ofp-funnel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 10px;
+}
+
+.ofp-funnel-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ofp-funnel-label {
+    font-size: 13.5px;
+    color: var(--ofp-text-muted);
+}
+
+.ofp-funnel-num {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ofp-text-main);
+}
+
+.ofp-funnel-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: var(--ofp-table-hover);
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+
+.ofp-funnel-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+    border-radius: 9999px;
+}
+
+/* Bottom Grid (Action Promo / Alerts + Data Table) */
+.ofp-bottom-grid {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 20px;
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Priority Action / System Status Box */
+.ofp-promo-card {
+    background: linear-gradient(135deg, #09261f 0%, #061c16 100%);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 16px;
+    padding: 20px;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 8px 20px rgba(9, 38, 31, 0.25);
+    width: 100%;
+    min-width: 260px;
+    box-sizing: border-box;
+}
+
+.ofp-promo-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    width: fit-content;
+    margin-bottom: 10px;
+}
+
+.ofp-promo-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #ffffff;
+}
+
+.ofp-promo-desc {
+    font-size: 12.5px;
+    color: #94a3b8;
+    line-height: 1.45;
+    margin-bottom: 16px;
+}
+
+.ofp-promo-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 12px 10px;
+    margin-bottom: 16px;
+}
+
+.ofp-promo-stat-box {
+    display: flex;
+    flex-direction: column;
+}
+
+.ofp-promo-stat-val {
+    font-size: 17px;
+    font-weight: 700;
+    color: #34d399;
+}
+
+.ofp-promo-stat-lbl {
+    font-size: 10.5px;
+    color: #94a3b8;
+}
+
+/* High Density Data Table (Design #2 Table) */
+.ofp-table-card {
+    background: var(--ofp-card-bg);
+    border: 1px solid var(--ofp-card-border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--ofp-shadow);
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.ofp-table-card .ofp-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    margin-bottom: 0 !important;
+}
+
+.ofp-table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    gap: 14px;
+}
+
+.ofp-table-search {
+    position: relative;
+    max-width: 280px;
+    width: 100%;
+}
+
+.ofp-table-search input {
+    width: 100%;
+    padding: 7px 12px 7px 34px;
+    background: var(--ofp-input-bg);
+    border: 1px solid var(--ofp-input-border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--ofp-text-main);
+    outline: none;
+}
+
+.ofp-table-search svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ofp-text-light);
+}
+
+.ofp-table-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ofp-table-wrap {
+    overflow-x: auto;
+}
+
+.ofp-data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13.5px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TABLE HORIZONTAL SCROLL & ANTI-SHRINK ARCHITECTURE
+   Enforce horizontal scroll across all tables — never shrink columns!
+   ───────────────────────────────────────────────────────────────────────── */
+.ofp-portal-content {
+    overflow-x: hidden;
+    max-width: 100%;
+    padding: 24px;
+}
+
+.ofp-table-wrap,
+.wrap,
+.ofp-wrap,
+.tablenav,
+.ofp-table-responsive,
+.table-responsive,
+.ofp-section,
+.postbox,
+div[style*="overflow-x"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    margin-bottom: 16px;
+}
+
+.ofp-table-wrap::-webkit-scrollbar,
+.wrap::-webkit-scrollbar,
+.ofp-wrap::-webkit-scrollbar {
+    height: 7px;
+}
+
+.ofp-table-wrap::-webkit-scrollbar-track,
+.wrap::-webkit-scrollbar-track,
+.ofp-wrap::-webkit-scrollbar-track {
+    background: var(--ofp-body-bg);
+    border-radius: 4px;
+}
+
+.ofp-table-wrap::-webkit-scrollbar-thumb,
+.wrap::-webkit-scrollbar-thumb,
+.ofp-wrap::-webkit-scrollbar-thumb {
+    background: #10b981;
+    border-radius: 4px;
+}
+
+.wp-list-table,
+table.widefat,
+table.ofp-table-full,
+.ofp-portal-content > .wrap table,
+.ofp-portal-content > .ofp-wrap table,
+.ofp-section table {
+    width: 100% !important;
+    min-width: 980px !important; /* Critical: large project tables never squish columns */
+    border-collapse: separate !important;
+    border-spacing: 0;
+    font-size: 13px;
+}
+
+/* Dashboard Overview Clients Table — fits perfectly inside .ofp-table-card */
+.ofp-table-card .ofp-data-table {
+    width: 100% !important;
+    min-width: 580px !important;
+    max-width: 100%;
+    border-collapse: separate !important;
+    border-spacing: 0;
+    font-size: 13px;
+}
+
+.ofp-data-table th,
+.ofp-data-table td,
+.wp-list-table th,
+.wp-list-table td,
+table.widefat th,
+table.widefat td,
+.ofp-card table th,
+.ofp-card table td,
+.wrap table th,
+.wrap table td,
+table th,
+table td {
+    white-space: nowrap !important; /* Never wrap or cramp into tall squished rows */
+    padding: 10px 14px !important;
+    border-bottom: 1px solid var(--ofp-card-border);
+    vertical-align: middle !important;
+}
+
+.ofp-data-table th,
+.wp-list-table th,
+table.widefat th,
+table th {
+    background: var(--ofp-table-stripe) !important;
+    color: var(--ofp-text-muted) !important;
+    font-weight: 600 !important;
+    font-size: 11.5px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    text-align: left;
+}
+
+.ofp-data-table td,
+.wp-list-table td,
+table.widefat td,
+table td {
+    color: var(--ofp-text-main);
+}
+
+.ofp-data-table tr:hover td,
+.wp-list-table tbody tr:hover td,
+table.widefat tbody tr:hover td,
+table tbody tr:hover td {
+    background: var(--ofp-table-hover) !important;
+}
+
+/* Nav Tab Wrapper Modernization (for Property Commerce, Sales, etc.) */
+.nav-tab-wrapper {
+    border-bottom: 1px solid var(--ofp-card-border) !important;
+    margin: 0 0 20px 0 !important;
+    padding: 0 0 8px 0 !important;
+    display: flex !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+}
+
+.nav-tab {
+    border: 1px solid var(--ofp-card-border) !important;
+    background: var(--ofp-card-bg) !important;
+    color: var(--ofp-text-muted) !important;
+    padding: 7px 15px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    text-decoration: none !important;
+    transition: all 0.2s ease !important;
+}
+
+.nav-tab:hover {
+    color: var(--ofp-primary) !important;
+    border-color: var(--ofp-primary) !important;
+}
+
+.nav-tab-active,
+.nav-tab-active:hover {
+    color: #ffffff !important;
+    background: #10b981 !important;
+    border-color: #10b981 !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+}
+
+/* Forms, Postboxes & Notices in Modern Design #2 */
+.postbox {
+    background: var(--ofp-card-bg) !important;
+    border: 1px solid var(--ofp-card-border) !important;
+    border-radius: 12px !important;
+    box-shadow: var(--ofp-shadow) !important;
+    color: var(--ofp-text-main) !important;
+    margin-bottom: 20px !important;
+}
+
+.postbox .postbox-header {
+    border-bottom: 1px solid var(--ofp-card-border) !important;
+    padding: 14px 18px !important;
+}
+
+.postbox .postbox-header h2 {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: var(--ofp-text-main) !important;
+}
+
+.notice, .ofp-notice {
+    background: var(--ofp-card-bg) !important;
+    border: 1px solid var(--ofp-card-border) !important;
+    border-left: 4px solid #10b981 !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+    margin: 16px 0 !important;
+    box-shadow: var(--ofp-shadow) !important;
+    color: var(--ofp-text-main) !important;
+}
+
+.notice-error {
+    border-left-color: #ef4444 !important;
+}
+
+.notice-warning {
+    border-left-color: #f59e0b !important;
+}
+
+.ofp-form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.ofp-form-group {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ofp-form-group label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ofp-text-main);
+}
+
+.ofp-input-text,
+.ofp-input-select,
+.ofp-textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--ofp-input-border);
+    background: var(--ofp-input-bg);
+    color: var(--ofp-text-main);
+    font-size: 13px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.ofp-input-text:focus,
+.ofp-input-select:focus,
+.ofp-textarea:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.ofp-tax-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .ofp-tax-grid,
+    .ofp-form-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ofp-user-thumb {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--ofp-table-hover);
+}
+
+.ofp-user-meta {
+    display: flex;
+    flex-direction: column;
+}
+
+.ofp-user-title {
+    font-weight: 600;
+    color: var(--ofp-text-main);
+}
+
+.ofp-user-sub {
+    font-size: 11.5px;
+    color: var(--ofp-text-muted);
+}
+
+/* Status Badges */
+.ofp-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.ofp-status-pill.active,
+.ofp-status-pill.live {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+
+.ofp-status-pill.pending_review,
+.ofp-status-pill.under_offer {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
+.ofp-status-pill.suspended,
+.ofp-status-pill.taken {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+}
+
+.ofp-status-pill.white_label {
+    background: rgba(139, 92, 246, 0.15);
+    color: #8b5cf6;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1200px) {
+    .ofp-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ofp-middle-grid,
+    .ofp-bottom-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ofp-promo-card {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .ofp-sb {
+        position: fixed;
+        left: -270px;
+        top: 0;
+        bottom: 0;
+    }
+
+    .ofp-sb.open {
+        left: 0;
+        box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .ofp-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ofp-portal-header {
+        padding: 0 16px;
+    }
+
+    .ofp-portal-content {
+        padding: 16px;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   MODERN SUBTABS (Design #2 Executive Pill / Underline Tabs)
+   Applied to .nav-tab-wrapper & .nav-tab inside the Admin Portal
+   ───────────────────────────────────────────────────────────────────────── */
+.ofp-portal-content .nav-tab-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px solid var(--ofp-card-border);
+    margin: 0 0 24px 0;
+    padding: 0;
+}
+
+.ofp-portal-content .nav-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ofp-text-muted);
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    border-radius: 6px 6px 0 0;
+    transition: all 0.2s ease;
+}
+
+.ofp-portal-content .nav-tab:hover {
+    color: var(--ofp-text-main);
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.ofp-portal-content .nav-tab.nav-tab-active,
+.ofp-portal-content .nav-tab-active {
+    color: #10b981 !important;
+    border-bottom-color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.08) !important;
+    font-weight: 700;
+}

@@ -169,6 +169,14 @@ if ( $can_view_team ) {
     ];
 }
 
+$nav_items[] = [
+    'label'  => 'Activity Log',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
+    'url'    => home_url( '/activity-logs' ),
+    'slug'   => 'activity-logs',
+    'locked' => false,
+];
+
 // Funding — main client only, team members can't pay or manage billing
 if ( $current_user && empty( $current_user->is_team_member ) && ! OFP_Brand::hide_plan_prompts( $client ) ) {
     $nav_items[] = [
@@ -180,13 +188,6 @@ if ( $current_user && empty( $current_user->is_team_member ) && ! OFP_Brand::hid
     ];
 }
 
-$nav_items[] = [
-    'label'  => 'Profile',
-    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>',
-    'url'    => home_url( '/profile' ),
-    'slug'   => 'profile',
-    'locked' => false,
-];
 
 // Plans & Pricing: hidden for solo companies, they have no plan to choose
 if ( ! OFP_Brand::hide_plan_prompts( $client ) ) {
@@ -196,7 +197,8 @@ $nav_items[] = [
     'url'    => home_url( '/pricing' ),
     'slug'   => 'pricing',
     'locked' => false,
-];
+];
+
 }
 
 ?>
@@ -253,25 +255,24 @@ svg { max-width: 100%; box-sizing: border-box; }
         </nav>
 
         <div class="ofp-sidebar-footer">
-            <!-- Sidebar User Profile Widget -->
-            <div class="ofp-user-menu ofp-sidebar-user-card" id="ofp-user-menu">
-                <div class="ofp-sidebar-user-trigger" id="ofp-user-avatar">
+            <div class="ofp-sidebar-user-card ofp-user-menu" id="ofp-user-menu">
+                <div class="ofp-sidebar-user-trigger" id="ofp-user-avatar" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" style="cursor:pointer;">
                     <div class="ofp-user-avatar">
                         <?php if ( ! empty( $client->logo_url ) ) : ?>
-                            <img src="<?php echo esc_url( $client->logo_url ); ?>" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                            <img src="<?php echo esc_url( $client->logo_url ); ?>" alt="Logo">
                         <?php else : ?>
                             <?php echo esc_html( strtoupper( substr( $client->business_name, 0, 2 ) ) ); ?>
                         <?php endif; ?>
                     </div>
                     <div class="ofp-sidebar-user-info">
-                        <strong class="ofp-sidebar-user-name"><?php echo esc_html( $client->owner_name ); ?></strong>
+                        <span class="ofp-sidebar-user-name"><?php echo esc_html( $client->owner_name ); ?></span>
                         <span class="ofp-sidebar-user-email"><?php echo esc_html( $client->email ); ?></span>
                     </div>
-                    <div class="ofp-sidebar-user-chevron">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" /></svg>
-                    </div>
+                    <span class="ofp-sidebar-user-chevron">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                    </span>
                 </div>
-                <div class="ofp-dropdown ofp-sidebar-dropdown">
+                <div class="ofp-dropdown">
                     <div class="ofp-dropdown-header">
                         <strong><?php echo esc_html( $client->owner_name ); ?></strong>
                         <span><?php echo esc_html( $client->email ); ?></span>
@@ -288,6 +289,10 @@ svg { max-width: 100%; box-sizing: border-box; }
                         <a href="<?php echo esc_url( home_url( '/api-settings' ) ); ?>" class="ofp-dropdown-item">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                             API Settings
+                        </a>
+                        <a href="<?php echo esc_url( home_url( '/activity-logs' ) ); ?>" class="ofp-dropdown-item">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Activity Log
                         </a>
                         <a href="<?php echo esc_url( OFP_Client_Portal::logout_url() ); ?>" class="ofp-dropdown-item danger">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
@@ -327,10 +332,20 @@ svg { max-width: 100%; box-sizing: border-box; }
             <div class="ofp-topbar-spacer" style="flex:1;"></div>
 
             <div class="ofp-topbar-actions">
+                <!-- Theme Toggle Desktop Icon -->
+                <button class="ofp-icon-btn" id="ofp-theme-toggle" type="button" aria-label="Toggle Theme" title="Toggle Light/Dark Theme">
+                    <svg class="theme-toggle-moon" style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                    <svg class="theme-toggle-sun" style="width:20px;height:20px;color:#f59e0b;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                </button>
+
                 <!-- Notification Dropdown Menu -->
                 <?php $ofp_unread = OFP_Notification::unread_count( $client->id ); ?>
-                <div class="ofp-user-menu" style="position:relative;">
-                    <div class="ofp-icon-btn" style="cursor:pointer; position:relative;">
+                <div class="ofp-user-menu" style="position:relative;" id="ofp-notif-menu">
+                    <div class="ofp-icon-btn" id="ofp-notif-trigger" style="cursor:pointer; position:relative;">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>
                         <?php if ( $ofp_unread > 0 ) : ?>
                             <span style="position:absolute; top:2px; right:2px; background:var(--accent-red); color:#fff; font-size:10px; font-weight:bold; height:16px; min-width:16px; border-radius:100px; display:flex; align-items:center; justify-content:center; padding:0 4px;"><?php echo esc_html( $ofp_unread ); ?></span>
@@ -380,15 +395,6 @@ svg { max-width: 100%; box-sizing: border-box; }
                     </div>
                 </div>
 
-                <!-- Theme Toggle Desktop Icon (L&D button sticks to the far right, after notification) -->
-                <button class="ofp-icon-btn" id="ofp-theme-toggle" type="button" aria-label="Toggle Theme" title="Toggle Light/Dark Theme">
-                    <svg class="theme-toggle-moon" style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-                    </svg>
-                    <svg class="theme-toggle-sun" style="width:20px;height:20px;color:#f59e0b;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                    </svg>
-                </button>
             </div>
         </header>
 

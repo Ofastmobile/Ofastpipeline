@@ -8,21 +8,37 @@ if ( ! OFP_Auth::is_admin_user() ) wp_die( 'Access denied.' );
 global $wpdb;
 $p = $wpdb->prefix;
 
-$tab = sanitize_text_field( $_GET['tab'] ?? 'log' );
-$allowed_tabs = [ 'log', 'send', 'templates' ];
-if ( ! in_array( $tab, $allowed_tabs, true ) ) {
-    $tab = 'log';
+$is_portal = ( isset( $_GET['tab'] ) && $_GET['tab'] === 'communications' )
+    || isset( $_GET['subtab'] )
+    || ( strpos( $_SERVER['REQUEST_URI'] ?? '', 'admin-portal' ) !== false );
+
+$subtab_input = sanitize_text_field( $_GET['subtab'] ?? $_GET['comm_tab'] ?? '' );
+if ( empty( $subtab_input ) && isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'log', 'send', 'templates' ], true ) ) {
+    $subtab_input = sanitize_text_field( $_GET['tab'] );
 }
+$tab = in_array( $subtab_input, [ 'log', 'send', 'templates' ], true ) ? $subtab_input : 'log';
+
+$log_url = $is_portal 
+    ? home_url( '/admin-portal?tab=communications&subtab=log' ) 
+    : admin_url( 'admin.php?page=ofp-communications&tab=log' );
+
+$send_url = $is_portal 
+    ? home_url( '/admin-portal?tab=communications&subtab=send' ) 
+    : admin_url( 'admin.php?page=ofp-communications&tab=send' );
+
+$templates_url = $is_portal 
+    ? home_url( '/admin-portal?tab=communications&subtab=templates' ) 
+    : admin_url( 'admin.php?page=ofp-communications&tab=templates' );
 
 include OFP_PATH . 'admin/views/partials/header.php';
 ?>
 
 <div class="wrap">
     <h2 class="nav-tab-wrapper">
-        <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-communications&tab=log' ) ); ?>" class="nav-tab <?php echo $tab === 'log' ? 'nav-tab-active' : ''; ?>">Communications Log</a>
+        <a href="<?php echo esc_url( $log_url ); ?>" class="nav-tab <?php echo $tab === 'log' ? 'nav-tab-active' : ''; ?>">Communications Log</a>
         <?php if ( OFP_Auth::is_super_admin() ) : ?>
-        <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-communications&tab=send' ) ); ?>" class="nav-tab <?php echo $tab === 'send' ? 'nav-tab-active' : ''; ?>">Send Broadcast</a>
-        <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-communications&tab=templates' ) ); ?>" class="nav-tab <?php echo $tab === 'templates' ? 'nav-tab-active' : ''; ?>">Universal Email Template</a>
+        <a href="<?php echo esc_url( $send_url ); ?>" class="nav-tab <?php echo $tab === 'send' ? 'nav-tab-active' : ''; ?>">Send Broadcast</a>
+        <a href="<?php echo esc_url( $templates_url ); ?>" class="nav-tab <?php echo $tab === 'templates' ? 'nav-tab-active' : ''; ?>">Universal Email Template</a>
         <?php endif; ?>
     </h2>
 
@@ -106,8 +122,13 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <!-- Filters -->
         <div class="ofp-filters">
             <form method="GET" action="" class="ofp-filter-form">
-                <input type="hidden" name="page" value="ofp-communications">
-                <input type="hidden" name="tab" value="log">
+                <?php if ( $is_portal ) : ?>
+                    <input type="hidden" name="tab" value="communications">
+                    <input type="hidden" name="subtab" value="log">
+                <?php else : ?>
+                    <input type="hidden" name="page" value="ofp-communications">
+                    <input type="hidden" name="tab" value="log">
+                <?php endif; ?>
                 <select name="client_id" onchange="this.form.submit()">
                     <option value="">All Clients</option>
                     <?php foreach ( $clients as $c ) : ?>
@@ -124,7 +145,12 @@ include OFP_PATH . 'admin/views/partials/header.php';
                     <option value="email" <?php selected( $filter_type, 'email' ); ?>>Email</option>
                 </select>
                 <?php if ( $filter_client || $filter_type ) : ?>
-                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-communications&tab=log' ) ); ?>"
+                    <?php
+                    $clear_url = $is_portal
+                        ? home_url( '/admin-portal?tab=communications&subtab=log' )
+                        : admin_url( 'admin.php?page=ofp-communications&tab=log' );
+                    ?>
+                    <a href="<?php echo esc_url( $clear_url ); ?>"
                        class="button">Clear</a>
                 <?php endif; ?>
             </form>
@@ -173,7 +199,12 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 <?php if ( $total_pages > 1 ) : ?>
                     <div class="ofp-pagination">
                         <?php for ( $i = 1; $i <= $total_pages; $i++ ) : ?>
-                            <a href="<?php echo esc_url( add_query_arg( [ 'paged' => $i, 'tab' => 'log' ] ) ); ?>"
+                            <?php
+                            $page_url = $is_portal
+                                ? home_url( '/admin-portal?tab=communications&subtab=log&paged=' . $i . ( $filter_client ? '&client_id=' . $filter_client : '' ) . ( $filter_type ? '&type=' . urlencode( $filter_type ) : '' ) )
+                                : add_query_arg( [ 'paged' => $i, 'tab' => 'log' ] );
+                            ?>
+                            <a href="<?php echo esc_url( $page_url ); ?>"
                                class="button button-small <?php echo $i === $current_page ? 'button-primary' : ''; ?>">
                                 <?php echo esc_html( $i ); ?>
                             </a>

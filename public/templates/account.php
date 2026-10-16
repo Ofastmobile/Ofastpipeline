@@ -60,28 +60,20 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
             exit;
         }
     } elseif ( isset( $_POST['update_profile'] ) ) {
-        $slug       = sanitize_title( $_POST['profile_slug'] ?? '' );
-        $bio        = sanitize_textarea_field( $_POST['bio'] ?? '' );
-        $pixel      = sanitize_text_field( $_POST['meta_pixel_id'] ?? '' );
-        $owner_name = sanitize_text_field( $_POST['owner_name'] ?? '' );
-        $phone      = sanitize_text_field( $_POST['phone'] ?? '' );
+        $slug          = sanitize_title( $_POST['profile_slug'] ?? '' );
+        $bio           = sanitize_textarea_field( $_POST['bio'] ?? '' );
+        $pixel         = sanitize_text_field( $_POST['meta_pixel_id'] ?? '' );
+        $owner_name    = sanitize_text_field( $_POST['owner_name'] ?? '' );
+        $phone         = sanitize_text_field( $_POST['phone'] ?? '' );
+        $support_email = sanitize_email( $_POST['support_email'] ?? '' );
+        $support_phone = sanitize_text_field( $_POST['support_phone'] ?? '' );
 
-        // Rich custom profile details matching reference mockup
+        // Preserve social links
         $extra_data = [
-            'role'               => sanitize_text_field( $_POST['role'] ?? '' ),
-            'experience'         => sanitize_text_field( $_POST['experience'] ?? '' ),
-            'favorite_artists'   => sanitize_text_field( $_POST['favorite_artists'] ?? '' ),
-            'favorite_genre'     => sanitize_text_field( $_POST['favorite_genre'] ?? '' ),
-            'software_equipment' => sanitize_text_field( $_POST['software_equipment'] ?? '' ),
-            'music_mood'         => sanitize_text_field( $_POST['music_mood'] ?? '' ),
-            'city_region'        => sanitize_text_field( $_POST['city_region'] ?? '' ),
-            'availability'       => sanitize_text_field( $_POST['availability'] ?? '' ),
-            'badges'             => sanitize_text_field( $_POST['badges'] ?? '' ),
-            'tags'               => sanitize_text_field( $_POST['tags'] ?? '' ),
-            'youtube_url'        => esc_url_raw( $_POST['youtube_url'] ?? '' ),
-            'instagram_url'      => esc_url_raw( $_POST['instagram_url'] ?? '' ),
-            'tiktok_url'         => esc_url_raw( $_POST['tiktok_url'] ?? '' ),
-            'whatsapp_url'       => esc_url_raw( $_POST['whatsapp_url'] ?? '' ),
+            'youtube_url'   => esc_url_raw( $_POST['youtube_url'] ?? '' ),
+            'instagram_url' => esc_url_raw( $_POST['instagram_url'] ?? '' ),
+            'tiktok_url'    => esc_url_raw( $_POST['tiktok_url'] ?? '' ),
+            'whatsapp_url'  => esc_url_raw( $_POST['whatsapp_url'] ?? '' ),
         ];
         $extra_json = wp_json_encode( $extra_data );
 
@@ -112,6 +104,14 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
             if ( ! empty( $phone ) ) {
                 $update_fields['phone'] = $phone;
                 $client->phone = $phone;
+            }
+            if ( isset( $_POST['support_email'] ) ) {
+                $update_fields['support_email'] = $support_email;
+                $client->support_email = $support_email;
+            }
+            if ( isset( $_POST['support_phone'] ) ) {
+                $update_fields['support_phone'] = $support_phone;
+                $client->support_phone = $support_phone;
             }
 
             $wpdb->update(
@@ -285,17 +285,11 @@ if ( ! empty( $client->profile_extra ) ) {
     $extra = json_decode( $client->profile_extra, true ) ?: [];
 }
 
-$display_name       = ! empty( $client->owner_name ) ? $client->owner_name : ( ! empty( $client->business_name ) ? $client->business_name : 'Maria Fernanda' );
-$role               = ! empty( $extra['role'] ) ? $extra['role'] : ( ! empty( $client->business_category ) ? $client->business_category : 'Beatmaker' );
-$experience         = ! empty( $extra['experience'] ) ? $extra['experience'] : 'Intermediate';
-$favorite_artists   = ! empty( $extra['favorite_artists'] ) ? $extra['favorite_artists'] : 'Ninho, Travis Scott, Metro Boomin';
-$favorite_genre     = ! empty( $extra['favorite_genre'] ) ? $extra['favorite_genre'] : 'Trap';
-$software_equipment = ! empty( $extra['software_equipment'] ) ? $extra['software_equipment'] : 'Ableton';
-$music_mood         = ! empty( $extra['music_mood'] ) ? $extra['music_mood'] : 'Melancholic';
-$city_region        = ! empty( $extra['city_region'] ) ? $extra['city_region'] : ( ! empty( $client->city ) ? $client->city : 'California, USA' );
-$availability       = ! empty( $extra['availability'] ) ? $extra['availability'] : 'Available for Collaboration';
-$badges             = ! empty( $extra['badges'] ) ? $extra['badges'] : 'Top Collaborator';
-$tags               = ! empty( $extra['tags'] ) ? $extra['tags'] : '#Drill, #Melancholic, #Rap-US';
+$display_name = ! empty( $client->owner_name ) ? $client->owner_name : ( ! empty( $client->business_name ) ? $client->business_name : 'Agent' );
+
+$base_domain = get_option( 'ofp_crm_base_domain' ) ?: ( isset( $_SERVER['HTTP_HOST'] ) ? preg_replace( '/:\d+$/', '', $_SERVER['HTTP_HOST'] ) : 'ofastpipeline.com' );
+$client_subdomain = ! empty( $client->subdomain ) ? $client->subdomain : '';
+$portal_url = $client_subdomain ? ( 'https://' . $client_subdomain . '.' . $base_domain ) : '';
 
 $youtube_url        = ! empty( $extra['youtube_url'] ) ? $extra['youtube_url'] : 'https://youtube.com';
 $instagram_url      = ! empty( $extra['instagram_url'] ) ? $extra['instagram_url'] : 'https://instagram.com';
@@ -318,79 +312,9 @@ if ( class_exists( 'OFP_Subscription' ) ) {
     }
 }
 
-// ── "My Productions" / Portfolio Listings ───────────────────────────────────
-$productions = [];
-$client_properties = $wpdb->get_results( $wpdb->prepare(
-    "SELECT id, title, price, listing_type, wp_post_id, created_at, status 
-     FROM {$wpdb->prefix}ofp_properties 
-     WHERE client_id = %d 
-     ORDER BY id DESC LIMIT 5",
-    $client->id
-) );
-
-if ( ! empty( $client_properties ) ) {
-    foreach ( $client_properties as $cp ) {
-        $thumb_url = '';
-        if ( ! empty( $cp->wp_post_id ) ) {
-            $main_img_id = get_post_meta( $cp->wp_post_id, 'ofp_main_image', true );
-            if ( $main_img_id ) {
-                $thumb_url = wp_get_attachment_image_url( $main_img_id, 'thumbnail' );
-            }
-        }
-        if ( ! $thumb_url ) {
-            $thumb_url = OFP_URL . 'assets/images/dashboard-hero-banner.jpg';
-        }
-
-        $inq_cnt = (int) $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}ofp_property_inquiries WHERE property_id = %d OR property_id = %d",
-            $cp->id,
-            $cp->wp_post_id ?: 0
-        ) );
-
-        $productions[] = [
-            'id'         => $cp->id,
-            'title'      => $cp->title ?: 'Featured Property',
-            'subtitle'   => ucfirst( $cp->listing_type ?? 'Sale' ) . ' • ' . ucfirst( $cp->status ?? 'Live' ),
-            'thumb'      => $thumb_url,
-            'timing'     => is_numeric( $cp->price ) ? '₦' . number_format( $cp->price ) : ( $cp->price ?: '₦45,000,000' ),
-            'listenings' => $inq_cnt > 0 ? $inq_cnt . ' inquiries' : '182 views',
-            'url'        => $cp->wp_post_id ? get_permalink( $cp->wp_post_id ) : home_url( '/properties' ),
-        ];
-    }
-}
-
-// Fallback items to match reference mockup if the client has no properties yet
-if ( empty( $productions ) ) {
-    $productions = [
-        [
-            'id'         => 1,
-            'title'      => 'Sunset Melody Beats (Track #01)',
-            'subtitle'   => 'Trap & Drill Production • 140 BPM',
-            'thumb'      => OFP_URL . 'assets/images/dashboard-hero-banner.jpg',
-            'timing'     => '03:42',
-            'listenings' => '12.4k',
-            'url'        => home_url( '/properties' ),
-        ],
-        [
-            'id'         => 2,
-            'title'      => 'Ocean Drive Luxury Villa (Plot 4)',
-            'subtitle'   => 'Residential • Lekki Phase 1',
-            'thumb'      => OFP_URL . 'assets/images/dashboard-hero-banner.jpg',
-            'timing'     => '₦180,000,000',
-            'listenings' => '48 inquiries',
-            'url'        => home_url( '/properties' ),
-        ],
-        [
-            'id'         => 3,
-            'title'      => 'Melancholic Piano & Trap 808',
-            'subtitle'   => 'Instrumental • Key of C Minor',
-            'thumb'      => OFP_URL . 'assets/images/dashboard-hero-banner.jpg',
-            'timing'     => '02:58',
-            'listenings' => '8.9k',
-            'url'        => home_url( '/properties' ),
-        ],
-    ];
-}
+// ── Bank Accounts & Branding Data ───────────────────────────────────────────
+$client_banks = class_exists( 'OFP_Bank_Account' ) ? OFP_Bank_Account::list( (int) $client->id ) : [];
+$can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -421,17 +345,6 @@ if ( empty( $productions ) ) {
         </div>
     <?php endif; ?>
 
-    <!-- ── Page Hero Header ──────────────────────────────────────────────── -->
-    <div class="ofp-profile-hero-header">
-        <div class="ofp-profile-title-group">
-            <h1 class="ofp-profile-main-title">Profile</h1>
-            <p class="ofp-profile-main-subtitle">View all your profile details here.</p>
-        </div>
-    </div>
-
-    <!-- Dashed Divider -->
-    <div class="ofp-profile-dashed-divider"></div>
-
     <!-- ── Top 2-Column Grid ─────────────────────────────────────────────── -->
     <div class="ofp-profile-top-grid">
 
@@ -453,85 +366,112 @@ if ( empty( $productions ) ) {
                 </div>
 
                 <div class="ofp-avatar-change-overlay">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="28" height="28"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    <span>Change Photo</span>
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <span style="font-size:11px; font-weight:600;">Change</span>
                 </div>
+            </div>
+
+            <!-- About Us / Bio under Profile Image -->
+            <div class="ofp-avatar-bio" style="margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--prof-border); width: 100%; text-align: center;">
+                <span class="ofp-detail-label" style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--prof-text-sub); font-weight: 600; margin-bottom: 8px;">About Us</span>
+                <p style="margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--prof-text-val); text-align: center; max-width: 92%; margin-left: auto; margin-right: auto;">
+                    <?php 
+                    $bio_raw = trim( (string) ( $client->bio ?: 'No agency bio provided yet. Click "Edit Profile" in the top bar to add your agency description and details.' ) );
+                    $bio_words = preg_split( '/\s+/', $bio_raw );
+                    if ( count( $bio_words ) > 18 ) {
+                        $bio_display = implode( ' ', array_slice( $bio_words, 0, 18 ) ) . '..........';
+                    } else {
+                        $bio_display = $bio_raw;
+                    }
+                    echo nl2br( esc_html( $bio_display ) );
+                    ?>
+                </p>
             </div>
         </div>
 
         <!-- Right Card: Bio & Other Details -->
         <div class="ofp-profile-card ofp-bio-card">
             <div class="ofp-bio-card-header">
-                <h3 class="ofp-bio-card-title">Bio & other details</h3>
-                <span class="ofp-online-indicator" title="Status: Online"></span>
+                <h3 class="ofp-bio-card-title">Company & Profile Details</h3>
+                <span class="ofp-online-indicator" title="Status: Active"></span>
             </div>
 
             <div class="ofp-details-matrix">
-                <!-- Row 1: Role & Experience -->
+                <!-- Row 1: Business Name & Owner Name -->
                 <div class="ofp-details-row">
                     <div class="ofp-detail-col">
-                        <span class="ofp-detail-label">My Role</span>
-                        <span class="ofp-detail-val"><?php echo esc_html( $role ); ?></span>
+                        <span class="ofp-detail-label">Business / Agency Name</span>
+                        <span class="ofp-detail-val"><?php echo esc_html( $client->business_name ); ?></span>
                     </div>
                     <div class="ofp-detail-col">
-                        <span class="ofp-detail-label">My Experience Level</span>
-                        <span class="ofp-detail-val"><?php echo esc_html( $experience ); ?></span>
+                        <span class="ofp-detail-label">Account Owner</span>
+                        <span class="ofp-detail-val"><?php echo esc_html( $client->owner_name ); ?></span>
                     </div>
                 </div>
 
-                <!-- Row 2: Favorite Artists & Genre -->
+                <!-- Row 2: Email & Phone -->
                 <div class="ofp-details-row">
                     <div class="ofp-detail-col">
-                        <span class="ofp-detail-label">My 3 Favorite Artists</span>
-                        <span class="ofp-detail-val"><?php echo esc_html( $favorite_artists ); ?></span>
+                        <span class="ofp-detail-label">Email Address</span>
+                        <span class="ofp-detail-val"><?php echo esc_html( $client->email ); ?></span>
                     </div>
                     <div class="ofp-detail-col">
-                        <span class="ofp-detail-label">My Favorite Music Genre</span>
-                        <span class="ofp-detail-val"><?php echo esc_html( $favorite_genre ); ?></span>
+                        <span class="ofp-detail-label">Mobile / Phone Number</span>
+                        <span class="ofp-detail-val"><?php echo esc_html( $client->phone ?: 'Not provided' ); ?></span>
                     </div>
                 </div>
 
-                <!-- Row 3: Equipment & Mood -->
+                <!-- Row 3: Branded Portal Address & Status -->
                 <div class="ofp-details-row">
                     <div class="ofp-detail-col">
-                        <span class="ofp-detail-label">The Software or Equipment I Use</span>
-                        <span class="ofp-detail-val"><?php echo esc_html( $software_equipment ); ?></span>
+                        <span class="ofp-detail-label">Branded Portal Address</span>
+                        <span class="ofp-detail-val">
+                            <?php if ( $portal_url ) : ?>
+                                <a href="<?php echo esc_url( $portal_url ); ?>" target="_blank" style="color:var(--prof-teal); text-decoration:none; font-weight:600;"><?php echo esc_html( $portal_url ); ?></a>
+                            <?php else : ?>
+                                <span style="color:var(--prof-text-sub);">No custom subdomain assigned</span>
+                            <?php endif; ?>
+                        </span>
                     </div>
                     <div class="ofp-detail-col">
-                        <span class="ofp-detail-label">My Preferred Music Mood</span>
-                        <span class="ofp-detail-val"><?php echo esc_html( $music_mood ); ?></span>
-                    </div>
-                </div>
-
-                <!-- Row 4: City/Region & Availability -->
-                <div class="ofp-details-row">
-                    <div class="ofp-detail-col">
-                        <span class="ofp-detail-label">My City or Region</span>
-                        <span class="ofp-detail-val"><?php echo esc_html( $city_region ); ?></span>
-                    </div>
-                    <div class="ofp-detail-col">
-                        <span class="ofp-detail-label">Availability</span>
+                        <span class="ofp-detail-label">Account Status</span>
                         <div class="ofp-availability-badge">
                             <span class="ofp-pill-pulse-dot"></span>
-                            <span><?php echo esc_html( $availability ); ?></span>
+                            <span style="text-transform:capitalize;"><?php echo esc_html( $client->status ?: 'Active' ); ?></span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Row 5: Badges & Tags -->
+                <!-- Row 4: Public Landing Page & Meta Pixel -->
                 <div class="ofp-details-row">
                     <div class="ofp-detail-col">
-                        <span class="ofp-detail-label">Badges</span>
-                        <div class="ofp-badge-item">
-                            <svg class="ofp-badge-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
-                            <span><?php echo esc_html( $badges ); ?></span>
-                        </div>
+                        <span class="ofp-detail-label">Public Landing Page</span>
+                        <span class="ofp-detail-val">
+                            <?php $agent_url = home_url( '/agent/' . ( $client->profile_slug ?: 'agent-' . $client->id ) ); ?>
+                            <a href="<?php echo esc_url( $agent_url ); ?>" target="_blank" style="color:var(--prof-teal); text-decoration:none; font-weight:600;"><?php echo esc_html( $agent_url ); ?></a>
+                        </span>
                     </div>
                     <div class="ofp-detail-col">
-                        <span class="ofp-detail-label">Tags</span>
-                        <span class="ofp-tags-text"><?php echo esc_html( $tags ); ?></span>
+                        <span class="ofp-detail-label">Facebook Meta Pixel ID</span>
+                        <span class="ofp-detail-val"><?php echo esc_html( $client->meta_pixel_id ?: 'Not configured' ); ?></span>
                     </div>
                 </div>
+
+                <!-- Row 5: Support Contact -->
+                <?php if ( ! empty( $client->support_email ) || ! empty( $client->support_phone ) ) : ?>
+                <div class="ofp-details-row">
+                    <div class="ofp-detail-col">
+                        <span class="ofp-detail-label">Support Email</span>
+                        <span class="ofp-detail-val"><?php echo esc_html( $client->support_email ?: $client->email ); ?></span>
+                    </div>
+                    <div class="ofp-detail-col">
+                        <span class="ofp-detail-label">Support Phone</span>
+                        <span class="ofp-detail-val"><?php echo esc_html( $client->support_phone ?: 'Same as mobile' ); ?></span>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+
             </div>
         </div>
     </div>
@@ -570,53 +510,157 @@ if ( empty( $productions ) ) {
         </div>
     </div>
 
-    <!-- ── Bottom Card: My Productions / Portfolio ───────────────────────── -->
-    <div class="ofp-profile-card ofp-productions-card">
-        <div class="ofp-productions-header-row">
-            <h3 class="ofp-productions-title">My Productions</h3>
-            <a href="<?php echo esc_url( home_url( '/properties' ) ); ?>" class="ofp-productions-view-all">
-                <span>View All</span>
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-            </a>
+    <!-- ── Bottom Card: Branding & Bank Details ───────────────────────────── -->
+    <div class="ofp-profile-card ofp-branding-card">
+        <div class="ofp-productions-header-row" style="margin-bottom: 22px; border-bottom: 1px solid var(--prof-border); padding-bottom: 16px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:38px; height:38px; border-radius:10px; background:rgba(0,188,181,0.12); display:flex; align-items:center; justify-content:center; color:var(--prof-teal); flex-shrink:0;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+                </div>
+                <div>
+                    <h3 class="ofp-productions-title" style="margin:0;">Branding & Bank Details</h3>
+                    <p style="margin:2px 0 0; font-size:12.5px; color:var(--prof-text-sub);">Custom white-label portal identity and client payout bank accounts</p>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <button type="button" class="ofp-productions-view-all" onclick="openEditModal('tab-branding')" style="background:rgba(255,255,255,0.04); border:1px solid var(--prof-border); border-radius:8px; padding:6px 14px; cursor:pointer;">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    <span>Customize Branding</span>
+                </button>
+                <button type="button" class="ofp-productions-view-all" onclick="openEditModal('tab-banking')" style="background:rgba(255,255,255,0.04); border:1px solid var(--prof-border); border-radius:8px; padding:6px 14px; cursor:pointer;">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                    <span>Manage Bank Accounts</span>
+                </button>
+            </div>
         </div>
 
-        <div class="ofp-table-responsive">
-            <table class="ofp-productions-table">
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Timing</th>
-                        <th>No. of listenings</th>
-                        <th style="text-align:right;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ( $productions as $prod ) : ?>
-                        <tr>
-                            <td>
-                                <div class="ofp-prod-title-cell">
-                                    <img src="<?php echo esc_url( $prod['thumb'] ); ?>" alt="" class="ofp-prod-thumb">
-                                    <div class="ofp-prod-info">
-                                        <span class="ofp-prod-main-title"><?php echo esc_html( $prod['title'] ); ?></span>
-                                        <span class="ofp-prod-sub-title"><?php echo esc_html( $prod['subtitle'] ); ?></span>
+        <!-- 2-Column Split: Left = Branding, Right = Bank Accounts -->
+        <div class="ofp-branding-bank-content-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 26px;">
+            
+            <!-- Column 1: Branding Identity -->
+            <div class="ofp-branding-col">
+                <h4 style="font-size:13.5px; font-weight:600; color:#ffffff; margin:0 0 14px; display:flex; align-items:center; gap:8px;">
+                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--prof-teal);"></span>
+                    Branding & White-Label Portal
+                </h4>
+
+                <div style="background:var(--prof-card-inner, #131722); border:1px solid var(--prof-border); border-radius:12px; padding:18px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                        <div>
+                            <span style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--prof-text-sub); font-weight:600;">Branded Portal Address</span>
+                            <a href="<?php echo esc_url( $portal_url ); ?>" target="_blank" style="color:var(--prof-teal); text-decoration:none; font-weight:600; font-size:13.5px; word-break:break-all;">
+                                <?php echo esc_html( $portal_url ); ?>
+                            </a>
+                        </div>
+                        <span class="ofp-status-pill pill-live" style="font-size:11px; padding:3px 9px;">
+                            <span class="ofp-pill-pulse-dot"></span> Active Portal
+                        </span>
+                    </div>
+
+                    <!-- Theme Color Swatches -->
+                    <span style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--prof-text-sub); font-weight:600; margin:14px 0 8px;">Portal Color Palette</span>
+                    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;">
+                        <?php
+                        $accent_color   = ! empty( $client->brand_color ) ? $client->brand_color : '#3b82f6';
+                        $sidebar_color  = ! empty( $client->sidebar_color ) ? $client->sidebar_color : '#1c2233';
+                        $menu_hov_color = ! empty( $client->menu_hover_color ) ? $client->menu_hover_color : '#252e42';
+                        ?>
+                        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:8px;">
+                            <span style="width:20px; height:20px; border-radius:6px; background:<?php echo esc_attr($accent_color); ?>; border:1px solid rgba(255,255,255,0.2); flex-shrink:0;"></span>
+                            <div>
+                                <span style="display:block; font-size:10px; color:var(--prof-text-sub);">Accent</span>
+                                <span style="font-size:11px; font-weight:600; color:#fff; font-family:monospace;"><?php echo esc_html($accent_color); ?></span>
+                            </div>
+                        </div>
+
+                        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:8px;">
+                            <span style="width:20px; height:20px; border-radius:6px; background:<?php echo esc_attr($sidebar_color); ?>; border:1px solid rgba(255,255,255,0.2); flex-shrink:0;"></span>
+                            <div>
+                                <span style="display:block; font-size:10px; color:var(--prof-text-sub);">Sidebar</span>
+                                <span style="font-size:11px; font-weight:600; color:#fff; font-family:monospace;"><?php echo esc_html($sidebar_color); ?></span>
+                            </div>
+                        </div>
+
+                        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:8px;">
+                            <span style="width:20px; height:20px; border-radius:6px; background:<?php echo esc_attr($menu_hov_color); ?>; border:1px solid rgba(255,255,255,0.2); flex-shrink:0;"></span>
+                            <div>
+                                <span style="display:block; font-size:10px; color:var(--prof-text-sub);">Hover</span>
+                                <span style="font-size:11px; font-weight:600; color:#fff; font-family:monospace;"><?php echo esc_html($menu_hov_color); ?></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Favicon & Support Info -->
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05);">
+                        <div>
+                            <span style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--prof-text-sub); font-weight:600;">Favicon</span>
+                            <?php if ( ! empty( $client->favicon_url ) ) : ?>
+                                <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                                    <img src="<?php echo esc_url( $client->favicon_url ); ?>" alt="Favicon" style="width:20px; height:20px; object-fit:contain; border-radius:4px;">
+                                    <span style="font-size:12px; color:#ffffff;">Custom Favicon</span>
+                                </div>
+                            <?php else : ?>
+                                <span style="font-size:12px; color:var(--prof-text-sub); margin-top:4px; display:inline-block;">Default System Icon</span>
+                            <?php endif; ?>
+                        </div>
+                        <div>
+                            <span style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--prof-text-sub); font-weight:600;">Support Inquiries</span>
+                            <span style="font-size:12px; color:#ffffff; margin-top:4px; display:inline-block;"><?php echo esc_html( $client->support_email ?: ($client->email ?: 'Not specified') ); ?></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 2: Bank Accounts -->
+            <div class="ofp-bank-col">
+                <h4 style="font-size:13.5px; font-weight:600; color:#ffffff; margin:0 0 14px; display:flex; align-items:center; gap:8px;">
+                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e;"></span>
+                    Client Bank & Payout Accounts
+                </h4>
+
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <?php if ( ! empty( $client_banks ) ) : foreach ( $client_banks as $bank ) : ?>
+                        <div style="background:var(--prof-card-inner, #131722); border:1px solid var(--prof-border); border-radius:12px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="width:38px; height:38px; border-radius:10px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); display:flex; align-items:center; justify-content:center; color:#22c55e; flex-shrink:0;">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                                </div>
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <strong style="color:#ffffff; font-size:14px;"><?php echo esc_html( $bank->bank_name ); ?></strong>
+                                        <?php if ( (int) $bank->is_default === 1 ) : ?>
+                                            <span style="font-size:10px; background:rgba(34,197,94,0.15); color:#22c55e; padding:2px 8px; border-radius:10px; font-weight:600;">Primary</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div style="font-family:monospace; font-size:14px; font-weight:600; color:var(--prof-teal); margin-top:2px;">
+                                        <?php echo esc_html( $bank->account_number ); ?>
+                                    </div>
+                                    <div style="font-size:11.5px; color:var(--prof-text-sub); margin-top:2px;">
+                                        <?php echo esc_html( $bank->account_name ); ?>
                                     </div>
                                 </div>
-                            </td>
-                            <td>
-                                <span class="ofp-prod-timing"><?php echo esc_html( $prod['timing'] ); ?></span>
-                            </td>
-                            <td>
-                                <span class="ofp-prod-listenings"><?php echo esc_html( $prod['listenings'] ); ?></span>
-                            </td>
-                            <td style="text-align:right;">
-                                <a href="<?php echo esc_url( $prod['url'] ); ?>" class="ofp-prod-action-btn" title="View Details">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                </a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                            </div>
+
+                            <button type="button" onclick="openEditModal('tab-banking')" style="background:none; border:none; color:var(--prof-text-sub); font-size:12px; cursor:pointer; text-decoration:underline;">
+                                Details
+                            </button>
+                        </div>
+                    <?php endforeach; else : ?>
+                        <div style="background:var(--prof-card-inner, #131722); border:1px dashed var(--prof-border); border-radius:12px; padding:26px 20px; text-align:center;">
+                            <div style="width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.04); display:inline-flex; align-items:center; justify-content:center; color:var(--prof-text-sub); margin-bottom:10px;">
+                                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                            </div>
+                            <div style="font-size:13.5px; color:#ffffff; font-weight:500;">No bank account configured yet</div>
+                            <p style="font-size:12px; color:var(--prof-text-sub); margin:4px 0 14px;">Add your payout account so buyers and tenants can send payments directly.</p>
+                            <button type="button" onclick="openEditModal('tab-banking')" class="ofp-btn-edit-profile" style="padding:6px 16px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                                <span>Add Bank Account</span>
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -671,68 +715,57 @@ if ( empty( $productions ) ) {
 
                     <div class="ofp-form-row-2">
                         <div class="ofp-field-group">
-                            <label>My Role</label>
-                            <input type="text" name="role" value="<?php echo esc_attr( $role ); ?>" placeholder="e.g. Beatmaker, Real Estate Broker">
+                            <label>Email Address</label>
+                            <input type="email" value="<?php echo esc_attr( $client->email ); ?>" readonly style="opacity:0.75;" title="Contact support to change your registered email address.">
                         </div>
                         <div class="ofp-field-group">
-                            <label>My Experience Level</label>
-                            <input type="text" name="experience" value="<?php echo esc_attr( $experience ); ?>" placeholder="e.g. Intermediate, 5+ Years">
+                            <label>Mobile / Phone Number</label>
+                            <input type="text" name="phone" value="<?php echo esc_attr( $client->phone ); ?>" required placeholder="+234...">
+                        </div>
+                    </div>
+
+                    <div class="ofp-field-group full-width" style="margin-bottom:14px;">
+                        <label>Branded Portal Address</label>
+                        <input type="text" value="<?php echo esc_attr( $portal_url ?: 'No custom subdomain assigned' ); ?>" readonly style="opacity:0.75;">
+                        <span class="ofp-field-hint">
+                            <?php if ( $portal_url ) : ?>
+                                Your agency's direct portal address. (Contact support if you need to change your subdomain).
+                            <?php else : ?>
+                                Contact support to configure a custom branded subdomain for your agency.
+                            <?php endif; ?>
+                        </span>
+                    </div>
+
+                    <div class="ofp-form-row-2">
+                        <div class="ofp-field-group">
+                            <label>Public Profile URL Slug</label>
+                            <input type="text" name="profile_slug" value="<?php echo esc_attr( $client->profile_slug ?? 'agent-' . $client->id ); ?>" placeholder="e.g. your-agency" required>
+                            <span class="ofp-field-hint">Public link: <?php echo esc_html( home_url( '/agent/' ) ); ?><strong>slug</strong></span>
+                        </div>
+                        <div class="ofp-field-group">
+                            <label>Facebook / Meta Pixel ID</label>
+                            <input type="text" name="meta_pixel_id" value="<?php echo esc_attr( $client->meta_pixel_id ?? '' ); ?>" placeholder="e.g. 1234567890">
+                            <span class="ofp-field-hint">Track visitors and conversions on your public pages</span>
                         </div>
                     </div>
 
                     <div class="ofp-form-row-2">
                         <div class="ofp-field-group">
-                            <label>My 3 Favorite Artists / Focus Areas</label>
-                            <input type="text" name="favorite_artists" value="<?php echo esc_attr( $favorite_artists ); ?>" placeholder="e.g. Ninho, Travis Scott, Metro Boomin">
+                            <label>Support Email</label>
+                            <input type="email" name="support_email" value="<?php echo esc_attr( $client->support_email ?? '' ); ?>" placeholder="support@yourcompany.com">
                         </div>
                         <div class="ofp-field-group">
-                            <label>My Favorite Music Genre / Category</label>
-                            <input type="text" name="favorite_genre" value="<?php echo esc_attr( $favorite_genre ); ?>" placeholder="e.g. Trap, Residential & Commercial">
+                            <label>Support Phone</label>
+                            <input type="text" name="support_phone" value="<?php echo esc_attr( $client->support_phone ?? '' ); ?>" placeholder="+234...">
                         </div>
                     </div>
 
-                    <div class="ofp-form-row-2">
-                        <div class="ofp-field-group">
-                            <label>The Software or Equipment I Use</label>
-                            <input type="text" name="software_equipment" value="<?php echo esc_attr( $software_equipment ); ?>" placeholder="e.g. Ableton, OFast CRM, Logic">
-                        </div>
-                        <div class="ofp-field-group">
-                            <label>My Preferred Music Mood / Deal Type</label>
-                            <input type="text" name="music_mood" value="<?php echo esc_attr( $music_mood ); ?>" placeholder="e.g. Melancholic, Installment Sales">
-                        </div>
+                    <div class="ofp-field-group full-width">
+                        <label>Biographical Info / About Agency</label>
+                        <textarea name="bio" rows="4" placeholder="Tell visitors and clients about your real estate agency or company..."><?php echo esc_textarea( $client->bio ?? '' ); ?></textarea>
                     </div>
 
-                    <div class="ofp-form-row-2">
-                        <div class="ofp-field-group">
-                            <label>My City or Region</label>
-                            <input type="text" name="city_region" value="<?php echo esc_attr( $city_region ); ?>" placeholder="e.g. California, USA">
-                        </div>
-                        <div class="ofp-field-group">
-                            <label>Availability Status</label>
-                            <input type="text" name="availability" value="<?php echo esc_attr( $availability ); ?>" placeholder="e.g. Available for Collaboration">
-                        </div>
-                    </div>
-
-                    <div class="ofp-form-row-2">
-                        <div class="ofp-field-group">
-                            <label>Badges Text</label>
-                            <input type="text" name="badges" value="<?php echo esc_attr( $badges ); ?>" placeholder="e.g. Top Collaborator, Verified Agency">
-                        </div>
-                        <div class="ofp-field-group">
-                            <label>Tags (Hashtags)</label>
-                            <input type="text" name="tags" value="<?php echo esc_attr( $tags ); ?>" placeholder="e.g. #Drill, #Melancholic, #Rap-US">
-                        </div>
-                    </div>
-
-                    <div class="ofp-field-group">
-                        <label>Biographical Info (About)</label>
-                        <textarea name="bio" placeholder="Tell the world about yourself and your work..."><?php echo esc_textarea( $client->bio ?? '' ); ?></textarea>
-                    </div>
-
-                    <!-- Preserve hidden / existing fields in same submit -->
-                    <input type="hidden" name="profile_slug" value="<?php echo esc_attr( $client->profile_slug ?? 'agent-' . $client->id ); ?>">
-                    <input type="hidden" name="meta_pixel_id" value="<?php echo esc_attr( $client->meta_pixel_id ?? '' ); ?>">
-                    <input type="hidden" name="phone" value="<?php echo esc_attr( $client->phone ?? '' ); ?>">
+                    <!-- Preserve social links in same submit -->
                     <input type="hidden" name="youtube_url" value="<?php echo esc_attr( $youtube_url ); ?>">
                     <input type="hidden" name="instagram_url" value="<?php echo esc_attr( $instagram_url ); ?>">
                     <input type="hidden" name="tiktok_url" value="<?php echo esc_attr( $tiktok_url ); ?>">
@@ -787,18 +820,11 @@ if ( empty( $productions ) ) {
                     </div>
 
                     <!-- Preserve core fields -->
-                    <input type="hidden" name="owner_name" value="<?php echo esc_attr( $display_name ); ?>">
+                    <input type="hidden" name="owner_name" value="<?php echo esc_attr( $client->owner_name ); ?>">
+                    <input type="hidden" name="phone" value="<?php echo esc_attr( $client->phone ); ?>">
+                    <input type="hidden" name="support_email" value="<?php echo esc_attr( $client->support_email ?? '' ); ?>">
+                    <input type="hidden" name="support_phone" value="<?php echo esc_attr( $client->support_phone ?? '' ); ?>">
                     <input type="hidden" name="bio" value="<?php echo esc_attr( $client->bio ?? '' ); ?>">
-                    <input type="hidden" name="role" value="<?php echo esc_attr( $role ); ?>">
-                    <input type="hidden" name="experience" value="<?php echo esc_attr( $experience ); ?>">
-                    <input type="hidden" name="favorite_artists" value="<?php echo esc_attr( $favorite_artists ); ?>">
-                    <input type="hidden" name="favorite_genre" value="<?php echo esc_attr( $favorite_genre ); ?>">
-                    <input type="hidden" name="software_equipment" value="<?php echo esc_attr( $software_equipment ); ?>">
-                    <input type="hidden" name="music_mood" value="<?php echo esc_attr( $music_mood ); ?>">
-                    <input type="hidden" name="city_region" value="<?php echo esc_attr( $city_region ); ?>">
-                    <input type="hidden" name="availability" value="<?php echo esc_attr( $availability ); ?>">
-                    <input type="hidden" name="badges" value="<?php echo esc_attr( $badges ); ?>">
-                    <input type="hidden" name="tags" value="<?php echo esc_attr( $tags ); ?>">
 
                     <div class="ofp-modal-footer">
                         <button type="button" class="ofp-modal-btn-cancel" onclick="closeEditModal()">Cancel</button>
@@ -991,10 +1017,16 @@ if ( empty( $productions ) ) {
     const tabButtons = document.querySelectorAll('.ofp-modal-tab-btn');
     const tabPanels  = document.querySelectorAll('.ofp-tab-panel');
 
-    window.openEditModal = function() {
+    window.openEditModal = function(tabId) {
         if (backdrop) {
             backdrop.classList.add('active');
             document.body.style.overflow = 'hidden';
+            if (tabId) {
+                const targetBtn = document.querySelector('.ofp-modal-tab-btn[data-tab="' + tabId + '"]');
+                if (targetBtn) {
+                    targetBtn.click();
+                }
+            }
         }
     };
 

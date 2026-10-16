@@ -199,8 +199,8 @@
 
 /* Concentric outer ring matching reference screenshot */
 .ofp-avatar-frame-outer {
-    width: 250px;
-    height: 250px;
+    width: 140px;
+    height: 140px;
     border-radius: 50%;
     background: #11141c;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -209,8 +209,8 @@
     justify-content: center;
     position: relative;
     box-shadow: 
-        0 0 0 10px #151a24,
-        inset 0 4px 16px rgba(0, 0, 0, 0.7);
+        0 0 0 6px #151a24,
+        inset 0 3px 12px rgba(0, 0, 0, 0.7);
     cursor: pointer;
     overflow: hidden;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -219,8 +219,8 @@
 .ofp-avatar-frame-outer:hover {
     transform: scale(1.02);
     box-shadow: 
-        0 0 0 10px #1c2331,
-        inset 0 4px 16px rgba(0, 0, 0, 0.7);
+        0 0 0 6px #1c2331,
+        inset 0 3px 12px rgba(0, 0, 0, 0.7);
 }
 
 .ofp-avatar-frame-inner {
@@ -242,7 +242,7 @@
 }
 
 .ofp-avatar-initials {
-    font-size: 48px;
+    font-size: 30px;
     font-weight: 700;
     color: #cbd5e1;
     text-transform: uppercase;
@@ -883,12 +883,12 @@ html.light .ofp-avatar-tier {
 html.light .ofp-avatar-frame-outer {
     background: #ffffff;
     border-color: #e2e8f0;
-    box-shadow: 0 0 0 10px #f1f5f9, inset 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 0 0 6px #f1f5f9, inset 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 [data-theme="light"] .ofp-avatar-frame-outer:hover,
 html.light .ofp-avatar-frame-outer:hover {
-    box-shadow: 0 0 0 10px #e2e8f0, inset 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 0 0 6px #e2e8f0, inset 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 [data-theme="light"] .ofp-avatar-frame-inner,
@@ -1157,4 +1157,75 @@ html.light .ofp-modal-btn-save {
 [data-theme="light"] .ofp-modal-btn-save:hover,
 html.light .ofp-modal-btn-save:hover {
     background: #1d4ed8;
+}
+
+
+/* --- Layout Spacing & Column Split Overrides --- */
+.ofp-profile-body .ofp-hero-full-header {
+    margin-bottom: 0 !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+.ofp-profile-body .ofp-content-area {
+    padding-top: 28px !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    max-width: 100% !important;
+}
+.ofp-profile-page-wrap {
+    padding-top: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    max-width: 100% !important;
+}
+.ofp-profile-dashed-divider {
+    display: none !important;
+}
+
+/* 40% Left (Avatar / About Us) & 60% Right (Details) Grid Split */
+@media (min-width: 981px) {
+    .ofp-profile-top-grid {
+        grid-template-columns: 4fr 6fr !important;
+        gap: 20px !important;
+    }
+}
+@media (max-width: 980px) {
+    .ofp-profile-top-grid {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+    }
+}
+
+/* --- Branding & Bank Details Card Styles --- */
+.ofp-branding-card {
+    padding-bottom: 24px;
+}
+@media (max-width: 992px) {
+    .ofp-branding-bank-content-grid {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+    }
+}
+[data-theme="light"] .ofp-branding-card,
+html.light .ofp-branding-card {
+    background: #ffffff;
+    border-color: #e2e8f0;
+}
+[data-theme="light"] .ofp-branding-col > div,
+[data-theme="light"] .ofp-bank-col > div > div,
+html.light .ofp-branding-col > div,
+html.light .ofp-bank-col > div > div {
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+}
+[data-theme="light"] .ofp-branding-card h4,
+html.light .ofp-branding-card h4 {
+    color: #0f172a !important;
+}
+[data-theme="light"] .ofp-branding-card strong,
+html.light .ofp-branding-card strong {
+    color: #0f172a !important;
 }

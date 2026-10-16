@@ -118,11 +118,15 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_admin_action'] 
 
 // ── Filters ──────────────────────────────────────────────────────────────────
 $filter_client = absint( $_GET['client_id'] ?? 0 );
-$filter_status = sanitize_key( $_GET['status'] ?? '' );
-$active_tab    = sanitize_key( $_GET['tab'] ?? 'leases' );
-if ( ! in_array( $active_tab, [ 'leases', 'tenants', 'payments' ], true ) ) {
-    $active_tab = 'leases';
+$is_portal = ( isset( $_GET['tab'] ) && $_GET['tab'] === 'rent-oversight' )
+    || isset( $_GET['subtab'] )
+    || ( strpos( $_SERVER['REQUEST_URI'] ?? '', 'admin-portal' ) !== false );
+
+$subtab_input = sanitize_key( $_GET['subtab'] ?? $_GET['rent_tab'] ?? '' );
+if ( empty( $subtab_input ) && isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'leases', 'tenants', 'payments' ], true ) ) {
+    $subtab_input = sanitize_key( $_GET['tab'] );
 }
+$active_tab = in_array( $subtab_input, [ 'leases', 'tenants', 'payments' ], true ) ? $subtab_input : 'leases';
 $per_page     = 50;
 $current_page = max( 1, absint( $_GET['paged'] ?? 1 ) );
 $offset       = ( $current_page - 1 ) * $per_page;
@@ -243,8 +247,13 @@ include OFP_PATH . 'admin/views/partials/header.php';
 <!-- Filters -->
 <div class="ofp-filters" style="margin-bottom:18px;">
     <form method="GET" action="" class="ofp-filter-form" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <input type="hidden" name="page" value="ofp-rent-oversight">
-        <input type="hidden" name="tab" value="<?php echo esc_attr( $active_tab ); ?>">
+        <?php if ( $is_portal ) : ?>
+            <input type="hidden" name="tab" value="rent-oversight">
+            <input type="hidden" name="subtab" value="<?php echo esc_attr( $active_tab ); ?>">
+        <?php else : ?>
+            <input type="hidden" name="page" value="ofp-rent-oversight">
+            <input type="hidden" name="tab" value="<?php echo esc_attr( $active_tab ); ?>">
+        <?php endif; ?>
         <select name="client_id" onchange="this.form.submit()">
             <option value="">All Clients</option>
             <?php foreach ( $clients as $c ) : ?>
@@ -260,7 +269,12 @@ include OFP_PATH . 'admin/views/partials/header.php';
         </select>
         <?php endif; ?>
         <?php if ( $filter_client || $filter_status ) : ?>
-            <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-rent-oversight&tab=' . $active_tab ) ); ?>" class="button">Clear</a>
+            <?php
+            $clear_url = $is_portal
+                ? home_url( '/admin-portal?tab=rent-oversight&subtab=' . $active_tab )
+                : admin_url( 'admin.php?page=ofp-rent-oversight&tab=' . $active_tab );
+            ?>
+            <a href="<?php echo esc_url( $clear_url ); ?>" class="button">Clear</a>
         <?php endif; ?>
     </form>
 </div>
@@ -270,7 +284,11 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <?php
     $tabs = [ 'leases' => 'Leases (' . $lease_total . ')', 'tenants' => 'Tenants (' . $tenant_total . ')', 'payments' => 'Transactions (' . $pay_total . ')' ];
     foreach ( $tabs as $slug => $label ) :
-        $url = add_query_arg( [ 'tab' => $slug, 'paged' => 1, 'client_id' => $filter_client ?: '' ] );
+        if ( $is_portal ) {
+            $url = home_url( '/admin-portal?tab=rent-oversight&subtab=' . $slug . ( $filter_client ? '&client_id=' . $filter_client : '' ) . ( $filter_status ? '&status=' . $filter_status : '' ) );
+        } else {
+            $url = add_query_arg( [ 'tab' => $slug, 'paged' => 1, 'client_id' => $filter_client ?: '', 'status' => $filter_status ?: '' ] );
+        }
     ?>
         <a href="<?php echo esc_url( $url ); ?>" class="nav-tab <?php echo $active_tab === $slug ? 'nav-tab-active' : ''; ?>"><?php echo esc_html( $label ); ?></a>
     <?php endforeach; ?>

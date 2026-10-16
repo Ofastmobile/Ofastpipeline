@@ -1,182 +1,471 @@
 /**
  * OFast Pipeline — Public Agent Profile Page Styles
  *
- * Enqueued via OFP_Client_Portal::enqueue_assets() for the ofp_agent_slug route.
+ * Implements the clean, high-end 'Hoomeee' real estate UI:
+ * - Soft off-white canvas with pure white elevated cards
+ * - Big rounded property cover with 'Available' green pill
+ * - Property specs overlay starts AFTER the overlapping squircle avatar
+ * - Squircle avatar with thick white border overlapping the cover
+ * - Agent name, OWNER tag, WhatsApp & Call buttons directly under the avatar
+ * - 'Description' title, bio text, and authentic Client Account Social Media section beside avatar
+ * - Clean marketplace property listings grid
  */
 
 :root {
-    --ofp-primary:       #111827;
-    --ofp-primary-light: #374151;
-    --ofp-bg:            #f9fafb;
-    --ofp-surface:       #ffffff;
-    --ofp-text:          #1f2937;
-    --ofp-text-light:    #6b7280;
-    --ofp-accent:        #2563eb;
-    --ofp-accent-hover:  #1d4ed8;
-    --ofp-border:        #e5e7eb;
+    --hoomeee-bg: #f4f6f8;
+    --hoomeee-card: #ffffff;
+    --hoomeee-text-main: #111827;
+    --hoomeee-text-muted: #6b7280;
+    --hoomeee-text-light: #9ca3af;
+    --hoomeee-green: #00a86b;
+    --hoomeee-green-light: rgba(0, 168, 107, 0.1);
+    --hoomeee-border: #eef1f5;
+    --hoomeee-radius-card: 24px;
+    --hoomeee-radius-inner: 20px;
+    --hoomeee-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
 }
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                 Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-    background-color: var(--ofp-bg);
-    color: var(--ofp-text);
+* {
+    box-sizing: border-box;
+}
+
+body.ofp-agent-page-body {
+    background-color: var(--hoomeee-bg);
+    color: var(--hoomeee-text-main);
     margin: 0;
     padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
 }
 
-/* ── Header ─────────────────────────────────────────────────────────────── */
-.agent-header {
+/* ── Container ───────────────────────────────────────────────────────────── */
+.ofp-agent-page-container {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+/* ── Top Bar (Minimal Breadcrumb / User Tag) ─────────────────────────────── */
+.ofp-agent-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+}
+
+.ofp-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ofp-topbar-back-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
     background: #ffffff;
-    color: var(--ofp-primary);
-    padding: 60px 20px;
-    text-align: center;
-    border-bottom: 1px solid var(--ofp-border);
+    border: 1px solid var(--hoomeee-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--hoomeee-text-main);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
-.agent-logo {
-    width: 120px;
-    height: 120px;
+.ofp-topbar-back-btn:hover {
+    background: #f8fafc;
+    transform: translateX(-2px);
+}
+
+.ofp-topbar-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--hoomeee-text-main);
+    margin: 0;
+    letter-spacing: -0.3px;
+}
+
+.ofp-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ofp-topbar-user-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #ffffff;
+    padding: 6px 14px 6px 8px;
+    border-radius: 30px;
+    border: 1px solid var(--hoomeee-border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.ofp-topbar-avatar {
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     object-fit: cover;
-    border: 1px solid var(--ofp-border);
-    margin-bottom: 20px;
-    background: #fff;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-.agent-name {
-    font-size: 32px;
-    font-weight: 700;
-    margin: 0 0 12px;
-}
-
-.agent-bio {
-    max-width: 600px;
-    margin: 0 auto 30px;
-    font-size: 16px;
-    line-height: 1.6;
-    color: var(--ofp-text-light);
-}
-
-/* ── Contact buttons ────────────────────────────────────────────────────── */
-.agent-contact-actions {
+.ofp-topbar-user-info {
     display: flex;
+    flex-direction: column;
+}
+
+.ofp-topbar-user-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--hoomeee-text-main);
+    line-height: 1.2;
+}
+
+.ofp-topbar-user-role {
+    font-size: 11px;
+    color: var(--hoomeee-green);
+    font-weight: 600;
+}
+
+/* ── Main Showcase Card ──────────────────────────────────────────────────── */
+.ofp-agent-showcase-card {
+    background: var(--hoomeee-card);
+    border-radius: var(--hoomeee-radius-card);
+    box-shadow: var(--hoomeee-shadow);
+    padding: 24px;
+    margin-bottom: 28px;
+}
+
+/* ── Featured Cover Banner (Exact Hoomeee Style) ─────────────────────────── */
+.ofp-cover-banner {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    border-radius: var(--hoomeee-radius-inner);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 24px 28px;
+    box-shadow: inset 0 -120px 80px -20px rgba(0, 0, 0, 0.65);
+}
+
+.ofp-cover-badge-available {
+    align-self: flex-end;
+    background: var(--hoomeee-green);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 18px;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(0, 168, 107, 0.35);
+}
+
+/* Bottom Image Overlay starts AFTER the 140px avatar so it is not obscured */
+.ofp-cover-overlay-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    width: 100%;
+    flex-wrap: wrap;
     gap: 16px;
-    justify-content: center;
+}
+
+.ofp-cover-meta-info {
+    color: #ffffff;
+    margin-left: 190px; /* Shifts text completely after the overlapping profile image */
+    transition: margin-left 0.2s ease;
+}
+
+.ofp-cover-property-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 10px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    letter-spacing: -0.3px;
+}
+
+.ofp-cover-specs {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.95);
     flex-wrap: wrap;
 }
 
-.agent-btn {
+.ofp-spec-item {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    border-radius: 100px;
-    font-weight: 600;
-    font-size: 14px;
-    text-decoration: none;
-    transition: transform 0.2s, opacity 0.2s;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(4px);
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-.agent-btn:hover { transform: translateY(-2px); opacity: 0.9; }
-
-.btn-call      { background: var(--ofp-primary); color: white; }
-.btn-whatsapp  { background: #25D366; color: white; }
-
-/* ── Property grid ──────────────────────────────────────────────────────── */
-.properties-container {
-    max-width: 1200px;
-    margin: 40px auto;
-    padding: 0 20px;
-}
-
-.section-title {
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 30px;
-    color: var(--ofp-primary);
-}
-
-.property-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 30px;
-}
-
-/* ── Property card ──────────────────────────────────────────────────────── */
-.property-card {
-    background: var(--ofp-surface);
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05),
-                0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    border: 1px solid var(--ofp-border);
-    text-decoration: none;
-    color: inherit;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.property-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-                0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-.property-img {
-    width: 100%;
-    height: 220px;
-    object-fit: cover;
-    background: #e5e7eb;
-}
-
-.property-content {
-    padding: 20px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.property-price {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--ofp-accent);
-    margin: 0 0 8px;
-}
-
-.property-title {
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0 0 12px;
-    line-height: 1.4;
-}
-
-.property-meta {
-    display: flex;
-    gap: 16px;
-    color: var(--ofp-text-light);
-    font-size: 13px;
-    margin-top: auto;
-    padding-top: 16px;
-    border-top: 1px solid var(--ofp-border);
-}
-
-.meta-item {
+.ofp-cover-tools {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 10px;
 }
 
-.meta-item svg { width: 16px; height: 16px; }
+.ofp-pagination-pill {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
 
-/* ── Empty state ────────────────────────────────────────────────────────── */
-.empty-state {
+@media (max-width: 860px) {
+    .ofp-cover-meta-info {
+        margin-left: 0;
+        margin-bottom: 20px;
+    }
+}
+
+/* ── Agent Content Split Row ─────────────────────────────────────────────── */
+.ofp-agent-content-split {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 40px;
+    padding: 0 12px 12px;
+}
+
+@media (max-width: 860px) {
+    .ofp-agent-content-split {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+/* ── Left Column: Overlapping Squircle Avatar & CTAs ─────────────────────── */
+.ofp-agent-left-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    padding: 60px 20px;
-    background: var(--ofp-surface);
-    border-radius: 16px;
-    border: 1px solid var(--ofp-border);
+}
+
+/* Squircle Avatar overlapping banner (Exact reference mockup match) */
+.ofp-squircle-avatar-wrap {
+    width: 140px;
+    height: 140px;
+    border-radius: 24px;
+    background: #ffffff;
+    border: 5px solid #ffffff;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+    margin-top: -65px;
+    position: relative;
+    z-index: 2;
+}
+
+.ofp-squircle-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.ofp-agent-person-name {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--hoomeee-text-main);
+    margin: 14px 0 3px;
+    line-height: 1.25;
+}
+
+.ofp-agent-owner-badge {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--hoomeee-green);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+}
+
+/* ── WhatsApp & Call CTAs directly under the profile image ───────────────── */
+.ofp-avatar-contact-buttons {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 14px;
+}
+
+.ofp-btn-avatar-cta {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.ofp-btn-call {
+    background: #111827;
+    color: #ffffff;
+}
+
+.ofp-btn-call:hover {
+    background: #1f2937;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(17, 24, 39, 0.2);
+}
+
+.ofp-btn-whatsapp {
+    background: #25D366;
+    color: #ffffff;
+}
+
+.ofp-btn-whatsapp:hover {
+    background: #20ba5a;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+}
+
+/* Address & Info Details */
+.ofp-agent-address-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 0;
+    border-top: 1px solid var(--hoomeee-border);
+    margin-bottom: 12px;
+}
+
+.ofp-address-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--hoomeee-text-muted);
+    word-break: break-all;
+}
+
+.ofp-address-row svg {
+    color: var(--hoomeee-green);
+    flex-shrink: 0;
+}
+
+/* ── Right Column: Description & Social Media from Client Account ────────── */
+.ofp-agent-right-col {
+    padding-top: 24px;
+}
+
+.ofp-desc-heading {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--hoomeee-text-main);
+    margin: 0 0 14px;
+    letter-spacing: -0.3px;
+}
+
+.ofp-desc-text {
+    font-size: 14.5px;
+    line-height: 1.8;
+    color: var(--hoomeee-text-muted);
+    margin-bottom: 24px;
+}
+
+.ofp-desc-text p {
+    margin: 0 0 12px;
+}
+
+/* ── Social Media Section (Replaces 3 Highlight Badges) ──────────────────── */
+.ofp-social-media-section {
+    padding-top: 20px;
+    border-top: 1px solid var(--hoomeee-border);
+}
+
+.ofp-social-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--hoomeee-text-main);
+    margin: 0 0 14px;
+}
+
+.ofp-social-icons-list {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.ofp-social-bubble {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.ofp-social-bubble:hover {
+    color: #ffffff;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.ofp-social-bubble.yt:hover {
+    background: #ff0000;
+    border-color: #ff0000;
+    color: #ffffff;
+}
+
+.ofp-social-bubble.ig:hover {
+    background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+    border-color: transparent;
+    color: #ffffff;
+}
+
+.ofp-social-bubble.tt:hover {
+    background: #000000;
+    border-color: #000000;
+    color: #ffffff;
+}
+
+.ofp-social-bubble.wa:hover {
+    background: #25d366;
+    border-color: #25d366;
+    color: #ffffff;
+}
+
+.ofp-social-bubble.web:hover {
+    background: var(--hoomeee-green);
+    border-color: var(--hoomeee-green);
+    color: #ffffff;
+}
+
+/* ── Minimal Clean Footer ────────────────────────────────────────────────── */
+.ofp-clean-footer {
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--hoomeee-text-light);
+    padding: 16px 0;
 }

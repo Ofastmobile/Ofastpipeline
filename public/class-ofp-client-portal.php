@@ -47,6 +47,7 @@ class OFP_Client_Portal {
         'property-sales' => 'property-sales.php',
         'property-purchases' => 'property-purchases.php',
         'property-payments' => 'property-payments.php',
+        'activity-logs' => 'activity-logs.php',
     ];
 
     private array $public_routes = [ 'login', 'signup', 'forgot-password', 'reset-password', 'team-invite' ];
@@ -367,6 +368,13 @@ class OFP_Client_Portal {
         }
 
         $route = get_query_var( 'ofp_route', '' );
+        if ( empty( $route ) ) {
+            $path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+            $first_segment = explode( '/', $path )[0] ?? '';
+            if ( array_key_exists( $first_segment, $this->routes ) ) {
+                $route = $first_segment;
+            }
+        }
         if ( empty( $route ) || ! array_key_exists( $route, $this->routes ) ) return;
 
         // Redirect old /communications URL to the unified /message-templates page.

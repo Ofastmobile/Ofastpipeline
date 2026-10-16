@@ -1,0 +1,1160 @@
+/**
+ * OFast Pipeline — Profile Page Redesign Styles
+ * Exact dark-theme aesthetic from reference design:
+ * Concentric avatar frame, 2-column bio matrix, social media chips, and productions table.
+ */
+
+:root {
+    --prof-bg-page: #10131a;
+    --prof-card-bg: #181d28;
+    --prof-card-inner: #131722;
+    --prof-card-hover: #1f2535;
+    --prof-border: rgba(255, 255, 255, 0.08);
+    --prof-border-subtle: rgba(255, 255, 255, 0.05);
+    --prof-text-title: #ffffff;
+    --prof-text-sub: #8a95a5;
+    --prof-text-val: #f1f5f9;
+    --prof-green: #22c55e;
+    --prof-green-glow: rgba(34, 197, 94, 0.25);
+    --prof-green-pill-bg: rgba(34, 197, 94, 0.12);
+    --prof-green-pill-border: rgba(34, 197, 94, 0.3);
+    --prof-teal: #06b6d4;
+    --prof-teal-glow: rgba(6, 182, 212, 0.2);
+    --prof-radius-card: 20px;
+}
+
+/* ── Container & Shell Wrapper ───────────────────────────────────────────── */
+.ofp-profile-page-wrap {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 24px 28px 60px;
+    color: var(--prof-text-val);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── Hero Header ─────────────────────────────────────────────────────────── */
+.ofp-profile-hero-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.ofp-profile-title-group h1.ofp-profile-main-title {
+    font-size: 34px;
+    font-weight: 700;
+    color: var(--prof-text-title);
+    letter-spacing: -0.6px;
+    margin: 0 0 6px 0;
+    line-height: 1.15;
+}
+
+.ofp-profile-main-subtitle {
+    font-size: 14px;
+    color: var(--prof-text-sub);
+    margin: 0;
+    font-weight: 400;
+}
+
+.ofp-profile-hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ofp-btn-edit-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #1e2535;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ofp-btn-edit-profile:hover {
+    background: #273145;
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.ofp-btn-public-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: var(--prof-green);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 9999px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.ofp-btn-public-link:hover {
+    background: rgba(34, 197, 94, 0.18);
+    border-color: var(--prof-green);
+    color: #4ade80;
+    transform: translateY(-1px);
+}
+
+/* ── Dashed Separator ────────────────────────────────────────────────────── */
+.ofp-profile-dashed-divider {
+    height: 1px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.12);
+    margin: 0 0 28px 0;
+}
+
+/* ── Notice / Alerts ─────────────────────────────────────────────────────── */
+.ofp-profile-notice {
+    padding: 14px 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.ofp-profile-notice.success {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+}
+
+.ofp-profile-notice.error {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+}
+
+/* ── Generic Profile Card ────────────────────────────────────────────────── */
+.ofp-profile-card {
+    background: var(--prof-card-bg);
+    border: 1px solid var(--prof-border);
+    border-radius: var(--prof-radius-card);
+    padding: 30px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    position: relative;
+    transition: border-color 0.2s ease;
+}
+
+.ofp-profile-card:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ── Top 2-Column Grid ───────────────────────────────────────────────────── */
+.ofp-profile-top-grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 980px) {
+    .ofp-profile-top-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Left Card: Avatar & Status ──────────────────────────────────────────── */
+.ofp-avatar-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 36px 24px;
+}
+
+.ofp-avatar-meta {
+    margin-bottom: 28px;
+}
+
+.ofp-avatar-name {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--prof-text-title);
+    margin: 0 0 6px 0;
+    line-height: 1.2;
+}
+
+.ofp-avatar-tier {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--prof-green);
+    letter-spacing: 0.2px;
+}
+
+/* Concentric outer ring matching reference screenshot */
+.ofp-avatar-frame-outer {
+    width: 250px;
+    height: 250px;
+    border-radius: 50%;
+    background: #11141c;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 
+        0 0 0 10px #151a24,
+        inset 0 4px 16px rgba(0, 0, 0, 0.7);
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ofp-avatar-frame-outer:hover {
+    transform: scale(1.02);
+    box-shadow: 
+        0 0 0 10px #1c2331,
+        inset 0 4px 16px rgba(0, 0, 0, 0.7);
+}
+
+.ofp-avatar-frame-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1b202c;
+}
+
+.ofp-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.ofp-avatar-initials {
+    font-size: 48px;
+    font-weight: 700;
+    color: #cbd5e1;
+    text-transform: uppercase;
+}
+
+.ofp-avatar-change-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 13, 20, 0.75);
+    backdrop-filter: blur(2px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    cursor: pointer;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.ofp-avatar-frame-outer:hover .ofp-avatar-change-overlay {
+    opacity: 1;
+}
+
+/* ── Right Card: Bio & Other Details Matrix ──────────────────────────────── */
+.ofp-bio-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.ofp-bio-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--prof-text-title);
+    margin: 0;
+}
+
+.ofp-online-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--prof-green);
+    box-shadow: 0 0 10px var(--prof-green);
+    display: inline-block;
+}
+
+/* 2-column info matrix with row dividers */
+.ofp-details-matrix {
+    display: flex;
+    flex-direction: column;
+}
+
+.ofp-details-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--prof-border-subtle);
+}
+
+.ofp-details-row:first-child {
+    padding-top: 0;
+}
+
+.ofp-details-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+@media (max-width: 640px) {
+    .ofp-details-row {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+}
+
+.ofp-detail-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ofp-detail-label {
+    font-size: 12px;
+    color: var(--prof-text-sub);
+    font-weight: 500;
+    letter-spacing: 0.1px;
+}
+
+.ofp-detail-val {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--prof-text-val);
+    line-height: 1.35;
+}
+
+/* Availability Pill */
+.ofp-availability-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--prof-green-pill-bg);
+    border: 1px solid var(--prof-green-pill-border);
+    color: var(--prof-green);
+    border-radius: 9999px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    width: fit-content;
+}
+
+.ofp-pill-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--prof-green);
+    box-shadow: 0 0 8px var(--prof-green);
+    display: inline-block;
+}
+
+/* Badges Item */
+.ofp-badge-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--prof-teal);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.ofp-badge-icon {
+    width: 15px;
+    height: 15px;
+    display: inline-block;
+}
+
+/* Tags */
+.ofp-tags-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--prof-text-title);
+    letter-spacing: 0.2px;
+}
+
+/* ── Middle Card: Social Media ───────────────────────────────────────────── */
+.ofp-social-media-card {
+    margin-bottom: 24px;
+}
+
+.ofp-social-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--prof-text-title);
+    margin: 0 0 18px 0;
+}
+
+.ofp-social-icons-list {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.ofp-social-bubble {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ofp-social-bubble:hover {
+    transform: translateY(-2px) scale(1.05);
+}
+
+/* YouTube */
+.ofp-social-bubble.yt {
+    background: #ff0000;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(255, 0, 0, 0.25);
+}
+
+/* Instagram */
+.ofp-social-bubble.ig {
+    background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(214, 36, 159, 0.25);
+}
+
+/* TikTok */
+.ofp-social-bubble.tt {
+    background: #000000;
+    border-color: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* WhatsApp */
+.ofp-social-bubble.wa {
+    background: #25d366;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25);
+}
+
+/* Globe / Public Website */
+.ofp-social-bubble.web {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #38bdf8;
+}
+
+/* ── Bottom Card: My Productions / Portfolio ─────────────────────────────── */
+.ofp-productions-card {
+    padding-bottom: 24px;
+}
+
+.ofp-productions-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.ofp-productions-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--prof-text-title);
+    margin: 0;
+}
+
+.ofp-productions-view-all {
+    font-size: 13px;
+    color: var(--prof-text-sub);
+    text-decoration: none;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.15s ease;
+}
+
+.ofp-productions-view-all:hover {
+    color: #ffffff;
+}
+
+.ofp-table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.ofp-productions-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.ofp-productions-table thead th {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--prof-text-sub);
+    padding: 0 16px 14px 16px;
+    border-bottom: 1px solid var(--prof-border);
+}
+
+.ofp-productions-table tbody tr {
+    transition: background-color 0.15s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.ofp-productions-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.ofp-productions-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.ofp-productions-table td {
+    padding: 16px;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.ofp-prod-title-cell {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ofp-prod-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #11141c;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+
+.ofp-prod-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.ofp-prod-main-title {
+    font-weight: 600;
+    color: var(--prof-text-title);
+    font-size: 14px;
+}
+
+.ofp-prod-sub-title {
+    font-size: 12px;
+    color: var(--prof-text-sub);
+}
+
+.ofp-prod-timing {
+    color: var(--prof-text-val);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.ofp-prod-listenings {
+    color: var(--prof-text-sub);
+    font-size: 14px;
+}
+
+.ofp-prod-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--prof-text-sub);
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.ofp-prod-action-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+/* ── Interactive Modal Drawer for Profile Editing ────────────────────────── */
+.ofp-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 11, 16, 0.78);
+    backdrop-filter: blur(6px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.ofp-modal-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.ofp-modal-window {
+    background: #171c26;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 820px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+}
+
+.ofp-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--prof-border);
+}
+
+.ofp-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.ofp-modal-close-btn {
+    background: none;
+    border: none;
+    color: var(--prof-text-sub);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.ofp-modal-close-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.ofp-modal-tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px 0 24px;
+    border-bottom: 1px solid var(--prof-border);
+    overflow-x: auto;
+}
+
+.ofp-modal-tab-btn {
+    background: none;
+    border: none;
+    color: var(--prof-text-sub);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.ofp-modal-tab-btn:hover {
+    color: #ffffff;
+}
+
+.ofp-modal-tab-btn.active {
+    color: #38bdf8;
+    border-bottom-color: #38bdf8;
+}
+
+.ofp-modal-body {
+    padding: 24px;
+}
+
+.ofp-tab-panel {
+    display: none;
+}
+
+.ofp-tab-panel.active {
+    display: block;
+}
+
+/* Modal Form Styles */
+.ofp-form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+    .ofp-form-row-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ofp-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.ofp-field-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--prof-text-sub);
+}
+
+.ofp-field-group input[type="text"],
+.ofp-field-group input[type="email"],
+.ofp-field-group input[type="password"],
+.ofp-field-group textarea,
+.ofp-field-group select {
+    background: #11151e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.ofp-field-group input:focus,
+.ofp-field-group textarea:focus,
+.ofp-field-group select:focus {
+    border-color: #38bdf8;
+}
+
+.ofp-field-group textarea {
+    min-height: 85px;
+    resize: vertical;
+}
+
+.ofp-field-hint {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.ofp-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--prof-border);
+    background: #141822;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+.ofp-modal-btn-cancel {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--prof-text-sub);
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ofp-modal-btn-cancel:hover {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.ofp-modal-btn-save {
+    background: #2563eb;
+    border: none;
+    color: #ffffff;
+    padding: 9px 22px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.ofp-modal-btn-save:hover {
+    background: #1d4ed8;
+}
+
+/* ── Light Mode Color Theme Overrides ────────────────────────────────────── */
+[data-theme="light"],
+html.light,
+body.light {
+    --prof-bg-page: #f8fafc;
+    --prof-card-bg: #ffffff;
+    --prof-card-inner: #f1f5f9;
+    --prof-card-hover: #f8fafc;
+    --prof-border: #e2e8f0;
+    --prof-border-subtle: #f1f5f9;
+    --prof-text-title: #0f172a;
+    --prof-text-sub: #64748b;
+    --prof-text-val: #1e293b;
+    --prof-green: #16a34a;
+    --prof-green-glow: rgba(22, 163, 74, 0.15);
+    --prof-green-pill-bg: #dcfce7;
+    --prof-green-pill-border: #86efac;
+    --prof-teal: #0891b2;
+    --prof-teal-glow: rgba(8, 145, 178, 0.15);
+}
+
+[data-theme="light"] .ofp-profile-page-wrap,
+html.light .ofp-profile-page-wrap {
+    color: #1e293b;
+}
+
+/* Light Mode Page Header */
+[data-theme="light"] .ofp-profile-main-title,
+html.light .ofp-profile-main-title {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-profile-main-subtitle,
+html.light .ofp-profile-main-subtitle {
+    color: #64748b;
+}
+
+[data-theme="light"] .ofp-profile-dashed-divider,
+html.light .ofp-profile-dashed-divider {
+    border-top-color: #cbd5e1;
+}
+
+/* Light Mode Cards */
+[data-theme="light"] .ofp-profile-card,
+html.light .ofp-profile-card {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 4px 18px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .ofp-profile-card:hover,
+html.light .ofp-profile-card:hover {
+    border-color: #cbd5e1;
+}
+
+/* Light Mode Avatar Card */
+[data-theme="light"] .ofp-avatar-name,
+html.light .ofp-avatar-name {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-avatar-tier,
+html.light .ofp-avatar-tier {
+    color: #16a34a;
+}
+
+[data-theme="light"] .ofp-avatar-frame-outer,
+html.light .ofp-avatar-frame-outer {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 0 0 10px #f1f5f9, inset 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .ofp-avatar-frame-outer:hover,
+html.light .ofp-avatar-frame-outer:hover {
+    box-shadow: 0 0 0 10px #e2e8f0, inset 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .ofp-avatar-frame-inner,
+html.light .ofp-avatar-frame-inner {
+    background: #f8fafc;
+}
+
+[data-theme="light"] .ofp-avatar-initials,
+html.light .ofp-avatar-initials {
+    color: #475569;
+}
+
+/* Light Mode Bio & Details Matrix */
+[data-theme="light"] .ofp-bio-card-title,
+html.light .ofp-bio-card-title {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-details-row,
+html.light .ofp-details-row {
+    border-bottom-color: #f1f5f9;
+}
+
+[data-theme="light"] .ofp-detail-label,
+html.light .ofp-detail-label {
+    color: #64748b;
+}
+
+[data-theme="light"] .ofp-detail-val,
+html.light .ofp-detail-val {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-availability-badge,
+html.light .ofp-availability-badge {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+}
+
+[data-theme="light"] .ofp-badge-item,
+html.light .ofp-badge-item {
+    color: #0891b2;
+}
+
+[data-theme="light"] .ofp-tags-text,
+html.light .ofp-tags-text {
+    color: #0f172a;
+}
+
+/* Light Mode Social Media Card */
+[data-theme="light"] .ofp-social-card-title,
+html.light .ofp-social-card-title {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-social-bubble,
+html.light .ofp-social-bubble {
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .ofp-social-bubble.tt,
+html.light .ofp-social-bubble.tt {
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #ffffff;
+}
+
+[data-theme="light"] .ofp-social-bubble.web,
+html.light .ofp-social-bubble.web {
+    background: #f1f5f9;
+    color: #0284c7;
+    border-color: #cbd5e1;
+}
+
+/* Light Mode Productions Table Card */
+[data-theme="light"] .ofp-productions-title,
+html.light .ofp-productions-title {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-productions-view-all,
+html.light .ofp-productions-view-all {
+    color: #64748b;
+}
+
+[data-theme="light"] .ofp-productions-view-all:hover,
+html.light .ofp-productions-view-all:hover {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-productions-table thead th,
+html.light .ofp-productions-table thead th {
+    color: #64748b;
+    border-bottom-color: #e2e8f0;
+}
+
+[data-theme="light"] .ofp-productions-table tbody tr,
+html.light .ofp-productions-table tbody tr {
+    border-bottom-color: #f1f5f9;
+}
+
+[data-theme="light"] .ofp-productions-table tbody tr:hover,
+html.light .ofp-productions-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+[data-theme="light"] .ofp-prod-thumb,
+html.light .ofp-prod-thumb {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+[data-theme="light"] .ofp-prod-main-title,
+html.light .ofp-prod-main-title {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-prod-sub-title,
+html.light .ofp-prod-sub-title {
+    color: #64748b;
+}
+
+[data-theme="light"] .ofp-prod-timing,
+html.light .ofp-prod-timing {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-prod-listenings,
+html.light .ofp-prod-listenings {
+    color: #64748b;
+}
+
+[data-theme="light"] .ofp-prod-action-btn,
+html.light .ofp-prod-action-btn {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #64748b;
+}
+
+[data-theme="light"] .ofp-prod-action-btn:hover,
+html.light .ofp-prod-action-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+/* Light Mode Popup Modal Drawer */
+[data-theme="light"] .ofp-modal-backdrop,
+html.light .ofp-modal-backdrop {
+    background: rgba(15, 23, 42, 0.55);
+}
+
+[data-theme="light"] .ofp-modal-window,
+html.light .ofp-modal-window {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-modal-header,
+html.light .ofp-modal-header {
+    border-bottom-color: #e2e8f0;
+    background: #ffffff;
+}
+
+[data-theme="light"] .ofp-modal-title,
+html.light .ofp-modal-title {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-modal-close-btn,
+html.light .ofp-modal-close-btn {
+    color: #64748b;
+}
+
+[data-theme="light"] .ofp-modal-close-btn:hover,
+html.light .ofp-modal-close-btn:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+[data-theme="light"] .ofp-modal-tabs,
+html.light .ofp-modal-tabs {
+    border-bottom-color: #e2e8f0;
+    background: #ffffff;
+}
+
+[data-theme="light"] .ofp-modal-tab-btn,
+html.light .ofp-modal-tab-btn {
+    color: #64748b;
+}
+
+[data-theme="light"] .ofp-modal-tab-btn:hover,
+html.light .ofp-modal-tab-btn:hover {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-modal-tab-btn.active,
+html.light .ofp-modal-tab-btn.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+
+[data-theme="light"] .ofp-field-group label,
+html.light .ofp-field-group label {
+    color: #475569;
+}
+
+[data-theme="light"] .ofp-field-group input[type="text"],
+[data-theme="light"] .ofp-field-group input[type="email"],
+[data-theme="light"] .ofp-field-group input[type="password"],
+[data-theme="light"] .ofp-field-group textarea,
+[data-theme="light"] .ofp-field-group select,
+html.light .ofp-field-group input[type="text"],
+html.light .ofp-field-group input[type="email"],
+html.light .ofp-field-group input[type="password"],
+html.light .ofp-field-group textarea,
+html.light .ofp-field-group select {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-field-group input:focus,
+[data-theme="light"] .ofp-field-group textarea:focus,
+[data-theme="light"] .ofp-field-group select:focus,
+html.light .ofp-field-group input:focus,
+html.light .ofp-field-group textarea:focus,
+html.light .ofp-field-group select:focus {
+    background: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+[data-theme="light"] .ofp-field-hint,
+html.light .ofp-field-hint {
+    color: #64748b;
+}
+
+[data-theme="light"] .ofp-modal-footer,
+html.light .ofp-modal-footer {
+    background: #f8fafc;
+    border-top-color: #e2e8f0;
+}
+
+[data-theme="light"] .ofp-modal-btn-cancel,
+html.light .ofp-modal-btn-cancel {
+    border-color: #cbd5e1;
+    color: #475569;
+    background: #ffffff;
+}
+
+[data-theme="light"] .ofp-modal-btn-cancel:hover,
+html.light .ofp-modal-btn-cancel:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-modal-btn-save,
+html.light .ofp-modal-btn-save {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+[data-theme="light"] .ofp-modal-btn-save:hover,
+html.light .ofp-modal-btn-save:hover {
+    background: #1d4ed8;
+}
