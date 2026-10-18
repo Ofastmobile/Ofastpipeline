@@ -100,6 +100,14 @@ class OFP_Activator {
             $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN logo_url VARCHAR(255) DEFAULT NULL AFTER business_category" );
         }
 
+        // cover_image_url column on ofp_clients (added for client profile cover banner uploads).
+        $cover_column_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'cover_image_url'"
+        );
+        if ( empty( $cover_column_exists ) ) {
+            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN cover_image_url VARCHAR(255) DEFAULT NULL AFTER logo_url" );
+        }
+
         // ofp_notification_pref column on ofp_clients (added for Phase 17 notifications).
         $notif_pref_exists = $wpdb->get_results(
             "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'ofp_notification_pref'"

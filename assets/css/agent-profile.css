@@ -37,13 +37,19 @@ body.ofp-agent-page-body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 /* ── Container ───────────────────────────────────────────────────────────── */
 .ofp-agent-page-container {
     max-width: 1240px;
+    width: 100%;
     margin: 0 auto;
-    padding: 24px 20px 60px;
+    padding: 24px 20px 40px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 /* ── Top Bar (Minimal Breadcrumb / User Tag) ─────────────────────────────── */
@@ -464,8 +470,15 @@ body.ofp-agent-page-body {
 
 /* ── Minimal Clean Footer ────────────────────────────────────────────────── */
 .ofp-clean-footer {
+    margin-top: auto;
+    padding: 60px 0 24px;
     text-align: center;
-    font-size: 12.5px;
-    color: var(--hoomeee-text-light);
-    padding: 16px 0;
+    font-size: 13px;
+    color: var(--hoomeee-text-muted);
+    border-top: 1px solid var(--hoomeee-border);
+}
+
+.ofp-clean-footer p {
+    margin: 0;
+    line-height: 1.6;
 }

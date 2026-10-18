@@ -98,6 +98,13 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                 ? 'You have reached your plan\'s property limit. Choose a higher plan to add more.'
                 : 'Upgrade your plan to add more properties, or you may have reached the Free plan limit of 1 listing.';
         }
+        elseif ( empty( OFP_Bank_Account::list( (int) $client->id ) ) ) {
+            $error = 'A receiving bank account is required before submitting properties. Please add your bank details in <a href="' . esc_url( home_url( '/account' ) ) . '" style="text-decoration:underline; font-weight:700;">Account Settings &rarr; Bank Accounts</a>.';
+        }
+        elseif ( ( in_array( OFP_Subscription::normalize_plan( $client->plan ?? 'free' ), [ 'silver', 'gold' ], true ) || ! empty( $client->is_white_label ) ) && empty( $client->is_verified ) ) {
+            $client_plan_name = ! empty( $client->is_white_label ) ? 'White-Label / Solo' : ucfirst( OFP_Subscription::normalize_plan( $client->plan ?? 'free' ) );
+            $error = 'Business verification (CAC & NIN/BVN) is required for ' . esc_html( $client_plan_name ) . ' plan before submitting properties. Please complete your verification in <a href="' . esc_url( home_url( '/account' ) ) . '" style="text-decoration:underline; font-weight:700;">Account Settings &rarr; Verification</a>.';
+        }
         elseif ( empty( $_POST['title'] ) || empty( $_POST['price'] ) ) {
             $error = 'Title and price are required.';
         } else {
@@ -704,7 +711,40 @@ $prop_tabs = [
                         </p>
                         <a href="<?php echo esc_url( home_url( '/pricing' ) ); ?>" class="ofp-btn ofp-btn-primary" style="padding:10px 24px;">Upgrade Plan</a>
                     </div>
-                <?php else : ?>
+                <?php else : 
+                    $ofp_client_banks = OFP_Bank_Account::list( (int) $client->id );
+                    $ofp_client_tier  = OFP_Subscription::normalize_plan( $client->plan ?? 'free' );
+                    $ofp_req_kyc      = in_array( $ofp_client_tier, [ 'silver', 'gold' ], true ) || ! empty( $client->is_white_label );
+                    $ofp_is_verified  = ! empty( $client->is_verified );
+                    $ofp_has_banks    = ! empty( $ofp_client_banks );
+                    $ofp_can_publish  = $ofp_has_banks && ( ! $ofp_req_kyc || $ofp_is_verified );
+                ?>
+                    <?php if ( ! $ofp_has_banks ) : ?>
+                        <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.3); border-radius:14px; padding:18px 22px; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:14px;">
+                                <span style="font-size:24px;">&#9888;&#65039;</span>
+                                <div>
+                                    <strong style="color:#d97706; font-size:14px; display:block; margin-bottom:2px;">Receiving Bank Account Required</strong>
+                                    <span style="color:var(--text-muted); font-size:13px;">All clients must add at least one verified bank account before properties can be saved.</span>
+                                </div>
+                            </div>
+                            <a href="<?php echo esc_url( home_url( '/account' ) ); ?>" class="ofp-btn ofp-btn-sm" style="background:#d97706; color:#fff; border-radius:8px; padding:8px 18px; font-weight:600; text-decoration:none; white-space:nowrap;">Add Bank Details &rarr;</a>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ( $ofp_req_kyc && ! $ofp_is_verified ) : ?>
+                        <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:14px; padding:18px 22px; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:14px;">
+                                <span style="font-size:24px;">&#128274;</span>
+                                <div>
+                                    <strong style="color:#dc2626; font-size:14px; display:block; margin-bottom:2px;">Business Verification Compulsory (<?php echo esc_html( ! empty( $client->is_white_label ) ? 'White-Label / Solo' : ucfirst( $ofp_client_tier ) ); ?> Plan)</strong>
+                                    <span style="color:var(--text-muted); font-size:13px;">Your plan requires official business verification (CAC and NIN or BVN) before listings can be published.</span>
+                                </div>
+                            </div>
+                            <a href="<?php echo esc_url( home_url( '/account' ) ); ?>" class="ofp-btn ofp-btn-sm" style="background:#dc2626; color:#fff; border-radius:8px; padding:8px 18px; font-weight:600; text-decoration:none; white-space:nowrap;">Verify Business &rarr;</a>
+                        </div>
+                    <?php endif; ?>
+
                     <form method="POST" enctype="multipart/form-data" style="margin-top:0;">
                         <?php wp_nonce_field( 'ofp_save_property_action', 'ofp_property_nonce' ); ?>
                         <?php if ( $editing_post ) : ?>

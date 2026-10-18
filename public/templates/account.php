@@ -18,6 +18,10 @@ $has_logo = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIK
 if (empty($has_logo)) {
     $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN logo_url VARCHAR(255) DEFAULT NULL AFTER business_category");
 }
+$has_cover = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'cover_image_url'");
+if (empty($has_cover)) {
+    $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN cover_image_url VARCHAR(255) DEFAULT NULL AFTER logo_url");
+}
 $has_slug = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'profile_slug'");
 if (empty($has_slug)) {
     $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN profile_slug VARCHAR(255) DEFAULT NULL");
@@ -235,6 +239,52 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
                 $success = 'Branding saved.';
             }
         }
+    } elseif ( isset( $_POST['upload_cover'] ) && isset( $_FILES['cover_image'] ) ) {
+        $file = $_FILES['cover_image'];
+        
+        if ( $file['error'] !== UPLOAD_ERR_OK ) {
+            $error = 'There was an error uploading the cover image. Please try again.';
+        } elseif ( $file['size'] > 3 * 1024 * 1024 ) {
+            $error = 'Cover image is too large. Maximum size is 3MB.';
+        } else {
+            $allowed_types = [ 'image/jpeg', 'image/png', 'image/webp' ];
+            $file_type = wp_check_filetype( $file['name'] );
+            
+            if ( ! in_array( $file_type['type'], $allowed_types ) ) {
+                $error = 'Invalid file type. Only JPG, PNG, and WebP are allowed.';
+            } else {
+                if ( ! function_exists( 'wp_handle_upload' ) ) {
+                    require_once ABSPATH . 'wp-admin/includes/file.php';
+                }
+                
+                $upload_overrides = [ 'test_form' => false ];
+                $movefile = wp_handle_upload( $file, $upload_overrides );
+                
+                if ( $movefile && ! isset( $movefile['error'] ) ) {
+                    global $wpdb;
+                    $wpdb->update(
+                        $wpdb->prefix . 'ofp_clients',
+                        [ 'cover_image_url' => $movefile['url'] ],
+                        [ 'id' => $client->id ]
+                    );
+                    
+                    wp_safe_redirect( add_query_arg( 'success', 'cover', home_url( '/account' ) ) );
+                    exit;
+                } else {
+                    $error = $movefile['error'] ?? 'Failed to save uploaded cover image.';
+                }
+            }
+        }
+    } elseif ( isset( $_POST['remove_cover'] ) ) {
+        global $wpdb;
+        $wpdb->update(
+            $wpdb->prefix . 'ofp_clients',
+            [ 'cover_image_url' => null ],
+            [ 'id' => $client->id ]
+        );
+        
+        wp_safe_redirect( add_query_arg( 'success', 'cover_reset', home_url( '/account' ) ) );
+        exit;
     } elseif ( isset( $_POST['upload_logo'] ) && isset( $_FILES['logo'] ) ) {
         $file = $_FILES['logo'];
         
@@ -275,8 +325,14 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
 }
 
 // Handle success messages from redirects
-if ( isset( $_GET['success'] ) && $_GET['success'] === 'logo' ) {
-    $success = 'Profile photo updated successfully.';
+if ( isset( $_GET['success'] ) ) {
+    if ( $_GET['success'] === 'logo' ) {
+        $success = 'Profile photo updated successfully.';
+    } elseif ( $_GET['success'] === 'cover' ) {
+        $success = 'Cover image updated successfully! It is now live on your public /agent profile.';
+    } elseif ( $_GET['success'] === 'cover_reset' ) {
+        $success = 'Cover image reset to default platform banner.';
+    }
 }
 
 // ── Profile Data Extraction & Fallbacks ──────────────────────────────────────
@@ -298,6 +354,11 @@ $whatsapp_url       = ! empty( $extra['whatsapp_url'] ) ? $extra['whatsapp_url']
 
 // Avatar image URL
 $avatar_url = ! empty( $client->logo_url ) ? $client->logo_url : OFP_URL . 'assets/images/default-avatar.png';
+
+// Cover banner image URL
+$default_cover    = OFP_URL . 'assets/images/dashboard-hero-banner.jpg';
+$cover_url        = ! empty( $client->cover_image_url ) ? $client->cover_image_url : $default_cover;
+$has_custom_cover = ! empty( $client->cover_image_url );
 
 // Tier badge text
 $plan_badge = 'Premium User';
@@ -673,6 +734,17 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
     <input type="file" name="logo" id="ofp-logo-input" accept="image/jpeg,image/png,image/gif,image/webp">
 </form>
 
+<!-- ── Hidden form for Instant Cover Banner upload ───────────────────────── -->
+<form method="POST" action="" enctype="multipart/form-data" id="ofp-cover-form" style="display:none;">
+    <?php wp_nonce_field( 'ofp_account_' . $client->id, 'ofp_account_nonce' ); ?>
+    <input type="hidden" name="upload_cover" value="1">
+    <input type="file" name="cover_image" id="ofp-cover-input" accept="image/jpeg,image/png,image/webp">
+</form>
+<form method="POST" action="" id="ofp-reset-cover-form" style="display:none;">
+    <?php wp_nonce_field( 'ofp_account_' . $client->id, 'ofp_account_nonce' ); ?>
+    <input type="hidden" name="remove_cover" value="1">
+</form>
+
 <!-- ── Interactive Edit Profile Modal Drawer ─────────────────────────────── -->
 <div class="ofp-modal-backdrop" id="ofp-edit-modal-backdrop" aria-hidden="true">
     <div class="ofp-modal-window" role="dialog" aria-modal="true" aria-labelledby="ofp-modal-title">
@@ -688,6 +760,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
             <button type="button" class="ofp-modal-tab-btn active" data-tab="tab-profile">Profile Details</button>
             <button type="button" class="ofp-modal-tab-btn" data-tab="tab-social">Social & Links</button>
             <button type="button" class="ofp-modal-tab-btn" data-tab="tab-banking">Bank Accounts</button>
+                    <button type="button" class="ofp-modal-tab-btn" data-tab="tab-verification">Verification (KYC/KYB)</button>
             <button type="button" class="ofp-modal-tab-btn" data-tab="tab-security">Security</button>
             <?php if ( OFP_Brand::can_brand( $client ) && OFP_White_Label::schema_ready() ) : ?>
                 <button type="button" class="ofp-modal-tab-btn" data-tab="tab-branding">Branding</button>
@@ -757,6 +830,51 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                         <div class="ofp-field-group">
                             <label>Support Phone</label>
                             <input type="text" name="support_phone" value="<?php echo esc_attr( $client->support_phone ?? '' ); ?>" placeholder="+234...">
+                        </div>
+                    </div>
+
+                    <!-- Public Agent Profile Cover Banner (/agent/) -->
+                    <div class="ofp-field-group full-width" style="margin-bottom:20px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                            <label style="margin:0; font-weight:600; font-size:13.5px; color:var(--prof-text-title);">Public Agent Profile Cover Banner</label>
+                            <?php if ( ! empty( $client->profile_slug ) ) : ?>
+                                <a href="<?php echo esc_url( home_url( '/agent/' . $client->profile_slug ) ); ?>" target="_blank" style="font-size:12px; color:var(--prof-teal); text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-weight:500;">
+                                    Preview /agent profile
+                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                        <span class="ofp-field-hint" style="margin-bottom:12px; display:block;">
+                            This image appears as the showcase hero banner at the top of your public <strong>/agent/</strong> profile page.
+                        </span>
+
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--prof-border); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:14px;">
+                            <!-- Banner Preview Box -->
+                            <div style="position:relative; width:100%; height:130px; border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.1); background-image:url('<?php echo esc_url( $cover_url ); ?>'); background-size:cover; background-position:center; display:flex; align-items:flex-end; justify-content:space-between; padding:12px 14px; box-shadow:inset 0 -50px 30px rgba(0,0,0,0.5);">
+                                <span style="background:rgba(16,19,26,0.75); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); color:#fff; font-size:11px; font-weight:600; padding:4px 10px; border-radius:12px; border:1px solid rgba(255,255,255,0.15);">
+                                    <?php echo $has_custom_cover ? '✓ Custom Cover Active' : 'Default Platform Banner'; ?>
+                                </span>
+                                <span style="color:rgba(255,255,255,0.8); font-size:11px; text-shadow:0 1px 2px rgba(0,0,0,0.8);">
+                                    1920 × 480px recommended
+                                </span>
+                            </div>
+
+                            <!-- Buttons Bar -->
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <button type="button" class="ofp-btn ofp-btn-sm" onclick="document.getElementById('ofp-cover-input').click();" style="background:var(--prof-teal); color:#fff; border-radius:8px; padding:8px 16px; font-size:12.5px; font-weight:600; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        <span><?php echo $has_custom_cover ? 'Change Cover Image' : 'Upload Cover Image'; ?></span>
+                                    </button>
+
+                                    <?php if ( $has_custom_cover ) : ?>
+                                        <button type="button" class="ofp-btn ofp-btn-sm" onclick="if(confirm('Reset your public profile cover back to default?')){ document.getElementById('ofp-reset-cover-form').submit(); }" style="background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer;">
+                                            Reset to Default
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                                <span style="font-size:11.5px; color:var(--prof-text-sub);">Supports JPG, PNG or WebP up to 3MB</span>
+                            </div>
                         </div>
                     </div>
 
@@ -863,27 +981,41 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                         <div class="ofp-form-row-2">
                             <div class="ofp-field-group">
                                 <label>Bank Name</label>
-                                <input type="text" name="bank_name" list="ofp-bank-names" placeholder="e.g. GTBank">
-                                <datalist id="ofp-bank-names">
-                                    <?php foreach ( [ 'Access Bank', 'GTBank', 'First Bank', 'UBA', 'Zenith Bank', 'Fidelity Bank', 'Stanbic IBTC', 'Sterling Bank', 'Union Bank', 'Wema Bank', 'Polaris Bank', 'FCMB', 'Ecobank', 'Kuda', 'Opay', 'Palmpay', 'Moniepoint', '9PSB' ] as $bn ) : ?>
-                                        <option value="<?php echo esc_attr( $bn ); ?>">
+                                <select name="bank_code" id="ofp-bank-code-select" required style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--prof-border); background:#1e293b; color:#fff; font-size:14px;">
+                                    <option value="">Select your bank...</option>
+                                    <?php foreach ( OFP_Bank_Account::get_banks() as $bank_item ) : ?>
+                                        <option value="<?php echo esc_attr( $bank_item['code'] ); ?>" data-name="<?php echo esc_attr( $bank_item['name'] ); ?>">
+                                            <?php echo esc_html( $bank_item['name'] ); ?>
+                                        </option>
                                     <?php endforeach; ?>
-                                </datalist>
+                                </select>
+                                <input type="hidden" name="bank_name" id="ofp-bank-name-hidden" value="">
                             </div>
                             <div class="ofp-field-group">
-                                <label>Account Number (10 digits)</label>
-                                <input type="text" name="bank_account_number" inputmode="numeric" maxlength="10" placeholder="0123456789">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label>Account Number (10 digits)</label>
+                                    <span id="ofp-bank-resolving-spin" style="display:none; font-size:11px; color:#38bdf8; font-weight:600;">
+                                        Verifying...
+                                    </span>
+                                </div>
+                                <input type="text" name="bank_account_number" id="ofp-bank-account-num" inputmode="numeric" maxlength="10" placeholder="0123456789" required autocomplete="off">
                             </div>
                         </div>
 
                         <div class="ofp-form-row-2">
                             <div class="ofp-field-group">
-                                <label>Account Name</label>
-                                <input type="text" name="bank_account_name" placeholder="Name on the bank account">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label>Account Name</label>
+                                    <span id="ofp-bank-verified-badge" style="display:none; font-size:11px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:12px; font-weight:700;">
+                                        ✓ Verified Account
+                                    </span>
+                                </div>
+                                <input type="text" name="bank_account_name" id="ofp-bank-account-name" placeholder="Auto-fetches upon typing account number" required>
+                                <p id="ofp-bank-resolve-err" style="display:none; color:#f87171; font-size:12px; margin:6px 0 0; line-height:1.4;"></p>
                             </div>
                             <div class="ofp-field-group">
                                 <label>Confirm with Password</label>
-                                <input type="password" name="bank_password" autocomplete="current-password" placeholder="Enter password to save">
+                                <input type="password" name="bank_password" autocomplete="current-password" placeholder="Enter password to save" required>
                             </div>
                         </div>
 
@@ -894,6 +1026,90 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                     </form>
                 <?php else : ?>
                     <p style="color:var(--prof-text-sub); font-size:14px;">Only primary clients can manage payment accounts.</p>
+                <?php endif; ?>
+            </div>
+
+                        <!-- Tab: Verification (KYC / KYB) -->
+            <div class="ofp-tab-panel" id="tab-verification">
+                <?php if ( ! empty( $client->is_verified ) ) : ?>
+                    <!-- Verified State -->
+                    <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:16px; padding:24px; text-align:center; margin-bottom:20px;">
+                        <div style="width:56px; height:56px; border-radius:50%; background:#10b981; color:#fff; display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px; box-shadow:0 4px 14px rgba(16,185,129,0.4);">
+                            <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <h3 style="color:#ffffff; font-size:18px; font-weight:700; margin:0 0 4px;">Business &amp; Identity Verified</h3>
+                        <p style="color:var(--prof-text-sub); font-size:13px; margin:0 0 16px;">Your business credentials have been officially validated against government registries.</p>
+                        
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; text-align:left; background:rgba(0,0,0,0.2); padding:16px; border-radius:12px; border:1px solid rgba(255,255,255,0.06);">
+                            <div>
+                                <span style="font-size:11px; color:var(--prof-text-sub); display:block; text-transform:uppercase; letter-spacing:0.5px;">Registered Company</span>
+                                <strong style="font-size:14px; color:#ffffff;"><?php echo esc_html( $client->verified_company_name ?: $client->business_name ); ?></strong>
+                            </div>
+                            <div>
+                                <span style="font-size:11px; color:var(--prof-text-sub); display:block; text-transform:uppercase; letter-spacing:0.5px;">CAC Registration No</span>
+                                <strong style="font-size:14px; color:#ffffff; font-family:monospace;"><?php echo esc_html( $client->cac_number ?: 'Verified' ); ?></strong>
+                            </div>
+                            <div>
+                                <span style="font-size:11px; color:var(--prof-text-sub); display:block; text-transform:uppercase; letter-spacing:0.5px;">Identity Check</span>
+                                <strong style="font-size:14px; color:#10b981;">✓ <?php echo esc_html( $client->id_type_verified ?: 'NIN/BVN' ); ?> Matched</strong>
+                            </div>
+                            <div>
+                                <span style="font-size:11px; color:var(--prof-text-sub); display:block; text-transform:uppercase; letter-spacing:0.5px;">Verified Since</span>
+                                <strong style="font-size:14px; color:#ffffff;"><?php echo esc_html( ! empty( $client->verified_at ) ? date( 'M d, Y', strtotime( $client->verified_at ) ) : 'Active' ); ?></strong>
+                            </div>
+                        </div>
+                    </div>
+                <?php else : ?>
+                    <!-- Unverified State Form -->
+                    <div style="background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:16px; margin-bottom:20px; display:flex; align-items:flex-start; gap:12px;">
+                        <svg width="22" height="22" fill="none" stroke="#38bdf8" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0; margin-top:2px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div>
+                            <strong style="color:#ffffff; font-size:14px; display:block; margin-bottom:2px;">Official Business Verification (CAC + NIN or BVN)</strong>
+                            <span style="color:var(--prof-text-sub); font-size:13px; line-height:1.4;">Submit your CAC business registration number and either your National Identity Number (NIN) or Bank Verification Number (BVN) to unlock Verified Partner status and property listings. Verification cost is covered by your subscription plan.</span>
+                        </div>
+                    </div>
+
+                    <form id="ofp-kyc-verify-form" onsubmit="return false;">
+                        <div class="ofp-form-row-2">
+                            <div class="ofp-field-group">
+                                <label>CAC Registration Number (RC / BN Number)</label>
+                                <input type="text" name="cac_number" id="ofp-kyc-cac" placeholder="e.g. RC-123456 or BN-987654" required>
+                                <span class="ofp-field-hint">Enter your Corporate Affairs Commission number</span>
+                            </div>
+                            <div class="ofp-field-group">
+                                <label>Identity Verification Method</label>
+                                <div style="display:flex; gap:16px; margin-top:8px;">
+                                    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#ffffff; cursor:pointer; font-weight:normal;">
+                                        <input type="radio" name="id_type" value="nin" checked onchange="document.getElementById('ofp-kyc-id-label').textContent='11-Digit National Identity Number (NIN)'; document.getElementById('ofp-kyc-id-num').placeholder='11-digit NIN';">
+                                        National Identity (NIN)
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#ffffff; cursor:pointer; font-weight:normal;">
+                                        <input type="radio" name="id_type" value="bvn" onchange="document.getElementById('ofp-kyc-id-label').textContent='11-Digit Bank Verification Number (BVN)'; document.getElementById('ofp-kyc-id-num').placeholder='11-digit BVN';">
+                                        Bank Verification (BVN)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ofp-form-row-2">
+                            <div class="ofp-field-group">
+                                <label id="ofp-kyc-id-label">11-Digit National Identity Number (NIN)</label>
+                                <input type="text" name="id_number" id="ofp-kyc-id-num" maxlength="11" inputmode="numeric" placeholder="11-digit NIN" required>
+                                <span class="ofp-field-hint">Validated securely via official registry. Never shared publicly.</span>
+                            </div>
+                            <div class="ofp-field-group" style="display:flex; flex-direction:column; justify-content:center;">
+                                <div id="ofp-kyc-status-msg" style="display:none; font-size:13px; padding:10px 14px; border-radius:8px;"></div>
+                            </div>
+                        </div>
+
+                        <div class="ofp-modal-footer">
+                            <button type="button" class="ofp-modal-btn-cancel" onclick="closeEditModal()">Close</button>
+                            <button type="button" id="ofp-btn-submit-kyc" class="ofp-modal-btn-save" style="background:#10b981;">
+                                <span id="ofp-kyc-btn-text">Verify My Business</span>
+                                <span id="ofp-kyc-btn-spin" style="display:none;">Verifying with Prembly...</span>
+                            </button>
+                        </div>
+                    </form>
                 <?php endif; ?>
             </div>
 
@@ -1010,6 +1226,22 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
         });
     }
 
+    // Cover banner upload auto-submit
+    const coverInput = document.getElementById('ofp-cover-input');
+    const coverForm  = document.getElementById('ofp-cover-form');
+    if (coverInput && coverForm) {
+        coverInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 3 * 1024 * 1024) {
+                alert('File is too large! Please select an image under 3MB.');
+                e.target.value = '';
+                return;
+            }
+            coverForm.submit();
+        });
+    }
+
     // Modal controls
     const backdrop   = document.getElementById('ofp-edit-modal-backdrop');
     const openBtn    = document.getElementById('ofp-open-edit-modal');
@@ -1080,6 +1312,180 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
             if (brandTab) brandTab.click();
         <?php endif; ?>
     <?php endif; ?>
+
+    // ── Live Bank Account Resolution via Paystack ──────────────────────────────
+    (function() {
+        const bankSelect   = document.getElementById('ofp-bank-code-select');
+        const bankHidden   = document.getElementById('ofp-bank-name-hidden');
+        const accNumInput  = document.getElementById('ofp-bank-account-num');
+        const accNameInput = document.getElementById('ofp-bank-account-name');
+        const spinBadge    = document.getElementById('ofp-bank-resolving-spin');
+        const verifyBadge  = document.getElementById('ofp-bank-verified-badge');
+        const errText      = document.getElementById('ofp-bank-resolve-err');
+
+        if (!bankSelect || !accNumInput) return;
+
+        function syncBankName() {
+            const selectedOpt = bankSelect.options[bankSelect.selectedIndex];
+            if (selectedOpt && selectedOpt.value) {
+                bankHidden.value = selectedOpt.getAttribute('data-name') || selectedOpt.text;
+            } else {
+                bankHidden.value = '';
+            }
+        }
+
+        bankSelect.addEventListener('change', function() {
+            syncBankName();
+            if (accNumInput.value.trim().length === 10) {
+                triggerResolution();
+            }
+        });
+
+        let debounceTimer = null;
+        accNumInput.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '');
+            if (this.value.length === 10) {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(triggerResolution, 250);
+            } else {
+                if (verifyBadge) verifyBadge.style.display = 'none';
+                if (errText) errText.style.display = 'none';
+            }
+        });
+
+        function triggerResolution() {
+            const bankCode = bankSelect.value;
+            const accNum   = accNumInput.value.trim();
+
+            if (!bankCode) {
+                if (errText) {
+                    errText.textContent = 'Please select a bank first.';
+                    errText.style.display = 'block';
+                }
+                if (verifyBadge) verifyBadge.style.display = 'none';
+                return;
+            }
+
+            if (accNum.length !== 10) return;
+
+            syncBankName();
+            if (spinBadge) spinBadge.style.display = 'inline-block';
+            if (errText) errText.style.display = 'none';
+            if (verifyBadge) verifyBadge.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('action', 'ofp_resolve_bank_account');
+            formData.append('account_number', accNum);
+            formData.append('bank_code', bankCode);
+
+            fetch('<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (spinBadge) spinBadge.style.display = 'none';
+                if (data && data.success && data.data && data.data.account_name) {
+                    accNameInput.value = data.data.account_name;
+                    if (verifyBadge) verifyBadge.style.display = 'inline-block';
+                    if (errText) errText.style.display = 'none';
+                } else {
+                    const msg = (data && data.data && data.data.message) ? data.data.message : 'Could not resolve account name for selected bank.';
+                    if (errText) {
+                        errText.textContent = msg;
+                        errText.style.display = 'block';
+                    }
+                    if (verifyBadge) verifyBadge.style.display = 'none';
+                }
+            })
+            .catch(err => {
+                if (spinBadge) spinBadge.style.display = 'none';
+                console.error('Bank resolve error:', err);
+            });
+        }
+    })();
+
+
+    // ── Prembly Business & Identity Verification ──────────────────────────────
+    (function() {
+        const btnSubmit = document.getElementById('ofp-btn-submit-kyc');
+        if (!btnSubmit) return;
+
+        btnSubmit.addEventListener('click', function() {
+            const cacInput  = document.getElementById('ofp-kyc-cac');
+            const idInput   = document.getElementById('ofp-kyc-id-num');
+            const typeRadio = document.querySelector('input[name="id_type"]:checked');
+            const msgBox    = document.getElementById('ofp-kyc-status-msg');
+            const btnText   = document.getElementById('ofp-kyc-btn-text');
+            const btnSpin   = document.getElementById('ofp-kyc-btn-spin');
+
+            const cac = cacInput ? cacInput.value.trim() : '';
+            const idVal = idInput ? idInput.value.trim() : '';
+            const idType = typeRadio ? typeRadio.value : 'nin';
+
+            if (!cac) {
+                showMsg('Please enter your CAC registration number.', false);
+                return;
+            }
+            if (!idVal || idVal.length !== 11) {
+                showMsg('Please enter a valid 11-digit ' + idType.toUpperCase() + '.', false);
+                return;
+            }
+
+            btnSubmit.disabled = true;
+            btnText.style.display = 'none';
+            btnSpin.style.display = 'inline';
+            msgBox.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('action', 'ofp_submit_client_verification');
+            formData.append('cac_number', cac);
+            formData.append('id_type', idType);
+            formData.append('id_number', idVal);
+
+            fetch('<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                btnSubmit.disabled = false;
+                btnText.style.display = 'inline';
+                btnSpin.style.display = 'none';
+
+                if (data && data.success) {
+                    showMsg('✓ ' + (data.data.message || 'Verification successful! Reloading...'), true);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1200);
+                } else {
+                    const err = (data && data.data && data.data.message) ? data.data.message : 'Verification check failed. Please check your details.';
+                    showMsg(err, false);
+                }
+            })
+            .catch(err => {
+                btnSubmit.disabled = false;
+                btnText.style.display = 'inline';
+                btnSpin.style.display = 'none';
+                showMsg('Network error connecting to verification service.', false);
+            });
+
+            function showMsg(text, isSuccess) {
+                msgBox.textContent = text;
+                msgBox.style.display = 'block';
+                if (isSuccess) {
+                    msgBox.style.background = 'rgba(16,185,129,0.15)';
+                    msgBox.style.color = '#10b981';
+                    msgBox.style.border = '1px solid rgba(16,185,129,0.3)';
+                } else {
+                    msgBox.style.background = 'rgba(239,68,68,0.15)';
+                    msgBox.style.color = '#f87171';
+                    msgBox.style.border = '1px solid rgba(239,68,68,0.3)';
+                }
+            }
+        });
+    })();
+
 })();
 </script>
 

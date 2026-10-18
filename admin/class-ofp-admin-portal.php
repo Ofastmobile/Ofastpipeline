@@ -466,9 +466,25 @@ class OFP_Admin_Portal {
             require_once ABSPATH . 'wp-admin/includes/plugin.php';
         }
 
-        // Enqueue media library scripts so image upload modals work seamlessly
+        // Enqueue media library scripts and core WordPress assets
         wp_enqueue_media();
         wp_enqueue_script( 'jquery' );
+        wp_enqueue_style( 'dashicons' );
+
+        // Enqueue Admin Portal styles
+        wp_enqueue_style( 'ofp-admin', OFP_URL . 'assets/css/admin.css', [], OFP_VERSION );
+        wp_enqueue_style( 'ofp-admin-portal', OFP_URL . 'assets/css/admin-portal.css', [ 'ofp-admin' ], OFP_VERSION );
+        wp_enqueue_style( 'ofp-admin-activity-logs', OFP_URL . 'assets/css/admin-activity-logs.css', [ 'ofp-admin' ], OFP_VERSION );
+
+        // Enqueue Admin Portal scripts with localization
+        wp_enqueue_script( 'ofp-admin', OFP_URL . 'assets/js/admin.js', [ 'jquery' ], OFP_VERSION, true );
+        wp_localize_script( 'ofp-admin', 'ofpAdmin', [
+            'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+            'nonce'   => wp_create_nonce( 'ofp_admin_nonce' ),
+        ] );
+
+        wp_enqueue_script( 'ofp-admin-portal', OFP_URL . 'assets/js/admin-portal.js', [ 'jquery', 'ofp-admin' ], OFP_VERSION, true );
+        wp_enqueue_script( 'ofp-admin-activity-logs', OFP_URL . 'assets/js/admin-activity-logs.js', [ 'jquery', 'ofp-admin' ], OFP_VERSION, true );
 
         $template_file = OFP_PATH . 'admin/views/portal/admin-portal-template.php';
         if ( file_exists( $template_file ) ) {

@@ -22,6 +22,10 @@ class OFP_Bank_Account {
 
 	public static function init(): void {
 		self::ensure_schema();
+		add_action( 'wp_ajax_ofp_resolve_bank_account', [ __CLASS__, 'ajax_resolve_account' ] );
+		add_action( 'wp_ajax_nopriv_ofp_resolve_bank_account', [ __CLASS__, 'ajax_resolve_account' ] );
+		add_action( 'wp_ajax_ofp_get_bank_list', [ __CLASS__, 'ajax_get_bank_list' ] );
+		add_action( 'wp_ajax_nopriv_ofp_get_bank_list', [ __CLASS__, 'ajax_get_bank_list' ] );
 	}
 
 	/** True only when the admin has switched online card payments on for buyers and tenants. */
@@ -55,6 +59,9 @@ class OFP_Bank_Account {
 		) {$charset};" );
 		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) ) {
 			update_option( self::SCHEMA_OPTION, self::SCHEMA_VERSION, true );
+		}
+		if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'bank_code'" ) ) ) {
+			$wpdb->query( "ALTER TABLE {$table} ADD COLUMN bank_code VARCHAR(20) DEFAULT '' AFTER bank_name" );
 		}
 	}
 
@@ -184,4 +191,156 @@ class OFP_Bank_Account {
 			esc_html( $reference )
 		);
 	}
+
+	/**
+	 * Return list of banks in Nigeria.
+	 * Queries Paystack API (cached 7 days) with robust offline fallback.
+	 */
+	public static function get_banks(): array {
+		$cached = get_transient( 'ofp_paystack_banks_ng' );
+		if ( is_array( $cached ) && ! empty( $cached ) ) {
+			return $cached;
+		}
+
+		$secret_encrypted = get_option( 'ofp_paystack_secret_key', '' );
+		$secret = class_exists( 'OFP_Security' ) ? OFP_Security::decrypt( $secret_encrypted ) : '';
+
+		$headers = [ 'Accept' => 'application/json' ];
+		if ( ! empty( $secret ) ) {
+			$headers['Authorization'] = 'Bearer ' . $secret;
+		}
+
+		$res = wp_remote_get( 'https://api.paystack.co/bank?country=nigeria&perPage=100', [
+			'timeout' => 8,
+			'headers' => $headers,
+		] );
+
+		if ( ! is_wp_error( $res ) && wp_remote_retrieve_response_code( $res ) === 200 ) {
+			$body = json_decode( wp_remote_retrieve_body( $res ), true );
+			if ( ! empty( $body['status'] ) && ! empty( $body['data'] ) && is_array( $body['data'] ) ) {
+				$banks = [];
+				foreach ( $body['data'] as $b ) {
+					if ( ! empty( $b['active'] ) && ! empty( $b['name'] ) && ! empty( $b['code'] ) ) {
+						$banks[] = [
+							'name' => trim( (string) $b['name'] ),
+							'code' => trim( (string) $b['code'] ),
+							'slug' => trim( (string) ( $b['slug'] ?? '' ) ),
+						];
+					}
+				}
+				if ( ! empty( $banks ) ) {
+					usort( $banks, fn( $x, $y ) => strcasecmp( $x['name'], $y['name'] ) );
+					set_transient( 'ofp_paystack_banks_ng', $banks, 7 * DAY_IN_SECONDS );
+					return $banks;
+				}
+			}
+		}
+
+		// Curated fallback of major Nigerian commercial, merchant & fintech banks
+		$fallback = [
+			[ 'name' => 'Access Bank', 'code' => '044' ],
+			[ 'name' => 'Access Bank (Diamond)', 'code' => '063' ],
+			[ 'name' => 'Citibank Nigeria', 'code' => '023' ],
+			[ 'name' => 'Ecobank Nigeria', 'code' => '050' ],
+			[ 'name' => 'Fidelity Bank', 'code' => '070' ],
+			[ 'name' => 'First Bank of Nigeria', 'code' => '011' ],
+			[ 'name' => 'First City Monument Bank (FCMB)', 'code' => '214' ],
+			[ 'name' => 'Guaranty Trust Bank (GTBank)', 'code' => '058' ],
+			[ 'name' => 'Heritage Bank', 'code' => '030' ],
+			[ 'name' => 'Jaiz Bank', 'code' => '301' ],
+			[ 'name' => 'Keystone Bank', 'code' => '082' ],
+			[ 'name' => 'Kuda Bank', 'code' => '50211' ],
+			[ 'name' => 'Moniepoint MFB', 'code' => '50515' ],
+			[ 'name' => 'OPay (PayCom)', 'code' => '999992' ],
+			[ 'name' => 'PalmPay', 'code' => '999991' ],
+			[ 'name' => 'Polaris Bank', 'code' => '076' ],
+			[ 'name' => 'Providus Bank', 'code' => '101' ],
+			[ 'name' => 'Stanbic IBTC Bank', 'code' => '221' ],
+			[ 'name' => 'Standard Chartered Bank', 'code' => '068' ],
+			[ 'name' => 'Sterling Bank', 'code' => '232' ],
+			[ 'name' => 'Suntrust Bank', 'code' => '100' ],
+			[ 'name' => 'TAJ Bank', 'code' => '302' ],
+			[ 'name' => 'Titan Trust Bank', 'code' => '102' ],
+			[ 'name' => 'Union Bank of Nigeria', 'code' => '032' ],
+			[ 'name' => 'United Bank For Africa (UBA)', 'code' => '033' ],
+			[ 'name' => 'Unity Bank', 'code' => '215' ],
+			[ 'name' => 'Wema Bank', 'code' => '035' ],
+			[ 'name' => 'Zenith Bank', 'code' => '057' ],
+			[ 'name' => '9PSB', 'code' => '120001' ],
+		];
+		usort( $fallback, fn( $x, $y ) => strcasecmp( $x['name'], $y['name'] ) );
+		return $fallback;
+	}
+
+	/**
+	 * Resolve 10-digit NUBAN and Bank Code via Paystack API.
+	 */
+	public static function resolve_account( string $account_number, string $bank_code ): array {
+		$account_number = preg_replace( '/\D/', '', $account_number );
+		$bank_code      = trim( sanitize_text_field( $bank_code ) );
+
+		if ( strlen( $account_number ) !== 10 ) {
+			return [ 'success' => false, 'message' => 'Account number must be exactly 10 digits.' ];
+		}
+		if ( empty( $bank_code ) ) {
+			return [ 'success' => false, 'message' => 'Please select a bank first.' ];
+		}
+
+		$secret_encrypted = get_option( 'ofp_paystack_secret_key', '' );
+		$secret = class_exists( 'OFP_Security' ) ? OFP_Security::decrypt( $secret_encrypted ) : '';
+
+		if ( empty( $secret ) ) {
+			return [ 'success' => false, 'message' => 'Paystack secret key is not configured in Admin Settings.' ];
+		}
+
+		$url = sprintf(
+			'https://api.paystack.co/bank/resolve?account_number=%s&bank_code=%s',
+			rawurlencode( $account_number ),
+			rawurlencode( $bank_code )
+		);
+
+		$res = wp_remote_get( $url, [
+			'timeout' => 15,
+			'headers' => [
+				'Authorization' => 'Bearer ' . $secret,
+				'Accept'        => 'application/json',
+			],
+		] );
+
+		if ( is_wp_error( $res ) ) {
+			return [ 'success' => false, 'message' => 'Unable to reach verification service. Check internet connection.' ];
+		}
+
+		$code = wp_remote_retrieve_response_code( $res );
+		$body = json_decode( wp_remote_retrieve_body( $res ), true );
+
+		if ( $code === 200 && ! empty( $body['status'] ) && ! empty( $body['data']['account_name'] ) ) {
+			return [
+				'success'        => true,
+				'account_name'   => trim( (string) $body['data']['account_name'] ),
+				'account_number' => $account_number,
+				'bank_code'      => $bank_code,
+			];
+		}
+
+		$msg = ! empty( $body['message'] ) ? $body['message'] : 'Account number could not be resolved for selected bank.';
+		return [ 'success' => false, 'message' => $msg ];
+	}
+
+	public static function ajax_resolve_account(): void {
+		$account_number = sanitize_text_field( $_POST['account_number'] ?? '' );
+		$bank_code      = sanitize_text_field( $_POST['bank_code'] ?? '' );
+
+		$result = self::resolve_account( $account_number, $bank_code );
+		if ( $result['success'] ) {
+			wp_send_json_success( $result );
+		} else {
+			wp_send_json_error( $result );
+		}
+	}
+
+	public static function ajax_get_bank_list(): void {
+		wp_send_json_success( [ 'banks' => self::get_banks() ] );
+	}
 }
+

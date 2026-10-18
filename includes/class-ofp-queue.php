@@ -302,15 +302,40 @@ class OFP_Queue {
         object $trigger,
         array $result,
         string $message,
-        float $cost
+        float $cost,
+        string $recipient = ''
     ): void {
         global $wpdb;
+
+        if ( empty( $recipient ) ) {
+            $lead = OFP_Lead::get( $trigger->lead_id );
+            if ( $lead ) {
+                $recipient = ( $trigger->type === 'email' ) ? ( $lead->email ?: '' ) : ( $lead->phone ?: '' );
+            }
+        }
+
+        if ( class_exists( 'OFP_Communications_Log' ) ) {
+            OFP_Communications_Log::log(
+                (int) $trigger->client_id,
+                (int) $trigger->lead_id,
+                $trigger->type,
+                $recipient,
+                'outbound',
+                $message,
+                $cost,
+                ! empty( $result['success'] ) ? 'sent' : 'failed',
+                $trigger->sms_provider ?? $trigger->type,
+                $result['provider_ref'] ?? ''
+            );
+            return;
+        }
 
         $wpdb->insert(
             $wpdb->prefix . 'ofp_communications_log',
             [
                 'client_id'    => $trigger->client_id,
                 'lead_id'      => $trigger->lead_id,
+                'recipient'    => $recipient,
                 'type'         => $trigger->type,
                 'direction'    => 'outbound',
                 'message'      => $message,

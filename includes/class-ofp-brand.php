@@ -107,7 +107,7 @@ class OFP_Brand {
 		if ( $host ) {
 			return $host;
 		}
-		if ( $client && self::can_brand( $client ) ) {
+		if ( $client && ( self::can_brand( $client ) || ! empty( $client->brand_color ) ) ) {
 			return $client;
 		}
 		return null;
@@ -300,8 +300,29 @@ class OFP_Brand {
 		}
 		$color = ! empty( $c->brand_color ) ? sanitize_hex_color( $c->brand_color ) : '';
 		if ( $color ) {
+			$hex_clean = ltrim( $color, '#' );
+			if ( strlen( $hex_clean ) === 3 ) {
+				$hex_clean = $hex_clean[0] . $hex_clean[0] . $hex_clean[1] . $hex_clean[1] . $hex_clean[2] . $hex_clean[2];
+			}
+			$r = hexdec( substr( $hex_clean, 0, 2 ) );
+			$g = hexdec( substr( $hex_clean, 2, 2 ) );
+			$b = hexdec( substr( $hex_clean, 4, 2 ) );
+			$rgb = "{$r}, {$g}, {$b}";
 			$hover = self::darken( $color );
-			echo '<style id="ofp-brand-colors">:root, body { --accent-blue: ' . $color . '; --accent-purple: ' . $color . '; --btn-primary: ' . $color . '; --btn-primary-hover: ' . $hover . '; }</style>' . "\n";
+
+			echo '<style id="ofp-brand-colors">
+:root, body {
+    --brand-color: ' . $color . ' !important;
+    --brand-color-rgb: ' . $rgb . ' !important;
+    --brand-color-alpha-10: rgba(' . $rgb . ', 0.10) !important;
+    --brand-color-alpha-15: rgba(' . $rgb . ', 0.15) !important;
+    --brand-color-alpha-25: rgba(' . $rgb . ', 0.25) !important;
+    --accent-blue: ' . $color . ' !important;
+    --accent-purple: ' . $color . ' !important;
+    --btn-primary: ' . $color . ' !important;
+    --btn-primary-hover: ' . $hover . ' !important;
+}
+</style>' . "\n";
 		}
 
 		$sidebar = ! empty( $c->sidebar_color ) ? sanitize_hex_color( $c->sidebar_color ) : '';

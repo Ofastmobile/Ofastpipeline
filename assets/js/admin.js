@@ -92,11 +92,57 @@
         });
     }
 
+    // Communications Page Handlers
+    function initCommunicationsHandlers() {
+        var $broadcastChannel = $('#broadcast_channel');
+        if ($broadcastChannel.length) {
+            $broadcastChannel.on('change', function() {
+                var subjectField = document.getElementById('broadcast_subject_field');
+                var subjectInput = document.getElementById('broadcast_subject');
+                if (!subjectField || !subjectInput) return;
+                if (this.value === 'sms') {
+                    subjectField.style.display = 'none';
+                    subjectInput.removeAttribute('required');
+                } else {
+                    subjectField.style.display = 'block';
+                    subjectInput.setAttribute('required', 'required');
+                }
+            });
+        }
+
+        var input = document.getElementById('universal_template_input');
+        var iframe = document.getElementById('template-preview-frame');
+        if (input && iframe) {
+            function updatePreview() {
+                var template = input.value;
+                var previewHtml = '';
+
+                if (!template.trim()) {
+                    previewHtml = '<div style="padding:40px; text-align:center; color:#64748b; font-family:sans-serif;">Default built-in template will be used.</div>';
+                } else {
+                    previewHtml = template.replace(
+                        '{email_body}', 
+                        '<div style="padding: 20px; border: 2px dashed #ccc; background: #fafafa; text-align: center; font-family: sans-serif;"><h3>Message Content Goes Here</h3><p>This is where the actual email body will be injected.</p></div>'
+                    );
+                }
+
+                var doc = iframe.contentDocument || iframe.contentWindow.document;
+                doc.open();
+                doc.writeln(previewHtml);
+                doc.close();
+            }
+
+            updatePreview();
+            input.addEventListener('input', updatePreview);
+        }
+    }
+
     $(document).ready(function() {
         togglePlanField();
         autoDismissNotices();
         confirmDangerousActions();
         initOfpCustomSelects();
+        initCommunicationsHandlers();
     });
 
 })(jQuery);

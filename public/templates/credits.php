@@ -70,116 +70,62 @@ $transactions = $wpdb->get_results(
         </div>
     <?php endif; ?>
 
-    <div class="ofp-grid-2" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 32px;">
-        
-        <?php if ( ! OFP_Brand::hide_plan_prompts( $client ) ) : ?>
-        <!-- Subscription Status -->
-        <div class="ofp-card">
-            <div class="ofp-card-header" style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
-                <div style="background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 12px; display: flex;">
-                    <svg width="24" height="24" fill="none" stroke="var(--accent-orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h3 style="margin: 0; font-size: 16px; color: var(--text-main);">Subscription Status</h3>
-                    <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Current plan and renewal</p>
-                </div>
+    <!-- Credits & Billing 4-KPI Grid -->
+    <div class="ofp-zentra-kpi-grid" style="margin-bottom: 32px;">
+        <!-- 1. Plan -->
+        <div class="ofp-kpi-card ofp-kpi-card-hero">
+            <div class="ofp-kpi-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Subscription Plan</span>
+                <?php if ( $client->status === 'active' ) : ?>
+                    <span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#34d399;">
+                        <span class="ofp-status-dot-pulse" style="width:7px; height:7px;"></span> Active
+                    </span>
+                <?php endif; ?>
             </div>
+            <div class="ofp-kpi-value"><?php echo esc_html( strtoupper( OFP_Subscription::client_plan( $client->id ) ) ); ?></div>
+            <div class="ofp-kpi-badge badge-hero">
+                <span class="ofp-status-dot-pulse" style="width:6px; height:6px;"></span>
+                <span><?php echo esc_html( ucfirst( str_replace( '_', ' ', $client->status ) ) ); ?> Status</span>
+            </div>
+        </div>
 
-            <div style="display: flex; flex-direction: column; gap: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px;">
-                    <div style="font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Account Status</div>
-                    <?php
-                    $status_colors = [
-                        'active'         => 'var(--accent-green)',
-                        'grace'          => 'var(--accent-orange)',
-                        'pending_review' => 'var(--accent-orange)',
-                        'suspended'      => 'var(--accent-red)',
-                    ];
-                    $bg_colors = [
-                        'active'         => 'rgba(16, 185, 129, 0.1)',
-                        'grace'          => 'rgba(245, 158, 11, 0.1)',
-                        'pending_review' => 'rgba(245, 158, 11, 0.1)',
-                        'suspended'      => 'rgba(239, 68, 68, 0.1)',
-                    ];
-                    $color = $status_colors[ $client->status ] ?? 'var(--text-muted)';
-                    $bg_color = $bg_colors[ $client->status ] ?? 'var(--bg-body)';
+        <!-- 2. Expires -->
+        <div class="ofp-kpi-card">
+            <div class="ofp-kpi-title">Subscription Expires</div>
+            <div class="ofp-kpi-value" style="font-size: 20px;">
+                <?php echo esc_html( $client->subscription_expires ? gmdate( 'M j, Y', strtotime( $client->subscription_expires ) ) : '—' ); ?>
+            </div>
+            <div class="ofp-kpi-badge badge-purple">
+                <span>
+                    <?php 
+                    if ( $client->subscription_expires ) {
+                        $diff_days = round( ( strtotime( $client->subscription_expires ) - time() ) / DAY_IN_SECONDS );
+                        echo $diff_days > 0 ? $diff_days . ' days remaining' : 'Renewal due';
+                    } else {
+                        echo 'Active Account';
+                    }
                     ?>
-                    <div style="font-size: 12px; font-weight: 700; color: <?php echo esc_attr( $color ); ?>; background: <?php echo esc_attr( $bg_color ); ?>; padding: 4px 10px; border-radius: 100px;">
-                        <?php echo esc_html( ucfirst( str_replace( '_', ' ', $client->status ) ) ); ?>
-                    </div>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px;">
-                    <div style="font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Plan</div>
-                    <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">
-                        <?php echo esc_html( strtoupper( OFP_Subscription::client_plan( $client->id ) ) ); ?>
-                    </div>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Expires</div>
-                    <div style="font-size: 15px; font-weight: 600; color: var(--text-main);">
-                        <?php echo esc_html( $client->subscription_expires ? gmdate( 'M j, Y', strtotime( $client->subscription_expires ) ) : '—' ); ?>
-                    </div>
-                </div>
+                </span>
             </div>
-
-
         </div>
-        <?php endif; ?>
 
-        <?php if ( OFP_Subscription::has_platform_access( $client->id ) ) : ?>
-        <!-- Credit Balances -->
-        <div class="ofp-card">
-            <div class="ofp-card-header" style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
-                <div style="background: rgba(139, 92, 246, 0.1); padding: 10px; border-radius: 12px; display: flex;">
-                    <svg width="24" height="24" fill="none" stroke="var(--accent-purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h3 style="margin: 0; font-size: 16px; color: var(--text-main);">Credit Balances</h3>
-                    <p style="margin: 0; font-size: 13px; color: var(--text-muted);">SMS and Voice top-up balances</p>
-                </div>
+        <!-- 3. SMS Credit -->
+        <div class="ofp-kpi-card">
+            <div class="ofp-kpi-title">SMS Credit Balance</div>
+            <div class="ofp-kpi-value">₦<?php echo number_format( (float) ( $credits->sms_remaining ?? 0 ), 0 ); ?></div>
+            <div class="ofp-kpi-badge badge-blue">
+                <span>~<?php echo esc_html( $credits ? floor( $credits->sms_remaining / 6.99 ) : 0 ); ?> msgs (~₦<?php echo number_format((float)($credits->sms_loaded ?? 0), 0); ?> loaded)</span>
             </div>
-
-            <div class="ofp-credit-bar-wrap">
-                <div class="ofp-credit-bar-label">
-                    <span style="font-weight: 600; color: var(--text-main); font-size: 14px;">SMS Credit</span>
-                    <span style="font-weight: 600; color: var(--text-main); font-size: 14px;">NGN <?php echo number_format( (float) ( $credits->sms_remaining ?? 0 ), 0 ); ?></span>
-                </div>
-                <div class="ofp-credit-bar-track">
-                    <div class="ofp-credit-bar-fill <?php echo $sms_pct > 40 ? 'high' : ( $sms_pct > 15 ? 'medium' : 'low' ); ?>"
-                         style="width:<?php echo esc_attr( $sms_pct ); ?>%"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 6px;">
-                    <span>~<?php echo esc_html( $credits ? floor( $credits->sms_remaining / 6.99 ) : 0 ); ?> messages remaining</span>
-                    <span>Loaded: NGN <?php echo number_format( (float) ( $credits->sms_loaded ?? 0 ), 0 ); ?></span>
-                </div>
-            </div>
-
-            <div class="ofp-credit-bar-wrap" style="margin-top:24px;">
-                <div class="ofp-credit-bar-label">
-                    <span style="font-weight: 600; color: var(--text-main); font-size: 14px;">Voice Credit</span>
-                    <span style="font-weight: 600; color: var(--text-main); font-size: 14px;">NGN <?php echo number_format( (float) ( $credits->voice_remaining ?? 0 ), 0 ); ?></span>
-                </div>
-                <div class="ofp-credit-bar-track">
-                    <div class="ofp-credit-bar-fill <?php echo $voice_pct > 40 ? 'high' : ( $voice_pct > 15 ? 'medium' : 'low' ); ?>"
-                         style="width:<?php echo esc_attr( $voice_pct ); ?>%"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 6px;">
-                    <span>~<?php echo esc_html( $credits ? floor( $credits->voice_remaining / 15 ) : 0 ); ?> minutes remaining</span>
-                    <span>Loaded: NGN <?php echo number_format( (float) ( $credits->voice_loaded ?? 0 ), 0 ); ?></span>
-                </div>
-            </div>
-
         </div>
-        <?php else : ?>
-            <div></div> <!-- Empty column to preserve grid if no CRM plan -->
-        <?php endif; ?>
 
+        <!-- 4. Voice Credit -->
+        <div class="ofp-kpi-card">
+            <div class="ofp-kpi-title">Voice Credit Balance</div>
+            <div class="ofp-kpi-value">₦<?php echo number_format( (float) ( $credits->voice_remaining ?? 0 ), 0 ); ?></div>
+            <div class="ofp-kpi-badge badge-green">
+                <span>~<?php echo esc_html( $credits ? floor( $credits->voice_remaining / 15 ) : 0 ); ?> mins (~₦<?php echo number_format((float)($credits->voice_loaded ?? 0), 0); ?> loaded)</span>
+            </div>
+        </div>
     </div>
 
     <!-- Payment History -->

@@ -58,6 +58,11 @@ $smartsms_routing   = get_option( 'ofp_smartsms_routing', '3' );
 $turnstile_site     = get_option( 'ofp_turnstile_site_key', '' );
 $has_turnstile_sec  = ! empty( get_option( 'ofp_turnstile_secret', '' ) );
 
+// Prembly (Identitypass)
+$prembly_app_id     = get_option( 'ofp_prembly_app_id', '' );
+$prembly_env        = get_option( 'ofp_prembly_env', 'test' );
+$has_prembly_sec    = ! empty( get_option( 'ofp_prembly_secret_key', '' ) );
+
 // Bank Details
 $bank_name          = get_option( 'ofp_company_bank_name', '' );
 $bank_acc_no        = get_option( 'ofp_company_account_no', '' );
@@ -1207,6 +1212,67 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                         </button>
                                     </div>
                                     <p class="ofp-field-hint">Leave blank in local development. When no secret key is set, Turnstile is automatically bypassed without errors.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prembly (Identitypass) Verification & KYC Card -->
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-emerald">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                        <path d="m9 12 2 2 4-4"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Prembly (Identitypass) Identity & Business Verification (KYC/KYB)</h3>
+                                    <p>Verifies Nigerian CAC business registrations and NIN/BVN identities for real estate clients and agents.</p>
+                                </div>
+                            </div>
+                            <?php if ( ! empty( $prembly_app_id ) && $has_prembly_sec ) : ?>
+                                <span class="ofp-pill ofp-pill-ready"><?php echo $prembly_env === 'live' ? 'Live Production' : 'Sandbox Active'; ?></span>
+                            <?php else : ?>
+                                <span class="ofp-pill ofp-pill-missing">Not Configured</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-field-grid">
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Prembly App ID (app-id)</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_prembly_app_id"
+                                               value="<?php echo esc_attr( $prembly_app_id ); ?>"
+                                               placeholder="e.g. app_live_... or your Prembly App ID">
+                                    </div>
+                                    <p class="ofp-field-hint">Found in Prembly Dashboard &rarr; API Keys &amp; Webhooks &rarr; App ID.</p>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">Prembly Secret Key (x-api-key)</label>
+                                        <?php if ( $has_prembly_sec ) : ?><span class="ofp-badge-encrypted">✓ Encrypted</span><?php endif; ?>
+                                    </div>
+                                    <div class="ofp-input-box has-action">
+                                        <input type="password" name="ofp_prembly_secret_key" class="ofp-secret-input"
+                                               placeholder="<?php echo $has_prembly_sec ? '••••••••••••••••' : 'sec_live_... or test key'; ?>">
+                                        <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide Key">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        </button>
+                                    </div>
+                                    <p class="ofp-field-hint">Your <code>x-api-key</code> from Prembly dashboard. Encrypted with AES-256 in database.</p>
+                                </div>
+
+                                <div class="ofp-field-group ofp-field-full">
+                                    <label class="ofp-field-label">Environment Mode</label>
+                                    <div class="ofp-input-box">
+                                        <select name="ofp_prembly_env" class="ofp-select" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--ofp-slate-200); background:#fff; font-size:14px;">
+                                            <option value="test" <?php selected( $prembly_env, 'test' ); ?>>Test Sandbox Mode (Simulated verification, no wallet charge)</option>
+                                            <option value="live" <?php selected( $prembly_env, 'live' ); ?>>Live Production Mode (Direct NIMC / NIBSS / CAC queries)</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </div>

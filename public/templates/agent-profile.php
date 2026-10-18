@@ -41,6 +41,12 @@ if ( $client->status !== 'active' ) {
 }
 
 $agent_name = $client->business_name ?: $client->owner_name;
+$custom_app_name = trim( (string) get_option( 'ofp_app_name', '' ) );
+if ( ! empty( $custom_app_name ) && ! in_array( strtolower( preg_replace( '/[^a-z0-9]/', '', $custom_app_name ) ), [ 'ofastpipeline' ], true ) ) {
+    $app_name = $custom_app_name;
+} else {
+    $app_name = 'app name';
+}
 $agent_logo = ! empty( $client->logo_url ) ? $client->logo_url : OFP_URL . 'assets/images/default-avatar.png';
 $agent_bio  = ! empty( $client->bio ) ? $client->bio : 'We provide premium real estate services, helping you discover dream homes, luxury apartments, and commercial investments with complete peace of mind and professional guidance.';
 
@@ -116,18 +122,23 @@ $properties = new WP_Query( [
 ] );
 
 // Cover image & featured property metadata for the top banner
-$featured_cover = OFP_URL . 'assets/images/dashboard-hero-banner.jpg';
+$featured_cover = ! empty( $client->cover_image_url ) 
+    ? $client->cover_image_url 
+    : ( OFP_URL . 'assets/images/dashboard-hero-banner.jpg' );
 $featured_title = $agent_name . ' • Featured Real Estate';
 $featured_beds  = '4 Bedroom';
 $featured_baths = '3 Bathroom';
 
 if ( $properties->have_posts() ) {
     $first_prop = $properties->posts[0];
-    $thumb_id   = get_post_meta( $first_prop->ID, 'ofp_main_image', true );
-    if ( $thumb_id ) {
-        $img_src = wp_get_attachment_image_url( $thumb_id, 'full' );
-        if ( $img_src ) {
-            $featured_cover = $img_src;
+    // Use first property thumbnail only if agent hasn't set an explicit custom cover
+    if ( empty( $client->cover_image_url ) ) {
+        $thumb_id = get_post_meta( $first_prop->ID, 'ofp_main_image', true );
+        if ( $thumb_id ) {
+            $img_src = wp_get_attachment_image_url( $thumb_id, 'full' );
+            if ( $img_src ) {
+                $featured_cover = $img_src;
+            }
         }
     }
     $featured_title = get_the_title( $first_prop->ID );
@@ -274,26 +285,14 @@ if ( $properties->have_posts() ) {
                     </div>
 
                     <!-- Address & Location Details (Matching reference style) -->
-                    <div class="ofp-agent-address-info">
-                        <?php if ( ! empty( $client->email ) ) : ?>
+                    <?php if ( ! empty( $client->email ) ) : ?>
+                        <div class="ofp-agent-address-info">
                             <div class="ofp-address-row">
                                 <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                                 <span><?php echo esc_html( $client->email ); ?></span>
                             </div>
-                        <?php endif; ?>
-
-                        <?php if ( ! empty( $portal_url ) ) : ?>
-                            <div class="ofp-address-row">
-                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
-                                <a href="<?php echo esc_url( $portal_url ); ?>" target="_blank" style="color:#00a86b; text-decoration:none; font-weight:600;">Branded Portal</a>
-                            </div>
-                        <?php endif; ?>
-
-                        <div class="ofp-address-row">
-                            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                            <span>Verified Agent • Fast Pipeline Certified</span>
                         </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- ── Right Column: Description & Social Media from Client Account ─ -->
@@ -329,7 +328,7 @@ if ( $properties->have_posts() ) {
 
                             <!-- Public Profile / Website -->
                             <?php if ( ! empty( $portal_url ) ) : ?>
-                                <a href="<?php echo esc_url( $portal_url ); ?>" target="_blank" rel="noopener" class="ofp-social-bubble web" title="Branded Client Portal">
+                                <a href="<?php echo esc_url( $portal_url ); ?>" target="_blank" rel="noopener" class="ofp-social-bubble web" title="Website">
                                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
                                 </a>
                             <?php endif; ?>
@@ -550,7 +549,7 @@ if ( $properties->have_posts() ) {
 
         <!-- ── Clean Minimal Footer ──────────────────────────────────────── -->
         <footer class="ofp-clean-footer">
-            <p>&copy; <?php echo esc_html( date( 'Y' ) ); ?> <?php echo esc_html( $agent_name ); ?>. All rights reserved. Powered by OFast Pipeline.</p>
+            <p>&copy; <?php echo esc_html( date( 'Y' ) ); ?> <?php echo esc_html( $agent_name ); ?>. All rights reserved. Powered by <?php echo esc_html( $app_name ); ?>.</p>
         </footer>
 
     </div> <!-- /.ofp-agent-page-container -->

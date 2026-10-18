@@ -105,61 +105,44 @@ $comms_last_month = (int) $wpdb->get_var(
         </div>
     <?php endif; ?>
 
-    <!-- Micro-Stats with Sparklines -->
-    <div class="ofp-micro-stats">
-        
-        <div class="ofp-card" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
-            <div>
-                <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px;">Leads This Month</div>
-                <div style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;"><?php echo esc_html( $stats['this_month'] ?: 0 ); ?></div>
-                <?php echo OFP_Lead::get_growth_html( $stats['this_month'], $stats['last_month'] ); ?>
+    <!-- Reports KPI Summary Grid -->
+    <div class="ofp-zentra-kpi-grid" style="margin-bottom:24px;">
+        <div class="ofp-kpi-card ofp-kpi-card-hero">
+            <div class="ofp-kpi-title">Leads This Month</div>
+            <div class="ofp-kpi-value"><?php echo esc_html( $stats['this_month'] ?: 0 ); ?></div>
+            <div class="ofp-kpi-badge badge-hero">
+                <span><?php echo strip_tags( OFP_Lead::get_growth_html( $stats['this_month'], $stats['last_month'] ) ); ?> vs last month</span>
             </div>
-            <svg width="60" height="30" viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 25 C 10 25, 20 5, 30 15 C 40 25, 50 10, 60 5" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round"/>
-                <path d="M55 5 L60 5 L60 10" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
         </div>
 
-        <div class="ofp-card" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
-            <div>
-                <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px;">Converted</div>
-                <div style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;"><?php echo esc_html( $stats['converted_month'] ?: 0 ); ?></div>
-                <?php echo OFP_Lead::get_growth_html( $stats['converted_month'], $stats['converted_last'] ); ?>
+        <div class="ofp-kpi-card">
+            <div class="ofp-kpi-title">Converted</div>
+            <div class="ofp-kpi-value"><?php echo esc_html( $stats['converted_month'] ?: 0 ); ?></div>
+            <div class="ofp-kpi-badge badge-green">
+                <span><?php echo strip_tags( OFP_Lead::get_growth_html( $stats['converted_month'], $stats['converted_last'] ) ); ?> deals converted</span>
             </div>
-            <svg width="60" height="30" viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 20 C 15 20, 30 10, 45 15 C 50 15, 55 10, 60 5" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round"/>
-                <path d="M55 5 L60 5 L60 10" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
         </div>
 
-        <div class="ofp-card" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
-            <div>
-                <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px;">Messages Sent</div>
-                <div style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;"><?php echo esc_html( $comms_this_month ?: 0 ); ?></div>
-                <?php echo OFP_Lead::get_growth_html( $comms_this_month, $comms_last_month ); ?>
+        <div class="ofp-kpi-card">
+            <div class="ofp-kpi-title">Messages Sent</div>
+            <div class="ofp-kpi-value"><?php echo esc_html( $comms_this_month ?: 0 ); ?></div>
+            <div class="ofp-kpi-badge badge-blue">
+                <span><?php echo strip_tags( OFP_Lead::get_growth_html( $comms_this_month, $comms_last_month ) ); ?> communications</span>
             </div>
-            <svg width="60" height="30" viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 5 C 10 5, 20 20, 30 10 C 40 0, 50 25, 60 25" stroke="var(--accent-orange)" stroke-width="2" stroke-linecap="round"/>
-                <path d="M55 25 L60 25 L60 20" stroke="var(--accent-orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
         </div>
 
-        <div class="ofp-card" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
-            <div>
-                <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px;">Conv. Rate</div>
-                <div style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">
-                    <?php 
-                        $rate = $stats['this_month'] > 0 ? round( ( $stats['converted_month'] / $stats['this_month'] ) * 100 ) : 0;
-                        $last_rate = $stats['last_month'] > 0 ? round( ( $stats['converted_last'] / $stats['last_month'] ) * 100 ) : 0;
-                        echo esc_html( $rate ) . '%';
-                    ?>
-                </div>
-                <?php echo OFP_Lead::get_growth_html( $rate, $last_rate ); ?>
+        <div class="ofp-kpi-card">
+            <div class="ofp-kpi-title">Conv. Rate</div>
+            <div class="ofp-kpi-value">
+                <?php 
+                    $rate = $stats['this_month'] > 0 ? round( ( $stats['converted_month'] / $stats['this_month'] ) * 100 ) : 0;
+                    $last_rate = $stats['last_month'] > 0 ? round( ( $stats['converted_last'] / $stats['last_month'] ) * 100 ) : 0;
+                    echo esc_html( $rate ) . '%';
+                ?>
             </div>
-            <svg width="60" height="30" viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 30 C 15 15, 30 25, 45 10 C 50 5, 55 10, 60 5" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round"/>
-                <path d="M55 5 L60 5 L60 10" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <div class="ofp-kpi-badge badge-purple">
+                <span><?php echo strip_tags( OFP_Lead::get_growth_html( $rate, $last_rate ) ); ?> conversion rate</span>
+            </div>
         </div>
     </div>
 

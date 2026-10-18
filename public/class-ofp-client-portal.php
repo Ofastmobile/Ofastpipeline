@@ -84,6 +84,12 @@ class OFP_Client_Portal {
         // Email Branding & Layout Customizer
         add_action( 'wp_ajax_ofp_save_email_branding', [ $this, 'ajax_save_email_branding' ] );
         add_action( 'wp_ajax_ofp_send_test_email',     [ $this, 'ajax_send_test_email' ] );
+        add_action( 'wp_ajax_ofp_resend_activity_email', [ $this, 'ajax_resend_activity_email' ] );
+        add_action( 'wp_ajax_ofp_get_email_preview',     [ $this, 'ajax_get_email_preview' ] );
+
+        // Communications Log Feed AJAX
+        add_action( 'wp_ajax_ofp_fetch_communications', [ $this, 'ajax_fetch_communications' ] );
+        add_action( 'wp_ajax_nopriv_ofp_fetch_communications', [ $this, 'ajax_fetch_communications' ] );
     }
 
     public function enqueue_assets(): void {
@@ -344,6 +350,55 @@ class OFP_Client_Portal {
 
         wp_send_json_success( [
             'monthly' => OFP_Lead::get_monthly_stats( $client->id, 12 ),
+        ] );
+    }
+
+    /**
+     * AJAX handler to fetch communication records with live filtering and pagination.
+     */
+    public function ajax_fetch_communications(): void {
+        check_ajax_referer( 'ofp_client_ajax', 'nonce' );
+        OFP_Auth::require_client_login();
+        $client = OFP_Auth::current_client();
+        if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) {
+            wp_send_json_error( 'Unauthorized' );
+        }
+
+        if ( class_exists( 'OFP_Communications_Log' ) ) {
+            OFP_Communications_Log::ensure_schema();
+            OFP_Communications_Log::sync_historical_activity( (int) $client->id );
+        }
+
+        $type   = sanitize_text_field( $_POST['type'] ?? '' );
+        $status = sanitize_text_field( $_POST['status'] ?? '' );
+        $search = sanitize_text_field( $_POST['s'] ?? '' );
+        $page   = max( 1, (int) ( $_POST['paged'] ?? 1 ) );
+        $per_page = 25;
+
+        $data = OFP_Communications_Log::fetch( (int) $client->id, [
+            'type'   => $type,
+            'status' => $status,
+            's'      => $search,
+        ], $page, $per_page );
+
+        $html       = OFP_Communications_Log::render_feed_html( $data['items'], (int) $client->id );
+        $pagination = OFP_Communications_Log::render_pagination_html( $data['total_pages'], $data['page'] );
+        $showing    = count( $data['items'] );
+        $total      = $data['total'];
+
+        $count_text = sprintf(
+            'Showing <strong>%s</strong> of <strong>%s</strong> records',
+            number_format( $showing ),
+            number_format( $total )
+        );
+
+        wp_send_json_success( [
+            'html'       => $html,
+            'pagination' => $pagination,
+            'total'      => $total,
+            'showing'    => $showing,
+            'count_text' => $count_text,
+            'has_filter' => ! empty( $type ) || ! empty( $status ) || ! empty( $search ),
         ] );
     }
 
@@ -881,6 +936,141 @@ class OFP_Client_Portal {
             wp_send_json_success( 'Test email sent to ' . $client->email . '. Please check your inbox or spam folder!' );
         } else {
             wp_send_json_error( 'Failed to send test email. Please check your SMTP configuration.' );
+        }
+    }
+
+    public function ajax_get_email_preview(): void {
+        check_ajax_referer( 'ofp_client_ajax', 'nonce' );
+        OFP_Auth::require_client_login();
+        $client = OFP_Auth::current_client();
+        if ( ! $client ) wp_send_json_error( 'Unauthorized.' );
+
+        $log_id = (int) ( $_POST['log_id'] ?? 0 );
+        if ( ! $log_id ) {
+            wp_send_json_error( 'Missing log ID.' );
+        }
+
+        global $wpdb;
+        $log = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}ofp_activity_logs WHERE id = %d AND client_id = %d LIMIT 1",
+            $log_id,
+            $client->id
+        ) );
+
+        if ( ! $log ) {
+            wp_send_json_error( 'Log record not found.' );
+        }
+
+        $details = $log->details ? json_decode( $log->details, true ) : [];
+        if ( ! is_array( $details ) ) $details = [];
+
+        $subject   = $details['subject'] ?? ( 'Notification from ' . ( $client->business_name ?: OFP_Brand::name() ) );
+        $body_text = $details['body'] ?? ( $details['message'] ?? ( $details['content'] ?? '' ) );
+
+        // If body_text is empty, attempt to recover from ofp_communications_log or ofp_notifications
+        if ( empty( $body_text ) ) {
+            $to = $details['to'] ?? '';
+            if ( ! empty( $to ) ) {
+                $comm_msg = $wpdb->get_var( $wpdb->prepare(
+                    "SELECT message FROM {$wpdb->prefix}ofp_communications_log 
+                     WHERE client_id = %d AND recipient = %s AND type = 'email' 
+                     ORDER BY id DESC LIMIT 1",
+                    $client->id,
+                    $to
+                ) );
+                if ( ! empty( $comm_msg ) ) {
+                    $body_text = $comm_msg;
+                }
+            }
+
+            if ( empty( $body_text ) && ! empty( $details['subject'] ) ) {
+                $notif_msg = $wpdb->get_var( $wpdb->prepare(
+                    "SELECT message FROM {$wpdb->prefix}ofp_notifications 
+                     WHERE client_id = %d AND title = %s 
+                     ORDER BY id DESC LIMIT 1",
+                    $client->id,
+                    $details['subject']
+                ) );
+                if ( ! empty( $notif_msg ) ) {
+                    $body_text = $notif_msg;
+                }
+            }
+
+            if ( empty( $body_text ) ) {
+                $body_text = 'This email was delivered via SMTP with subject: ' . $subject;
+            }
+        }
+
+        // If body already has full HTML tags, wrap only if needed, otherwise apply formatting
+        $has_html_tags = ( strpos( $body_text, '<p>' ) !== false || strpos( $body_text, '<table' ) !== false || strpos( $body_text, '<div' ) !== false );
+        $formatted_body = $has_html_tags ? $body_text : wpautop( esc_html( $body_text ) );
+        $full_html      = OFP_Mailer::wrap_in_client_template( $client, $subject, $formatted_body );
+
+        wp_send_json_success( [
+            'html'    => $full_html,
+            'subject' => $subject,
+            'to'      => $details['to'] ?? '',
+            'sent_at' => wp_date( 'M j, Y g:i A', strtotime( $log->created_at ) ),
+            'action'  => $log->action,
+        ] );
+    }
+
+    public function ajax_resend_activity_email(): void {
+        check_ajax_referer( 'ofp_client_ajax', 'nonce' );
+        OFP_Auth::require_client_login();
+        $client = OFP_Auth::current_client();
+        if ( ! $client ) wp_send_json_error( 'Unauthorized.' );
+
+        $log_id             = (int) ( $_POST['log_id'] ?? 0 );
+        $override_recipient = sanitize_email( $_POST['recipient'] ?? '' );
+
+        if ( ! $log_id ) {
+            wp_send_json_error( 'Missing log ID.' );
+        }
+
+        global $wpdb;
+        $log = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}ofp_activity_logs WHERE id = %d AND client_id = %d LIMIT 1",
+            $log_id,
+            $client->id
+        ) );
+
+        if ( ! $log ) {
+            wp_send_json_error( 'Log record not found.' );
+        }
+
+        $details = $log->details ? json_decode( $log->details, true ) : [];
+        if ( ! is_array( $details ) ) $details = [];
+
+        $to = $override_recipient ?: ( $details['to'] ?? ( $details['recipient'] ?? '' ) );
+        if ( empty( $to ) || ! is_email( $to ) ) {
+            wp_send_json_error( 'Invalid or missing recipient email address.' );
+        }
+
+        $subject   = $details['subject'] ?? ( 'Notification from ' . ( $client->business_name ?: OFP_Brand::name() ) );
+        $body_text = $details['message'] ?? ( $details['body'] ?? ( $details['content'] ?? '' ) );
+        if ( empty( $body_text ) ) {
+            $body_text = 'This is a resent notice regarding: ' . $subject;
+        }
+
+        $sent = OFP_Mailer::send_client_email( $to, $subject, $body_text, (int) $client->id );
+
+        if ( $sent ) {
+            OFP_Logger::log( 'Email resent', (int) $client->id, [
+                'to'              => $to,
+                'subject'         => $subject,
+                'message'         => $body_text,
+                'original_log_id' => $log_id,
+                'actor_type'      => 'client',
+                'actor_name'      => $client->owner_name,
+            ] );
+
+            wp_send_json_success( [
+                'message' => 'Email was resent successfully to ' . $to . '!',
+                'sent_at' => wp_date( 'M j, Y g:i A' ),
+            ] );
+        } else {
+            wp_send_json_error( 'Failed to send email. Please check your SMTP settings and server status.' );
         }
     }
 }

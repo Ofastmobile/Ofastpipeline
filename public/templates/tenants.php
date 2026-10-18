@@ -423,17 +423,17 @@ if ( $can_rent ) {
 
         <!-- ── Page Actions ── -->
         <?php if ( $can_rent ) : ?>
-            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:10px;">
-                <button type="button" onclick="ofpOpenModal('ofp-modal-offer')" class="ofp-btn ofp-btn-primary" style="display:inline-flex; align-items:center; gap:8px;">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:8px;">
+                <button type="button" onclick="ofpOpenModal('ofp-modal-offer')" class="ofp-btn ofp-btn-primary" style="padding:8px 14px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     New Lease Offer
                 </button>
-                <button type="button" onclick="ofpOpenModal('ofp-modal-rate')" class="ofp-btn" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color); display:inline-flex; align-items:center; gap:8px;">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <button type="button" onclick="ofpOpenModal('ofp-modal-rate')" class="ofp-btn" style="padding:8px 14px; font-size:13px; background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color); display:inline-flex; align-items:center; gap:6px;">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Add Rent Rate
                 </button>
-                <button type="button" onclick="ofpOpenModal('ofp-modal-payment')" class="ofp-btn" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color); display:inline-flex; align-items:center; gap:8px;">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <button type="button" onclick="ofpOpenModal('ofp-modal-payment')" class="ofp-btn" style="padding:8px 14px; font-size:13px; background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color); display:inline-flex; align-items:center; gap:6px;">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Record Payment
                 </button>
             </div>
@@ -510,70 +510,49 @@ if ( $can_rent ) {
 
         <?php else : ?>
 
-            <!-- ── Micro-Stats KPI Cards ── -->
-            <div class="ofp-kpi-grid">
-                <div class="ofp-kpi-card">
-                    <div class="ofp-kpi-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    </div>
-                    <div>
-                        <div style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Active Tenancies</div>
-                        <div style="font-size: 22px; font-weight: 700; color: var(--text-main); margin-top: 2px;"><?php echo esc_html( $stat_active_leases ); ?></div>
-                    </div>
+            <!-- ── Rent & Tenants KPI Grid ── -->
+            <div class="ofp-zentra-kpi-grid" style="margin-bottom:24px;">
+                <div class="ofp-kpi-card ofp-kpi-card-hero">
+                    <div class="ofp-kpi-title">Active Tenancies</div>
+                    <div class="ofp-kpi-value"><?php echo esc_html( $stat_active_leases ); ?></div>
+                    <div class="ofp-kpi-badge badge-hero"><span>Current Signed Leases</span></div>
                 </div>
 
                 <div class="ofp-kpi-card">
-                    <div class="ofp-kpi-icon" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                    </div>
-                    <div>
-                        <div style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Total Tenants</div>
-                        <div style="font-size: 22px; font-weight: 700; color: var(--text-main); margin-top: 2px;"><?php echo esc_html( $stat_total_tenants ); ?></div>
-                    </div>
+                    <div class="ofp-kpi-title">Total Tenants</div>
+                    <div class="ofp-kpi-value"><?php echo esc_html( $stat_total_tenants ); ?></div>
+                    <div class="ofp-kpi-badge badge-blue"><span>Registered Tenants</span></div>
                 </div>
 
                 <div class="ofp-kpi-card">
-                    <div class="ofp-kpi-icon" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    </div>
-                    <div>
-                        <div style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Rent Collected</div>
-                        <div style="font-size: 22px; font-weight: 700; color: var(--text-main); margin-top: 2px;">NGN <?php echo esc_html( number_format( $stat_rent_collected, 2 ) ); ?></div>
-                    </div>
+                    <div class="ofp-kpi-title">Rent Collected</div>
+                    <div class="ofp-kpi-value">₦<?php echo esc_html( number_format( $stat_rent_collected ) ); ?></div>
+                    <div class="ofp-kpi-badge badge-green"><span>Verified Income</span></div>
                 </div>
 
                 <div class="ofp-kpi-card">
-                    <div class="ofp-kpi-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    </div>
-                    <div>
-                        <div style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Balance Due</div>
-                        <div style="font-size: 22px; font-weight: 700; color: var(--text-main); margin-top: 2px;">NGN <?php echo esc_html( number_format( $stat_balance_due, 2 ) ); ?></div>
-                    </div>
+                    <div class="ofp-kpi-title">Balance Due</div>
+                    <div class="ofp-kpi-value">₦<?php echo esc_html( number_format( $stat_balance_due ) ); ?></div>
+                    <div class="ofp-kpi-badge badge-amber"><span>Rent Outstanding</span></div>
                 </div>
             </div>
 
-            <!-- ── Tabs Header ── -->
-            <div style="display:flex; border-bottom:1px solid var(--border-color); margin-bottom:20px; overflow-x:auto;">
+            <!-- ── Tabs Header (Clean Minimal Underline Style) ── -->
+            <div style="display:flex; border-bottom:1px solid var(--border-color); margin-bottom:20px; overflow-x:auto; gap:4px;">
                 <a href="<?php echo esc_url( add_query_arg( 'tab', 'leases', home_url( '/tenants' ) ) ); ?>" class="ofp-tab-btn <?php echo $active_tab === 'leases' ? 'active' : ''; ?>">
                     Leases &amp; Offers
-                    <span class="ofp-tab-badge"><?php echo count( $leases ); ?></span>
                 </a>
                 <a href="<?php echo esc_url( add_query_arg( 'tab', 'tenants', home_url( '/tenants' ) ) ); ?>" class="ofp-tab-btn <?php echo $active_tab === 'tenants' ? 'active' : ''; ?>">
                     Tenants Directory
-                    <span class="ofp-tab-badge"><?php echo count( $tenants ); ?></span>
                 </a>
                 <a href="<?php echo esc_url( add_query_arg( 'tab', 'rates', home_url( '/tenants' ) ) ); ?>" class="ofp-tab-btn <?php echo $active_tab === 'rates' ? 'active' : ''; ?>">
                     Property Rent Rates
-                    <span class="ofp-tab-badge"><?php echo count( $rent_options ); ?></span>
                 </a>
                 <a href="<?php echo esc_url( add_query_arg( 'tab', 'payments', home_url( '/tenants' ) ) ); ?>" class="ofp-tab-btn <?php echo $active_tab === 'payments' ? 'active' : ''; ?>">
                     Rent Transactions
-                    <span class="ofp-tab-badge"><?php echo count( $payments ); ?></span>
                 </a>
                 <a href="<?php echo esc_url( add_query_arg( 'tab', 'revisions', home_url( '/tenants' ) ) ); ?>" class="ofp-tab-btn <?php echo $active_tab === 'revisions' ? 'active' : ''; ?>">
                     Rent Revisions &amp; Audit Log
-                    <span class="ofp-tab-badge"><?php echo count( $revisions ); ?></span>
                 </a>
             </div>
 

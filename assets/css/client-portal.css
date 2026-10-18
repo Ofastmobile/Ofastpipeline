@@ -16,8 +16,13 @@
     --accent-green: #10b981;
     --accent-orange: #f59e0b;
     --accent-red: #ef4444;
-    --accent-purple: #8b5cf6;
-    --btn-primary: #3b82f6;
+    --brand-color: #3b82f6;
+    --brand-color-rgb: 59, 130, 246;
+    --brand-color-alpha-10: rgba(59, 130, 246, 0.10);
+    --brand-color-alpha-15: rgba(59, 130, 246, 0.15);
+    --brand-color-alpha-25: rgba(59, 130, 246, 0.25);
+    --accent-purple: var(--brand-color, #3b82f6);
+    --btn-primary: var(--brand-color, #3b82f6);
     --btn-primary-hover: #2563eb;
     --dropdown-bg: #1c2233;
     --dropdown-border: rgba(255, 255, 255, 0.1);
@@ -42,8 +47,13 @@ html.light {
     --accent-green: #059669;
     --accent-orange: #d97706;
     --accent-red: #dc2626;
-    --accent-purple: #7c3aed;
-    --btn-primary: #2563eb;
+    --brand-color: #2563eb;
+    --brand-color-rgb: 37, 99, 235;
+    --brand-color-alpha-10: rgba(37, 99, 235, 0.10);
+    --brand-color-alpha-15: rgba(37, 99, 235, 0.15);
+    --brand-color-alpha-25: rgba(37, 99, 235, 0.25);
+    --accent-purple: var(--brand-color, #2563eb);
+    --btn-primary: var(--brand-color, #2563eb);
     --btn-primary-hover: #1d4ed8;
     --dropdown-bg: #ffffff;
     --dropdown-border: #e2e8f0;
@@ -112,10 +122,25 @@ html[data-theme="light"] .theme-toggle-sun {
 
 body.ofp-portal-body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-body);
+    background-color: var(--bg-body);
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.10) 0px, transparent 50%),
+        radial-gradient(at 100% 12%, rgba(139, 92, 246, 0.09) 0px, transparent 45%),
+        radial-gradient(at 50% 90%, rgba(16, 185, 129, 0.06) 0px, transparent 55%);
+    background-attachment: fixed;
     color: var(--text-main);
     min-height: 100vh;
     transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+[data-theme="light"] body.ofp-portal-body,
+html.light body.ofp-portal-body {
+    background-color: #f8fafc;
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.07) 0px, transparent 50%),
+        radial-gradient(at 100% 12%, rgba(139, 92, 246, 0.06) 0px, transparent 45%),
+        radial-gradient(at 50% 90%, rgba(16, 185, 129, 0.05) 0px, transparent 55%);
+    background-attachment: fixed;
 }
 
 /* ── Shell & Layout ───────────────────────────────────────────────────────── */
@@ -667,8 +692,18 @@ html.dark .ofp-hero-full-header {
     flex-direction: column;
     justify-content: space-between;
     padding-bottom: 22px;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.18) 0%, rgba(15, 23, 42, 0.02) 40%, rgba(15, 23, 42, 0.55) 100%);
+    background: rgba(0, 0, 0, 0.45);
     border-radius: 0;
+}
+
+[data-theme="dark"] .ofp-hero-full-header-overlay,
+html.dark .ofp-hero-full-header-overlay {
+    background: rgba(0, 0, 0, 0.50);
+}
+
+[data-theme="light"] .ofp-hero-full-header-overlay,
+html.light .ofp-hero-full-header-overlay {
+    background: rgba(255, 255, 255, 0.40);
 }
 
 /* Make topbar completely transparent so image reflects 100% through it */
@@ -700,111 +735,120 @@ html.dark .ofp-hero-full-header {
     margin-right: 34px;
 }
 
-/* Sticky Light & Dark (L&D) Theme Toggle Button - sticks close to right side on any scroll */
+/* Sticky Light & Dark (L&D) Theme Toggle Button - iPhone Frosted Glassmorphism */
 #ofp-theme-toggle {
     position: fixed !important;
     top: 18px !important;
     right: 14px !important;
     z-index: 1050 !important;
-    width: 40px !important;
-    height: 40px !important;
-    border-radius: 10px !important;
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 13px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer !important;
-    background: rgba(255, 255, 255, 0.92) !important;
-    backdrop-filter: blur(14px) !important;
-    -webkit-backdrop-filter: blur(14px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.9) !important;
-    color: #1e293b !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important;
-    transition: all 0.2s ease !important;
+    background: rgba(255, 255, 255, 0.32) !important;
+    backdrop-filter: blur(20px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    color: #0f172a !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65) !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 #ofp-theme-toggle:hover {
-    background: #ffffff !important;
+    background: rgba(255, 255, 255, 0.48) !important;
+    border-color: rgba(255, 255, 255, 0.8) !important;
     transform: translateY(-1px) scale(1.04) !important;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16) !important;
+    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.16), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85) !important;
 }
 
 [data-theme="dark"] #ofp-theme-toggle,
 html.dark #ofp-theme-toggle {
-    background: rgba(15, 23, 42, 0.88) !important;
-    border-color: rgba(255, 255, 255, 0.18) !important;
+    background: rgba(15, 23, 42, 0.5) !important;
+    backdrop-filter: blur(20px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
     color: #f8fafc !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
 }
 
 [data-theme="dark"] #ofp-theme-toggle:hover,
 html.dark #ofp-theme-toggle:hover {
-    background: rgba(30, 41, 59, 0.95) !important;
+    background: rgba(30, 41, 59, 0.65) !important;
+    border-color: rgba(255, 255, 255, 0.28) !important;
     transform: translateY(-1px) scale(1.04) !important;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45) !important;
+    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.32) !important;
 }
 
 .ofp-topbar-transparent .ofp-topbar-actions .ofp-btn-balance {
-    background: rgba(255, 255, 255, 0.92) !important;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    color: #1e293b !important;
-    border: 1px solid rgba(255, 255, 255, 0.9) !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.32) !important;
+    backdrop-filter: blur(20px) saturate(190%);
+    -webkit-backdrop-filter: blur(20px) saturate(190%);
+    color: #0f172a !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65);
     font-weight: 600;
     font-size: 13px;
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 8px 16px;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ofp-topbar-transparent .ofp-topbar-actions .ofp-btn-balance svg {
-    color: #3b82f6;
+    color: #2563eb;
 }
 
 .ofp-topbar-transparent .ofp-topbar-actions .ofp-btn-balance:hover {
-    background: #ffffff !important;
+    background: rgba(255, 255, 255, 0.48) !important;
+    border-color: rgba(255, 255, 255, 0.8) !important;
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.16), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 .ofp-topbar-transparent .ofp-topbar-actions .ofp-icon-btn,
-.ofp-topbar-transparent .ofp-user-menu .ofp-icon-btn {
-    background: rgba(255, 255, 255, 0.92) !important;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(255, 255, 255, 0.9) !important;
-    color: #1e293b !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
+.ofp-topbar-transparent .ofp-user-menu .ofp-icon-btn,
+#ofp-notif-trigger {
+    background: rgba(255, 255, 255, 0.32) !important;
+    backdrop-filter: blur(20px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    color: #0f172a !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65) !important;
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 13px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .ofp-topbar-transparent .ofp-topbar-actions .ofp-icon-btn:hover,
-.ofp-topbar-transparent .ofp-user-menu .ofp-icon-btn:hover {
-    background: #ffffff !important;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+.ofp-topbar-transparent .ofp-user-menu .ofp-icon-btn:hover,
+#ofp-notif-trigger:hover {
+    background: rgba(255, 255, 255, 0.48) !important;
+    border-color: rgba(255, 255, 255, 0.8) !important;
+    transform: translateY(-1px) scale(1.04) !important;
+    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.16), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85) !important;
 }
 
 .ofp-topbar-transparent .ofp-sidebar-toggle {
-    background: rgba(255, 255, 255, 0.92) !important;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(255, 255, 255, 0.9) !important;
-    border-radius: 10px;
-    padding: 8px;
-    color: #1e293b !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.32) !important;
+    backdrop-filter: blur(20px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    border-radius: 13px !important;
+    padding: 9px !important;
+    color: #0f172a !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65) !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .ofp-topbar-transparent .ofp-user-avatar {
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.7);
     cursor: pointer;
     transition: transform 0.2s ease;
 }
@@ -813,30 +857,42 @@ html.dark #ofp-theme-toggle:hover {
     transform: scale(1.05);
 }
 
-/* Dark theme overrides for transparent topbar glass controls */
+/* Dark theme overrides for transparent topbar iPhone glass controls */
 [data-theme="dark"] .ofp-topbar-transparent .ofp-topbar-actions .ofp-btn-balance,
 html.dark .ofp-topbar-transparent .ofp-topbar-actions .ofp-btn-balance {
-    background: rgba(15, 23, 42, 0.88) !important;
+    background: rgba(15, 23, 42, 0.5) !important;
     border-color: rgba(255, 255, 255, 0.18) !important;
     color: #f8fafc !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
 }
 
 [data-theme="dark"] .ofp-topbar-transparent .ofp-topbar-actions .ofp-icon-btn,
 html.dark .ofp-topbar-transparent .ofp-topbar-actions .ofp-icon-btn,
 [data-theme="dark"] .ofp-topbar-transparent .ofp-user-menu .ofp-icon-btn,
-html.dark .ofp-topbar-transparent .ofp-user-menu .ofp-icon-btn {
-    background: rgba(15, 23, 42, 0.88) !important;
+html.dark .ofp-topbar-transparent .ofp-user-menu .ofp-icon-btn,
+[data-theme="dark"] #ofp-notif-trigger,
+html.dark #ofp-notif-trigger {
+    background: rgba(15, 23, 42, 0.5) !important;
     border-color: rgba(255, 255, 255, 0.18) !important;
     color: #f8fafc !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+[data-theme="dark"] .ofp-topbar-transparent .ofp-topbar-actions .ofp-icon-btn:hover,
+html.dark .ofp-topbar-transparent .ofp-topbar-actions .ofp-icon-btn:hover,
+[data-theme="dark"] #ofp-notif-trigger:hover,
+html.dark #ofp-notif-trigger:hover {
+    background: rgba(30, 41, 59, 0.65) !important;
+    border-color: rgba(255, 255, 255, 0.28) !important;
+    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.32) !important;
 }
 
 [data-theme="dark"] .ofp-topbar-transparent .ofp-sidebar-toggle,
 html.dark .ofp-topbar-transparent .ofp-sidebar-toggle {
-    background: rgba(15, 23, 42, 0.88) !important;
+    background: rgba(15, 23, 42, 0.5) !important;
     border-color: rgba(255, 255, 255, 0.18) !important;
     color: #f8fafc !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
 }
 
 .ofp-hero-topbar-header {
@@ -848,23 +904,28 @@ html.dark .ofp-topbar-transparent .ofp-sidebar-toggle {
 .ofp-hero-greeting-pill {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    gap: 9px;
+    background: rgba(255, 255, 255, 0.32);
+    backdrop-filter: blur(20px) saturate(190%);
+    -webkit-backdrop-filter: blur(20px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.55);
     border-radius: 9999px;
-    padding: 6px 14px;
+    padding: 7px 16px;
     font-size: 13px;
     font-weight: 600;
-    color: #1e293b;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    color: #0f172a;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 [data-theme="dark"] .ofp-hero-greeting-pill,
 html.dark .ofp-hero-greeting-pill {
-    background: rgba(15, 23, 42, 0.85);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: #f1f5f9;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(20px) saturate(190%);
+    -webkit-backdrop-filter: blur(20px) saturate(190%);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #f8fafc;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
 }
 
 .ofp-status-dot-pulse {
@@ -891,19 +952,24 @@ html.dark .ofp-hero-greeting-pill {
 }
 
 .ofp-hero-date-divider {
-    color: #94a3b8;
+    color: rgba(15, 23, 42, 0.4);
     font-size: 11px;
 }
 
+[data-theme="dark"] .ofp-hero-date-divider,
+html.dark .ofp-hero-date-divider {
+    color: rgba(255, 255, 255, 0.35);
+}
+
 .ofp-hero-date {
-    color: #64748b;
+    color: #475569;
     font-weight: 500;
     font-size: 12px;
 }
 
 [data-theme="dark"] .ofp-hero-date,
 html.dark .ofp-hero-date {
-    color: #94a3b8;
+    color: #cbd5e1;
 }
 
 .ofp-hero-topbar-controls {
@@ -917,42 +983,63 @@ html.dark .ofp-hero-date {
 .ofp-hero-search-box {
     display: flex;
     align-items: center;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.9);
-    border-radius: 12px;
-    padding: 7px 14px;
+    background: rgba(255, 255, 255, 0.32);
+    backdrop-filter: blur(20px) saturate(190%);
+    -webkit-backdrop-filter: blur(20px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 14px;
+    padding: 8px 16px;
     min-width: 280px;
     max-width: 380px;
     flex: 1;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ofp-hero-search-box:hover {
+    background: rgba(255, 255, 255, 0.45);
+    border-color: rgba(255, 255, 255, 0.75);
+    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.16), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 [data-theme="dark"] .ofp-hero-search-box,
 html.dark .ofp-hero-search-box {
-    background: rgba(15, 23, 42, 0.88);
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(20px) saturate(190%);
+    -webkit-backdrop-filter: blur(20px) saturate(190%);
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
+}
+
+[data-theme="dark"] .ofp-hero-search-box:hover,
+html.dark .ofp-hero-search-box:hover {
+    background: rgba(15, 23, 42, 0.65);
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.32);
 }
 
 .ofp-hero-search-box:focus-within {
-    box-shadow: 0 0 0 2px #8b5cf6, 0 6px 18px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 0 0 2px #3b82f6, 0 12px 36px 0 rgba(0, 0, 0, 0.2);
 }
 
 .ofp-hero-search-box svg {
-    width: 16px;
-    height: 16px;
-    color: #64748b;
-    margin-right: 8px;
-    shrink: 0;
+    width: 17px;
+    height: 17px;
+    color: #475569;
+    margin-right: 9px;
+    flex-shrink: 0;
+}
+
+[data-theme="dark"] .ofp-hero-search-box svg,
+html.dark .ofp-hero-search-box svg {
+    color: #94a3b8;
 }
 
 .ofp-hero-search-box input {
     border: none;
     background: transparent;
     outline: none;
-    font-size: 13px;
+    font-size: 13.5px;
     font-weight: 500;
     color: #0f172a;
     width: 100%;
@@ -964,27 +1051,36 @@ html.dark .ofp-hero-search-box input {
 }
 
 .ofp-hero-search-box input::placeholder {
-    color: #94a3b8;
+    color: rgba(15, 23, 42, 0.6);
+}
+
+[data-theme="dark"] .ofp-hero-search-box input::placeholder,
+html.dark .ofp-hero-search-box input::placeholder {
+    color: rgba(248, 250, 252, 0.55);
 }
 
 .ofp-hero-kbd {
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 6px;
-    padding: 2px 7px;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 7px;
+    padding: 3px 8px;
     font-size: 11px;
     font-weight: 700;
-    color: #64748b;
+    color: #1e293b;
     letter-spacing: 0.02em;
     white-space: nowrap;
     user-select: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 [data-theme="dark"] .ofp-hero-kbd,
 html.dark .ofp-hero-kbd {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.12);
-    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #f1f5f9;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .ofp-hero-action-buttons {
@@ -994,32 +1090,35 @@ html.dark .ofp-hero-kbd {
 }
 
 .ofp-hero-btn-more {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.32);
+    backdrop-filter: blur(20px) saturate(190%);
+    -webkit-backdrop-filter: blur(20px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.55);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #334155;
+    color: #0f172a;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transition: all 0.2s ease;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 [data-theme="dark"] .ofp-hero-btn-more,
 html.dark .ofp-hero-btn-more {
-    background: rgba(15, 23, 42, 0.88);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: #e2e8f0;
+    background: rgba(15, 23, 42, 0.5);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #f8fafc;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
 }
 
 .ofp-hero-btn-more:hover {
-    background: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    background: rgba(255, 255, 255, 0.48);
+    border-color: rgba(255, 255, 255, 0.8);
+    transform: translateY(-1px) scale(1.04);
+    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.16), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 .ofp-hero-btn-export {
@@ -1374,8 +1473,8 @@ html.dark .ofp-hero-btn-export {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: rgba(139, 92, 246, 0.1);
-    color: var(--accent-purple);
+    background: var(--brand-color-alpha-10, rgba(59, 130, 246, 0.1));
+    color: var(--brand-color, var(--btn-primary, #3b82f6));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2842,10 +2941,12 @@ input[type="date"].ofp-input,
     border-color: rgba(239, 68, 68, 0.3);
 }
 
-/* ── Badge Purple ────────────────────────────────────────────────────────── */
-.ofp-badge-purple {
-    background: rgba(139, 92, 246, 0.15);
-    color: #8b5cf6;
+/* ── Badge Purple & Brand ────────────────────────────────────────────────── */
+.ofp-badge-purple,
+.ofp-badge-brand {
+    background: var(--brand-color-alpha-15, rgba(59, 130, 246, 0.12));
+    color: var(--brand-color, var(--btn-primary, #3b82f6));
+    border: 1px solid var(--brand-color-alpha-25, rgba(59, 130, 246, 0.25));
 }
 
 @media (max-width: 640px) {
@@ -3406,9 +3507,21 @@ select.ofp-form-input option:disabled {
 /* --- pricing --- */
 .ofp-pricing-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 24px;
     margin-top: 32px;
+}
+
+@media (max-width: 1024px) {
+    .ofp-pricing-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .ofp-pricing-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .ofp-pricing-card {
@@ -3654,8 +3767,8 @@ html.dark .hero-bg {
 }
 
 .ofp-btn-primary {
-    background: #1a73e8;
-    color: #fff
+    background: var(--btn-primary, var(--brand-color, #3b82f6));
+    color: #fff;
 }
 
 .ofp-btn-danger {
@@ -3765,15 +3878,11 @@ body,
 .ofp-team-table {
     width: 100%;
     border-collapse: collapse;
-    background: var(--bg-card);
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1px solid var(--border-color);
 }
 
 .ofp-team-table th,
 .ofp-team-table td {
-    padding: 16px;
+    padding: 14px 16px;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
 }
@@ -3781,9 +3890,9 @@ body,
 .ofp-team-table th {
     font-weight: 600;
     color: var(--text-muted);
-    font-size: 13px;
+    font-size: 11.5px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.04em;
 }
 
 .ofp-team-table tr:last-child td {
@@ -3791,20 +3900,22 @@ body,
 }
 
 .ofp-badge-pending {
-    background: #fef08a;
-    color: #854d0e;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
+    background: rgba(245, 158, 11, 0.14);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
     font-weight: 600;
 }
 
 .ofp-badge-active {
-    background: #bbf7d0;
-    color: #166534;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
     font-weight: 600;
 }
 
@@ -3812,10 +3923,13 @@ body,
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
     z-index: 1000;
     align-items: center;
     justify-content: center;
+    padding: 20px;
 }
 
 .ofp-modal.active {
@@ -3823,13 +3937,23 @@ body,
 }
 
 .ofp-modal-content {
-    background: var(--bg-card);
+    background: rgba(22, 28, 44, 0.9) !important;
+    backdrop-filter: blur(28px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    box-shadow: 0 24px 60px 0 rgba(0, 0, 0, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
     width: 100%;
-    max-width: 500px;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--border-color);
+    max-width: 520px;
+    border-radius: 16px;
+    padding: 28px;
+    box-sizing: border-box;
+}
+
+[data-theme="light"] .ofp-modal-content,
+html.light .ofp-modal-content {
+    background: rgba(255, 255, 255, 0.94) !important;
+    border: 1px solid rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 0 24px 60px 0 rgba(15, 23, 42, 0.15), inset 0 1px 1px 0 #ffffff !important;
 }
 
 .ofp-modal-header {
@@ -3892,9 +4016,9 @@ body,
 
 /* --- Tabs Navigation System --- */
 .ofp-tab-btn {
-    padding: 12px 20px;
-    font-size: 13.5px;
-    font-weight: 600;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--text-muted);
     background: transparent;
     border: none;
@@ -3910,37 +4034,21 @@ body,
 }
 
 .ofp-tab-btn svg {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    transition: transform 0.2s ease;
+    display: none !important;
 }
 
 .ofp-tab-btn:hover {
     color: var(--text-main);
 }
 
-.ofp-tab-btn:hover svg {
-    transform: translateY(-1px);
-}
-
 .ofp-tab-btn.active {
-    color: var(--accent-blue) !important;
-    border-bottom: 2px solid var(--accent-blue) !important;
-}
-
-.ofp-tab-badge {
-    background: var(--bg-card-hover);
-    color: var(--text-muted);
-    padding: 2px 7px;
-    border-radius: 999px;
-    font-size: 11px;
+    color: #ef4444 !important;
+    border-bottom: 2px solid #ef4444 !important;
     font-weight: 600;
 }
 
-.ofp-tab-btn.active .ofp-tab-badge {
-    background: rgba(59, 130, 246, 0.15);
-    color: var(--accent-blue);
+.ofp-tab-badge {
+    display: none !important;
 }
 
 /* Static Left-aligned Back Button (No Hover Effect) */
@@ -4268,19 +4376,19 @@ html.dark .ofp-modal-footer .ofp-btn-form-cancel:hover {
 .ofp-zentra-kpi-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
+    gap: 16px;
     margin-bottom: 24px;
 }
 
 .ofp-kpi-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 18px;
-    padding: 22px 24px;
+    border-radius: 16px;
+    padding: 16px 18px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 145px;
+    min-height: 118px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -4303,11 +4411,26 @@ html.light .ofp-kpi-card-hero {
     border-color: rgba(139, 92, 246, 0.5) !important;
 }
 
+.ofp-kpi-card-emerald {
+    background: linear-gradient(135deg, rgba(6, 78, 59, 0.25) 0%, rgba(6, 78, 59, 0.08) 100%) !important;
+    border: 1px solid rgba(16, 185, 129, 0.35) !important;
+}
+
+.ofp-kpi-card-blue {
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.25) 0%, rgba(30, 58, 138, 0.08) 100%) !important;
+    border: 1px solid rgba(59, 130, 246, 0.35) !important;
+}
+
+.ofp-kpi-card-amber {
+    background: linear-gradient(135deg, rgba(120, 53, 15, 0.22) 0%, rgba(120, 53, 15, 0.08) 100%) !important;
+    border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
 .ofp-kpi-title {
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 500;
     color: var(--text-muted);
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .ofp-kpi-card-hero .ofp-kpi-title {
@@ -4315,11 +4438,11 @@ html.light .ofp-kpi-card-hero {
 }
 
 .ofp-kpi-value {
-    font-size: 30px;
+    font-size: 25px;
     font-weight: 800;
     color: var(--text-main);
     line-height: 1.1;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
     letter-spacing: -0.02em;
 }
 
@@ -4344,19 +4467,44 @@ html.light .ofp-kpi-card-hero {
     color: #34d399;
 }
 
-.ofp-kpi-badge.badge-purple {
-    background: rgba(139, 92, 246, 0.12);
-    color: #8b5cf6;
+.ofp-kpi-badge.badge-purple,
+.ofp-kpi-badge.badge-brand,
+.ofp-kpi-badge.badge-primary {
+    background: var(--brand-color-alpha-15, rgba(59, 130, 246, 0.12));
+    color: var(--brand-color, var(--btn-primary, #3b82f6));
+    border: 1px solid var(--brand-color-alpha-25, rgba(59, 130, 246, 0.25));
 }
 
 .ofp-kpi-badge.badge-blue {
     background: rgba(59, 130, 246, 0.12);
     color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
 .ofp-kpi-badge.badge-green {
     background: rgba(16, 185, 129, 0.12);
     color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.ofp-kpi-badge.badge-amber,
+.ofp-kpi-badge.badge-orange {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.ofp-kpi-badge.badge-rose,
+.ofp-kpi-badge.badge-red {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.ofp-kpi-badge.badge-cyan {
+    background: rgba(6, 182, 212, 0.12);
+    color: #06b6d4;
+    border: 1px solid rgba(6, 182, 212, 0.25);
 }
 
 /* 2. Analytics Row (Cash Flow + Month Breakdown) */
@@ -4652,19 +4800,19 @@ html.dark .ofp-stylized-map-box {
     }
 }
 
-/* Recent Properties List */
+/* Recent Properties & Buyers List (Minimal Height) */
 .ofp-recent-properties-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 7px;
 }
 
 .ofp-recent-property-card {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 10px 14px;
-    border-radius: 12px;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 9px;
     background: var(--bg-body);
     border: 1px solid var(--border-color);
     transition: transform 0.2s ease, border-color 0.2s ease;
@@ -4676,9 +4824,10 @@ html.dark .ofp-stylized-map-box {
 }
 
 .ofp-recent-prop-thumb {
-    width: 58px;
-    height: 58px;
-    border-radius: 10px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 8px;
     overflow: hidden;
     flex-shrink: 0;
     background: #e2e8f0;
@@ -4696,28 +4845,31 @@ html.dark .ofp-stylized-map-box {
 }
 
 .ofp-recent-prop-title {
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 12.5px;
+    font-weight: 600;
     color: var(--text-main);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
+    line-height: 1.2;
 }
 
 .ofp-recent-prop-price {
-    font-size: 13px;
-    font-weight: 800;
+    font-size: 12px;
+    font-weight: 700;
     color: #8b5cf6;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
+    line-height: 1.2;
 }
 
 .ofp-recent-prop-sub {
-    font-size: 11px;
+    font-size: 10.5px;
     color: var(--text-muted);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    line-height: 1.2;
 }
 
 /* Responsive */
@@ -4734,7 +4886,24 @@ html.dark .ofp-stylized-map-box {
 
 @media (max-width: 640px) {
     .ofp-zentra-kpi-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+    .ofp-kpi-card {
+        padding: 12px 14px !important;
+        min-height: 105px !important;
+    }
+    .ofp-kpi-title {
+        font-size: 11.5px !important;
+        margin-bottom: 6px !important;
+    }
+    .ofp-kpi-value {
+        font-size: 19px !important;
+        margin-bottom: 8px !important;
+    }
+    .ofp-kpi-badge {
+        font-size: 10px !important;
+        padding: 2px 7px !important;
     }
 }
 
@@ -5778,7 +5947,7 @@ html.dark .ofp-map-external-link-btn:hover {
 html.dark .ofp-search-modal-box {
     background: #131826;
     border-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--brand-color-alpha-25, rgba(59, 130, 246, 0.25));
 }
 
 /* Modal Search Input Header */
@@ -5794,7 +5963,7 @@ html.dark .ofp-search-modal-box {
 .ofp-search-modal-icon {
     width: 22px;
     height: 22px;
-    color: var(--btn-primary, var(--accent-purple, #8b5cf6));
+    color: var(--brand-color, var(--btn-primary, #3b82f6));
     flex-shrink: 0;
 }
 
@@ -5888,7 +6057,7 @@ html.dark .ofp-search-tab-pill:hover {
 }
 
 .ofp-search-tab-pill.active {
-    background: var(--btn-primary, var(--accent-purple, #8b5cf6));
+    background: var(--brand-color, var(--btn-primary, #3b82f6));
     color: #ffffff !important;
 }
 
@@ -5932,24 +6101,24 @@ html.dark .ofp-search-item {
 
 .ofp-search-item:hover,
 .ofp-search-item.selected {
-    background: rgba(59, 130, 246, 0.09);
-    border-color: var(--btn-primary, var(--accent-purple, #8b5cf6));
+    background: var(--brand-color-alpha-10, rgba(59, 130, 246, 0.09));
+    border-color: var(--brand-color, var(--btn-primary, #3b82f6));
 }
 
 [data-theme="dark"] .ofp-search-item:hover,
 [data-theme="dark"] .ofp-search-item.selected,
 html.dark .ofp-search-item:hover,
 html.dark .ofp-search-item.selected {
-    background: rgba(59, 130, 246, 0.18);
-    border-color: var(--btn-primary, var(--accent-purple, #8b5cf6));
+    background: var(--brand-color-alpha-15, rgba(59, 130, 246, 0.18));
+    border-color: var(--brand-color, var(--btn-primary, #3b82f6));
 }
 
 .ofp-search-item-icon {
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    background: rgba(59, 130, 246, 0.1);
-    color: var(--btn-primary, var(--accent-purple, #8b5cf6));
+    background: var(--brand-color-alpha-10, rgba(59, 130, 246, 0.1));
+    color: var(--brand-color, var(--btn-primary, #3b82f6));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -6107,9 +6276,10 @@ html.dark .ofp-search-hint-kbd kbd {
     color: var(--accent-blue);
 }
 
-.ofp-spec-card-icon.is-purple {
-    background: rgba(139, 92, 246, 0.12);
-    color: var(--accent-purple);
+.ofp-spec-card-icon.is-purple,
+.ofp-spec-card-icon.is-brand {
+    background: var(--brand-color-alpha-10, rgba(59, 130, 246, 0.12));
+    color: var(--brand-color, var(--btn-primary, #3b82f6));
 }
 
 .ofp-spec-card-icon.is-orange {
@@ -6499,4 +6669,714 @@ html.dark .ofp-input-unit-tag {
         flex-direction: column;
         align-items: flex-start;
     }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   CLIENT DASHBOARD: BOTTOM GRID (HEALTH PROMO + BUYERS DATA TABLE)
+   Exact match to Admin Portal Design with Dark/Light Support
+   ───────────────────────────────────────────────────────────────────────── */
+.ofp-bottom-grid {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 16px;
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 18px;
+}
+
+/* Priority Action / System Status Box */
+.ofp-promo-card {
+    background: linear-gradient(135deg, #09261f 0%, #061c16 100%);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 16px;
+    padding: 20px;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 8px 20px rgba(9, 38, 31, 0.25);
+    width: 100%;
+    min-width: 260px;
+    box-sizing: border-box;
+}
+
+.ofp-promo-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    width: fit-content;
+    margin-bottom: 10px;
+}
+
+.ofp-promo-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #ffffff;
+}
+
+.ofp-promo-desc {
+    font-size: 12.5px;
+    color: #94a3b8;
+    line-height: 1.45;
+    margin-bottom: 16px;
+}
+
+.ofp-promo-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 12px 10px;
+    margin-bottom: 16px;
+}
+
+.ofp-promo-stat-box {
+    display: flex;
+    flex-direction: column;
+}
+
+.ofp-promo-stat-val {
+    font-size: 17px;
+    font-weight: 700;
+    color: #34d399;
+}
+
+.ofp-promo-stat-lbl {
+    font-size: 10.5px;
+    color: #94a3b8;
+}
+
+/* High Density Data Table Card */
+.ofp-table-card {
+    background: var(--bg-card, #1e2638);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.3));
+    min-width: 0;
+    max-width: 100%;
+    min-height: 290px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.ofp-table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    gap: 14px;
+}
+
+.ofp-table-search {
+    position: relative;
+    max-width: 280px;
+    width: 100%;
+}
+
+.ofp-table-search input {
+    width: 100%;
+    padding: 7px 12px 7px 34px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-main, #f8fafc);
+    outline: none;
+    box-sizing: border-box;
+}
+
+[data-theme="light"] .ofp-table-search input,
+html.light .ofp-table-search input {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #0f172a;
+}
+
+.ofp-table-search svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted, #94a3b8);
+}
+
+.ofp-table-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ofp-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    margin-bottom: 0 !important;
+}
+
+.ofp-data-table {
+    width: 100%;
+    min-width: 580px;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    font-size: 13.5px;
+}
+
+.ofp-data-table th,
+.ofp-data-table td {
+    white-space: nowrap !important;
+    padding: 13px 14px !important;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    vertical-align: middle !important;
+}
+
+.ofp-data-table th {
+    background: rgba(255, 255, 255, 0.02) !important;
+    color: var(--text-muted, #94a3b8) !important;
+    font-weight: 600 !important;
+    font-size: 11.5px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    text-align: left;
+}
+
+[data-theme="light"] .ofp-data-table th,
+html.light .ofp-data-table th {
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+}
+
+.ofp-data-table td {
+    color: var(--text-main, #f8fafc);
+}
+
+.ofp-data-table th.ofp-col-amount,
+.ofp-data-table td.ofp-col-amount,
+.ofp-data-table th.ofp-col-date,
+.ofp-data-table td.ofp-col-date,
+.ofp-data-table th.ofp-col-status,
+.ofp-data-table td.ofp-col-status,
+.ofp-data-table th:last-child,
+.ofp-data-table td:last-child {
+    width: 1%;
+    white-space: nowrap !important;
+}
+
+.ofp-data-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="light"] .ofp-data-table tbody tr:hover,
+html.light .ofp-data-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* User cell & meta */
+.ofp-user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ofp-user-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+}
+
+.ofp-user-meta {
+    display: flex;
+    flex-direction: column;
+}
+
+.ofp-user-title {
+    font-weight: 600;
+    color: var(--text-main, #f8fafc);
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+.ofp-user-sub {
+    font-size: 11.5px;
+    color: var(--text-muted, #94a3b8);
+    line-height: 1.25;
+}
+
+/* Table Status Badge Pill (Compact & Crisp) */
+.ofp-tbl-status-pill,
+.ofp-data-table .ofp-status-pill,
+.ofp-table-card .ofp-status-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 3px 8px !important;
+    border-radius: 9999px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.2px !important;
+    width: fit-content !important;
+    height: auto !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+}
+
+/* Buttons */
+.ofp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    box-sizing: border-box;
+}
+
+.ofp-btn-primary {
+    background: var(--btn-primary, var(--brand-color, #3b82f6)) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 10px var(--brand-color-alpha-25, rgba(59, 130, 246, 0.25));
+}
+
+.ofp-btn-primary:hover {
+    background: var(--btn-primary-hover, var(--brand-color, #2563eb)) !important;
+    box-shadow: 0 4px 16px var(--brand-color-alpha-25, rgba(59, 130, 246, 0.35));
+    color: #ffffff !important;
+}
+
+.ofp-btn-outline {
+    background: transparent;
+    border-color: var(--border-color, rgba(255, 255, 255, 0.12));
+    color: var(--text-main, #f8fafc);
+}
+
+.ofp-btn-outline:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main, #f8fafc);
+}
+
+[data-theme="light"] .ofp-btn-outline,
+html.light .ofp-btn-outline {
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+[data-theme="light"] .ofp-btn-outline:hover,
+html.light .ofp-btn-outline:hover {
+    background: #f1f5f9;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .ofp-bottom-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ofp-promo-card {
+        min-width: 0;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   IPHONE / VISIONOS FROSTED GLASS SYSTEM ACROSS ALL CONTAINERS & TABLES
+   Unified Glassmorphism Across All Client Portal Pages
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 1. Frosted Glass Containers & Cards (Dark Mode Default) */
+.ofp-card,
+.ofp-zentra-card,
+.ofp-kpi-card:not(.ofp-kpi-card-hero),
+.ofp-table-card,
+.ofp-spec-counter-card,
+.ofp-sizing-card,
+.ofp-meta-picker-card,
+.ofp-land-studio-box,
+.ofp-pricing-card,
+.ofp-stat-card,
+.ofp-section,
+.ofp-form-card,
+.ofp-property-card,
+.ofp-specs-card,
+.ofp-report-card {
+    background: rgba(30, 41, 59, 0.45) !important;
+    backdrop-filter: blur(20px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.11) !important;
+    box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.28), inset 0 1px 0 0 rgba(255, 255, 255, 0.14) !important;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease !important;
+}
+
+.ofp-card:hover,
+.ofp-zentra-card:hover,
+.ofp-kpi-card:not(.ofp-kpi-card-hero):hover,
+.ofp-spec-counter-card:hover,
+.ofp-pricing-card:hover,
+.ofp-property-card:hover {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 14px 40px 0 rgba(0, 0, 0, 0.38), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+/* 2. Frosted Glass Containers & Cards (Light Mode) */
+[data-theme="light"] .ofp-card,
+[data-theme="light"] .ofp-zentra-card,
+[data-theme="light"] .ofp-kpi-card:not(.ofp-kpi-card-hero),
+[data-theme="light"] .ofp-table-card,
+[data-theme="light"] .ofp-spec-counter-card,
+[data-theme="light"] .ofp-sizing-card,
+[data-theme="light"] .ofp-meta-picker-card,
+[data-theme="light"] .ofp-land-studio-box,
+[data-theme="light"] .ofp-pricing-card,
+[data-theme="light"] .ofp-stat-card,
+[data-theme="light"] .ofp-section,
+[data-theme="light"] .ofp-form-card,
+[data-theme="light"] .ofp-property-card,
+[data-theme="light"] .ofp-specs-card,
+[data-theme="light"] .ofp-report-card,
+html.light .ofp-card,
+html.light .ofp-zentra-card,
+html.light .ofp-kpi-card:not(.ofp-kpi-card-hero),
+html.light .ofp-table-card,
+html.light .ofp-spec-counter-card,
+html.light .ofp-sizing-card,
+html.light .ofp-meta-picker-card,
+html.light .ofp-land-studio-box,
+html.light .ofp-pricing-card,
+html.light .ofp-stat-card,
+html.light .ofp-section,
+html.light .ofp-form-card,
+html.light .ofp-property-card,
+html.light .ofp-specs-card,
+html.light .ofp-report-card {
+    background: rgba(255, 255, 255, 0.72) !important;
+    backdrop-filter: blur(20px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.75) !important;
+    box-shadow: 0 10px 30px 0 rgba(15, 23, 42, 0.05), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .ofp-card:hover,
+[data-theme="light"] .ofp-zentra-card:hover,
+[data-theme="light"] .ofp-kpi-card:not(.ofp-kpi-card-hero):hover,
+[data-theme="light"] .ofp-spec-counter-card:hover,
+[data-theme="light"] .ofp-pricing-card:hover,
+[data-theme="light"] .ofp-property-card:hover,
+html.light .ofp-card:hover,
+html.light .ofp-zentra-card:hover,
+html.light .ofp-kpi-card:not(.ofp-kpi-card-hero):hover,
+html.light .ofp-spec-counter-card:hover,
+html.light .ofp-pricing-card:hover,
+html.light .ofp-property-card:hover {
+    border-color: rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 0 16px 40px 0 rgba(15, 23, 42, 0.1), inset 0 1px 1px 0 #ffffff !important;
+}
+
+/* 3. Frosted Glass Tables & Table Wrappers */
+.ofp-table-responsive,
+.ofp-table-wrap {
+    background: transparent;
+    border-radius: 14px;
+}
+
+.ofp-table,
+.ofp-data-table,
+.ofp-team-table {
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    width: 100%;
+}
+
+.ofp-table th,
+.ofp-data-table th,
+.ofp-team-table th {
+    background: rgba(255, 255, 255, 0.035) !important;
+    backdrop-filter: blur(16px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(190%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: var(--text-muted) !important;
+    font-weight: 600 !important;
+    font-size: 11.5px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+}
+
+[data-theme="light"] .ofp-table th,
+[data-theme="light"] .ofp-data-table th,
+[data-theme="light"] .ofp-team-table th,
+html.light .ofp-table th,
+html.light .ofp-data-table th,
+html.light .ofp-team-table th {
+    background: rgba(241, 245, 249, 0.75) !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.9) !important;
+    color: #64748b !important;
+}
+
+.ofp-table td,
+.ofp-data-table td,
+.ofp-team-table td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+    transition: background-color 0.15s ease;
+}
+
+[data-theme="light"] .ofp-table td,
+[data-theme="light"] .ofp-data-table td,
+[data-theme="light"] .ofp-team-table td,
+html.light .ofp-table td,
+html.light .ofp-data-table td,
+html.light .ofp-team-table td {
+    border-bottom: 1px solid rgba(226, 232, 240, 0.7) !important;
+}
+
+.ofp-table tr:hover td,
+.ofp-data-table tr:hover td,
+.ofp-team-table tr:hover td {
+    background: rgba(255, 255, 255, 0.04) !important;
+}
+
+[data-theme="light"] .ofp-table tr:hover td,
+[data-theme="light"] .ofp-data-table tr:hover td,
+[data-theme="light"] .ofp-team-table tr:hover td,
+html.light .ofp-table tr:hover td,
+html.light .ofp-data-table tr:hover td,
+html.light .ofp-team-table tr:hover td {
+    background: rgba(255, 255, 255, 0.88) !important;
+}
+
+/* 4. Frosted Glass Sub-Tabs, Filter Navigation & Segmented Controls */
+.ofp-segmented-nav,
+.ofp-filter-tabs-wrap,
+.ofp-filter-tabs {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(20px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.18), inset 0 1px 0 0 rgba(255, 255, 255, 0.12) !important;
+    border-radius: 14px;
+}
+
+[data-theme="light"] .ofp-segmented-nav,
+[data-theme="light"] .ofp-filter-tabs-wrap,
+[data-theme="light"] .ofp-filter-tabs,
+html.light .ofp-segmented-nav,
+html.light .ofp-filter-tabs-wrap,
+html.light .ofp-filter-tabs {
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(20px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.75) !important;
+    box-shadow: 0 4px 20px 0 rgba(15, 23, 42, 0.05), inset 0 1px 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+/* 5. Frosted Glass Search Inputs */
+.ofp-table-search input,
+.ofp-card-mini-search,
+.ofp-search-box input {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(16px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+    transition: all 0.2s ease !important;
+}
+
+.ofp-table-search input:focus,
+.ofp-card-mini-search:focus-within,
+.ofp-search-box input:focus {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+[data-theme="light"] .ofp-table-search input,
+[data-theme="light"] .ofp-card-mini-search,
+[data-theme="light"] .ofp-search-box input,
+html.light .ofp-table-search input,
+html.light .ofp-card-mini-search,
+html.light .ofp-search-box input {
+    background: rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light"] .ofp-table-search input:focus,
+[data-theme="light"] .ofp-card-mini-search:focus-within,
+[data-theme="light"] .ofp-search-box input:focus,
+html.light .ofp-table-search input:focus,
+html.light .ofp-card-mini-search:focus-within,
+html.light .ofp-search-box input:focus {
+    background: #ffffff !important;
+    border-color: var(--accent-blue) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+}
+
+/* 6. Frosted Glass Floating Dropdowns & Menus */
+.ofp-dropdown,
+.ofp-dropdown-menu,
+.ofp-sidebar-user-menu,
+.ofp-custom-select-options,
+.ofp-user-dropdown,
+.ofp-notifications-dropdown {
+    background: rgba(19, 23, 34, 0.8) !important;
+    backdrop-filter: blur(24px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    box-shadow: 0 20px 48px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.18) !important;
+    border-radius: 14px !important;
+}
+
+[data-theme="light"] .ofp-dropdown,
+[data-theme="light"] .ofp-dropdown-menu,
+[data-theme="light"] .ofp-sidebar-user-menu,
+[data-theme="light"] .ofp-custom-select-options,
+[data-theme="light"] .ofp-user-dropdown,
+[data-theme="light"] .ofp-notifications-dropdown,
+html.light .ofp-dropdown,
+html.light .ofp-dropdown-menu,
+html.light .ofp-sidebar-user-menu,
+html.light .ofp-custom-select-options,
+html.light .ofp-user-dropdown,
+html.light .ofp-notifications-dropdown {
+    background: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(24px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 20px 48px 0 rgba(15, 23, 42, 0.12), inset 0 1px 1px 0 #ffffff !important;
+}
+
+/* 7. Frosted Glass Navigation Bar & Sidebar (iPhone Style) */
+.ofp-sidebar {
+    background: rgba(18, 24, 38, 0.72) !important;
+    backdrop-filter: blur(25px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(25px) saturate(190%) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.09) !important;
+    box-shadow: 4px 0 32px 0 rgba(0, 0, 0, 0.35), inset -1px 0 0 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="light"] .ofp-sidebar,
+html.light .ofp-sidebar {
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(25px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(25px) saturate(190%) !important;
+    border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
+    box-shadow: 4px 0 32px 0 rgba(15, 23, 42, 0.04), inset -1px 0 0 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+.ofp-sidebar-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+[data-theme="light"] .ofp-sidebar-header,
+html.light .ofp-sidebar-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+.ofp-sidebar-footer {
+    background: transparent !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+[data-theme="light"] .ofp-sidebar-footer,
+html.light .ofp-sidebar-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+.ofp-nav-item {
+    border: 1px solid transparent !important;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.ofp-nav-item:hover {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    transform: translateX(2px);
+}
+
+[data-theme="light"] .ofp-nav-item:hover,
+html.light .ofp-nav-item:hover {
+    background: rgba(0, 0, 0, 0.04) !important;
+    border-color: rgba(0, 0, 0, 0.06) !important;
+    color: #0f172a !important;
+    transform: translateX(2px);
+}
+
+.ofp-nav-item.active {
+    background: rgba(255, 255, 255, 0.14) !important;
+    backdrop-filter: blur(16px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.25), inset 0 1px 0 0 rgba(255, 255, 255, 0.28) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+[data-theme="light"] .ofp-nav-item.active,
+html.light .ofp-nav-item.active {
+    background: rgba(255, 255, 255, 0.92) !important;
+    backdrop-filter: blur(16px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 0 4px 16px 0 rgba(15, 23, 42, 0.08), inset 0 1px 1px 0 #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 600 !important;
+}
+
+.ofp-sidebar-user-trigger {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(14px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.ofp-sidebar-user-trigger:hover,
+.ofp-sidebar-user-card.active .ofp-sidebar-user-trigger {
+    background: rgba(255, 255, 255, 0.09) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+[data-theme="light"] .ofp-sidebar-user-trigger,
+html.light .ofp-sidebar-user-trigger {
+    background: rgba(255, 255, 255, 0.6) !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(14px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
+}
+
+[data-theme="light"] .ofp-sidebar-user-trigger:hover,
+[data-theme="light"] .ofp-sidebar-user-card.active .ofp-sidebar-user-trigger,
+html.light .ofp-sidebar-user-trigger:hover,
+html.light .ofp-sidebar-user-card.active .ofp-sidebar-user-trigger {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: rgba(203, 213, 225, 1) !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06), inset 0 1px 1px #ffffff !important;
+}
+
+.ofp-sidebar-backdrop {
+    backdrop-filter: blur(12px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+    background: rgba(0, 0, 0, 0.45) !important;
 }

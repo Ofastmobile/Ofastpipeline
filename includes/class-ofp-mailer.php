@@ -162,17 +162,55 @@ class OFP_Mailer {
             error_log( "[OFP_Mailer] wp_mail() failed for: {$to} | Subject: {$subject}" );
         }
 
-        if ( class_exists( 'OFP_Logger' ) ) {
-            global $wpdb;
-            $client_id = $wpdb->get_var( $wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1",
+        global $wpdb;
+        $resolved_client_id = ! empty( $recipient_client->id ) ? (int) $recipient_client->id : null;
+        $resolved_lead_id   = null;
+
+        if ( ! $resolved_client_id ) {
+            $lead = $wpdb->get_row( $wpdb->prepare(
+                "SELECT client_id, id FROM {$wpdb->prefix}ofp_leads WHERE email = %s LIMIT 1",
                 $to
             ) );
+            if ( $lead ) {
+                $resolved_client_id = (int) $lead->client_id;
+                $resolved_lead_id   = (int) $lead->id;
+            } else {
+                $buyer = $wpdb->get_row( $wpdb->prepare(
+                    "SELECT client_id FROM {$wpdb->prefix}ofp_property_purchases WHERE buyer_email = %s LIMIT 1",
+                    $to
+                ) );
+                if ( $buyer ) {
+                    $resolved_client_id = (int) $buyer->client_id;
+                } else {
+                    $resolved_client_id = (int) $wpdb->get_var( $wpdb->prepare(
+                        "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1",
+                        $to
+                    ) );
+                }
+            }
+        }
 
-            OFP_Logger::log( $sent ? 'Email sent' : 'Email failed', $client_id ? (int) $client_id : null, [
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( $sent ? 'Email sent' : 'Email failed', $resolved_client_id ?: null, [
                 'to'      => $to,
                 'subject' => $subject,
+                'message' => wp_strip_all_tags( $body_html ),
+                'body'    => $body_html,
             ] );
+        }
+
+        if ( class_exists( 'OFP_Communications_Log' ) && ! empty( $resolved_client_id ) ) {
+            OFP_Communications_Log::log(
+                $resolved_client_id,
+                $resolved_lead_id,
+                'email',
+                $to,
+                'outbound',
+                $subject . ' — ' . wp_strip_all_tags( $body_html ),
+                0.00,
+                $sent ? 'sent' : 'failed',
+                'smtp'
+            );
         }
 
         return $sent;
@@ -247,6 +285,29 @@ class OFP_Mailer {
 
         if ( ! $sent ) {
             error_log( "[OFP_Mailer] send_client_email failed for client #{$client_id} to {$to}" );
+        }
+
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( $sent ? 'Email sent' : 'Email failed', (int) $client_id, [
+                'to'      => $to,
+                'subject' => $subject,
+                'message' => wp_strip_all_tags( $body_html ),
+                'body'    => $body_html,
+            ] );
+        }
+
+        if ( class_exists( 'OFP_Communications_Log' ) && ! empty( $client_id ) ) {
+            OFP_Communications_Log::log(
+                (int) $client_id,
+                null,
+                'email',
+                $to,
+                'outbound',
+                wp_strip_all_tags( $body_html ),
+                0.00,
+                $sent ? 'sent' : 'failed',
+                'smtp'
+            );
         }
 
         return (bool) $sent;

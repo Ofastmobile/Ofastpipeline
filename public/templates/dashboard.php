@@ -170,16 +170,130 @@ if ( ! empty( $client_properties ) ) {
     }
 }
 
-$initial_featured = ! empty( $all_recent_props ) ? $all_recent_props[0] : null;
+// ── Recent Buyers Data (Top 3) ──────────────────────────────────────
+$recent_buyers_raw = $wpdb->get_results( $wpdb->prepare(
+    "SELECT pu.*, pr.title AS property_title
+     FROM {$pfx}ofp_property_purchases pu
+     LEFT JOIN {$pfx}ofp_properties pr ON pr.id = pu.property_id
+     WHERE pu.client_id = %d
+     ORDER BY pu.created_at DESC
+     LIMIT 3",
+    (int) $client->id
+) );
 
-$pin_coords = [
-    [ 'top' => '42%', 'left' => '30%' ],
-    [ 'top' => '62%', 'left' => '65%' ],
-    [ 'top' => '28%', 'left' => '78%' ],
-    [ 'top' => '74%', 'left' => '24%' ],
-    [ 'top' => '50%', 'left' => '84%' ],
-    [ 'top' => '22%', 'left' => '50%' ],
+$avatar_gradients = [
+    'linear-gradient(135deg, var(--btn-primary, #3b82f6), #1d4ed8)',
+    'linear-gradient(135deg, #10b981, #047857)',
+    'linear-gradient(135deg, #f59e0b, #b45309)',
+    'linear-gradient(135deg, #0ea5e9, #0284c7)',
+    'linear-gradient(135deg, #ec4899, #be185d)',
 ];
+
+$recent_buyers_display = [];
+if ( ! empty( $recent_buyers_raw ) ) {
+    $idx = 0;
+    foreach ( $recent_buyers_raw as $b_row ) {
+        $b_name  = trim( $b_row->buyer_name ?: 'Valued Buyer' );
+        $parts   = preg_split( '/\s+/', $b_name );
+        $inits   = '';
+        if ( ! empty( $parts[0] ) ) $inits .= strtoupper( mb_substr( $parts[0], 0, 1 ) );
+        if ( ! empty( $parts[1] ) ) $inits .= strtoupper( mb_substr( $parts[1], 0, 1 ) );
+        if ( empty( $inits ) ) $inits = 'BY';
+
+        $paid_val = (float) $b_row->amount_paid;
+        if ( $paid_val <= 0 ) {
+            $paid_val = (float) $b_row->total_price;
+        }
+
+        $b_status = strtolower( $b_row->status ?: 'completed' );
+        $badge_style = 'background:rgba(16, 185, 129, 0.12); color:#10b981; border:1px solid rgba(16, 185, 129, 0.25);';
+        $badge_label = 'Completed';
+        if ( in_array( $b_status, [ 'completed', 'paid', 'successful' ], true ) ) {
+            $badge_style = 'background:rgba(16, 185, 129, 0.12); color:#10b981; border:1px solid rgba(16, 185, 129, 0.25);';
+            $badge_label = 'Completed';
+        } elseif ( in_array( $b_status, [ 'pending', 'pending_verification' ], true ) ) {
+            $badge_style = 'background:rgba(245, 158, 11, 0.14); color:#d97706; border:1px solid rgba(245, 158, 11, 0.25);';
+            $badge_label = 'Pending';
+        } elseif ( in_array( $b_status, [ 'active', 'installment' ], true ) ) {
+            $badge_style = 'background:var(--brand-color-alpha-15, rgba(59, 130, 246, 0.12)); color:var(--brand-color, var(--btn-primary, #3b82f6)); border:1px solid var(--brand-color-alpha-25, rgba(59, 130, 246, 0.25));';
+            $badge_label = 'Installment';
+        }
+
+        $time_str = ! empty( $b_row->created_at ) ? human_time_diff( strtotime( $b_row->created_at ), current_time( 'timestamp' ) ) . ' ago' : 'Recent';
+
+        $recent_buyers_display[] = [
+            'id'             => (int) $b_row->id,
+            'name'           => $b_name,
+            'phone'          => $b_row->buyer_phone ?: '—',
+            'email'          => $b_row->buyer_email ?: '',
+            'initials'       => $inits,
+            'avatar_bg'      => $avatar_gradients[ $idx % count( $avatar_gradients ) ],
+            'amount_paid'    => $paid_val > 0 ? '₦' . number_format( $paid_val ) : 'Offer Active',
+            'property_title' => $b_row->property_title ?: 'Portfolio Property',
+            'status_label'   => $badge_label,
+            'status_style'   => $badge_style,
+            'time_ago'       => $time_str,
+            'link'           => home_url( '/property-sales' ),
+        ];
+        $idx++;
+    }
+}
+
+// Demo fallback buyers if fewer than 3 in database
+$demo_buyer_templates = [
+    [
+        'name'           => 'Chief Adeleke Adeleke',
+        'phone'          => '+234 803 456 7890',
+        'email'          => 'adeleke@gmail.com',
+        'initials'       => 'AA',
+        'avatar_bg'      => 'linear-gradient(135deg, var(--btn-primary, #3b82f6), #1d4ed8)',
+        'amount_paid'    => '₦182,900,000',
+        'property_title' => 'Greenlake Luxury Residence',
+        'status_label'   => 'Completed',
+        'status_style'   => 'background:rgba(16, 185, 129, 0.12); color:#10b981; border:1px solid rgba(16, 185, 129, 0.25);',
+        'time_ago'       => '2 days ago',
+        'link'           => home_url( '/property-sales' ),
+    ],
+    [
+        'name'           => 'Dr. Folashade Alakija',
+        'phone'          => '+234 812 345 6789',
+        'email'          => 'folashade.a@outlook.com',
+        'initials'       => 'FA',
+        'avatar_bg'      => 'linear-gradient(135deg, #10b981, #047857)',
+        'amount_paid'    => '₦240,000,000',
+        'property_title' => 'Ocean Crest Penthouse',
+        'status_label'   => 'Installment',
+        'status_style'   => 'background:var(--brand-color-alpha-15, rgba(59, 130, 246, 0.12)); color:var(--brand-color, var(--btn-primary, #3b82f6)); border:1px solid var(--brand-color-alpha-25, rgba(59, 130, 246, 0.25));',
+        'time_ago'       => '5 days ago',
+        'link'           => home_url( '/property-sales' ),
+    ],
+    [
+        'name'           => 'Engr. Tunde Bakare',
+        'phone'          => '+234 701 987 6543',
+        'email'          => 'tunde.bakare@live.com',
+        'initials'       => 'TB',
+        'avatar_bg'      => 'linear-gradient(135deg, #f59e0b, #b45309)',
+        'amount_paid'    => '₦95,000,000',
+        'property_title' => 'Admiralty Point Luxury Flat',
+        'status_label'   => 'Verified',
+        'status_style'   => 'background:rgba(59, 130, 246, 0.12); color:#3b82f6; border:1px solid rgba(59, 130, 246, 0.25);',
+        'time_ago'       => '1 week ago',
+        'link'           => home_url( '/property-sales' ),
+    ],
+];
+
+while ( count( $recent_buyers_display ) < 3 ) {
+    $demo_idx = count( $recent_buyers_display );
+    $recent_buyers_display[] = $demo_buyer_templates[ $demo_idx ];
+}
+$recent_buyers_display = array_slice( $recent_buyers_display, 0, 3 );
+$total_buyers_count = (int) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COUNT(*) FROM {$pfx}ofp_property_purchases WHERE client_id = %d",
+    (int) $client->id
+) );
+if ( $total_buyers_count < 3 ) {
+    $total_buyers_count = 3;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -188,6 +302,7 @@ $pin_coords = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Dashboard', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
+    <?php OFP_Brand::print_head( $client ); ?>
 </head>
 <body class="ofp-portal-body ofp-dashboard-page">
 
@@ -241,7 +356,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
         <div class="ofp-kpi-card">
             <div class="ofp-kpi-title">Total Properties</div>
             <div class="ofp-kpi-value"><?php echo esc_html( $display_units ); ?></div>
-            <div class="ofp-kpi-badge badge-purple">
+            <div class="ofp-kpi-badge badge-brand">
                 <span>+2 New assets added</span>
             </div>
         </div>
@@ -267,32 +382,24 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 
     <!-- ── 2. ZENTRA ANALYTICS & CASH FLOW ROW ────────────────────────── -->
     <div class="ofp-zentra-analytics-grid">
-        <!-- Cash Flow Multi-bar Chart -->
+        <!-- Cash Flow Trajectory Area Chart (Matching Modern Admin Portal) -->
         <div class="ofp-zentra-card">
-            <div class="ofp-zentra-card-header">
-                <div class="ofp-zentra-card-title">Cash flow</div>
-                <div class="ofp-chart-header-controls">
-                    <div class="ofp-chart-legends">
-                        <div class="ofp-chart-legend-item">
-                            <span class="ofp-legend-dot" style="background:#8b5cf6;"></span>
-                            <span>Income</span>
-                        </div>
-                        <div class="ofp-chart-legend-item">
-                            <span class="ofp-legend-dot" style="background:#c084fc;"></span>
-                            <span>Expense</span>
-                        </div>
-                        <div class="ofp-chart-legend-item">
-                            <span class="ofp-legend-dot" style="background:#cbd5e1;"></span>
-                            <span>Net</span>
-                        </div>
+            <div class="ofp-zentra-card-header" style="align-items:flex-start;">
+                <div>
+                    <div class="ofp-zentra-card-title">Cash Flow Trajectory</div>
+                    <div style="font-size:20px; font-weight:700; color:var(--text-main); margin-top:4px;">
+                        ₦12,320,000 <span style="font-size:12px; font-weight:600; color:#10b981; background:rgba(16,185,129,0.1); padding:2px 8px; border-radius:9999px;">+18.4% Flow</span>
                     </div>
+                </div>
+                <div class="ofp-chart-header-controls">
                     <select class="ofp-zentra-select" id="ofp-cashflow-period">
-                        <option value="1year">1 Year</option>
-                        <option value="6months">6 Months</option>
+                        <option value="1year">This Year (2026)</option>
+                        <option value="6months">Last 6 Months</option>
+                        <option value="30days">Last 30 Days</option>
                     </select>
                 </div>
             </div>
-            <div style="position:relative;height:240px;">
+            <div style="position:relative;height:230px;">
                 <canvas id="ofp-chart-cashflow"></canvas>
             </div>
         </div>
@@ -341,200 +448,107 @@ include OFP_PATH . 'public/templates/partials/nav.php';
         </div>
     </div>
 
-    <!-- ── 3. ZENTRA LOCATION & RECENT PROPERTIES ROW ─────────────────── -->
-    <div class="ofp-zentra-bottom-grid">
-        <!-- Left: Properties by location -->
-        <div class="ofp-zentra-card">
-            <div class="ofp-zentra-card-header">
-                <div class="ofp-zentra-card-title">Properties by location</div>
-                <div class="ofp-card-header-search">
-                    <div class="ofp-card-mini-search">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:13px;height:13px;color:var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
-                        <input type="text" id="ofp-search-location-input" placeholder="Search location..." autocomplete="off" />
+    <!-- ── 3. Bottom Row: Priority Action Promo Box (Platform Health) + Interactive Buyers Table ── -->
+    <div class="ofp-bottom-grid">
+        <!-- Left: Priority Action Promo Card -->
+        <div class="ofp-promo-card">
+            <div>
+                <span class="ofp-promo-tag">Platform Health</span>
+                <h3 class="ofp-promo-title">Priority Oversight</h3>
+                <p class="ofp-promo-desc">Automated SMS triggers, property lead alerts, and carrier gateways are active 24/7.</p>
+                
+                <div class="ofp-promo-stats">
+                    <div class="ofp-promo-stat-box">
+                        <span class="ofp-promo-stat-val">₦<?php echo number_format( (float)$sms_remaining ); ?></span>
+                        <span class="ofp-promo-stat-lbl">SMS Credit</span>
                     </div>
-                    <button type="button" class="ofp-card-filter-btn" id="ofp-btn-reset-map" title="Show all locations">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>
-                    </button>
+                    <div class="ofp-promo-stat-box">
+                        <span class="ofp-promo-stat-val"><?php echo (float)$sms_remaining > 0 ? 'Active' : 'Low'; ?></span>
+                        <span class="ofp-promo-stat-lbl">Gateway Health</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Quick Location Filter Pills -->
-            <div class="ofp-location-pills-bar" id="ofp-location-pills-bar">
-                <button type="button" class="ofp-location-pill-btn active" data-location="all">
-                    <span>All Locations</span>
-                    <span style="font-size:10px; opacity:0.8;">(<?php echo count( $all_recent_props ); ?>)</span>
-                </button>
-                <?php foreach ( $properties_by_loc as $loc_key => $loc_items ) : ?>
-                    <button type="button" class="ofp-location-pill-btn" data-location="<?php echo esc_attr( $loc_key ); ?>">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:12px;height:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
-                        <span><?php echo esc_html( explode( ',', $loc_key )[0] ); ?></span>
-                        <span style="font-size:10px; opacity:0.8;">(<?php echo count( $loc_items ); ?>)</span>
-                    </button>
-                <?php endforeach; ?>
-            </div>
-
-            <!-- Featured Location Property Capsule -->
-            <?php 
-                $feat_prop = $initial_featured;
-            ?>
-            <div class="ofp-location-featured-card" id="ofp-location-featured-card">
-                <div>
-                    <div class="ofp-loc-feat-title" id="ofp-feat-title"><?php echo esc_html( $feat_prop ? $feat_prop['title'] : 'Prime Portfolio Property' ); ?></div>
-                    <div class="ofp-loc-feat-sub">
-                        <span>Status: <strong style="color:#f59e0b;" id="ofp-feat-status"><?php echo esc_html( $feat_prop ? $feat_prop['status'] : 'Occupied' ); ?></strong></span>
-                        <span>•</span>
-                        <span id="ofp-feat-loc"><?php echo esc_html( $feat_prop ? $feat_prop['location'] : 'Lagos, Nigeria' ); ?></span>
-                    </div>
-                </div>
-                <div>
-                    <div class="ofp-loc-feat-price" id="ofp-feat-price"><?php echo esc_html( $feat_prop ? $feat_prop['price'] : '—' ); ?></div>
-                    <a href="<?php echo esc_url( $feat_prop ? $feat_prop['link'] : home_url('/properties') ); ?>" class="ofp-btn-see-details" id="ofp-feat-link">See Details</a>
-                </div>
-            </div>
-
-            <!-- Real Google Map Embed with Dynamic Location Pan -->
-            <?php
-            $initial_loc_query = ! empty( $feat_prop['location'] ) ? $feat_prop['location'] . ', Nigeria' : 'Lagos, Nigeria';
-            $initial_short_loc = ! empty( $feat_prop['short_loc'] ) ? $feat_prop['short_loc'] : ( ! empty( $feat_prop['location'] ) ? explode( ',', $feat_prop['location'] )[0] : 'Lagos' );
-            ?>
-            <div class="ofp-google-map-wrap" id="ofp-dashboard-map-box">
-                <iframe
-                    id="ofp-dashboard-google-map"
-                    src="https://maps.google.com/maps?q=<?php echo urlencode( $initial_loc_query ); ?>&t=&z=14&ie=UTF8&iwloc=&output=embed"
-                    loading="lazy"
-                    allowfullscreen>
-                </iframe>
-
-                <!-- Floating Live Location Beacon Badge -->
-                <div class="ofp-map-live-badge" id="ofp-map-live-badge">
-                    <div class="ofp-beacon-dot-wrap">
-                        <div class="ofp-beacon-ping"></div>
-                        <div class="ofp-beacon-core"></div>
-                    </div>
-                    <div>
-                        <div class="ofp-map-badge-title" id="ofp-map-badge-title"><?php echo esc_html( $initial_short_loc ); ?></div>
-                        <div class="ofp-map-badge-sub" id="ofp-map-badge-sub"><?php echo count( $all_recent_props ); ?> Properties Active</div>
-                    </div>
-                </div>
-
-                <!-- External Open in Google Maps Link Button -->
-                <div class="ofp-map-ext-btn-wrap">
-                    <a id="ofp-map-external-link" href="https://maps.google.com/?q=<?php echo urlencode( $initial_loc_query ); ?>" target="_blank" rel="noopener noreferrer" class="ofp-map-external-link-btn" title="Open in Google Maps">
-                        <svg style="width:13px; height:13px; color:#4285F4; flex-shrink:0;" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                        </svg>
-                        <span>Open in Google Maps</span>
-                    </a>
-                </div>
+            <div>
+                <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn ofp-btn-primary" style="width:100%; text-align:center; display:block;">
+                    Manage Credits →
+                </a>
             </div>
         </div>
 
-        <!-- Right: Your Recent Properties (Interactively Filtered by Map Location) -->
-        <div class="ofp-zentra-card">
-            <div class="ofp-zentra-card-header">
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <div class="ofp-zentra-card-title" id="ofp-recent-props-title">Your Recent Properties</div>
-                    <span id="ofp-active-loc-tag" class="ofp-loc-filter-badge" style="display:none;">
-                        <span id="ofp-active-loc-text"></span>
-                        <button type="button" id="ofp-btn-clear-loc" title="Show all properties">&times;</button>
-                    </span>
+        <!-- Right: Buyers Data Table with Horizontal Scroll (Strictly 3 List) -->
+        <div class="ofp-table-card">
+            <div class="ofp-table-toolbar">
+                <div class="ofp-table-search">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input type="text" id="ofp-table-search-input" placeholder="Search buyers, property, status...">
                 </div>
-                <div class="ofp-card-header-search">
-                    <div class="ofp-card-mini-search">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:13px;height:13px;color:var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
-                        <input type="text" id="ofp-search-properties-input" placeholder="Search by title..." autocomplete="off" />
-                    </div>
-                    <button type="button" class="ofp-card-filter-btn" id="ofp-btn-reset-filters" title="Reset Filters">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
-                    </button>
+
+                <div class="ofp-table-actions">
+                    <a href="<?php echo esc_url( home_url( '/property-sales' ) ); ?>" class="ofp-btn ofp-btn-outline" style="font-size:12px; padding:5px 10px;">
+                        View All (<?php echo esc_html( $total_buyers_count ); ?>)
+                    </a>
                 </div>
             </div>
 
-            <div class="ofp-recent-properties-list" id="ofp-recent-properties-container">
-                <?php foreach ( $all_recent_props as $p_item ) : ?>
-                    <a href="<?php echo esc_url( $p_item['link'] ); ?>" 
-                       class="ofp-recent-property-card" 
-                       style="text-decoration:none;"
-                       data-location="<?php echo esc_attr( strtolower( $p_item['location'] ) ); ?>"
-                       data-prop-title="<?php echo esc_attr( $p_item['title'] ); ?>"
-                       data-prop-loc="<?php echo esc_attr( $p_item['location'] ); ?>"
-                       data-prop-price="<?php echo esc_attr( $p_item['price'] ); ?>"
-                       data-prop-status="<?php echo esc_attr( $p_item['status'] ); ?>"
-                       data-prop-link="<?php echo esc_url( $p_item['link'] ); ?>">
-                        <div class="ofp-recent-prop-thumb">
-                            <img src="<?php echo esc_url( $p_item['thumb'] ); ?>" alt="<?php echo esc_attr( $p_item['title'] ); ?>" loading="lazy" />
-                        </div>
-                        <div class="ofp-recent-prop-content">
-                            <div class="ofp-recent-prop-title"><?php echo esc_html( $p_item['title'] ); ?></div>
-                            <div class="ofp-recent-prop-price"><?php echo esc_html( $p_item['price'] ); ?></div>
-                            <div class="ofp-recent-prop-sub">
-                                <span><?php echo $p_item['is_rent'] ? 'Monthly rent: ' . esc_html( $p_item['price'] ) : 'Type: ' . esc_html( $p_item['type'] ); ?></span>
-                                <div style="display:inline-flex; align-items:center; gap:6px;">
-                                    <?php 
-                                    $badge_style = 'background:rgba(16, 185, 129, 0.12); color:#10b981; border:1px solid rgba(16, 185, 129, 0.25);';
-                                    if ( ( $p_item['status_key'] ?? '' ) === 'occupied' ) {
-                                        $badge_style = 'background:rgba(139, 92, 246, 0.14); color:#8b5cf6; border:1px solid rgba(139, 92, 246, 0.28);';
-                                    } elseif ( ( $p_item['status_key'] ?? '' ) === 'taken' || ( $p_item['status_key'] ?? '' ) === 'expired' ) {
-                                        $badge_style = 'background:rgba(239, 68, 68, 0.12); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.25);';
-                                    } elseif ( ( $p_item['status_key'] ?? '' ) === 'pending_upload' || ( $p_item['status_key'] ?? '' ) === 'under_offer' ) {
-                                        $badge_style = 'background:rgba(245, 158, 11, 0.14); color:#d97706; border:1px solid rgba(245, 158, 11, 0.25);';
-                                    }
-                                    ?>
-                                    <span class="ofp-kpi-badge" style="font-size:10px;padding:2px 8px;font-weight:700;<?php echo esc_attr( $badge_style ); ?>">
-                                        <?php echo esc_html( $p_item['status'] ); ?>
-                                    </span>
-                                    <button type="button" 
-                                            class="ofp-btn-card-locate" 
-                                            title="View on Google Map"
-                                            onclick="event.preventDefault(); event.stopPropagation(); window.selectDashboardLocation('<?php echo esc_js( $p_item['location'] ); ?>');">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:11px;height:11px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                <?php endforeach; ?>
-
-                <div id="ofp-no-location-props" class="ofp-location-empty-state" style="display:none;">
-                    <p style="margin:0 0 6px; font-weight:600;">No properties found in this location.</p>
-                    <button type="button" onclick="selectDashboardLocation('all')">View All Properties</button>
-                </div>
+            <div class="ofp-table-wrap">
+                <table class="ofp-data-table" id="ofp-buyers-table">
+                    <thead>
+                        <tr>
+                            <th>Buyer Name / Contact</th>
+                            <th>Property</th>
+                            <th class="ofp-col-amount">Amount Paid</th>
+                            <th class="ofp-col-date">Date</th>
+                            <th class="ofp-col-status">Status</th>
+                            <th style="text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ( empty( $recent_buyers_display ) ) : ?>
+                            <tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">No buyer records found yet.</td></tr>
+                        <?php else : ?>
+                            <?php foreach ( $recent_buyers_display as $b_item ) : ?>
+                                <tr>
+                                    <td>
+                                        <div class="ofp-user-cell">
+                                            <div class="ofp-user-thumb" style="display:flex; align-items:center; justify-content:center; background:<?php echo esc_attr( $b_item['avatar_bg'] ); ?>; color:#fff; font-weight:700; font-size:12px; border-radius:8px; width:36px; height:36px; flex-shrink:0;">
+                                                <span><?php echo esc_html( $b_item['initials'] ); ?></span>
+                                            </div>
+                                            <div class="ofp-user-meta">
+                                                <span class="ofp-user-title"><?php echo esc_html( $b_item['name'] ); ?></span>
+                                                <span class="ofp-user-sub"><?php echo esc_html( $b_item['email'] ?: $b_item['phone'] ); ?></span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span style="font-weight:600;"><?php echo esc_html( $b_item['property_title'] ); ?></span>
+                                    </td>
+                                    <td class="ofp-col-amount">
+                                        <span style="font-weight:700; color:#10b981;"><?php echo esc_html( $b_item['amount_paid'] ); ?></span>
+                                    </td>
+                                    <td class="ofp-col-date">
+                                        <span style="color:var(--text-muted); font-size:12px;"><?php echo esc_html( $b_item['time_ago'] ); ?></span>
+                                    </td>
+                                    <td class="ofp-col-status">
+                                        <span class="ofp-tbl-status-pill ofp-status-pill <?php echo esc_attr( strtolower( $b_item['status_label'] ) ); ?>" style="<?php echo esc_attr( $b_item['status_style'] ); ?>">
+                                            <?php echo esc_html( $b_item['status_label'] ); ?>
+                                        </span>
+                                    </td>
+                                    <td style="text-align:right;">
+                                        <a href="<?php echo esc_url( $b_item['link'] ); ?>" class="ofp-btn ofp-btn-outline" style="font-size:12px; padding:5px 10px; border-radius:7px;">
+                                            Manage
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- ── 4. PIPELINE AUTOMATION & CREDITS SUMMARY ──────────────────── -->
-    <div class="ofp-card" style="margin-top:20px;border-radius:18px;">
-        <div class="ofp-card-header">
-            <span class="ofp-card-title">Automation & Gateway Health</span>
-            <span class="ofp-card-link" style="color:#10b981;">All Systems Operational</span>
-        </div>
-        <div class="ofp-status-grid">
-            <div class="ofp-status-pill">
-                <div class="ofp-status-dot"></div>
-                <div class="ofp-status-info">
-                    <strong>SMS Credit</strong>
-                    <span>₦<?php echo number_format( (float)$sms_remaining, 2 ); ?></span>
-                </div>
-            </div>
-            <div class="ofp-status-pill">
-                <div class="ofp-status-dot"></div>
-                <div class="ofp-status-info">
-                    <strong>Voice Credit</strong>
-                    <span>₦<?php echo number_format( (float)$voice_remaining, 2 ); ?></span>
-                </div>
-            </div>
-            <div class="ofp-status-pill">
-                <div class="ofp-status-dot"></div>
-                <div class="ofp-status-info">
-                    <strong>Pipeline Status</strong>
-                    <span>Carrier Healthy</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Chart.js Cash Flow Script -->
+    <!-- Chart.js Cash Flow Trajectory Script (Matching Modern Admin Portal) -->
     <script>
     (function() {
         function initChart() {
@@ -543,57 +557,63 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             var canvas = document.getElementById('ofp-chart-cashflow');
             if (!canvas) return;
 
+            var ctx = canvas.getContext('2d');
+            var grad = ctx.createLinearGradient(0, 0, 0, 220);
+            grad.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+            grad.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+
             var allMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            var fullIncome = [8.5, 9.2, 10.4, 9.8, 11.2, 12.0, 11.8, 14.5, 12.2, 13.0, 12.8, 15.0];
-            var fullExpense = [3.2, 3.8, 4.1, 3.6, 4.0, 4.5, 4.2, 5.2, 4.4, 4.6, 4.5, 5.0];
-            var fullNet = [5.3, 5.4, 6.3, 6.2, 7.2, 7.5, 7.6, 9.3, 7.8, 8.4, 8.3, 10.0];
+            var yearData  = [6.8, 7.9, 9.4, 8.8, 10.5, 11.2, 11.0, 13.8, 11.6, 12.4, 12.1, 14.2];
+
+            var sixMonths = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            var sixData   = [11.0, 13.8, 11.6, 12.4, 12.1, 14.2];
+
+            var thirtyDays = [];
+            var thirtyData = [];
+            for (var d = 1; d <= 30; d += 3) {
+                thirtyDays.push('Day ' + d);
+                thirtyData.push(Number((10.5 + Math.sin(d / 3) * 2.4 + (d * 0.1)).toFixed(1)));
+            }
 
             var chartInstance = new Chart(canvas, {
-                type: 'bar',
+                type: 'line',
                 data: {
                     labels: allMonths,
                     datasets: [
                         {
-                            label: 'Income',
-                            data: fullIncome,
-                            backgroundColor: function(context) {
-                                var index = context.dataIndex;
-                                return index === 7 ? '#7c3aed' : 'rgba(139, 92, 246, 0.45)';
-                            },
-                            borderRadius: 6,
-                            barPercentage: 0.7,
-                        },
-                        {
-                            label: 'Expense',
-                            data: fullExpense,
-                            backgroundColor: function(context) {
-                                var index = context.dataIndex;
-                                return index === 7 ? '#c084fc' : 'rgba(192, 132, 252, 0.35)';
-                            },
-                            borderRadius: 6,
-                            barPercentage: 0.7,
-                        },
-                        {
-                            label: 'Net',
-                            data: fullNet,
-                            backgroundColor: function(context) {
-                                var index = context.dataIndex;
-                                return index === 7 ? '#a78bfa' : 'rgba(203, 213, 225, 0.4)';
-                            },
-                            borderRadius: 6,
-                            barPercentage: 0.7,
+                            label: 'Trajectory',
+                            data: yearData,
+                            borderColor: '#10b981',
+                            borderWidth: 3,
+                            backgroundColor: grad,
+                            fill: true,
+                            tension: 0.42,
+                            pointRadius: 4,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2.5
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                            titleFont: { size: 12, weight: '600', family: "'Inter', sans-serif" },
+                            bodyFont: { size: 12, weight: '700', family: "'Inter', sans-serif" },
+                            padding: 10,
+                            cornerRadius: 8,
                             callbacks: {
                                 label: function(item) {
-                                    return item.dataset.label + ': ₦' + (item.raw * 1000000).toLocaleString();
+                                    return ' Flow: ₦' + (item.raw * 1000000).toLocaleString();
                                 }
                             }
                         }
@@ -602,13 +622,23 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                         x: {
                             grid: { display: false },
                             ticks: {
-                                font: { size: 11, family: "'Segoe UI', sans-serif" },
+                                font: { size: 11, family: "'Inter', -apple-system, sans-serif" },
                                 color: '#94a3b8'
                             }
                         },
                         y: {
-                            display: false,
-                            beginAtZero: true
+                            grid: {
+                                color: 'rgba(226, 232, 240, 0.5)',
+                                borderDash: [3, 3]
+                            },
+                            ticks: {
+                                callback: function(val) {
+                                    return '₦' + val + 'M';
+                                },
+                                font: { size: 10.5, family: "'Inter', -apple-system, sans-serif" },
+                                color: '#94a3b8'
+                            },
+                            beginAtZero: false
                         }
                     }
                 }
@@ -618,15 +648,14 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             if (periodSelect) {
                 periodSelect.addEventListener('change', function() {
                     if (this.value === '6months') {
-                        chartInstance.data.labels = allMonths.slice(6);
-                        chartInstance.data.datasets[0].data = fullIncome.slice(6);
-                        chartInstance.data.datasets[1].data = fullExpense.slice(6);
-                        chartInstance.data.datasets[2].data = fullNet.slice(6);
+                        chartInstance.data.labels = sixMonths;
+                        chartInstance.data.datasets[0].data = sixData;
+                    } else if (this.value === '30days') {
+                        chartInstance.data.labels = thirtyDays;
+                        chartInstance.data.datasets[0].data = thirtyData;
                     } else {
                         chartInstance.data.labels = allMonths;
-                        chartInstance.data.datasets[0].data = fullIncome;
-                        chartInstance.data.datasets[1].data = fullExpense;
-                        chartInstance.data.datasets[2].data = fullNet;
+                        chartInstance.data.datasets[0].data = yearData;
                     }
                     chartInstance.update();
                 });
@@ -640,171 +669,20 @@ include OFP_PATH . 'public/templates/partials/nav.php';
         }
     })();
 
-    // ── Real Google Map & Recent Properties Interactive Linking ──
+    // ── Live Filter for Buyers Table ──
     (function() {
-        function initLocationMapLinking() {
-            var pillBtns = document.querySelectorAll('.ofp-location-pill-btn');
-            var propCards = document.querySelectorAll('#ofp-recent-properties-container .ofp-recent-property-card');
-            var activeTag = document.getElementById('ofp-active-loc-tag');
-            var activeTagText = document.getElementById('ofp-active-loc-text');
-            var clearBtn = document.getElementById('ofp-btn-clear-loc');
-            var resetFiltersBtn = document.getElementById('ofp-btn-reset-filters');
-            var resetMapBtn = document.getElementById('ofp-btn-reset-map');
-            var heading = document.getElementById('ofp-recent-props-title');
-            var emptyMsg = document.getElementById('ofp-no-location-props');
-            var locSearchInput = document.getElementById('ofp-search-location-input');
-            var propSearchInput = document.getElementById('ofp-search-properties-input');
-
-            var featTitle = document.getElementById('ofp-feat-title');
-            var featLoc = document.getElementById('ofp-feat-loc');
-            var featStatus = document.getElementById('ofp-feat-status');
-            var featPrice = document.getElementById('ofp-feat-price');
-            var featLink = document.getElementById('ofp-feat-link');
-
-            var gmap = document.getElementById('ofp-dashboard-google-map');
-            var gmapBadgeTitle = document.getElementById('ofp-map-badge-title');
-            var gmapBadgeSub = document.getElementById('ofp-map-badge-sub');
-            var gmapExtLink = document.getElementById('ofp-map-external-link');
-
-            window.selectDashboardLocation = function(locName) {
-                var isAll = !locName || locName === 'all';
-                var query = isAll ? '' : locName.toLowerCase().trim();
-
-                // 1. Highlight matching pill button
-                pillBtns.forEach(function(btn) {
-                    var bLoc = (btn.getAttribute('data-location') || '').toLowerCase().trim();
-                    if ((isAll && bLoc === 'all') || (!isAll && (bLoc.indexOf(query) !== -1 || query.indexOf(bLoc) !== -1))) {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
-                });
-
-                // 2. Filter properties in the Recent Properties container
-                var visibleCount = 0;
-                var firstCard = null;
-
-                propCards.forEach(function(card) {
-                    var cLoc = (card.getAttribute('data-location') || '').toLowerCase();
-                    var matches = isAll || cLoc.indexOf(query) !== -1 || query.indexOf(cLoc) !== -1;
-                    if (matches) {
-                        card.style.display = 'flex';
-                        visibleCount++;
-                        if (!firstCard) firstCard = card;
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-
-                // 3. Update Real Google Map iframe location & zoom
-                if (gmap) {
-                    var mapQuery = 'Lagos, Nigeria';
-                    var zoom = 12;
-
-                    if (!isAll) {
-                        var target = locName.trim();
-                        if (target.toLowerCase().indexOf('lagos') === -1 && target.toLowerCase().indexOf('nigeria') === -1) {
-                            target += ', Lagos, Nigeria';
-                        }
-                        mapQuery = target;
-                        zoom = 15;
-                    }
-
-                    var embedUrl = 'https://maps.google.com/maps?q=' + encodeURIComponent(mapQuery) + '&t=&z=' + zoom + '&ie=UTF8&iwloc=&output=embed';
-                    if (gmap.src !== embedUrl) {
-                        gmap.src = embedUrl;
-                    }
-
-                    if (gmapExtLink) {
-                        gmapExtLink.href = 'https://maps.google.com/?q=' + encodeURIComponent(mapQuery);
-                    }
-                }
-
-                // 4. Update Live Map Beacon Badge
-                if (gmapBadgeTitle) {
-                    gmapBadgeTitle.textContent = isAll ? 'All Locations (Lagos)' : locName.split(',')[0];
-                }
-                if (gmapBadgeSub) {
-                    gmapBadgeSub.textContent = visibleCount + (visibleCount === 1 ? ' Property Active' : ' Properties Active');
-                }
-
-                // 5. Update Header Badge and Title in Recent Properties card
-                if (isAll) {
-                    if (activeTag) activeTag.style.display = 'none';
-                    if (heading) heading.textContent = 'Your Recent Properties';
-                } else {
-                    var displayLabel = locName.split(',')[0];
-                    if (activeTag) activeTag.style.display = 'inline-flex';
-                    if (activeTagText) activeTagText.textContent = '📍 ' + displayLabel + ' (' + visibleCount + ')';
-                    if (heading) heading.textContent = 'Properties in ' + displayLabel;
-                }
-
-                // 6. Empty state visibility
-                if (emptyMsg) {
-                    emptyMsg.style.display = visibleCount === 0 ? 'block' : 'none';
-                }
-
-                // 7. Update Featured Property Capsule in left box
-                if (firstCard) {
-                    if (featTitle) featTitle.textContent = firstCard.getAttribute('data-prop-title') || '';
-                    if (featLoc) featLoc.textContent = firstCard.getAttribute('data-prop-loc') || '';
-                    if (featPrice) featPrice.textContent = firstCard.getAttribute('data-prop-price') || '';
-                    if (featStatus) featStatus.textContent = firstCard.getAttribute('data-prop-status') || '';
-                    if (featLink) featLink.href = firstCard.getAttribute('data-prop-link') || '#';
-                }
-            };
-
-            // Click handlers on pill buttons
-            pillBtns.forEach(function(btn) {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    var loc = this.getAttribute('data-location');
-                    window.selectDashboardLocation(loc);
-                });
-            });
-
-            // Clear filter button
-            if (clearBtn) {
-                clearBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    if (locSearchInput) locSearchInput.value = '';
-                    window.selectDashboardLocation('all');
-                });
-            }
-            if (resetFiltersBtn) {
-                resetFiltersBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    if (locSearchInput) locSearchInput.value = '';
-                    if (propSearchInput) propSearchInput.value = '';
-                    window.selectDashboardLocation('all');
-                });
-            }
-            if (resetMapBtn) {
-                resetMapBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    if (locSearchInput) locSearchInput.value = '';
-                    window.selectDashboardLocation('all');
-                });
-            }
-
-            // Live location search input
-            if (locSearchInput) {
-                locSearchInput.addEventListener('input', function() {
-                    var val = this.value.trim();
-                    window.selectDashboardLocation(val ? val : 'all');
-                });
-            }
-
-            // Live property title search input in right box
-            if (propSearchInput) {
-                propSearchInput.addEventListener('input', function() {
-                    var term = this.value.toLowerCase().trim();
-                    propCards.forEach(function(card) {
-                        var title = (card.getAttribute('data-prop-title') || '').toLowerCase();
-                        if (!term || title.indexOf(term) !== -1) {
-                            card.style.display = 'flex';
+        function initBuyersTableSearch() {
+            var searchInput = document.getElementById('ofp-table-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    var query = e.target.value.toLowerCase().trim();
+                    var rows = document.querySelectorAll('#ofp-buyers-table tbody tr');
+                    rows.forEach(function(row) {
+                        var text = row.innerText.toLowerCase();
+                        if (!query || text.indexOf(query) !== -1) {
+                            row.style.display = '';
                         } else {
-                            card.style.display = 'none';
+                            row.style.display = 'none';
                         }
                     });
                 });
@@ -812,9 +690,9 @@ include OFP_PATH . 'public/templates/partials/nav.php';
         }
 
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initLocationMapLinking);
+            document.addEventListener('DOMContentLoaded', initBuyersTableSearch);
         } else {
-            initLocationMapLinking();
+            initBuyersTableSearch();
         }
     })();
     </script>

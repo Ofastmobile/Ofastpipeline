@@ -32,6 +32,30 @@ $current_count = count( $team_members );
 $can_invite    = ( $max_members > 0 && $current_count < $max_members );
 $free_plan     = ( $plan === 'free' );
 
+// Pass hero banner button configuration to nav.php
+if ( $free_plan ) {
+    $ofp_banner_btn = [
+        'label'   => 'Upgrade to Add Team',
+        'url'     => home_url( '/pricing' ),
+        'onclick' => '',
+        'icon'    => 'none',
+    ];
+} elseif ( $can_invite ) {
+    $ofp_banner_btn = [
+        'label'   => '+ Invite Member',
+        'url'     => '#',
+        'onclick' => 'if(typeof openInviteModal===\'function\'){ openInviteModal(); return false; }',
+        'icon'    => 'none',
+    ];
+} else {
+    $ofp_banner_btn = [
+        'label'   => 'Limit Reached (' . $max_members . ')',
+        'url'     => home_url( '/pricing' ),
+        'onclick' => '',
+        'icon'    => 'none',
+    ];
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -45,69 +69,117 @@ $free_plan     = ( $plan === 'free' );
 
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
-    <div class="ofp-team-header" style="justify-content: flex-end;">
-        <div>
-            <?php if ( $free_plan ) : ?>
-                <button class="ofp-btn" disabled style="opacity:0.5;" title="Upgrade to Pro or Gold to add team members">Upgrade to Add Team</button>
-            <?php elseif ( $can_invite ) : ?>
-                <button class="ofp-btn" onclick="openInviteModal()">+ Invite Member</button>
-            <?php else : ?>
-                <button class="ofp-btn" disabled style="opacity:0.5;" title="Team member limit reached for your plan">Limit Reached (<?php echo esc_html($max_members); ?>)</button>
-            <?php endif; ?>
-        </div>
-    </div>
 
-    <?php if ( empty( $team_members ) ) : ?>
-        <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:40px;text-align:center;">
-            <div style="font-size:40px;margin-bottom:16px;">👥</div>
-            <h3 style="font-size:18px;font-weight:600;color:var(--text-main);margin-bottom:8px;">No team members yet</h3>
-            <p style="color:var(--text-muted);font-size:14px;margin-bottom:24px;">Invite members to help manage your leads and communications.</p>
-            <?php if ( ! $free_plan && $can_invite ) : ?>
-                <button class="ofp-btn" onclick="openInviteModal()">Invite First Member</button>
-            <?php endif; ?>
+
+<?php
+$avatar_gradients = [
+    'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+    'linear-gradient(135deg, #10b981, #047857)',
+    'linear-gradient(135deg, #f59e0b, #b45309)',
+    'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+    'linear-gradient(135deg, #ec4899, #be185d)',
+    'linear-gradient(135deg, #06b6d4, #0e7490)',
+];
+?>
+
+    <div class="ofp-table-card" style="margin-top: 10px;">
+        <div class="ofp-table-toolbar">
+            <div class="ofp-table-search">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <input type="text" id="ofp-team-search-input" placeholder="Search team members, role, status, contact...">
+            </div>
+
+            <div class="ofp-table-actions">
+                <span class="ofp-btn ofp-btn-outline" style="font-size:12px; padding:6px 14px; pointer-events:none; font-weight:600;">
+                    Team Members (<?php echo esc_html( $current_count . ( $max_members ? ' / ' . $max_members : '' ) ); ?>)
+                </span>
+            </div>
         </div>
-    <?php else : ?>
-        <table class="ofp-team-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Contact</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ( $team_members as $member ) : 
-                    $perms = $member->permissions ? json_decode( $member->permissions, true ) : [];
-                ?>
-                    <tr>
-                        <td>
-                            <div style="font-weight:600;color:var(--text-main);"><?php echo esc_html( $member->name ); ?></div>
-                        </td>
-                        <td>
-                            <div style="font-size:13px;color:var(--text-main);"><?php echo esc_html( $member->email ); ?></div>
-                            <div style="font-size:12px;color:var(--text-muted);"><?php echo esc_html( $member->phone ); ?></div>
-                        </td>
-                        <td>
-                            <span style="font-weight:600;font-size:13px;color:var(--text-main);"><?php echo esc_html( $member->role_name ); ?></span>
-                        </td>
-                        <td>
-                            <?php if ( $member->status === 'pending' ) : ?>
-                                <span class="ofp-badge-pending">Pending</span>
-                            <?php else : ?>
-                                <span class="ofp-badge-active">Active</span>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <button class="ofp-btn ofp-btn-small" style="background:transparent;color:var(--text-main);border:1px solid var(--border-color);" onclick="openEditModal(<?php echo esc_attr( wp_json_encode( $member ) ); ?>)">Edit</button>
-                            <button class="ofp-btn ofp-btn-small" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;margin-left:8px;" onclick="deleteMember(<?php echo (int) $member->id; ?>)">Delete</button>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    <?php endif; ?>
+
+        <?php if ( empty( $team_members ) ) : ?>
+            <div style="padding:60px 24px; text-align:center;">
+                <div style="font-size:44px; margin-bottom:14px; opacity:0.85;">👥</div>
+                <h3 style="font-size:18px; font-weight:700; color:var(--text-main); margin-bottom:8px;">No team members yet</h3>
+                <p style="color:var(--text-muted); font-size:14px; margin-bottom:24px; max-width:400px; margin-left:auto; margin-right:auto;">
+                    Invite team members to assist with properties, buyer follow-ups, and customer communications.
+                </p>
+                <?php if ( ! $free_plan && $can_invite ) : ?>
+                    <button class="ofp-btn ofp-btn-primary" onclick="openInviteModal()">+ Invite First Member</button>
+                <?php endif; ?>
+            </div>
+        <?php else : ?>
+            <div class="ofp-table-wrap">
+                <table class="ofp-data-table ofp-team-table" id="ofp-team-table">
+                    <thead>
+                        <tr>
+                            <th>Team Member</th>
+                            <th>Contact Info</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th style="text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $idx = 0;
+                        foreach ( $team_members as $member ) : 
+                            $parts = preg_split( '/\s+/', trim( $member->name ) );
+                            $inits = '';
+                            if ( ! empty( $parts[0] ) ) $inits .= mb_substr( $parts[0], 0, 1 );
+                            if ( ! empty( $parts[1] ) ) $inits .= mb_substr( $parts[1], 0, 1 );
+                            if ( empty( $inits ) ) $inits = strtoupper( substr( $member->name, 0, 2 ) );
+                            $inits = strtoupper( $inits );
+                            $bg_grad = $avatar_gradients[ $idx % count( $avatar_gradients ) ];
+                            $idx++;
+
+                            $is_manager_role = strtolower( $member->role_name ?? '' ) === 'manager';
+                            $role_badge_style = $is_manager_role 
+                                ? 'background:rgba(59, 130, 246, 0.12); color:#3b82f6; border:1px solid rgba(59, 130, 246, 0.25);' 
+                                : 'background:rgba(139, 92, 246, 0.12); color:#8b5cf6; border:1px solid rgba(139, 92, 246, 0.25);';
+                        ?>
+                            <tr>
+                                <td>
+                                    <div class="ofp-user-cell" style="display:flex; align-items:center; gap:12px;">
+                                        <div class="ofp-user-thumb" style="display:flex; align-items:center; justify-content:center; background:<?php echo esc_attr( $bg_grad ); ?>; color:#fff; font-weight:700; font-size:12px; border-radius:8px; width:36px; height:36px; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                                            <span><?php echo esc_html( $inits ); ?></span>
+                                        </div>
+                                        <div class="ofp-user-meta">
+                                            <span class="ofp-user-title" style="font-weight:600; font-size:14px; color:var(--text-main); display:block;"><?php echo esc_html( $member->name ); ?></span>
+                                            <span class="ofp-user-sub" style="font-size:12px; color:var(--text-muted); display:block;">Member #<?php echo (int) $member->id; ?></span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-size:13px; font-weight:500; color:var(--text-main);"><?php echo esc_html( $member->email ); ?></div>
+                                    <?php if ( ! empty( $member->phone ) ) : ?>
+                                        <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                                            <?php echo esc_html( $member->phone ); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <span class="ofp-tbl-status-pill" style="<?php echo esc_attr( $role_badge_style ); ?> font-weight:600;">
+                                        <?php echo esc_html( $member->role_name ); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <?php if ( $member->status === 'pending' ) : ?>
+                                        <span class="ofp-tbl-status-pill pending" style="background:rgba(245, 158, 11, 0.14); color:#d97706; border:1px solid rgba(245, 158, 11, 0.25);">Pending</span>
+                                    <?php else : ?>
+                                        <span class="ofp-tbl-status-pill active" style="background:rgba(16, 185, 129, 0.12); color:#10b981; border:1px solid rgba(16, 185, 129, 0.25);">Active</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="text-align:right;">
+                                    <button class="ofp-btn ofp-btn-outline" style="font-size:12px; padding:5px 12px; border-radius:7px;" onclick="openEditModal(<?php echo esc_attr( wp_json_encode( $member ) ); ?>)">Edit</button>
+                                    <button class="ofp-btn ofp-btn-outline" style="font-size:12px; padding:5px 12px; border-radius:7px; color:#ef4444; border-color:rgba(239, 68, 68, 0.35); margin-left:6px;" onclick="deleteMember(<?php echo (int) $member->id; ?>)">Delete</button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
 
 
     <!-- Invite Modal -->
@@ -150,7 +222,7 @@ $free_plan     = ( $plan === 'free' );
                     <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">Managers have full access automatically.</p>
                 </div>
 
-                <button type="submit" class="ofp-btn" style="width:100%;margin-top:16px;">Send Invitation</button>
+                <button type="submit" class="ofp-btn ofp-btn-primary" style="width:100%;margin-top:16px;">Send Invitation</button>
                 <p style="font-size:12px;color:var(--text-muted);margin-top:12px;text-align:center;">Sending an invite deducts 1 SMS credit.</p>
             </form>
         </div>
@@ -184,7 +256,7 @@ $free_plan     = ( $plan === 'free' );
                     </div>
                 </div>
 
-                <button type="submit" class="ofp-btn" style="width:100%;margin-top:16px;">Save Changes</button>
+                <button type="submit" class="ofp-btn ofp-btn-primary" style="width:100%;margin-top:16px;">Save Changes</button>
             </form>
         </div>
     </div>
@@ -313,6 +385,21 @@ $free_plan     = ( $plan === 'free' );
                 alert('Connection error');
             }
         }
+
+        // Live search filter for team table
+        (function() {
+            var searchInput = document.getElementById('ofp-team-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    var q = this.value.toLowerCase().trim();
+                    var rows = document.querySelectorAll('#ofp-team-table tbody tr');
+                    rows.forEach(function(r) {
+                        var txt = r.textContent.toLowerCase();
+                        r.style.display = txt.indexOf(q) !== -1 ? '' : 'none';
+                    });
+                });
+            }
+        })();
     </script>
 
 </div> <!-- .ofp-content-area -->

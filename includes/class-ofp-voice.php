@@ -83,20 +83,53 @@ class OFP_Voice {
         );
 
         if ( is_wp_error( $response ) ) {
+            $err = $response->get_error_message();
+            if ( class_exists( 'OFP_Communications_Log' ) && ! empty( $client_id ) ) {
+                OFP_Communications_Log::log(
+                    (int) $client_id,
+                    $lead_id ?: null,
+                    'voice',
+                    $phone,
+                    'outbound',
+                    $message,
+                    0.00,
+                    'failed',
+                    'africastalking',
+                    null
+                );
+            }
             return [
                 'success'    => false,
                 'session_id' => '',
-                'error'      => $response->get_error_message(),
+                'error'      => $err,
             ];
         }
 
         $body  = json_decode( wp_remote_retrieve_body( $response ) );
         $entry = $body->entries[0] ?? null;
 
+        $is_success = $entry && $entry->status === 'Queued';
+        $provider_ref = $entry->sessionId ?? '';
+
+        if ( class_exists( 'OFP_Communications_Log' ) && ! empty( $client_id ) ) {
+            OFP_Communications_Log::log(
+                (int) $client_id,
+                $lead_id ?: null,
+                'voice',
+                $phone,
+                'outbound',
+                $message,
+                0.00,
+                $is_success ? 'queued' : 'failed',
+                'africastalking',
+                $provider_ref
+            );
+        }
+
         return [
-            'success'      => $entry && $entry->status === 'Queued',
-            'session_id'   => $entry->sessionId ?? '',
-            'provider_ref' => $entry->sessionId ?? '',
+            'success'      => $is_success,
+            'session_id'   => $provider_ref,
+            'provider_ref' => $provider_ref,
             'error'        => $entry && $entry->status !== 'Queued' ? $entry->status : '',
         ];
     }

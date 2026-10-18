@@ -87,6 +87,21 @@ class OFP_SMS {
             ] );
         }
 
+        if ( class_exists( 'OFP_Communications_Log' ) && ! empty( $this->client_id ) ) {
+            OFP_Communications_Log::log(
+                (int) $this->client_id,
+                null,
+                'sms',
+                $phone,
+                'outbound',
+                $message,
+                6.99,
+                ! empty( $result['success'] ) ? 'sent' : 'failed',
+                $this->provider,
+                $result['provider_ref'] ?? null
+            );
+        }
+
         return $result;
     }
 

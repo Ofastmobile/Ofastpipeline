@@ -59,6 +59,8 @@ class OFP_Admin_Menu {
         add_action( 'admin_post_ofp_cancel_trigger',  [ $this, 'handle_cancel_trigger' ] );
         add_action( 'admin_post_ofp_send_broadcast',  [ $this, 'handle_send_broadcast' ] );
         add_action( 'admin_post_ofp_save_universal_template',  [ $this, 'handle_save_universal_template' ] );
+        add_action( 'wp_ajax_ofp_admin_get_email_preview',     [ $this, 'ajax_get_email_preview' ] );
+        add_action( 'wp_ajax_ofp_admin_resend_activity_email', [ $this, 'ajax_resend_activity_email' ] );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -142,6 +144,13 @@ class OFP_Admin_Menu {
             OFP_VERSION
         );
 
+        wp_enqueue_style(
+            'ofp-admin-activity-logs',
+            OFP_URL . 'assets/css/admin-activity-logs.css',
+            [ 'ofp-admin' ],
+            OFP_VERSION
+        );
+
         wp_enqueue_script(
             'ofp-admin',
             OFP_URL . 'assets/js/admin.js',
@@ -154,6 +163,14 @@ class OFP_Admin_Menu {
             'ajaxUrl' => admin_url( 'admin-ajax.php' ),
             'nonce'   => wp_create_nonce( 'ofp_admin_nonce' ),
         ] );
+
+        wp_enqueue_script(
+            'ofp-admin-activity-logs',
+            OFP_URL . 'assets/js/admin-activity-logs.js',
+            [ 'jquery', 'ofp-admin' ],
+            OFP_VERSION,
+            true
+        );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -620,6 +637,9 @@ class OFP_Admin_Menu {
             'ofp_smartsms_routing'   => sanitize_text_field( wp_unslash( $_POST['ofp_smartsms_routing']   ?? '3' ) ),
             // Cloudflare Turnstile
             'ofp_turnstile_site_key' => sanitize_text_field( wp_unslash( $_POST['ofp_turnstile_site_key'] ?? '' ) ),
+            // Prembly (Identitypass) Verification & KYC
+            'ofp_prembly_app_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_prembly_app_id'] ?? '' ) ),
+            'ofp_prembly_env'        => sanitize_text_field( wp_unslash( $_POST['ofp_prembly_env'] ?? 'test' ) ),
         ];
 
         // Encrypted fields — only update if a new value was submitted.
@@ -632,6 +652,7 @@ class OFP_Admin_Menu {
             'ofp_smartsms_api_key'        => [ 'raw' => $_POST['ofp_smartsms_api_key']        ?? '', 'label' => 'SmartSMS API Key' ],
             'ofp_paystack_secret_key'     => [ 'raw' => $_POST['ofp_paystack_secret_key']     ?? '', 'label' => 'Paystack Secret Key' ],
             'ofp_turnstile_secret'        => [ 'raw' => $_POST['ofp_turnstile_secret']        ?? '', 'label' => 'Turnstile Secret' ],
+            'ofp_prembly_secret_key'      => [ 'raw' => $_POST['ofp_prembly_secret_key']      ?? '', 'label' => 'Prembly API Key' ],
         ];
 
         foreach ( $settings as $key => $value ) {
@@ -1568,6 +1589,7 @@ class OFP_Admin_Menu {
                     OFP_Logger::log( $sent ? 'Broadcast email sent' : 'Broadcast email failed', $client_id ? (int) $client_id : null, [
                         'to'      => $recipient,
                         'subject' => $subject,
+                        'message' => wp_strip_all_tags( $message ),
                     ] );
                 }
             } elseif ( $channel === 'sms' ) {
@@ -1579,5 +1601,160 @@ class OFP_Admin_Menu {
 
         wp_redirect( add_query_arg( [ 'page' => 'ofp-communications', 'tab' => 'send', 'sent' => $success, 'failed' => $failed ], admin_url( 'admin.php' ) ) );
         exit;
+    }
+
+    public function ajax_get_email_preview(): void {
+        check_ajax_referer( 'ofp_admin_nonce', 'nonce' );
+        if ( ! OFP_Auth::is_admin_user() ) {
+            wp_send_json_error( 'Unauthorized.' );
+        }
+
+        $log_id  = (int) ( $_POST['log_id'] ?? 0 );
+        $comm_id = (int) ( $_POST['comm_id'] ?? 0 );
+
+        global $wpdb;
+        $subject   = '';
+        $body_text = '';
+        $to        = '';
+        $sent_at   = '';
+        $action    = '';
+        $client    = null;
+
+        if ( $log_id ) {
+            $log = $wpdb->get_row( $wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}ofp_activity_logs WHERE id = %d LIMIT 1",
+                $log_id
+            ) );
+            if ( ! $log ) {
+                wp_send_json_error( 'Log record not found.' );
+            }
+            if ( $log->client_id ) {
+                $client = OFP_Client::get( (int) $log->client_id );
+            }
+            $details = $log->details ? json_decode( $log->details, true ) : [];
+            if ( ! is_array( $details ) ) $details = [];
+
+            $subject   = $details['subject'] ?? ( 'Notification from ' . ( $client ? ( $client->business_name ?: OFP_Brand::name() ) : OFP_Brand::name() ) );
+            $body_text = $details['message'] ?? ( $details['body'] ?? ( $details['content'] ?? '' ) );
+            if ( empty( $body_text ) ) {
+                $body_text = 'This email was delivered via SMTP with subject: ' . $subject;
+            }
+            $to      = $details['to'] ?? '';
+            $sent_at = wp_date( 'M j, Y g:i A', strtotime( $log->created_at ) );
+            $action  = $log->action;
+        } elseif ( $comm_id ) {
+            $comm = $wpdb->get_row( $wpdb->prepare(
+                "SELECT cl.*, l.name as lead_name, l.phone as lead_phone, l.email as lead_email 
+                 FROM {$wpdb->prefix}ofp_communications_log cl 
+                 LEFT JOIN {$wpdb->prefix}ofp_leads l ON l.id = cl.lead_id 
+                 WHERE cl.id = %d LIMIT 1",
+                $comm_id
+            ) );
+            if ( ! $comm ) {
+                wp_send_json_error( 'Communications record not found.' );
+            }
+            if ( $comm->client_id ) {
+                $client = OFP_Client::get( (int) $comm->client_id );
+            }
+            $body_text = $comm->message ?? 'No content available.';
+            $subject   = 'Communication Notice';
+            $to        = $comm->lead_email ?: ( $comm->lead_phone ?: 'Recipient' );
+            $sent_at   = wp_date( 'M j, Y g:i A', strtotime( $comm->sent_at ) );
+            $action    = strtoupper( $comm->type ) . ' Dispatched';
+        } else {
+            wp_send_json_error( 'Missing record identifier.' );
+        }
+
+        $formatted_body = wpautop( esc_html( $body_text ) );
+        $full_html      = OFP_Mailer::wrap_in_client_template( $client, $subject, $formatted_body );
+
+        wp_send_json_success( [
+            'html'    => $full_html,
+            'subject' => $subject,
+            'to'      => $to,
+            'sent_at' => $sent_at,
+            'action'  => $action,
+        ] );
+    }
+
+    public function ajax_resend_activity_email(): void {
+        check_ajax_referer( 'ofp_admin_nonce', 'nonce' );
+        if ( ! OFP_Auth::is_admin_user() ) {
+            wp_send_json_error( 'Unauthorized.' );
+        }
+
+        $log_id             = (int) ( $_POST['log_id'] ?? 0 );
+        $comm_id            = (int) ( $_POST['comm_id'] ?? 0 );
+        $override_recipient = sanitize_email( $_POST['recipient'] ?? '' );
+
+        global $wpdb;
+        $to        = '';
+        $subject   = '';
+        $body_text = '';
+        $client_id = null;
+
+        if ( $log_id ) {
+            $log = $wpdb->get_row( $wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}ofp_activity_logs WHERE id = %d LIMIT 1",
+                $log_id
+            ) );
+            if ( ! $log ) {
+                wp_send_json_error( 'Log record not found.' );
+            }
+            $client_id = $log->client_id ? (int) $log->client_id : null;
+            $details   = $log->details ? json_decode( $log->details, true ) : [];
+            if ( ! is_array( $details ) ) $details = [];
+
+            $to        = $override_recipient ?: ( $details['to'] ?? ( $details['recipient'] ?? '' ) );
+            $subject   = $details['subject'] ?? ( 'Notification from ' . OFP_Brand::name() );
+            $body_text = $details['message'] ?? ( $details['body'] ?? ( $details['content'] ?? '' ) );
+        } elseif ( $comm_id ) {
+            $comm = $wpdb->get_row( $wpdb->prepare(
+                "SELECT cl.*, l.email as lead_email FROM {$wpdb->prefix}ofp_communications_log cl LEFT JOIN {$wpdb->prefix}ofp_leads l ON l.id = cl.lead_id WHERE cl.id = %d LIMIT 1",
+                $comm_id
+            ) );
+            if ( ! $comm ) {
+                wp_send_json_error( 'Communications record not found.' );
+            }
+            $client_id = $comm->client_id ? (int) $comm->client_id : null;
+            $to        = $override_recipient ?: ( $comm->lead_email ?? '' );
+            $subject   = 'Notification from ' . OFP_Brand::name();
+            $body_text = $comm->message ?? '';
+        } else {
+            wp_send_json_error( 'Missing record identifier.' );
+        }
+
+        if ( empty( $to ) || ! is_email( $to ) ) {
+            wp_send_json_error( 'Invalid or missing recipient email address.' );
+        }
+
+        if ( empty( $body_text ) ) {
+            $body_text = 'This is a resent notice regarding: ' . $subject;
+        }
+
+        $sent = false;
+        if ( $client_id ) {
+            $sent = OFP_Mailer::send_client_email( $to, $subject, $body_text, $client_id );
+        } else {
+            $sent = OFP_Mailer::send( $to, $subject, $body_text );
+        }
+
+        if ( $sent ) {
+            OFP_Logger::log( 'Admin resent email via SMTP', $client_id, [
+                'to'              => $to,
+                'subject'         => $subject,
+                'message'         => $body_text,
+                'original_log_id' => $log_id ?: $comm_id,
+                'actor_type'      => 'admin',
+                'actor_name'      => OFP_Auth::current_admin_name() ?: 'Admin',
+            ] );
+
+            wp_send_json_success( [
+                'message' => 'Email was resent successfully to ' . $to . '!',
+                'sent_at' => wp_date( 'M j, Y g:i A' ),
+            ] );
+        } else {
+            wp_send_json_error( 'Failed to send email. Please check your SMTP settings and server status.' );
+        }
     }
 }

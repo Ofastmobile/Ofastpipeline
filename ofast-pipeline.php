@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION', '2.2.0' );
+define( 'OFP_VERSION', '2.2.3' );
 define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
@@ -42,6 +42,7 @@ require_once OFP_PATH . 'includes/class-ofp-property-cpt.php';
 require_once OFP_PATH . 'includes/class-ofp-host-router.php';
 require_once OFP_PATH . 'includes/class-ofp-notification.php';
 require_once OFP_PATH . 'includes/class-ofp-logger.php';
+require_once OFP_PATH . 'includes/class-ofp-communications-log.php';
 require_once OFP_PATH . 'includes/class-ofp-pipeline-audio.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce-migration.php';
@@ -61,6 +62,7 @@ require_once OFP_PATH . 'includes/class-ofp-property-rent-visibility.php';
 require_once OFP_PATH . 'includes/class-ofp-white-label.php';
 require_once OFP_PATH . 'includes/class-ofp-brand.php';
 require_once OFP_PATH . 'includes/class-ofp-bank-account.php';
+require_once OFP_PATH . 'includes/class-ofp-prembly.php';
 require_once OFP_PATH . 'includes/class-ofp-property-lease-payment.php';
 require_once OFP_PATH . 'includes/class-ofp-property-tenant-transfer.php';
 require_once OFP_PATH . 'includes/class-ofp-property-my-payments.php';
@@ -120,6 +122,7 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Subscription::cleanup_free_pending_once();
     OFP_Payment::init();
     OFP_Bank_Account::init();
+OFP_Prembly::init();
     OFP_Property_Commerce::init();
     OFP_Property_Commerce_Migration::init();
     OFP_Property_Sales::init();

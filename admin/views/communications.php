@@ -169,10 +169,24 @@ include OFP_PATH . 'admin/views/partials/header.php';
                             <th>Status</th>
                             <th>Cost (NGN)</th>
                             <th>Sent</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ( $comms as $comm ) : ?>
+                            <?php
+                            $comm_recipient = $comm->lead_name ?: ( $comm->lead_phone ?: 'Recipient' );
+                            $comm_payload = [
+                                'id'         => (int) $comm->id,
+                                'type'       => $comm->type,
+                                'status'     => $comm->status,
+                                'recipient'  => $comm_recipient,
+                                'client'     => $comm->business_name ?? 'Super Admin',
+                                'sent_at'    => wp_date( 'M j, Y g:i A', strtotime( $comm->sent_at ) ),
+                                'time_rel'   => human_time_diff( strtotime( $comm->sent_at ), current_time( 'timestamp' ) ) . ' ago',
+                                'message'    => $comm->message ?? '',
+                            ];
+                            ?>
                             <tr>
                                 <td><?php echo $type_badges[ $comm->type ] ?? esc_html( strtoupper( $comm->type ) ); ?></td>
                                 <td><?php echo esc_html( $comm->business_name ?? 'Super Admin' ); ?></td>
@@ -191,10 +205,71 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                 <td><?php echo esc_html(
                                     human_time_diff( strtotime( $comm->sent_at ), current_time( 'timestamp' ) ) . ' ago'
                                 ); ?></td>
+                                <td>
+                                    <?php if ( $comm->type === 'email' ) : ?>
+                                        <button type="button" class="button button-small" onclick="ofpOpenCommEmailDrawer(<?php echo (int) $comm->id; ?>, <?php echo esc_attr( wp_json_encode( $comm_payload ) ); ?>)">
+                                            View
+                                        </button>
+                                    <?php else : ?>
+                                        <span style="color:#94a3b8; font-size:12px;">—</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+
+                <!-- ── SLIDE-OVER EMAIL DRAWER WITH TEMPLATE PREVIEW & RESEND ───────── -->
+                <div class="ofp-email-drawer-overlay" id="ofpCommDrawerOverlay" onclick="ofpCloseCommDrawer()"></div>
+                <div class="ofp-email-drawer" id="ofpCommDrawer" role="dialog" aria-modal="true" aria-labelledby="ofpCommDrawerTitle">
+                    <div class="ofp-email-drawer-header">
+                        <div class="ofp-email-drawer-header-left">
+                            <svg width="20" height="20" fill="none" stroke="#2563eb" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            <h3 class="ofp-email-drawer-title" id="ofpCommDrawerTitle">Email Delivery & Template</h3>
+                            <span id="ofpCommStatusBadge" class="ofp-badge ofp-badge-green" style="font-size:11px;">Sent via SMTP</span>
+                        </div>
+                        <button type="button" class="ofp-email-drawer-close" onclick="ofpCloseCommDrawer()" aria-label="Close drawer">&times;</button>
+                    </div>
+
+                    <!-- Meta Details Bar -->
+                    <div class="ofp-email-drawer-meta">
+                        <div class="ofp-email-drawer-meta-row">
+                            <span class="ofp-email-drawer-meta-label">To:</span>
+                            <span class="ofp-email-drawer-meta-val" id="ofpCommDrawerTo"></span>
+                        </div>
+                        <div class="ofp-email-drawer-meta-row">
+                            <span class="ofp-email-drawer-meta-label">Subject:</span>
+                            <span class="ofp-email-drawer-meta-val" id="ofpCommDrawerSubject" style="font-weight:600;"></span>
+                        </div>
+                        <div class="ofp-email-drawer-meta-row">
+                            <span class="ofp-email-drawer-meta-label">Date:</span>
+                            <span class="ofp-email-drawer-meta-val" id="ofpCommDrawerDate"></span>
+                        </div>
+                        <div class="ofp-email-drawer-meta-row">
+                            <span class="ofp-email-drawer-meta-label">Sender:</span>
+                            <span class="ofp-email-drawer-meta-val" id="ofpCommDrawerActor"></span>
+                        </div>
+                    </div>
+
+                    <!-- Email Template Preview Body -->
+                    <div class="ofp-email-drawer-body">
+                        <div class="ofp-email-iframe-wrap">
+                            <iframe id="ofpCommEmailIframe" class="ofp-email-iframe" sandbox="allow-same-origin" title="Email Template Preview"></iframe>
+                        </div>
+                    </div>
+
+                    <!-- Footer with Resend Action -->
+                    <div class="ofp-email-drawer-footer">
+                        <div class="ofp-email-resend-group">
+                            <button type="button" class="ofp-act-btn-resend" id="ofpCommBtnResend" onclick="ofpTriggerCommResend()">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                <span id="ofpCommBtnResendText">Resend Email</span>
+                            </button>
+                            <span id="ofpCommResendStatus" class="ofp-resend-status"></span>
+                        </div>
+                        <button type="button" class="ofp-act-btn-dismiss" onclick="ofpCloseCommDrawer()">Close</button>
+                    </div>
+                </div>
 
                 <?php if ( $total_pages > 1 ) : ?>
                     <div class="ofp-pagination">
@@ -270,20 +345,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 </div>
             </form>
         </div>
-        
-        <script>
-        document.getElementById('broadcast_channel').addEventListener('change', function() {
-            var subjectField = document.getElementById('broadcast_subject_field');
-            var subjectInput = document.getElementById('broadcast_subject');
-            if (this.value === 'sms') {
-                subjectField.style.display = 'none';
-                subjectInput.removeAttribute('required');
-            } else {
-                subjectField.style.display = 'block';
-                subjectInput.setAttribute('required', 'required');
-            }
-        });
-        </script>
     <?php endif; ?>
 
     <?php if ( $tab === 'templates' && OFP_Auth::is_super_admin() ) : ?>
@@ -324,36 +385,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 </div>
             </div>
         </div>
-
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var input = document.getElementById('universal_template_input');
-            var iframe = document.getElementById('template-preview-frame');
-
-            function updatePreview() {
-                var template = input.value;
-                var previewHtml = '';
-
-                if (!template.trim()) {
-                    previewHtml = '<div style="padding:40px; text-align:center; color:#64748b; font-family:sans-serif;">Default built-in template will be used.</div>';
-                } else {
-                    previewHtml = template.replace(
-                        '{email_body}', 
-                        '<div style="padding: 20px; border: 2px dashed #ccc; background: #fafafa; text-align: center; font-family: sans-serif;"><h3>Message Content Goes Here</h3><p>This is where the actual email body will be injected.</p></div>'
-                    );
-                }
-
-                var doc = iframe.contentDocument || iframe.contentWindow.document;
-                doc.open();
-                doc.writeln(previewHtml);
-                doc.close();
-            }
-
-            // Update initially and on input
-            updatePreview();
-            input.addEventListener('input', updatePreview);
-        });
-        </script>
     <?php endif; ?>
 </div>
 
