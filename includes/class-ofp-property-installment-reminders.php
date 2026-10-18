@@ -52,7 +52,16 @@ class OFP_Property_Installment_Reminders {
             }
 
             if ( ! empty( $row->buyer_email ) ) {
-                OFP_Mailer::send( $row->buyer_email, $row->buyer_name ?: 'there', $subject, sprintf( '<p>Hello %s,</p><p>%s</p><p>Please use your secure payment link to make the payment.</p>', esc_html( $row->buyer_name ?: 'there' ), esc_html( $message ) ) );
+                $payment_link = class_exists( 'OFP_Property_Checkout' )
+                    ? OFP_Property_Checkout::payment_link( (int) $row->purchase_id )
+                    : OFP_Property_Manual_Payment::payment_link( (int) $row->purchase_id );
+                $email_body = sprintf(
+                    '<p>Hello %s,</p><p>%s</p><p><a href="%s" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;">View payment options</a></p><p>You can pay securely online when available, or use the bank-transfer instructions on the payment page. If you have already paid, please disregard this reminder.</p>',
+                    esc_html( $row->buyer_name ?: 'there' ),
+                    esc_html( $message ),
+                    esc_url( $payment_link )
+                );
+                OFP_Mailer::send( $row->buyer_email, $row->buyer_name ?: 'there', $subject, $email_body );
             }
 
             if ( ! empty( $row->sms_provider ) && ! empty( $row->buyer_phone ) && ! empty( $row->client_id ) && class_exists( 'OFP_Credit' ) && OFP_Credit::has_balance( (int) $row->client_id, 'sms', self::SMS_COST ) ) {

@@ -407,7 +407,9 @@ class OFP_Property_Rent {
             'created_at'                  => current_time( 'mysql' ),
         ] );
         if ( ! $ok ) return new WP_Error( 'lease_offer_create_failed', 'Unable to create lease offer.' );
-        return [ 'lease_id' => (int) $wpdb->insert_id, 'offer_token' => $token ];
+        $lease_id = (int) $wpdb->insert_id;
+        self::send_lease_offer_email( $lease_id, $token, false );
+        return [ 'lease_id' => $lease_id, 'offer_token' => $token ];
     }
 
     /** Acceptance records consent; the first verified payment activates the lease. */
@@ -691,6 +693,37 @@ class OFP_Property_Rent {
         if ( ! $ok ) return new WP_Error( 'lease_renewal_failed', 'Unable to generate renewal lease offer.' );
 
         $new_lease_id = (int) $wpdb->insert_id;
+        self::send_lease_offer_email( $new_lease_id, $token, true );
         return [ 'lease_id' => $new_lease_id, 'offer_token' => $token, 'cycle_number' => $cycle_number, 'amount' => $next_amount ];
+    }
+
+    /** Sends the tenant the same secure lease link shown to the landlord. */
+    private static function send_lease_offer_email( int $lease_id, string $token, bool $is_renewal ): void {
+        if ( ! class_exists( 'OFP_Mailer' ) ) return;
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $lease = $wpdb->get_row( $wpdb->prepare(
+            "SELECT l.*, t.full_name AS tenant_name, t.email AS tenant_email, pr.title AS property_title
+             FROM {$p}ofp_property_leases l
+             INNER JOIN {$p}ofp_property_tenants t ON t.id = l.tenant_id
+             LEFT JOIN {$p}ofp_properties pr ON pr.id = l.property_id
+             WHERE l.id = %d LIMIT 1",
+            $lease_id
+        ) );
+        if ( ! $lease || empty( $lease->tenant_email ) || ! is_email( $lease->tenant_email ) ) return;
+
+        $lease_url = home_url( '/tenant-lease/' . rawurlencode( $token ) . '/' );
+        $label = $is_renewal ? 'Lease renewal offer' : 'Lease offer';
+        $expires = ! empty( $lease->offer_expires_at ) ? wp_date( 'M j, Y', strtotime( $lease->offer_expires_at ) ) : 'the stated expiry date';
+        $body = sprintf(
+            '<p>Hello %s,</p><p>Your %s for <strong>%s</strong> is ready for review.</p><p>Rent package for this cycle: <strong>â‚¦%s</strong>.</p><p><a href="%s" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;">Review lease and payment options</a></p><p>Please review the terms and accept before %s. After acceptance, the same secure page shows the available payment instructions.</p>',
+            esc_html( $lease->tenant_name ?: 'there' ),
+            esc_html( strtolower( $label ) ),
+            esc_html( $lease->property_title ?: 'the property' ),
+            number_format( (float) $lease->total_initial_package, 2 ),
+            esc_url( $lease_url ),
+            esc_html( $expires )
+        );
+        OFP_Mailer::send( $lease->tenant_email, $lease->tenant_name ?: 'there', $label . ' â€” ' . ( $lease->property_title ?: 'Property' ), $body );
     }
 }

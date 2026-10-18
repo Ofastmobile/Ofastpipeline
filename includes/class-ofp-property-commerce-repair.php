@@ -144,7 +144,7 @@ class OFP_Property_Commerce_Repair {
         if(!$ok)wp_die(esc_html__('Could not record the completed purchase.','ofast-pipeline')); $purchase_id=(int)$wpdb->insert_id;
         $payment=OFP_Property_Payment_Record::create(['purchase_id'=>$purchase_id,'payment_method'=>'manual','amount'=>$amount,'status'=>'successful','payer_name'=>$buyer_name,'payer_reference'=>$reference,'note'=>trim('Method: '.str_replace('_',' ',$method).($note?' — '.$note:''))]);
         if(is_wp_error($payment)){$wpdb->delete("{$p}ofp_property_purchases",['id'=>$purchase_id]);wp_die(esc_html__('Could not create the payment record.','ofast-pipeline'));}
-        $wpdb->update("{$p}ofp_property_purchases",['amount_paid'=>$amount,'balance'=>0,'status'=>'completed','updated_at'=>current_time('mysql')],['id'=>$purchase_id]); self::mark_property_taken($property_id); do_action('ofp_property_purchase_completed',$purchase_id,$property_id,$amount,$method); do_action('ofp_property_purchase_created',$purchase_id,null,$owner_id,$property_id);
+        $wpdb->update("{$p}ofp_property_purchases",['amount_paid'=>$amount,'balance'=>0,'status'=>'completed','updated_at'=>current_time('mysql')],['id'=>$purchase_id]); self::mark_property_taken($property_id); do_action('ofp_property_purchase_created',$purchase_id,null,$owner_id,$property_id); do_action('ofp_property_purchase_completed',$purchase_id,$property_id,$amount,$method);
         wp_safe_redirect(add_query_arg('created',$purchase_id,admin_url('edit.php?post_type=ofp_property&page=ofp-property-add-purchase')));exit;
     }
 
@@ -169,7 +169,10 @@ class OFP_Property_Commerce_Repair {
         $token=sanitize_text_field(wp_unslash($_GET['offer']??'')); if(!$token)return; global $wpdb; $p=$wpdb->prefix; $hash=hash('sha256',$token); $offer=$wpdb->get_row($wpdb->prepare("SELECT * FROM {$p}ofp_property_offers WHERE offer_token_hash=%s LIMIT 1",$hash)); if(!$offer||'pending'!==$offer->status)return;
         $nonce=sanitize_text_field(wp_unslash($_POST['ofp_offer_nonce']??'')); if(!wp_verify_nonce($nonce,'ofp_offer_action_'.$offer->id)||empty($_POST['accept_terms'])||'1'!==$_POST['accept_terms'])return;
         $purchase_id=OFP_Property_Commerce::create_purchase_from_offer((int)$offer->id,isset($_SERVER['REMOTE_ADDR'])?sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])):''); if(is_wp_error($purchase_id))return;
-        do_action('ofp_property_offer_accepted',(int)$offer->id,(int)$purchase_id); do_action('ofp_property_purchase_created',(int)$purchase_id,$offer->lead_id?(int)$offer->lead_id:null,$offer->client_id?(int)$offer->client_id:null,(int)$offer->property_id);
+        // create_purchase_from_offer() already emits the purchase-created event.
+        // Emit only the acceptance event here so the buyer receives one clear
+        // purchase confirmation rather than duplicate emails.
+        do_action('ofp_property_offer_accepted',(int)$offer->id,(int)$purchase_id);
         $installment_id=(int)$wpdb->get_var($wpdb->prepare("SELECT id FROM {$p}ofp_property_installments WHERE purchase_id=%d AND amount_paid<amount_due ORDER BY installment_no ASC LIMIT 1",$purchase_id)); $expires=time()+OFP_Property_Manual_Payment::TOKEN_TTL; $payload=$purchase_id.'.'.$expires; $checkout_token=$payload.'.'.hash_hmac('sha256',$payload,wp_salt('auth')); $checkout_link=add_query_arg(['token'=>rawurlencode($checkout_token),'installment'=>$installment_id],home_url('/property-checkout/')); wp_safe_redirect($checkout_link); exit;
     }
 

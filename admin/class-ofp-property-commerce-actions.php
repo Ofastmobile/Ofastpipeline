@@ -321,8 +321,6 @@ class OFP_Property_Commerce_Actions {
             OFP_Mailer::send( $offer->buyer_email, $offer->buyer_name, $subject, $message );
         }
 
-        do_action( 'ofp_property_offer_created', $offer_id, $raw_token, $offer_url );
-
         wp_safe_redirect( add_query_arg( 'resent', 1, admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-purchases' ) ) );
         exit;
     }
@@ -378,8 +376,6 @@ class OFP_Property_Commerce_Actions {
             $message .= "If you have any questions, please contact us.";
             OFP_Mailer::send( $offer->buyer_email, $offer->buyer_name, $subject, $message );
         }
-
-        do_action( 'ofp_property_offer_created', $offer_id, $raw_token, $offer_url );
 
         wp_safe_redirect( add_query_arg( 'resent', 1, home_url( '/property-sales' ) ) );
         exit;

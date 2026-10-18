@@ -123,13 +123,17 @@ $is_portal = ( isset( $_GET['tab'] ) && $_GET['tab'] === 'rent-oversight' )
     || ( strpos( $_SERVER['REQUEST_URI'] ?? '', 'admin-portal' ) !== false );
 
 $subtab_input = sanitize_key( $_GET['subtab'] ?? $_GET['rent_tab'] ?? '' );
-if ( empty( $subtab_input ) && isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'leases', 'tenants', 'payments' ], true ) ) {
+if ( empty( $subtab_input ) && isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'leases', 'tenants', 'payments', 'activity' ], true ) ) {
     $subtab_input = sanitize_key( $_GET['tab'] );
 }
-$active_tab = in_array( $subtab_input, [ 'leases', 'tenants', 'payments' ], true ) ? $subtab_input : 'leases';
+$active_tab = in_array( $subtab_input, [ 'leases', 'tenants', 'payments', 'activity' ], true ) ? $subtab_input : 'leases';
 $per_page     = 50;
 $current_page = max( 1, absint( $_GET['paged'] ?? 1 ) );
 $offset       = ( $current_page - 1 ) * $per_page;
+
+if ( class_exists( 'OFP_Communications_Log' ) ) {
+    OFP_Communications_Log::ensure_schema();
+}
 
 $clients = $wpdb->get_results( "SELECT id, business_name FROM {$p}ofp_clients WHERE status != 'cancelled' ORDER BY business_name ASC" );
 
@@ -215,10 +219,35 @@ $payments = $wpdb->get_results( $wpdb->prepare(
     ...array_merge( $pay_args, [ $per_page, $offset ] )
 ) );
 
+// Rent communication records are limited to known tenant contacts. This keeps
+// the platform oversight view useful without mixing in unrelated client emails.
+$activity_where = [ '1=1' ];
+$activity_args  = [];
+if ( $filter_client ) { $activity_where[] = 'cl.client_id = %d'; $activity_args[] = $filter_client; }
+$activity_where_sql = implode( ' AND ', $activity_where );
+$activity_total = (int) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COUNT(DISTINCT cl.id) FROM {$p}ofp_communications_log cl
+     INNER JOIN {$p}ofp_property_tenants t ON t.client_id = cl.client_id
+       AND ((t.email <> '' AND LOWER(cl.recipient) = LOWER(t.email)) OR (t.phone <> '' AND cl.recipient LIKE CONCAT('%%', RIGHT(t.phone, 10))))
+     WHERE {$activity_where_sql}",
+    ...$activity_args
+) );
+$rent_activity = $wpdb->get_results( $wpdb->prepare(
+    "SELECT DISTINCT cl.*, t.full_name AS tenant_name, c.business_name
+     FROM {$p}ofp_communications_log cl
+     INNER JOIN {$p}ofp_property_tenants t ON t.client_id = cl.client_id
+       AND ((t.email <> '' AND LOWER(cl.recipient) = LOWER(t.email)) OR (t.phone <> '' AND cl.recipient LIKE CONCAT('%%', RIGHT(t.phone, 10))))
+     LEFT JOIN {$p}ofp_clients c ON c.id = cl.client_id
+     WHERE {$activity_where_sql}
+     ORDER BY cl.sent_at DESC LIMIT %d OFFSET %d",
+    ...array_merge( $activity_args, [ $per_page, $offset ] )
+) );
+
 // Pagination counts per active tab
 $total_for_tab = match ( $active_tab ) {
     'tenants'  => $tenant_total,
     'payments' => $pay_total,
+    'activity' => $activity_total,
     default    => $lease_total,
 };
 $total_pages = max( 1, (int) ceil( $total_for_tab / $per_page ) );
@@ -282,7 +311,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 <!-- Tabs -->
 <h2 class="nav-tab-wrapper">
     <?php
-    $tabs = [ 'leases' => 'Leases (' . $lease_total . ')', 'tenants' => 'Tenants (' . $tenant_total . ')', 'payments' => 'Transactions (' . $pay_total . ')' ];
+    $tabs = [ 'leases' => 'Leases (' . $lease_total . ')', 'tenants' => 'Tenants (' . $tenant_total . ')', 'payments' => 'Transactions (' . $pay_total . ')', 'activity' => 'Rent Activity (' . $activity_total . ')' ];
     foreach ( $tabs as $slug => $label ) :
         if ( $is_portal ) {
             $url = home_url( '/admin-portal?tab=rent-oversight&subtab=' . $slug . ( $filter_client ? '&client_id=' . $filter_client : '' ) . ( $filter_status ? '&status=' . $filter_status : '' ) );
@@ -422,6 +451,17 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 </tbody>
             </table>
         </div>
+    <?php endif; ?>
+
+<?php elseif ( $active_tab === 'activity' ) : ?>
+    <?php if ( empty( $rent_activity ) ) : ?>
+        <p>No tenant communication activity found.</p>
+    <?php else : ?>
+        <div style="overflow-x:auto;"><table class="widefat ofp-table" style="min-width:980px;"><thead><tr><th>Sent</th><th>Client</th><th>Tenant</th><th>Channel</th><th>Subject / Message</th><th>Status</th></tr></thead><tbody>
+        <?php foreach ( $rent_activity as $entry ) : ?>
+            <tr><td><small><?php echo esc_html( $entry->sent_at ); ?></small></td><td><strong><?php echo esc_html( $entry->business_name ?: '—' ); ?></strong></td><td><?php echo esc_html( $entry->tenant_name ); ?><br><small><?php echo esc_html( $entry->recipient ); ?></small></td><td><?php echo esc_html( strtoupper( $entry->type ) ); ?></td><td><strong><?php echo esc_html( $entry->email_subject ?: '' ); ?></strong><br><small><?php echo esc_html( wp_html_excerpt( $entry->message, 160, '…' ) ); ?></small></td><td><?php echo esc_html( ucfirst( $entry->status ) ); ?></td></tr>
+        <?php endforeach; ?>
+        </tbody></table></div>
     <?php endif; ?>
 
 <?php endif; ?>

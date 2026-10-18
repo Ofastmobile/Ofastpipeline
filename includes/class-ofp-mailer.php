@@ -209,7 +209,10 @@ class OFP_Mailer {
                 $subject . ' — ' . wp_strip_all_tags( $body_html ),
                 0.00,
                 $sent ? 'sent' : 'failed',
-                'smtp'
+                'smtp',
+                null,
+                $subject,
+                $body_html
             );
         }
 
@@ -232,6 +235,14 @@ class OFP_Mailer {
         if ( ! $client ) {
             $client = $wpdb->get_row( $wpdb->prepare(
                 "SELECT c.* FROM {$p}ofp_clients c INNER JOIN {$p}ofp_team_members t ON t.client_id = c.id WHERE t.email = %s LIMIT 1",
+                $to
+            ) );
+        }
+        if ( ! $client ) {
+            // Tenant messages belong to the landlord's client account. This
+            // ensures correct white-label branding and scoped rent activity.
+            $client = $wpdb->get_row( $wpdb->prepare(
+                "SELECT c.* FROM {$p}ofp_clients c INNER JOIN {$p}ofp_property_tenants t ON t.client_id = c.id WHERE t.email = %s LIMIT 1",
                 $to
             ) );
         }
@@ -306,7 +317,10 @@ class OFP_Mailer {
                 wp_strip_all_tags( $body_html ),
                 0.00,
                 $sent ? 'sent' : 'failed',
-                'smtp'
+                'smtp',
+                null,
+                $subject,
+                $body_html
             );
         }
 

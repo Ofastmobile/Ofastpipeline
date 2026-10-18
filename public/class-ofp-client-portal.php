@@ -967,38 +967,10 @@ class OFP_Client_Portal {
         $subject   = $details['subject'] ?? ( 'Notification from ' . ( $client->business_name ?: OFP_Brand::name() ) );
         $body_text = $details['body'] ?? ( $details['message'] ?? ( $details['content'] ?? '' ) );
 
-        // If body_text is empty, attempt to recover from ofp_communications_log or ofp_notifications
+        // Never substitute another message merely because it shares a recipient
+        // or subject. That can show the contents of a later, unrelated email.
         if ( empty( $body_text ) ) {
-            $to = $details['to'] ?? '';
-            if ( ! empty( $to ) ) {
-                $comm_msg = $wpdb->get_var( $wpdb->prepare(
-                    "SELECT message FROM {$wpdb->prefix}ofp_communications_log 
-                     WHERE client_id = %d AND recipient = %s AND type = 'email' 
-                     ORDER BY id DESC LIMIT 1",
-                    $client->id,
-                    $to
-                ) );
-                if ( ! empty( $comm_msg ) ) {
-                    $body_text = $comm_msg;
-                }
-            }
-
-            if ( empty( $body_text ) && ! empty( $details['subject'] ) ) {
-                $notif_msg = $wpdb->get_var( $wpdb->prepare(
-                    "SELECT message FROM {$wpdb->prefix}ofp_notifications 
-                     WHERE client_id = %d AND title = %s 
-                     ORDER BY id DESC LIMIT 1",
-                    $client->id,
-                    $details['subject']
-                ) );
-                if ( ! empty( $notif_msg ) ) {
-                    $body_text = $notif_msg;
-                }
-            }
-
-            if ( empty( $body_text ) ) {
-                $body_text = 'This email was delivered via SMTP with subject: ' . $subject;
-            }
+            $body_text = 'The original message body was not retained for this legacy email.';
         }
 
         // If body already has full HTML tags, wrap only if needed, otherwise apply formatting
@@ -1048,7 +1020,7 @@ class OFP_Client_Portal {
         }
 
         $subject   = $details['subject'] ?? ( 'Notification from ' . ( $client->business_name ?: OFP_Brand::name() ) );
-        $body_text = $details['message'] ?? ( $details['body'] ?? ( $details['content'] ?? '' ) );
+        $body_text = $details['body'] ?? ( $details['message'] ?? ( $details['content'] ?? '' ) );
         if ( empty( $body_text ) ) {
             $body_text = 'This is a resent notice regarding: ' . $subject;
         }

@@ -29,6 +29,14 @@ class OFP_Communications_Log {
         if ( ! $col ) {
             $wpdb->query( "ALTER TABLE {$table} ADD COLUMN recipient VARCHAR(255) DEFAULT NULL AFTER lead_id" );
         }
+        // Email is a structured message.  Keeping its subject and original HTML
+        // separately prevents a preview/resend from having to guess at content.
+        if ( ! $wpdb->get_var( "SHOW COLUMNS FROM {$table} LIKE 'email_subject'" ) ) {
+            $wpdb->query( "ALTER TABLE {$table} ADD COLUMN email_subject VARCHAR(255) NULL AFTER message" );
+        }
+        if ( ! $wpdb->get_var( "SHOW COLUMNS FROM {$table} LIKE 'email_body_html'" ) ) {
+            $wpdb->query( "ALTER TABLE {$table} ADD COLUMN email_body_html LONGTEXT NULL AFTER email_subject" );
+        }
         $wpdb->query( "ALTER TABLE {$table} MODIFY COLUMN lead_id BIGINT UNSIGNED DEFAULT NULL" );
 
         $checked = true;
@@ -59,7 +67,9 @@ class OFP_Communications_Log {
         float $cost = 0.00,
         string $status = 'sent',
         ?string $provider = null,
-        ?string $provider_ref = null
+        ?string $provider_ref = null,
+        ?string $email_subject = null,
+        ?string $email_body_html = null
     ): int {
         self::ensure_schema();
 
@@ -76,6 +86,8 @@ class OFP_Communications_Log {
             'status'       => sanitize_key( $status ?: 'sent' ),
             'provider'     => $provider ? sanitize_text_field( $provider ) : null,
             'provider_ref' => $provider_ref ? sanitize_text_field( $provider_ref ) : null,
+            'email_subject' => $email_subject ? sanitize_text_field( $email_subject ) : null,
+            'email_body_html' => $email_body_html,
             'cost'         => (float) $cost,
             'sent_at'      => current_time( 'mysql' ),
         ];
@@ -140,7 +152,7 @@ class OFP_Communications_Log {
 
         $activities = $wpdb->get_results( $wpdb->prepare(
             "SELECT * FROM {$p}ofp_activity_logs 
-             WHERE (client_id = %d OR client_id = 0 OR client_id IS NULL)
+              WHERE client_id = %d
                AND (action LIKE %s OR action LIKE %s OR action LIKE %s OR action LIKE %s OR details LIKE %s)
              ORDER BY created_at DESC 
              LIMIT 250",
@@ -151,6 +163,15 @@ class OFP_Communications_Log {
             $like_mail,
             $like_to
         ) );
+
+        // Older versions copied unowned activity rows into every client's log.
+        // Remove only those derived copies; source activity records are untouched.
+        $wpdb->query(
+            "DELETE cl FROM {$p}ofp_communications_log cl
+             INNER JOIN {$p}ofp_activity_logs al ON cl.provider_ref = CONCAT('act_', al.id)
+             WHERE cl.provider_ref LIKE 'act_%'
+               AND (al.client_id IS NULL OR al.client_id = 0 OR al.client_id <> cl.client_id)"
+        );
 
         if ( empty( $activities ) ) {
             return;

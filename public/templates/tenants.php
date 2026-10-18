@@ -314,7 +314,7 @@ if ( isset( $_GET['success'] ) ) {
 
 // Active Tab
 $active_tab = sanitize_key( $_GET['tab'] ?? 'leases' );
-if ( ! in_array( $active_tab, [ 'leases', 'tenants', 'rates', 'payments', 'revisions' ], true ) ) {
+if ( ! in_array( $active_tab, [ 'leases', 'tenants', 'rates', 'payments', 'activity', 'revisions' ], true ) ) {
     $active_tab = 'leases';
 }
 
@@ -325,6 +325,7 @@ $leases            = [];
 $tenants           = [];
 $payments          = [];
 $revisions         = [];
+$rent_activity     = [];
 
 $stat_active_leases = 0;
 $stat_total_tenants = 0;
@@ -332,6 +333,9 @@ $stat_rent_collected = 0.0;
 $stat_balance_due   = 0.0;
 
 if ( $can_rent ) {
+    if ( class_exists( 'OFP_Communications_Log' ) ) {
+        OFP_Communications_Log::ensure_schema();
+    }
     // 1. Rental properties
     $rental_properties = $wpdb->get_results( $wpdb->prepare(
         "SELECT id, title, price, price_period, listing_type
@@ -392,6 +396,20 @@ if ( $can_rent ) {
 
     // 6. Rent Revisions & Audit Log
     $revisions = OFP_Property_Rent::get_rent_revisions( (int) $client->id );
+
+    // Rent activity is deliberately matched to registered tenant contacts,
+    // keeping ordinary client/lead communications out of this rent-only view.
+    $rent_activity = $wpdb->get_results( $wpdb->prepare(
+        "SELECT cl.*, t.full_name AS tenant_name
+         FROM {$p}ofp_communications_log cl
+         INNER JOIN {$p}ofp_property_tenants t ON t.client_id = cl.client_id
+           AND ( (t.email <> '' AND LOWER(cl.recipient) = LOWER(t.email))
+                 OR (t.phone <> '' AND cl.recipient LIKE CONCAT('%%', RIGHT(t.phone, 10))) )
+         WHERE cl.client_id = %d
+         ORDER BY cl.sent_at DESC
+         LIMIT 100",
+        (int) $client->id
+    ) );
 
     // Stats calculations
     foreach ( $leases as $l ) {
@@ -550,6 +568,9 @@ if ( $can_rent ) {
                 </a>
                 <a href="<?php echo esc_url( add_query_arg( 'tab', 'payments', home_url( '/tenants' ) ) ); ?>" class="ofp-tab-btn <?php echo $active_tab === 'payments' ? 'active' : ''; ?>">
                     Rent Transactions
+                </a>
+                <a href="<?php echo esc_url( add_query_arg( 'tab', 'activity', home_url( '/tenants' ) ) ); ?>" class="ofp-tab-btn <?php echo $active_tab === 'activity' ? 'active' : ''; ?>">
+                    Rent Activity
                 </a>
                 <a href="<?php echo esc_url( add_query_arg( 'tab', 'revisions', home_url( '/tenants' ) ) ); ?>" class="ofp-tab-btn <?php echo $active_tab === 'revisions' ? 'active' : ''; ?>">
                     Rent Revisions &amp; Audit Log
@@ -951,6 +972,22 @@ if ( $can_rent ) {
             <!-- ══════════════════════════════════════════════════════════════ -->
             <!-- TAB 5: RENT REVISIONS & AUDIT LOG                              -->
             <!-- ══════════════════════════════════════════════════════════════ -->
+            <?php elseif ( $active_tab === 'activity' ) : ?>
+                <div class="ofp-card">
+                    <div style="margin-bottom:16px;">
+                        <h3 style="margin:0; font-size:16px; font-weight:600; color:var(--text-main);">Rent Communication Activity</h3>
+                        <p style="color:var(--text-muted); margin:4px 0 0; font-size:13px;">Messages sent to registered tenants, including email and SMS delivery status.</p>
+                    </div>
+                    <?php if ( empty( $rent_activity ) ) : ?>
+                        <p style="color:var(--text-muted);">No rent communications have been recorded yet.</p>
+                    <?php else : ?>
+                        <div class="ofp-table-responsive"><table class="ofp-table"><thead><tr><th>Sent</th><th>Tenant</th><th>Channel</th><th>Subject / Message</th><th>Status</th></tr></thead><tbody>
+                        <?php foreach ( $rent_activity as $entry ) : ?>
+                            <tr><td><small><?php echo esc_html( wp_date( 'd M Y g:i A', strtotime( $entry->sent_at ) ) ); ?></small></td><td><strong><?php echo esc_html( $entry->tenant_name ); ?></strong><small style="display:block;color:var(--text-muted);"><?php echo esc_html( $entry->recipient ); ?></small></td><td><?php echo esc_html( strtoupper( $entry->type ) ); ?></td><td><strong><?php echo esc_html( $entry->email_subject ?: '' ); ?></strong><span style="display:block;max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?php echo esc_html( $entry->message ); ?></span></td><td><?php echo esc_html( ucfirst( $entry->status ) ); ?></td></tr>
+                        <?php endforeach; ?>
+                        </tbody></table></div>
+                    <?php endif; ?>
+                </div>
             <?php elseif ( $active_tab === 'revisions' ) : ?>
                 <div class="ofp-card">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">

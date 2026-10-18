@@ -138,10 +138,17 @@ class OFP_Property_Lease_Reminders {
 
         // Email to tenant.
         if ( ! empty( $lease->tenant_email ) && class_exists( 'OFP_Mailer' ) ) {
+            $lease_link = ! empty( $lease->offer_token )
+                ? home_url( '/tenant-lease/' . rawurlencode( $lease->offer_token ) . '/' )
+                : '';
+            $payment_action = $lease_link
+                ? '<p><a href="' . esc_url( $lease_link ) . '" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;">View lease and payment options</a></p>'
+                : '';
             $email_body = sprintf(
-                '<p>Hello %s,</p><p>%s</p><p>If you have already made a payment, please disregard this reminder.</p>',
+                '<p>Hello %s,</p><p>%s</p>%s<p>If you have already made a payment, please disregard this reminder.</p>',
                 esc_html( $tenant_name ),
-                esc_html( $message )
+                esc_html( $message ),
+                $payment_action
             );
             OFP_Mailer::send( $lease->tenant_email, $tenant_name, $subject, $email_body );
         }

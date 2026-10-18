@@ -9,6 +9,8 @@ class OFP_Property_Comms_Bridge {
         add_action( 'ofp_property_purchase_created', [ __CLASS__, 'purchase_created' ], 10, 4 );
         add_action( 'ofp_property_payment_processed', [ __CLASS__, 'payment_processed' ], 10, 6 );
         add_action( 'ofp_property_manual_payment_submitted', [ __CLASS__, 'manual_payment_submitted' ], 10, 2 );
+        add_action( 'ofp_property_offer_accepted', [ __CLASS__, 'offer_accepted' ], 10, 2 );
+        add_action( 'ofp_property_purchase_completed', [ __CLASS__, 'purchase_completed' ], 10, 4 );
     }
 
     public static function purchase_created( int $purchase_id ): void {
@@ -72,6 +74,12 @@ class OFP_Property_Comms_Bridge {
 
         if ( class_exists( 'OFP_Notification' ) && $row->client_id ) {
             OFP_Notification::create( (int) $row->client_id, 'property_payment_received', 'Property payment received', sprintf( '₦%s received for %s. Remaining balance: ₦%s.', number_format( $amount, 2 ), $row->property_title ?: 'property', number_format( (float) $row->balance, 2 ) ) );
+        }
+
+        // The receipt is sent first. When this was the final installment, the
+        // buyer then receives a distinct completion confirmation.
+        if ( (float) $row->balance <= 0.00001 ) {
+            self::purchase_completed( $purchase_id, 0, $amount, $gateway );
         }
     }
 
@@ -152,6 +160,49 @@ class OFP_Property_Comms_Bridge {
             );
         }
         self::sms_to( $row, (string) $row->buyer_phone, sprintf( 'Your payment notice of N%s for %s was not confirmed. Reason: %s. You can submit again: %s', $amount, $title, $reason, $link ) );
+    }
+
+    /** Confirm acceptance to the owner without re-sending the buyer's purchase-recorded email. */
+    public static function offer_accepted( int $offer_id, int $purchase_id ): void {
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $row = $wpdb->get_row( $wpdb->prepare(
+            "SELECT o.buyer_name, pr.title AS property_title, c.email AS owner_email, c.owner_name
+             FROM {$p}ofp_property_offers o
+             LEFT JOIN {$p}ofp_properties pr ON pr.id = o.property_id
+             LEFT JOIN {$p}ofp_clients c ON c.id = o.client_id
+             WHERE o.id = %d LIMIT 1",
+            $offer_id
+        ) );
+        if ( ! $row || empty( $row->owner_email ) ) return;
+
+        OFP_Mailer::send(
+            $row->owner_email,
+            $row->owner_name ?: 'there',
+            'Installment offer accepted â€” ' . ( $row->property_title ?: 'Property' ),
+            sprintf( '<p>Hello %s,</p><p><strong>%s</strong> accepted the installment offer for <strong>%s</strong>.</p><p>The purchase has been created and is ready for payment tracking.</p>', esc_html( $row->owner_name ?: 'there' ), esc_html( $row->buyer_name ?: 'The buyer' ), esc_html( $row->property_title ?: 'the property' ) )
+        );
+    }
+
+    /** Send the buyer an explicit completion receipt once the final balance is paid. */
+    public static function purchase_completed( int $purchase_id, int $property_id, float $amount, string $method ): void {
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $row = $wpdb->get_row( $wpdb->prepare(
+            "SELECT pu.buyer_name, pu.buyer_email, pu.total_price, pr.title AS property_title
+             FROM {$p}ofp_property_purchases pu
+             LEFT JOIN {$p}ofp_properties pr ON pr.id = pu.property_id
+             WHERE pu.id = %d LIMIT 1",
+            $purchase_id
+        ) );
+        if ( ! $row || empty( $row->buyer_email ) ) return;
+
+        OFP_Mailer::send(
+            $row->buyer_email,
+            $row->buyer_name ?: 'there',
+            'Purchase completed â€” ' . ( $row->property_title ?: 'Property' ),
+            sprintf( '<p>Hello %s,</p><p>Your payment plan for <strong>%s</strong> is now <strong>fully paid</strong>.</p><p>Total purchase amount: <strong>â‚¦%s</strong>.</p><p>Thank you. Please keep this email as confirmation of completion.</p>', esc_html( $row->buyer_name ?: 'there' ), esc_html( $row->property_title ?: 'the property' ), number_format( (float) $row->total_price, 2 ) )
+        );
     }
 
     private static function sms_to( object $row, string $phone, string $message ): void {

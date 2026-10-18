@@ -550,8 +550,8 @@ class OFP_Property_Commerce {
         $p = $wpdb->prefix;
 
         $purchases = $purchase_id > 0
-            ? $wpdb->get_results( $wpdb->prepare( "SELECT id, total_price, amount_paid, balance, status FROM {$p}ofp_property_purchases WHERE id = %d", $purchase_id ) )
-            : $wpdb->get_results( "SELECT id, total_price, amount_paid, balance, status FROM {$p}ofp_property_purchases" );
+            ? $wpdb->get_results( $wpdb->prepare( "SELECT id, property_id, total_price, amount_paid, balance, status FROM {$p}ofp_property_purchases WHERE id = %d", $purchase_id ) )
+            : $wpdb->get_results( "SELECT id, property_id, total_price, amount_paid, balance, status FROM {$p}ofp_property_purchases" );
 
         if ( empty( $purchases ) ) {
             return;

@@ -1635,7 +1635,7 @@ class OFP_Admin_Menu {
             if ( ! is_array( $details ) ) $details = [];
 
             $subject   = $details['subject'] ?? ( 'Notification from ' . ( $client ? ( $client->business_name ?: OFP_Brand::name() ) : OFP_Brand::name() ) );
-            $body_text = $details['message'] ?? ( $details['body'] ?? ( $details['content'] ?? '' ) );
+            $body_text = $details['body'] ?? ( $details['message'] ?? ( $details['content'] ?? '' ) );
             if ( empty( $body_text ) ) {
                 $body_text = 'This email was delivered via SMTP with subject: ' . $subject;
             }
@@ -1656,16 +1656,17 @@ class OFP_Admin_Menu {
             if ( $comm->client_id ) {
                 $client = OFP_Client::get( (int) $comm->client_id );
             }
-            $body_text = $comm->message ?? 'No content available.';
-            $subject   = 'Communication Notice';
-            $to        = $comm->lead_email ?: ( $comm->lead_phone ?: 'Recipient' );
+            $body_text = $comm->email_body_html ?: ( $comm->message ?? 'No content available.' );
+            $subject   = $comm->email_subject ?: 'Communication Notice';
+            $to        = $comm->recipient ?: ( $comm->lead_email ?: ( $comm->lead_phone ?: 'Recipient' ) );
             $sent_at   = wp_date( 'M j, Y g:i A', strtotime( $comm->sent_at ) );
             $action    = strtoupper( $comm->type ) . ' Dispatched';
         } else {
             wp_send_json_error( 'Missing record identifier.' );
         }
 
-        $formatted_body = wpautop( esc_html( $body_text ) );
+        $has_html_tags = $body_text && preg_match( '/<\/?[a-z][^>]*>/i', $body_text );
+        $formatted_body = $has_html_tags ? wp_kses_post( $body_text ) : wpautop( esc_html( $body_text ) );
         $full_html      = OFP_Mailer::wrap_in_client_template( $client, $subject, $formatted_body );
 
         wp_send_json_success( [
@@ -1717,9 +1718,9 @@ class OFP_Admin_Menu {
                 wp_send_json_error( 'Communications record not found.' );
             }
             $client_id = $comm->client_id ? (int) $comm->client_id : null;
-            $to        = $override_recipient ?: ( $comm->lead_email ?? '' );
-            $subject   = 'Notification from ' . OFP_Brand::name();
-            $body_text = $comm->message ?? '';
+            $to        = $override_recipient ?: ( $comm->recipient ?: ( $comm->lead_email ?? '' ) );
+            $subject   = $comm->email_subject ?: ( 'Notification from ' . OFP_Brand::name() );
+            $body_text = $comm->email_body_html ?: ( $comm->message ?? '' );
         } else {
             wp_send_json_error( 'Missing record identifier.' );
         }
@@ -1736,7 +1737,7 @@ class OFP_Admin_Menu {
         if ( $client_id ) {
             $sent = OFP_Mailer::send_client_email( $to, $subject, $body_text, $client_id );
         } else {
-            $sent = OFP_Mailer::send( $to, $subject, $body_text );
+            $sent = OFP_Mailer::send( $to, 'Recipient', $subject, $body_text );
         }
 
         if ( $sent ) {
