@@ -1366,7 +1366,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                     <p>Verifies Nigerian CAC business registrations and NIN/BVN identities for real estate clients and agents.</p>
                                 </div>
                             </div>
-                            <?php if ( ! empty( $prembly_app_id ) && $has_prembly_sec ) : ?>
+                            <?php if ( $has_prembly_sec ) : ?>
                                 <span class="ofp-pill ofp-pill-ready"><?php echo $prembly_env === 'live' ? 'Live Production' : 'Sandbox Active'; ?></span>
                             <?php else : ?>
                                 <span class="ofp-pill ofp-pill-missing">Not Configured</span>
@@ -1375,13 +1375,13 @@ include OFP_PATH . 'admin/views/partials/header.php';
                         <div class="ofp-card-body">
                             <div class="ofp-field-grid">
                                 <div class="ofp-field-group">
-                                    <label class="ofp-field-label">Prembly App ID (app-id)</label>
+                                    <label class="ofp-field-label">Prembly App ID <span style="font-size:11px;font-weight:400;color:var(--ofp-slate-500);">(Optional / Legacy)</span></label>
                                     <div class="ofp-input-box">
                                         <input type="text" name="ofp_prembly_app_id"
                                                value="<?php echo esc_attr( $prembly_app_id ); ?>"
-                                               placeholder="e.g. app_live_... or your Prembly App ID">
+                                               placeholder="Leave blank (only needed for legacy accounts)">
                                     </div>
-                                    <p class="ofp-field-hint">Found in Prembly Dashboard &rarr; API Keys &amp; Webhooks &rarr; App ID.</p>
+                                    <p class="ofp-field-hint">Prembly now uses unified <code>x-api-key</code> authentication. If you only have Secret & Public keys, leave this blank.</p>
                                 </div>
 
                                 <div class="ofp-field-group">
@@ -1391,7 +1391,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                     </div>
                                     <div class="ofp-input-box has-action">
                                         <input type="password" name="ofp_prembly_secret_key" class="ofp-secret-input"
-                                               placeholder="<?php echo $has_prembly_sec ? '••••••••••••••••' : 'sec_live_... or test key'; ?>">
+                                               placeholder="<?php echo $has_prembly_sec ? '••••••••••••••••' : 'live_sk_... or test_sk_...'; ?>">
                                         <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide Key">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                         </button>
@@ -1399,10 +1399,10 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                     <p class="ofp-field-hint">Your <code>x-api-key</code> from Prembly dashboard. Encrypted with AES-256 in database.</p>
                                 </div>
 
-                                <div class="ofp-field-group ofp-field-full">
+                                <div class="ofp-field-group ofp-field-full" style="position:relative; z-index:30;">
                                     <label class="ofp-field-label">Environment Mode</label>
-                                    <div class="ofp-input-box">
-                                        <select name="ofp_prembly_env" class="ofp-select" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--ofp-slate-200); background:#fff; font-size:14px;">
+                                    <div class="ofp-input-box" style="position:relative; z-index:30;">
+                                        <select name="ofp_prembly_env" class="ofp-select" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--ofp-slate-200); background:#fff; font-size:14px; cursor:pointer;">
                                             <option value="test" <?php selected( $prembly_env, 'test' ); ?>>Test Sandbox Mode (Simulated verification, no wallet charge)</option>
                                             <option value="live" <?php selected( $prembly_env, 'live' ); ?>>Live Production Mode (Direct NIMC / NIBSS / CAC queries)</option>
                                         </select>

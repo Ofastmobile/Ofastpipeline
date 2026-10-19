@@ -73,8 +73,11 @@
 
             $trigger.on('click', function(e) {
                 e.stopPropagation();
-                $('.ofp-custom-select-wrapper.open').not($wrapper).removeClass('open');
-                $wrapper.toggleClass('open');
+                var wasOpen = $wrapper.hasClass('open');
+                $('.ofp-custom-select-wrapper.open').removeClass('open').closest('.ofp-card').css('z-index', '');
+                if (!wasOpen) {
+                    $wrapper.addClass('open').closest('.ofp-card').css('z-index', '100');
+                }
             });
 
             $select.on('change', function() {
@@ -88,7 +91,7 @@
         });
 
         $(document).on('click', function() {
-            $('.ofp-custom-select-wrapper.open').removeClass('open');
+            $('.ofp-custom-select-wrapper.open').removeClass('open').closest('.ofp-card').css('z-index', '');
         });
     }
 

@@ -65,7 +65,7 @@ class OFP_Prembly {
     }
 
     public static function is_configured(): bool {
-        return ! empty( self::get_api_key() ) && ! empty( self::get_app_id() );
+        return ! empty( self::get_api_key() );
     }
 
     /**
@@ -106,14 +106,18 @@ class OFP_Prembly {
             $company_type = 'IT';
         }
 
+        $headers = [
+            'x-api-key'    => $api_key,
+            'Content-Type' => 'application/json',
+            'Accept'       => 'application/json',
+        ];
+        if ( ! empty( $app_id ) ) {
+            $headers['app-id'] = $app_id;
+        }
+
         $res = wp_remote_post( $endpoint, [
             'timeout' => 20,
-            'headers' => [
-                'x-api-key'    => $api_key,
-                'app-id'       => $app_id,
-                'Content-Type' => 'application/json',
-                'Accept'       => 'application/json',
-            ],
+            'headers' => $headers,
             'body' => wp_json_encode( [
                 'rc_number'    => preg_replace( '/^[A-Za-z]+/', '', $rc_clean ) ?: $rc_clean,
                 'company_type' => $company_type,
@@ -165,14 +169,18 @@ class OFP_Prembly {
         }
 
         $endpoint = 'https://api.prembly.com/identitypass/verification/nin';
+        $headers = [
+            'x-api-key'    => $api_key,
+            'Content-Type' => 'application/json',
+            'Accept'       => 'application/json',
+        ];
+        if ( ! empty( $app_id ) ) {
+            $headers['app-id'] = $app_id;
+        }
+
         $res = wp_remote_post( $endpoint, [
             'timeout' => 20,
-            'headers' => [
-                'x-api-key'    => $api_key,
-                'app-id'       => $app_id,
-                'Content-Type' => 'application/json',
-                'Accept'       => 'application/json',
-            ],
+            'headers' => $headers,
             'body' => wp_json_encode( [
                 'number' => $nin_clean,
             ] ),
@@ -221,14 +229,18 @@ class OFP_Prembly {
         }
 
         $endpoint = 'https://api.prembly.com/identitypass/verification/bvn';
+        $headers = [
+            'x-api-key'    => $api_key,
+            'Content-Type' => 'application/json',
+            'Accept'       => 'application/json',
+        ];
+        if ( ! empty( $app_id ) ) {
+            $headers['app-id'] = $app_id;
+        }
+
         $res = wp_remote_post( $endpoint, [
             'timeout' => 20,
-            'headers' => [
-                'x-api-key'    => $api_key,
-                'app-id'       => $app_id,
-                'Content-Type' => 'application/json',
-                'Accept'       => 'application/json',
-            ],
+            'headers' => $headers,
             'body' => wp_json_encode( [
                 'number' => $bvn_clean,
             ] ),

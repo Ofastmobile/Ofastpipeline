@@ -835,7 +835,8 @@
     border-radius: var(--ofp-radius);
     box-shadow: var(--ofp-card-shadow);
     margin-bottom: 24px;
-    overflow: hidden;
+    overflow: visible;
+    position: relative;
     transition: border-color 0.2s ease;
 }
 
@@ -1653,6 +1654,10 @@
     width: 100%;
 }
 
+.ofp-custom-select-wrapper.open {
+    z-index: 99999 !important;
+}
+
 .ofp-custom-select-wrapper select {
     display: none !important;
 }
@@ -1705,8 +1710,8 @@
     background: var(--bg-card, #fff);
     border: 1px solid var(--border-color, #e5e7eb);
     border-radius: 8px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-    z-index: 99;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+    z-index: 999999 !important;
     max-height: 250px;
     overflow-y: auto;
     opacity: 0;
