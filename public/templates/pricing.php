@@ -28,6 +28,15 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
 
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
+    <?php 
+    $is_solo = ! empty( $client->is_white_label ) || ( class_exists('OFP_Subscription') && OFP_Subscription::is_unlimited( (int) $client->id ) );
+    if ( $is_solo ) : ?>
+        <div style="max-width:1100px; margin:0 auto 24px; padding:16px 20px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.25); border-radius:12px; color:#10b981; display:flex; align-items:center; gap:12px; font-weight:600;">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span>You are on the <strong>Premium White-Label</strong> tier. Your account includes unlimited property listings, unlimited team members, and priority platform access.</span>
+        </div>
+    <?php endif; ?>
+
     <div class="ofp-pricing-grid">
         
         <?php
@@ -91,11 +100,11 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
         ];
 
         foreach ( $plans as $id => $p ) :
-            $is_active = ( $id === $current_plan );
+            $is_active = $is_solo ? ( $id === 'gold' ) : ( $id === $current_plan );
         ?>
         <div class="ofp-pricing-card <?php echo $is_active ? 'is-active' : ''; ?>">
             <?php if ( $is_active ) : ?>
-                <div class="ofp-active-badge">Active Plan</div>
+                <div class="ofp-active-badge"><?php echo $is_solo ? 'Active: Premium Unlimited' : 'Active Plan'; ?></div>
             <?php endif; ?>
             <div class="ofp-pricing-header">
                 <div class="ofp-pricing-title"><?php echo esc_html($p['name']); ?> Plan</div>
@@ -112,25 +121,31 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
             </ul>
             <div class="ofp-pricing-action">
                 <?php 
-                // Rank the plans so we know what is an upgrade vs downgrade
-                $plan_ranks = ['free' => 1, 'silver' => 2, 'gold' => 3];
-                $current_rank = $plan_ranks[$current_plan] ?? 1;
-                $this_rank = $plan_ranks[$id] ?? 1;
+                if ( $is_solo ) : ?>
+                    <button class="ofp-btn" disabled style="width:100%; opacity:0.85; cursor:default; background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.25); font-weight:600;">
+                        <?php echo $id === 'gold' ? 'Active (Unlimited)' : 'Included in Premium'; ?>
+                    </button>
+                <?php else :
+                    // Rank the plans so we know what is an upgrade vs downgrade
+                    $plan_ranks = ['free' => 1, 'silver' => 2, 'gold' => 3];
+                    $current_rank = $plan_ranks[$current_plan] ?? 1;
+                    $this_rank = $plan_ranks[$id] ?? 1;
 
-                if ( $id === 'free' ) : ?>
-                    <?php if ( $is_active ) : ?>
-                        <button class="ofp-btn" disabled style="width:100%; opacity:0.7; cursor:default;">Currently Active</button>
-                    <?php endif; // Free has no select button otherwise ?>
-                <?php elseif ( $is_active ) : ?>
-                    <?php if ( $days_to_expiry <= 7 ) : ?>
-                        <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn-accent">Renew <?php echo esc_html($p['name']); ?></a>
+                    if ( $id === 'free' ) : ?>
+                        <?php if ( $is_active ) : ?>
+                            <button class="ofp-btn" disabled style="width:100%; opacity:0.7; cursor:default;">Currently Active</button>
+                        <?php endif; // Free has no select button otherwise ?>
+                    <?php elseif ( $is_active ) : ?>
+                        <?php if ( $days_to_expiry <= 7 ) : ?>
+                            <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn-accent">Renew <?php echo esc_html($p['name']); ?></a>
+                        <?php else : ?>
+                            <button class="ofp-btn" disabled style="width:100%; opacity:0.7; cursor:default;">Currently Active</button>
+                        <?php endif; ?>
+                    <?php elseif ( $this_rank < $current_rank && $days_to_expiry > 7 ) : ?>
+                        <button class="ofp-btn" disabled style="width:100%; opacity:0.5; cursor:not-allowed;">Locked</button>
                     <?php else : ?>
-                        <button class="ofp-btn" disabled style="width:100%; opacity:0.7; cursor:default;">Currently Active</button>
+                        <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn-accent">Select <?php echo esc_html($p['name']); ?></a>
                     <?php endif; ?>
-                <?php elseif ( $this_rank < $current_rank && $days_to_expiry > 7 ) : ?>
-                    <button class="ofp-btn" disabled style="width:100%; opacity:0.5; cursor:not-allowed;">Locked</button>
-                <?php else : ?>
-                    <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn-accent">Select <?php echo esc_html($p['name']); ?></a>
                 <?php endif; ?>
             </div>
         </div>

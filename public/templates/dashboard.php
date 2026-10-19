@@ -425,7 +425,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             </div>
 
             <div>
-                <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn ofp-btn-primary" style="width:100%; text-align:center; display:block;">
+                <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>" class="ofp-btn ofp-promo-action-btn" style="width:100%; text-align:center; display:block; background:#10b981 !important; color:#ffffff !important; border:1px solid #059669 !important; font-weight:600; box-shadow:0 4px 14px rgba(16, 185, 129, 0.35) !important;">
                     Manage Credits →
                 </a>
             </div>

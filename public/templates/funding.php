@@ -354,7 +354,13 @@ $listing_prices = [
     //  Any paid, ≤ 7 days   → show card with both Silver & Gold (renew / switch)
     $has_active_paid_plan = in_array( $current_plan, [ 'silver', 'gold' ], true );
 
-    if ( ! $has_active_paid_plan ) {
+    $is_solo_client = ! empty( $client->is_white_label ) || ( class_exists( 'OFP_Subscription' ) && OFP_Subscription::is_unlimited( (int) $client->id ) );
+    if ( $is_solo_client ) {
+        // Solo / White-label clients have unlimited plans and are billed outside the portal
+        $show_listing_card = false;
+        $show_silver       = false;
+        $show_gold         = false;
+    } elseif ( ! $has_active_paid_plan ) {
         // Free client — show both plans, no lock
         $show_listing_card = true;
         $show_silver       = true;

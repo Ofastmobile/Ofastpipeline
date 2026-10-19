@@ -70,35 +70,46 @@ $transactions = $wpdb->get_results(
         </div>
     <?php endif; ?>
 
+    <?php 
+    $is_solo = ! empty( $client->is_white_label ) || ( class_exists( 'OFP_Subscription' ) && OFP_Subscription::is_unlimited( (int) $client->id ) );
+    ?>
     <!-- Credits & Billing 4-KPI Grid -->
     <div class="ofp-zentra-kpi-grid" style="margin-bottom: 32px;">
         <!-- 1. Plan -->
         <div class="ofp-kpi-card ofp-kpi-card-hero">
             <div class="ofp-kpi-title" style="display:flex; justify-content:space-between; align-items:center;">
                 <span>Subscription Plan</span>
-                <?php if ( $client->status === 'active' ) : ?>
+                <?php if ( $client->status === 'active' || $is_solo ) : ?>
                     <span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#34d399;">
                         <span class="ofp-status-dot-pulse" style="width:7px; height:7px;"></span> Active
                     </span>
                 <?php endif; ?>
             </div>
-            <div class="ofp-kpi-value"><?php echo esc_html( strtoupper( OFP_Subscription::client_plan( $client->id ) ) ); ?></div>
+            <div class="ofp-kpi-value"><?php echo $is_solo ? 'PREMIUM' : esc_html( strtoupper( OFP_Subscription::client_plan( $client->id ) ) ); ?></div>
             <div class="ofp-kpi-badge badge-hero">
                 <span class="ofp-status-dot-pulse" style="width:6px; height:6px;"></span>
-                <span><?php echo esc_html( ucfirst( str_replace( '_', ' ', $client->status ) ) ); ?> Status</span>
+                <span><?php echo $is_solo ? 'Lifetime Access' : esc_html( ucfirst( str_replace( '_', ' ', $client->status ) ) ) . ' Status'; ?></span>
             </div>
         </div>
 
-        <!-- 2. Expires -->
+        <!-- 2. Expires / Validity -->
         <div class="ofp-kpi-card">
-            <div class="ofp-kpi-title">Subscription Expires</div>
+            <div class="ofp-kpi-title"><?php echo $is_solo ? 'Subscription Validity' : 'Subscription Expires'; ?></div>
             <div class="ofp-kpi-value" style="font-size: 20px;">
-                <?php echo esc_html( $client->subscription_expires ? gmdate( 'M j, Y', strtotime( $client->subscription_expires ) ) : '—' ); ?>
+                <?php 
+                if ( $is_solo ) {
+                    echo 'Unlimited';
+                } else {
+                    echo esc_html( $client->subscription_expires ? gmdate( 'M j, Y', strtotime( $client->subscription_expires ) ) : '—' );
+                }
+                ?>
             </div>
             <div class="ofp-kpi-badge badge-purple">
                 <span>
                     <?php 
-                    if ( $client->subscription_expires ) {
+                    if ( $is_solo ) {
+                        echo 'Never Expires';
+                    } elseif ( $client->subscription_expires ) {
                         $diff_days = round( ( strtotime( $client->subscription_expires ) - time() ) / DAY_IN_SECONDS );
                         echo $diff_days > 0 ? $diff_days . ' days remaining' : 'Renewal due';
                     } else {

@@ -6754,6 +6754,27 @@ html.dark .ofp-input-unit-tag {
     color: #94a3b8;
 }
 
+.ofp-promo-card .ofp-btn,
+.ofp-promo-card .ofp-promo-action-btn,
+.ofp-promo-card .ofp-btn-primary {
+    background: #10b981 !important;
+    color: #ffffff !important;
+    border: 1px solid #059669 !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+    transition: all 0.2s ease !important;
+}
+
+.ofp-promo-card .ofp-btn:hover,
+.ofp-promo-card .ofp-promo-action-btn:hover,
+.ofp-promo-card .ofp-btn-primary:hover {
+    background: #059669 !important;
+    border-color: #047857 !important;
+    color: #ffffff !important;
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45) !important;
+    transform: translateY(-1px) !important;
+}
+
 /* High Density Data Table Card */
 .ofp-table-card {
     background: var(--bg-card, #1e2638);
