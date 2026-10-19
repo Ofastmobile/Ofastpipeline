@@ -12,17 +12,17 @@
  */
 
 :root {
-    --hoomeee-bg: #f4f6f8;
+    --hoomeee-bg: #ffffff;
     --hoomeee-card: #ffffff;
-    --hoomeee-text-main: #111827;
-    --hoomeee-text-muted: #6b7280;
-    --hoomeee-text-light: #9ca3af;
-    --hoomeee-green: #00a86b;
-    --hoomeee-green-light: rgba(0, 168, 107, 0.1);
-    --hoomeee-border: #eef1f5;
+    --hoomeee-text-main: #0f172a;
+    --hoomeee-text-muted: #1e293b;
+    --hoomeee-text-light: #475569;
+    --hoomeee-green: #00875a;
+    --hoomeee-green-light: rgba(0, 135, 90, 0.1);
+    --hoomeee-border: #e2e8f0;
     --hoomeee-radius-card: 24px;
     --hoomeee-radius-inner: 20px;
-    --hoomeee-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+    --hoomeee-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
 }
 
 * {
@@ -30,7 +30,7 @@
 }
 
 body.ofp-agent-page-body {
-    background-color: var(--hoomeee-bg);
+    background-color: #ffffff;
     color: var(--hoomeee-text-main);
     margin: 0;
     padding: 0;
@@ -380,21 +380,39 @@ body.ofp-agent-page-body {
 
 .ofp-desc-heading {
     font-size: 22px;
-    font-weight: 700;
-    color: var(--hoomeee-text-main);
-    margin: 0 0 14px;
-    letter-spacing: -0.3px;
+    font-weight: 800;
+    color: #0f172a !important;
+    margin: 0 0 16px;
+    letter-spacing: -0.02em;
+}
+
+.ofp-desc-heading span:not(.ofp-heading-bar) {
+    color: #0f172a !important;
 }
 
 .ofp-desc-text {
-    font-size: 14.5px;
-    line-height: 1.8;
-    color: var(--hoomeee-text-muted);
+    font-size: 16px !important;
+    line-height: 1.85 !important;
+    font-weight: 500 !important;
+    color: #0f172a !important;
     margin-bottom: 24px;
+    letter-spacing: -0.011em;
+    text-align: justify;
+    text-justify: inter-word;
 }
 
 .ofp-desc-text p {
-    margin: 0 0 12px;
+    margin: 0 0 14px !important;
+    color: #0f172a !important;
+    font-weight: 500 !important;
+    font-size: 16px !important;
+    line-height: 1.85 !important;
+    text-align: justify;
+    text-justify: inter-word;
+}
+
+.ofp-desc-text p:last-child {
+    margin-bottom: 0 !important;
 }
 
 /* ── Social Media Section (Replaces 3 Highlight Badges) ──────────────────── */
@@ -481,4 +499,29 @@ body.ofp-agent-page-body {
 .ofp-clean-footer p {
     margin: 0;
     line-height: 1.6;
+}
+
+/* ── Clean Neutral White Canvas & Cards ──────────────────────────────────── */
+body.ofp-agent-page-body {
+    background-color: #ffffff !important;
+    color: #0f172a;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.ofp-agent-showcase-card {
+    background: #ffffff !important;
+    border-radius: var(--hoomeee-radius-card);
+    box-shadow: var(--hoomeee-shadow);
+    padding: 24px;
+    margin-bottom: 28px;
+    border: 1px solid var(--hoomeee-border);
+}
+
+.ofp-properties-section-card {
+    background: #ffffff !important;
+    border: 1px solid var(--hoomeee-border);
 }

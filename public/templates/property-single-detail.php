@@ -85,8 +85,10 @@ $agent = null;
 if ( $client_id ) {
     $agent = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1", $client_id ) );
 }
-$agent_name    = $agent ? ( $agent->owner_name ?: $agent->business_name ) : get_bloginfo( 'name' );
-$agent_company = $agent ? ( $agent->business_name ?: 'Verified Partner' ) : 'Internal Listing';
+$is_agent_verified    = $agent && ! empty( $agent->is_verified );
+$is_property_verified = ! empty( get_post_meta( $post_id, 'ofp_is_verified', true ) ) || $is_agent_verified;
+$agent_name           = $agent ? ( $agent->owner_name ?: $agent->business_name ) : get_bloginfo( 'name' );
+$agent_company        = $agent ? ( $agent->business_name ?: ( $is_agent_verified ? 'Verified Partner' : 'Property Host' ) ) : 'Internal Listing';
 $agent_phone   = $agent ? $agent->phone : '';
 $clean_phone   = preg_replace( '/[^0-9]/', '', $agent_phone );
 if ( strpos( $clean_phone, '0' ) === 0 ) {
@@ -409,6 +411,8 @@ if ( empty( $gallery_urls ) ) {
             line-height: 1.85;
             font-weight: 500;
             letter-spacing: -0.01em;
+            text-align: justify;
+            text-justify: inter-word;
         }
         .dark .ofp-property-description {
             color: #f1f5f9 !important; /* Crisp luminous slate-100 */
@@ -418,6 +422,8 @@ if ( empty( $gallery_urls ) ) {
             color: inherit;
             font-weight: 500;
             line-height: 1.85;
+            text-align: justify;
+            text-justify: inter-word;
         }
         .ofp-property-description strong,
         .ofp-property-description b {
@@ -748,14 +754,16 @@ if ( empty( $gallery_urls ) ) {
                         Available
                     </span>
                 <?php endif; ?>
-                <span
-                    class="bg-emerald-500/90 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Registry Verified
-                </span>
+                <?php if ( ! empty( $is_property_verified ) ) : ?>
+                    <span
+                        class="bg-emerald-500/90 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Registry Verified
+                    </span>
+                <?php endif; ?>
             </div>
 
             <!-- Bottom-left: address + title -->
@@ -898,7 +906,7 @@ if ( empty( $gallery_urls ) ) {
                             <span class="w-1.5 h-5 bg-blue-600 rounded-full inline-block"></span>
                             <span>Property Description</span>
                         </h2>
-                        <div class="ofp-property-description text-slate-900 dark:text-slate-100 font-medium text-[15.5px] leading-relaxed space-y-4">
+                        <div class="ofp-property-description text-slate-900 dark:text-slate-100 font-medium text-[15.5px] leading-relaxed space-y-4 text-justify">
                             <?php the_content(); ?>
                         </div>
                     </div>
@@ -1368,48 +1376,74 @@ if ( empty( $gallery_urls ) ) {
 
                 <!-- Agent Card -->
                 <div
-                    class="bg-[#0B132B] rounded-3xl p-6 border border-slate-800 shadow-2xl shadow-blue-950/30 text-white">
+                    class="bg-white dark:bg-[#0B132B] rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl dark:shadow-blue-950/30 text-slate-900 dark:text-white transition-colors duration-300">
                     <!-- Agent Info Header -->
                     <div class="flex items-center gap-4 mb-6">
                         <div class="relative">
-                            <div class="w-16 h-16 rounded-2xl bg-blue-900/60 ring-2 ring-blue-500/80 flex items-center justify-center text-white font-black text-2xl uppercase tracking-wider"><?php echo esc_html( strtoupper( substr( $agent_name, 0, 1 ) ) ); ?></div>
-                            <!-- Verified Shield Badge -->
-                            <div
-                                class="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-600 rounded-full border-2 border-[#0B132B] flex items-center justify-center text-white shadow">
-                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
-                                    </path>
-                                </svg>
+                            <?php if ( ! empty( $agent_profile_url ) ) : ?>
+                                <a href="<?php echo esc_url( $agent_profile_url ); ?>" class="block group/avatar" title="View <?php echo esc_attr( $agent_name ); ?>'s Profile">
+                            <?php endif; ?>
+                            <div class="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/60 ring-2 ring-blue-500/80 flex items-center justify-center text-blue-600 dark:text-white font-black text-2xl uppercase tracking-wider overflow-hidden shadow-inner group-hover/avatar:ring-blue-400 transition-all">
+                                <?php if ( $agent && ! empty( $agent->logo_url ) ) : ?>
+                                    <img src="<?php echo esc_url( $agent->logo_url ); ?>" alt="<?php echo esc_attr( $agent_name ); ?>" class="w-full h-full object-cover">
+                                <?php else : ?>
+                                    <?php echo esc_html( strtoupper( substr( $agent_name, 0, 1 ) ) ); ?>
+                                <?php endif; ?>
                             </div>
+                            <?php if ( ! empty( $agent_profile_url ) ) : ?>
+                                </a>
+                            <?php endif; ?>
+                            <!-- Verified Shield Badge (Only if verified in profile) -->
+                            <?php if ( ! empty( $is_agent_verified ) ) : ?>
+                                <div
+                                    class="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-600 rounded-full border-2 border-white dark:border-[#0B132B] flex items-center justify-center text-white shadow" title="Verified Business (CAC / Identity Verified)">
+                                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                                        </path>
+                                    </svg>
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <div>
-                            <div class="flex items-center gap-2">
-                                <h3 class="font-extrabold text-lg text-white tracking-tight"><?php echo esc_html( $agent_name ); ?></h3>
-                                <span
-                                    class="bg-blue-900/60 text-blue-400 border border-blue-500/30 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">NIESV</span>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <?php if ( ! empty( $agent_profile_url ) ) : ?>
+                                    <a href="<?php echo esc_url( $agent_profile_url ); ?>" class="group/agent inline-flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="View Profile">
+                                        <h3 class="font-extrabold text-lg text-slate-900 dark:text-white tracking-tight group-hover/agent:underline"><?php echo esc_html( $agent_name ); ?></h3>
+                                        <svg class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 group-hover/agent:text-blue-600 dark:group-hover/agent:text-blue-400 transition-colors shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                    </a>
+                                <?php else : ?>
+                                    <h3 class="font-extrabold text-lg text-slate-900 dark:text-white tracking-tight"><?php echo esc_html( $agent_name ); ?></h3>
+                                <?php endif; ?>
+                                <?php if ( ! empty( $is_agent_verified ) ) : ?>
+                                    <span
+                                        class="bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-500/30 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex items-center gap-1" title="CAC & Identity Verified">
+                                        <svg class="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                        <span>Verified</span>
+                                    </span>
+                                <?php endif; ?>
                             </div>
-                            <p class="text-xs text-slate-400 font-medium mt-0.5"><?php echo esc_html( $agent_company ); ?></p>
-                            <div class="flex items-center gap-1.5 text-xs text-emerald-400 font-medium mt-1">
-                                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5"><?php echo esc_html( $agent_company ); ?></p>
+                            <div class="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                                 <span>Responds in &lt; 15 mins</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Book Inspection Tour Header -->
-                    <div class="border-t border-slate-800/80 pt-5">
-                        <div class="flex items-center gap-2 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-100 mb-3">
-                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <div class="border-t border-slate-200 dark:border-slate-800/80 pt-5">
+                        <div class="flex items-center gap-2 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100 mb-3">
+                            <svg class="w-4 h-4 text-blue-600 dark:text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                             </svg>
                             <span>SCHEDULE INSPECTION &amp; INQUIRY</span>
                         </div>
 
                         <?php if ( ! empty( $status_ctx['is_occupied'] ) || ! empty( $status_ctx['is_taken'] ) ) : ?>
-                            <div class="mb-3.5 p-3 rounded-2xl <?php echo ! empty( $status_ctx['is_occupied'] ) ? 'bg-purple-950/60 border border-purple-500/40 text-purple-200' : 'bg-rose-950/60 border border-rose-500/40 text-rose-200'; ?> text-xs">
-                                <div class="flex items-center gap-1.5 font-bold mb-1 <?php echo ! empty( $status_ctx['is_occupied'] ) ? 'text-purple-300' : 'text-rose-300'; ?>">
+                            <div class="mb-3.5 p-3 rounded-2xl <?php echo ! empty( $status_ctx['is_occupied'] ) ? 'bg-purple-50 border border-purple-200 text-purple-900 dark:bg-purple-950/60 dark:border-purple-500/40 dark:text-purple-200' : 'bg-rose-50 border border-rose-200 text-rose-900 dark:bg-rose-950/60 dark:border-rose-500/40 dark:text-rose-200'; ?> text-xs">
+                                <div class="flex items-center gap-1.5 font-bold mb-1 <?php echo ! empty( $status_ctx['is_occupied'] ) ? 'text-purple-700 dark:text-purple-300' : 'text-rose-700 dark:text-rose-300'; ?>">
                                     <?php if ( ! empty( $status_ctx['is_occupied'] ) ) : ?>
                                         <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                         <span>Notice: Property Currently Occupied</span>
@@ -1429,26 +1463,26 @@ if ( empty( $gallery_urls ) ) {
                         <?php endif; ?>
 
                         <!-- Inspection Schedule Notice Badge -->
-                        <div class="bg-blue-950/40 border border-blue-900/40 rounded-xl p-2.5 mb-3.5 text-[11px] text-slate-300">
-                            <div class="flex items-center gap-1.5 font-bold text-blue-400 mb-0.5">
+                        <div class="bg-blue-50/80 border border-blue-200/80 dark:bg-blue-950/40 dark:border-blue-900/40 rounded-xl p-2.5 mb-3.5 text-[11px] text-slate-700 dark:text-slate-300">
+                            <div class="flex items-center gap-1.5 font-bold text-blue-700 dark:text-blue-400 mb-0.5">
                                 <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 <span><?php echo esc_html( $insp_days ); ?> &bull; <?php echo esc_html( $insp_hours ); ?></span>
                             </div>
                             <?php if ( $insp_notice ) : ?>
-                                <p class="text-slate-400 text-[10px] mt-0.5 leading-tight">Notice: <?php echo esc_html( $insp_notice ); ?></p>
+                                <p class="text-slate-500 dark:text-slate-400 text-[10px] mt-0.5 leading-tight">Notice: <?php echo esc_html( $insp_notice ); ?></p>
                             <?php endif; ?>
                         </div>
 
                         <!-- Tour Type Selector Tabs (Physical vs WhatsApp Video Call) -->
-                        <div class="bg-[#050B18] p-1 rounded-2xl flex gap-1 border border-slate-800/90 mb-4">
+                        <div class="bg-slate-100 dark:bg-[#050B18] p-1 rounded-2xl flex gap-1 border border-slate-200 dark:border-slate-800/90 mb-4">
                             <button type="button" @click="tourType = 'physical'"
-                                :class="tourType === 'physical' ? 'bg-blue-600 text-white font-bold shadow-md border border-blue-400/50' : 'text-slate-400 hover:text-white font-semibold border border-transparent'"
+                                :class="tourType === 'physical' ? 'bg-blue-600 text-white font-bold shadow-md border border-blue-400/50' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-semibold border border-transparent'"
                                 class="flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer">
                                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6m6 0l-3-3m3 3l-3 3"></path></svg>
                                 <span>Physical Tour</span>
                             </button>
                             <button type="button" @click="tourType = 'whatsapp_video'"
-                                :class="tourType === 'whatsapp_video' ? 'bg-[#25D366] text-white font-bold shadow-md border border-emerald-400/50' : 'text-slate-400 hover:text-white font-semibold border border-transparent'"
+                                :class="tourType === 'whatsapp_video' ? 'bg-[#25D366] text-white font-bold shadow-md border border-emerald-400/50' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-semibold border border-transparent'"
                                 class="flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer">
                                 <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
                                     <path fill-rule="evenodd" clip-rule="evenodd" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z" :fill="tourType === 'whatsapp_video' ? '#ffffff' : '#25D366'"/>
@@ -1460,9 +1494,9 @@ if ( empty( $gallery_urls ) ) {
 
                         <!-- Success Message Banner -->
                         <div x-show="inquirySuccess" x-cloak class="space-y-3">
-                            <div class="p-4 bg-emerald-950/80 border border-emerald-500/40 rounded-2xl text-emerald-300 text-xs font-semibold leading-relaxed">
-                                <div class="flex items-center gap-2 font-bold text-sm mb-1 text-emerald-200">
-                                    <svg class="w-4 h-4 shrink-0 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                            <div class="p-4 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-500/40 rounded-2xl text-emerald-800 dark:text-emerald-300 text-xs font-semibold leading-relaxed">
+                                <div class="flex items-center gap-2 font-bold text-sm mb-1 text-emerald-700 dark:text-emerald-200">
+                                    <svg class="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                                     </svg>
                                     Inspection Request Logged!
@@ -1471,7 +1505,7 @@ if ( empty( $gallery_urls ) ) {
                             </div>
 
                             <a :href="cleanWhatsAppUrl" target="_blank"
-                                class="w-full bg-[#25D366] hover:bg-[#20ba59] text-white font-semibold rounded-xl py-2.5 px-4 flex items-center justify-center gap-2 text-xs shadow-md shadow-emerald-950/30 transition-all cursor-pointer">
+                                class="w-full bg-[#25D366] hover:bg-[#20ba59] text-white font-semibold rounded-xl py-2.5 px-4 flex items-center justify-center gap-2 text-xs shadow-md shadow-emerald-600/20 transition-all cursor-pointer">
                                 <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
                                     <path fill-rule="evenodd" clip-rule="evenodd" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z" fill="#ffffff"/>
                                     <path d="M17.84 16.03c-.24.68-1.2 1.26-1.98 1.42-.53.11-1.22.2-3.56-.76-2.99-1.24-4.91-4.28-5.06-4.48-.15-.2-1.2-1.6-1.2-3.05s.76-2.16 1.03-2.46c.27-.3.59-.37.78-.37.2 0 .39 0 .56.01.18.01.42-.07.66.5.24.58.83 2.03.9 2.18.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.18-.32.4-.45.53-.15.15-.31.31-.13.61.18.3.8 1.32 1.72 2.14 1.18 1.05 2.18 1.38 2.48 1.53.3.15.48.13.66-.08.18-.2.76-.89.96-1.19.2-.3.4-.25.66-.15.27.1 1.72.81 2.01.96.3.15.49.22.56.35.07.13.07.73-.17 1.41z" fill="#25D366"/>
@@ -1480,7 +1514,7 @@ if ( empty( $gallery_urls ) ) {
                             </a>
 
                             <button type="button" @click="inquirySuccess = false; inquiryMessage = ''"
-                                class="w-full text-center text-xs text-slate-400 hover:text-white py-2 transition-colors cursor-pointer">
+                                class="w-full text-center text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white py-2 transition-colors cursor-pointer">
                                 Submit another request
                             </button>
                         </div>
@@ -1488,27 +1522,27 @@ if ( empty( $gallery_urls ) ) {
                         <!-- Active Form View -->
                         <div x-show="!inquirySuccess" class="space-y-3">
                             <!-- Error Message Banner -->
-                            <div x-show="inquiryError" x-cloak class="p-3 bg-rose-950/80 border border-rose-500/40 rounded-xl text-rose-300 text-xs font-semibold" x-text="inquiryError"></div>
+                            <div x-show="inquiryError" x-cloak class="p-3 bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/40 rounded-xl text-rose-700 dark:text-rose-300 text-xs font-semibold" x-text="inquiryError"></div>
 
                             <!-- Date & Time Row -->
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Preferred Date</label>
+                                    <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">Preferred Date</label>
                                     <input type="date" x-model="inquiryDate" required
-                                        class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer [color-scheme:dark]">
+                                        class="w-full bg-slate-50 dark:bg-[#050B18] border border-slate-200 dark:border-slate-800/90 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer">
                                 </div>
                                 <div>
-                                    <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Preferred Time</label>
+                                    <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">Preferred Time</label>
                                     <div class="relative">
                                         <select x-model="inquiryTime"
-                                            class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-3 py-2.5 text-xs text-white appearance-none cursor-pointer focus:outline-none focus:border-blue-500 pr-7">
+                                            class="w-full bg-slate-50 dark:bg-[#050B18] border border-slate-200 dark:border-slate-800/90 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 pr-7">
                                             <option value="10:00 AM">10:00 AM</option>
                                             <option value="11:30 AM">11:30 AM</option>
                                             <option value="01:00 PM">01:00 PM</option>
                                             <option value="02:30 PM">02:30 PM</option>
                                             <option value="04:00 PM">04:00 PM</option>
                                         </select>
-                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400 dark:text-slate-500">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
                                         </div>
                                     </div>
@@ -1517,40 +1551,40 @@ if ( empty( $gallery_urls ) ) {
 
                             <!-- Full Name -->
                             <div>
-                                <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Your Full Name</label>
+                                <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">Your Full Name</label>
                                 <input type="text" x-model="inquiryName" placeholder="e.g. Chukwuma Adebayo" required
-                                    class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
+                                    class="w-full bg-slate-50 dark:bg-[#050B18] border border-slate-200 dark:border-slate-800/90 rounded-xl px-4 py-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
                             </div>
 
                             <!-- WhatsApp Phone & Email -->
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">WhatsApp Phone</label>
+                                    <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">WhatsApp Phone</label>
                                     <input type="tel" x-model="inquiryPhone" placeholder="0801 234 5678" required
-                                        class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-3.5 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
+                                        class="w-full bg-slate-50 dark:bg-[#050B18] border border-slate-200 dark:border-slate-800/90 rounded-xl px-3.5 py-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
                                 </div>
                                 <div>
-                                    <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Email Address (Optional)</label>
+                                    <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">Email Address (Optional)</label>
                                     <input type="email" x-model="inquiryEmail" placeholder="you@email.com"
-                                        class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-3.5 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
+                                        class="w-full bg-slate-50 dark:bg-[#050B18] border border-slate-200 dark:border-slate-800/90 rounded-xl px-3.5 py-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
                                 </div>
                             </div>
 
                             <!-- Detailed Request Textarea -->
                             <div>
-                                <label class="text-[11px] font-semibold text-slate-400 mb-1.5 flex items-center justify-between">
+                                <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
                                     <span>Detailed Request / Specific Notes</span>
-                                    <span class="text-[10px] text-blue-400 font-normal">Required for agent dispatch</span>
+                                    <span class="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">Required for agent dispatch</span>
                                 </label>
                                 <textarea x-model="inquiryMessage" rows="3" required
                                     placeholder="Tell the agent what you are looking for (e.g. your budget, move-in date, key questions, or preferences)..."
-                                    class="w-full bg-[#050B18] border border-slate-800/90 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors resize-none leading-relaxed"></textarea>
+                                    class="w-full bg-slate-50 dark:bg-[#050B18] border border-slate-200 dark:border-slate-800/90 rounded-xl px-4 py-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors resize-none leading-relaxed"></textarea>
                             </div>
 
                             <!-- Primary Submit Button -->
                             <div class="pt-1">
                                 <button type="button" @click="submitInquiry('booking')" :disabled="inquiryLoading"
-                                    class="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-blue-600/30 text-sm tracking-wide active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer">
+                                    class="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-blue-600/25 text-sm tracking-wide active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer">
                                     <span x-show="!inquiryLoading || actionLoading !== 'booking'">Book Inspection Tour</span>
                                     <span x-show="inquiryLoading && actionLoading === 'booking'" x-cloak class="flex items-center gap-2">
                                         <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
@@ -1561,15 +1595,15 @@ if ( empty( $gallery_urls ) ) {
 
                             <!-- Divider: Or Connect Directly -->
                             <div class="relative flex py-2 items-center">
-                                <div class="flex-grow border-t border-slate-800"></div>
-                                <span class="flex-shrink mx-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Or Connect With Agent</span>
-                                <div class="flex-grow border-t border-slate-800"></div>
+                                <div class="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+                                <span class="flex-shrink mx-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Or Connect With Agent</span>
+                                <div class="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
                             </div>
 
                             <!-- Direct WhatsApp & Call Buttons (Under Form & Textarea with silent lead capture) -->
                             <div class="grid grid-cols-2 gap-2.5">
                                 <button type="button" @click="submitInquiry('whatsapp')" :disabled="inquiryLoading"
-                                    class="bg-[#25D366] hover:bg-[#20ba59] disabled:opacity-50 text-white font-semibold rounded-xl py-2 px-2.5 flex items-center justify-center gap-1.5 text-xs shadow-md shadow-emerald-950/30 transition-all cursor-pointer">
+                                    class="bg-[#25D366] hover:bg-[#20ba59] disabled:opacity-50 text-white font-semibold rounded-xl py-2 px-2.5 flex items-center justify-center gap-1.5 text-xs shadow-md shadow-emerald-600/20 transition-all cursor-pointer">
                                     <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
                                         <path fill-rule="evenodd" clip-rule="evenodd" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z" fill="#ffffff"/>
                                         <path d="M17.84 16.03c-.24.68-1.2 1.26-1.98 1.42-.53.11-1.22.2-3.56-.76-2.99-1.24-4.91-4.28-5.06-4.48-.15-.2-1.2-1.6-1.2-3.05s.76-2.16 1.03-2.46c.27-.3.59-.37.78-.37.2 0 .39 0 .56.01.18.01.42-.07.66.5.24.58.83 2.03.9 2.18.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.18-.32.4-.45.53-.15.15-.31.31-.13.61.18.3.8 1.32 1.72 2.14 1.18 1.05 2.18 1.38 2.48 1.53.3.15.48.13.66-.08.18-.2.76-.89.96-1.19.2-.3.4-.25.66-.15.27.1 1.72.81 2.01.96.3.15.49.22.56.35.07.13.07.73-.17 1.41z" fill="#25D366"/>
@@ -1579,15 +1613,15 @@ if ( empty( $gallery_urls ) ) {
                                 </button>
 
                                 <button type="button" @click="submitInquiry('call')" :disabled="inquiryLoading"
-                                    class="bg-slate-800/80 hover:bg-slate-700/80 disabled:opacity-50 border border-slate-700/70 text-white font-semibold rounded-xl py-2 px-2.5 flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer">
-                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 disabled:opacity-50 border border-slate-200 dark:border-slate-700/70 text-slate-800 dark:text-white font-semibold rounded-xl py-2 px-2.5 flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer shadow-sm">
+                                    <svg class="w-3.5 h-3.5 shrink-0 text-slate-600 dark:text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                                     </svg>
                                     <span x-show="!inquiryLoading || actionLoading !== 'call'" class="truncate">Call Agent</span>
                                     <span x-show="inquiryLoading && actionLoading === 'call'" x-cloak>Connecting...</span>
                                 </button>
                             </div>
-                            <p class="text-[10px] text-center text-slate-500 pt-1">
+                            <p class="text-[10px] text-center text-slate-500 dark:text-slate-400 pt-1">
                                 WhatsApp &amp; Call automatically log your request for instant priority inspection response.
                             </p>
                         </div>
@@ -1595,21 +1629,18 @@ if ( empty( $gallery_urls ) ) {
                 </div>
 
                 <!-- Buyer Safety Diligence Tips Card -->
-                <div class="!mt-6 rounded-2xl border border-amber-800/40 p-4 shadow-xl font-system"
-                    style="background: linear-gradient(145deg, #180d05 0%, #110802 100%); font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';">
-                    <div class="flex items-center justify-between gap-2 mb-1">
-                        <h4 class="text-amber-400 font-bold tracking-tight"
-                            style="font-size: 12px; font-weight: 700;">Buyer Safety Diligence Tips</h4>
-                        <div class="shrink-0 text-amber-500">
+                <div class="!mt-6 rounded-2xl border border-amber-200 dark:border-amber-800/40 bg-amber-50/70 dark:bg-[#180d05] p-4 shadow-sm dark:shadow-xl font-system">
+                    <div class="flex items-center gap-2 mb-1.5">
+                        <div class="shrink-0 text-amber-600 dark:text-amber-500 flex items-center">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
                                 </path>
                             </svg>
                         </div>
+                        <h4 class="text-amber-800 dark:text-amber-400 font-bold tracking-tight text-xs m-0">Buyer Safety Diligence Tips</h4>
                     </div>
-                    <p class="text-amber-500/90 leading-relaxed"
-                        style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; font-size: 11px; font-style: normal; font-weight: 400; font-variant-caps: normal; font-variant-east-asian: normal; font-variant-ligatures: normal; font-variant-numeric: normal;">
+                    <p class="text-amber-900/80 dark:text-amber-500/90 leading-relaxed text-[11px] m-0">
                         Never pay upfront fees before inspection. All purchase payments are secured through
                         institutional escrow accounts pending title deed transfer.
                     </p>

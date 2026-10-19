@@ -954,18 +954,28 @@
                     $ag_comp = 'Apex Capital Realty';
                     $ag_avatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80';
                     $ag_profile_url = home_url( '/agent/' . sanitize_title( $ag_name ) );
+                    $is_card_verified = false;
                     if ( $c_id ) {
                         global $wpdb;
-                        $client_row = $wpdb->get_row( $wpdb->prepare( "SELECT owner_name, business_name, profile_slug FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1", $c_id ) );
+                        $client_row = $wpdb->get_row( $wpdb->prepare( "SELECT owner_name, business_name, profile_slug, is_verified, logo_url FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1", $c_id ) );
                         if ( $client_row ) {
                             $ag_name = $client_row->owner_name ?: $client_row->business_name;
-                            $ag_comp = $client_row->business_name ?: 'Apex Capital Realty';
+                            $ag_comp = $client_row->business_name ?: ( ! empty( $client_row->is_verified ) ? 'Verified Partner' : 'Property Host' );
+                            if ( ! empty( $client_row->logo_url ) ) {
+                                $ag_avatar = $client_row->logo_url;
+                            }
                             if ( ! empty( $client_row->profile_slug ) ) {
                                 $ag_profile_url = home_url( '/agent/' . $client_row->profile_slug );
                             } else {
                                 $ag_profile_url = home_url( '/agent/' . sanitize_title( $ag_name ) );
                             }
+                            if ( ! empty( $client_row->is_verified ) ) {
+                                $is_card_verified = true;
+                            }
                         }
+                    }
+                    if ( ! empty( get_post_meta( $p_id, 'ofp_is_verified', true ) ) ) {
+                        $is_card_verified = true;
                     }
 
                     $cards_data[] = [
@@ -982,7 +992,7 @@
                         'parking'       => get_post_meta( $p_id, 'ofp_parking', true ) ?: '',
                         'sqm'           => get_post_meta( $p_id, 'ofp_area_sqm', true ) ?: '',
                         'title_doc'     => get_post_meta( $p_id, 'ofp_title_document', true ),
-                        'is_verified'   => true,
+                        'is_verified'   => $is_card_verified,
                         'is_featured'   => true,
                         'agent_name'    => $ag_name,
                         'agent_company' => $ag_comp,

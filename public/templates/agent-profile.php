@@ -42,6 +42,8 @@ if ( $client->status !== 'active' ) {
 }
 
 $agent_name = $client->business_name ?: $client->owner_name;
+$is_client_verified = ! empty( $client->is_verified );
+$agent_role = $is_client_verified ? 'Verified Agent' : 'Agent';
 $custom_app_name = trim( (string) get_option( 'ofp_app_name', '' ) );
 if ( ! empty( $custom_app_name ) && ! in_array( strtolower( preg_replace( '/[^a-z0-9]/', '', $custom_app_name ) ), [ 'ofastpipeline' ], true ) ) {
     $app_name = $custom_app_name;
@@ -122,32 +124,38 @@ $properties = new WP_Query( [
     ]
 ] );
 
-// Cover image & featured property metadata for the top banner
+// Check client bank account verification
+$client_bank_accounts = class_exists( 'OFP_Bank_Account' ) ? OFP_Bank_Account::list( (int) $client->id ) : [];
+$has_verified_bank    = ! empty( $client_bank_accounts );
+
+// Count verified properties
+$verified_listings_count = 0;
+if ( $properties->have_posts() ) {
+    foreach ( $properties->posts as $p_post ) {
+        if ( '1' === (string) get_post_meta( $p_post->ID, 'ofp_is_verified', true ) ) {
+            $verified_listings_count++;
+        }
+    }
+}
+
+// Cover image for the top banner
 $featured_cover = ! empty( $client->cover_image_url ) 
     ? $client->cover_image_url 
     : ( OFP_URL . 'assets/images/dashboard-hero-banner.jpg' );
-$featured_title = $agent_name . ' • Featured Real Estate';
-$featured_beds  = '4 Bedroom';
-$featured_baths = '3 Bathroom';
 
-if ( $properties->have_posts() ) {
+// If agent hasn't set an explicit custom cover, use first property thumbnail if available
+if ( empty( $client->cover_image_url ) && $properties->have_posts() ) {
     $first_prop = $properties->posts[0];
-    // Use first property thumbnail only if agent hasn't set an explicit custom cover
-    if ( empty( $client->cover_image_url ) ) {
-        $thumb_id = get_post_meta( $first_prop->ID, 'ofp_main_image', true );
-        if ( $thumb_id ) {
-            $img_src = wp_get_attachment_image_url( $thumb_id, 'full' );
-            if ( $img_src ) {
-                $featured_cover = $img_src;
-            }
+    $thumb_id   = get_post_meta( $first_prop->ID, 'ofp_main_image', true );
+    if ( $thumb_id ) {
+        $img_src = wp_get_attachment_image_url( $thumb_id, 'full' );
+        if ( $img_src ) {
+            $featured_cover = $img_src;
         }
     }
-    $featured_title = get_the_title( $first_prop->ID );
-    $b_count        = get_post_meta( $first_prop->ID, 'ofp_bedrooms', true );
-    if ( $b_count ) $featured_beds = $b_count . ' Bedroom';
-    $ba_count       = get_post_meta( $first_prop->ID, 'ofp_bathrooms', true );
-    if ( $ba_count ) $featured_baths = $ba_count . ' Bathroom';
 }
+
+$banner_title = $agent_name . ' • Official Real Estate Portfolio';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -191,11 +199,20 @@ if ( $properties->have_posts() ) {
         </script>
         <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=<?php echo esc_attr( $client->meta_pixel_id ); ?>&ev=PageView&noscript=1"/></noscript>
     <?php endif; ?>
+    <script>
+        (function() {
+            var html = document.documentElement;
+            html.classList.remove('dark');
+            html.classList.add('light');
+            html.setAttribute('data-theme', 'light');
+            try { localStorage.removeItem('ofp_theme'); } catch(e) {}
+        })();
+    </script>
 </head>
-<body class="ofp-agent-page-body bg-slate-50 text-slate-900">
+<body class="ofp-agent-page-body bg-white text-slate-900 min-h-screen flex flex-col">
 
     <!-- ── Main Application Shell ────────────────────────────────────────── -->
-    <div class="ofp-agent-page-container">
+    <div class="ofp-agent-page-container flex-1">
 
         <!-- ── Top Header Navigation Bar (Clean Minimal) ─────────────────── -->
         <header class="ofp-agent-topbar">
@@ -211,42 +228,69 @@ if ( $properties->have_posts() ) {
                     <img src="<?php echo esc_url( $agent_logo ); ?>" alt="<?php echo esc_attr( $agent_name ); ?>" class="ofp-topbar-avatar" onerror="this.src='<?php echo esc_url( OFP_URL . 'assets/images/default-avatar.png' ); ?>';">
                     <div class="ofp-topbar-user-info">
                         <span class="ofp-topbar-user-name"><?php echo esc_html( $agent_name ); ?></span>
-                        <span class="ofp-topbar-user-role">Verified Agent</span>
+                        <span class="ofp-topbar-user-role"><?php echo esc_html( $agent_role ); ?></span>
                     </div>
                 </div>
             </div>
         </header>
 
         <!-- ── Main Showcase Card (Matching Hoomeee Reference) ─────────────── -->
-        <article class="ofp-agent-showcase-card">
+        <article class="ofp-agent-showcase-card bg-white text-slate-900 border border-slate-200">
 
             <!-- ── Featured Property Cover Banner ──────────────────────────── -->
             <div class="ofp-cover-banner" style="background-image: url('<?php echo esc_url( $featured_cover ); ?>');">
                 <!-- Status Badge -->
-                <span class="ofp-cover-badge-available">Available</span>
+                <?php if ( $is_client_verified ) : ?>
+                    <span class="ofp-cover-badge-available" style="background:#10b981; color:#ffffff; font-weight:700;">Verified Agency</span>
+                <?php else : ?>
+                    <span class="ofp-cover-badge-available" style="background:#0f172a; color:#ffffff; font-weight:700;">Official Partner</span>
+                <?php endif; ?>
 
                 <!-- Bottom Image Overlay: Starts AFTER the profile image -->
                 <div class="ofp-cover-overlay-bottom">
                     <div class="ofp-cover-meta-info">
-                        <h2 class="ofp-cover-property-title"><?php echo esc_html( $featured_title ); ?></h2>
+                        <h2 class="ofp-cover-property-title"><?php echo esc_html( $banner_title ); ?></h2>
                         <div class="ofp-cover-specs">
-                            <span class="ofp-spec-item">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                                <?php echo esc_html( $featured_beds ); ?>
+                            <!-- Verified Listings Pill -->
+                            <span class="ofp-spec-item" title="Properties listed by this agency">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                                <?php if ( $verified_listings_count > 0 ) : ?>
+                                    <?php echo (int) $verified_listings_count; ?> Verified Listings
+                                <?php else : ?>
+                                    <?php echo (int) $properties->found_posts; ?> Property Listings
+                                <?php endif; ?>
                             </span>
-                            <span class="ofp-spec-item">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                                <?php echo esc_html( $featured_baths ); ?>
-                            </span>
-                            <span class="ofp-spec-item">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" /></svg>
-                                Verified Listings
-                            </span>
+
+                            <!-- Verified Bank Details Pill -->
+                            <?php if ( $has_verified_bank ) : ?>
+                                <span class="ofp-spec-item text-emerald-300" style="border-color: rgba(16,185,129,0.4);" title="Bank details verified for direct transfers">
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                                    Verified Bank Details
+                                </span>
+                            <?php else : ?>
+                                <span class="ofp-spec-item" title="Direct contact verified">
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                    Direct Contact Verified
+                                </span>
+                            <?php endif; ?>
+
+                            <!-- Business / Identity Verification Pill -->
+                            <?php if ( $is_client_verified ) : ?>
+                                <span class="ofp-spec-item text-emerald-300" style="border-color: rgba(16,185,129,0.4);" title="Business registry &amp; identity verified">
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                    CAC &amp; Identity Verified
+                                </span>
+                            <?php else : ?>
+                                <span class="ofp-spec-item" title="Registered Real Estate Partner">
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                    Registered Partner
+                                </span>
+                            <?php endif; ?>
                         </div>
                     </div>
 
                     <div class="ofp-cover-tools">
-                        <span class="ofp-pagination-pill">1 of <?php echo max( 1, (int) $properties->found_posts ); ?></span>
+                        <span class="ofp-pagination-pill"><?php echo (int) $properties->found_posts; ?> <?php echo ( (int) $properties->found_posts === 1 ) ? 'Property' : 'Properties'; ?></span>
                     </div>
                 </div>
             </div>
@@ -258,13 +302,22 @@ if ( $properties->have_posts() ) {
                 <div class="ofp-agent-left-col">
                     
                     <!-- Squircle Avatar Overlapping Banner -->
-                    <div class="ofp-squircle-avatar-wrap">
+                    <div class="ofp-squircle-avatar-wrap" style="position:relative;">
                         <img src="<?php echo esc_url( $agent_logo ); ?>" alt="<?php echo esc_attr( $agent_name ); ?>" class="ofp-squircle-avatar-img" onerror="this.src='<?php echo esc_url( OFP_URL . 'assets/images/default-avatar.png' ); ?>';">
+                        <?php if ( $is_client_verified ) : ?>
+                            <div class="ofp-avatar-verified-tick" title="CAC &amp; Identity Verified" style="position:absolute; bottom:6px; right:6px; width:22px; height:22px; background:#10b981; border:2px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.2);">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Agent Name & Owner Badge -->
                     <h3 class="ofp-agent-person-name"><?php echo esc_html( $agent_name ); ?></h3>
-                    <div class="ofp-agent-owner-badge">OWNER</div>
+                    <?php if ( $is_client_verified ) : ?>
+                        <div class="ofp-agent-owner-badge" style="background:#10b981; color:#fff; font-weight:700;">VERIFIED PARTNER</div>
+                    <?php else : ?>
+                        <div class="ofp-agent-owner-badge">AGENT</div>
+                    <?php endif; ?>
 
                     <!-- WhatsApp and Call buttons DIRECTLY UNDER the profile image -->
                     <div class="ofp-avatar-contact-buttons">
@@ -298,8 +351,11 @@ if ( $properties->have_posts() ) {
 
                 <!-- ── Right Column: Description & Social Media from Client Account ─ -->
                 <div class="ofp-agent-right-col">
-                    <h2 class="ofp-desc-heading">Description</h2>
-                    <div class="ofp-desc-text">
+                    <h2 class="ofp-desc-heading text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-4 flex items-center gap-2.5">
+                        <span class="w-1.5 h-5 bg-[#00875A] rounded-full inline-block shrink-0 ofp-heading-bar"></span>
+                        <span class="text-slate-900 dark:text-white" style="color:#0f172a;">About <?php echo esc_html( $agent_name ); ?></span>
+                    </h2>
+                    <div class="ofp-desc-text text-slate-900 dark:text-slate-100 font-medium text-[16px] leading-[1.85] space-y-4 text-justify">
                         <?php echo wpautop( esc_html( $agent_bio ) ); ?>
                     </div>
 
@@ -342,11 +398,11 @@ if ( $properties->have_posts() ) {
         </article>
 
         <!-- ── Available Properties: Using Site Main Card from Marketplace ── -->
-        <section class="ofp-properties-section-card bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] p-6 sm:p-8 mb-8 border border-slate-100">
+        <section class="ofp-properties-section-card bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] p-6 sm:p-8 mb-8 border border-slate-200">
             <div class="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
                 <div>
                     <h3 class="text-xl sm:text-2xl font-bold text-slate-900 m-0">Available Properties</h3>
-                    <p class="text-sm text-slate-500 mt-1 mb-0">Browse verified properties listed by <?php echo esc_html( $agent_name ); ?></p>
+                    <p class="text-sm font-medium text-slate-600 mt-1 mb-0"><?php echo $is_client_verified ? 'Browse verified properties listed by ' : 'Browse properties listed by '; ?><?php echo esc_html( $agent_name ); ?></p>
                 </div>
                 <div class="bg-emerald-50 text-[#00875A] font-bold text-xs sm:text-sm px-4 py-1.5 rounded-full border border-emerald-100">
                     <?php echo (int) $properties->found_posts; ?> Listings
@@ -523,7 +579,7 @@ if ( $properties->have_posts() ) {
                                         </div>
                                         <div>
                                             <p class="text-[13px] font-bold text-slate-900 leading-tight mb-0"><?php echo esc_html( $agent_name ); ?></p>
-                                            <p class="text-[11px] text-slate-500 leading-tight mb-0">Verified Agent</p>
+                                            <p class="text-[11px] text-slate-500 leading-tight mb-0"><?php echo esc_html( $agent_role ); ?></p>
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1.5">
@@ -548,12 +604,113 @@ if ( $properties->have_posts() ) {
             <?php endif; ?>
         </section>
 
-        <!-- ── Clean Minimal Footer ──────────────────────────────────────── -->
-        <footer class="ofp-clean-footer">
-            <p>&copy; <?php echo esc_html( date( 'Y' ) ); ?> <?php echo esc_html( $agent_name ); ?>. All rights reserved. Powered by <?php echo esc_html( $app_name ); ?>.</p>
-        </footer>
-
     </div> <!-- /.ofp-agent-page-container -->
+
+    <!-- ── Comprehensive Official Site Footer (Resting Solidly at Viewport Bottom) ── -->
+    <footer class="w-full bg-slate-50 text-slate-600 mt-auto border-t border-slate-200"
+        style="font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,'Helvetica Neue','Noto Sans',Arial,sans-serif;font-size:12px;font-weight:400">
+        <!-- Top Subscription Area -->
+        <div class="border-b border-slate-200 py-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div>
+                    <h3 style="font-size:16px;font-weight:700" class="text-slate-900 mb-2">Get Off-Market Real Estate Alerts &amp; Price Drops</h3>
+                    <p class="text-slate-500">Join over 24,000 verified investors and homebuyers receiving weekly curated deals in Nigeria.</p>
+                </div>
+                <form class="flex w-full md:w-auto gap-4" onsubmit="event.preventDefault(); alert('Subscribed to alerts!');">
+                    <input type="email" placeholder="Enter your email address"
+                        class="w-full md:w-72 bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:border-blue-500"
+                        style="font-size:12px" required>
+                    <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-lg transition-colors cursor-pointer whitespace-nowrap flex items-center gap-2">
+                        Subscribe <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main Footer Links -->
+        <div class="py-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr] gap-8 lg:gap-10">
+                    <!-- Column 1: Brand & Contact -->
+                    <div>
+                        <a href="<?php echo esc_url( home_url('/') ); ?>" class="flex items-center gap-2 mb-6">
+                            <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-sm">
+                                <?php echo esc_html( strtoupper( substr( OFP_Brand::public_name_text( 'Bofast Homes' ), 0, 1 ) ) ); ?>
+                            </div>
+                            <span style="font-size:16px;font-weight:700" class="tracking-tight text-slate-900">
+                                <?php echo esc_html( OFP_Brand::public_name_text( 'Bofast Homes' ) ); ?>
+                            </span>
+                        </a>
+                        <p class="text-slate-500 leading-relaxed mb-6">
+                            Nigeria's leading verified real estate marketplace and integrated broker CRM portal. Fast, transparent property acquisitions.
+                        </p>
+                        <div class="space-y-3 text-slate-500 text-[12px]">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                                <span>Plot 14 Admiralty Way, Lekki Phase 1, Lagos</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <svg class="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                                <span>+234 (01) 888 4000</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <svg class="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                <span>support@propertyportal.ng</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Top Locations -->
+                    <div>
+                        <h4 style="font-weight:700" class="text-slate-900 mb-6 uppercase tracking-wider">Top Locations</h4>
+                        <ul class="space-y-3 text-slate-500 text-[12px]">
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Properties in Lekki Phase 1</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Properties in Ikoyi</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Properties in Victoria Island</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Properties in Maitama Abuja</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Properties in Ikeja GRA</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Column 3: Categories -->
+                    <div>
+                        <h4 style="font-weight:700" class="text-slate-900 mb-6 uppercase tracking-wider">Popular Categories</h4>
+                        <ul class="space-y-3 text-slate-500 text-[12px]">
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Houses for Sale in Lagos</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Flats &amp; Apartments for Rent</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Serviced Luxury Short Lets</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Prime Residential Lands (C of O)</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Grade-A Commercial Offices</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Column 4: Quick Links -->
+                    <div>
+                        <h4 style="font-weight:700" class="text-slate-900 mb-6 uppercase tracking-wider">Portals &amp; Verification</h4>
+                        <ul class="space-y-3 text-slate-500 text-[12px]">
+                            <li><a href="<?php echo esc_url( home_url('/login') ); ?>" class="hover:text-slate-900 transition-colors">Agent &amp; Host Portal Login</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Marketplace Catalog</a></li>
+                            <li><a href="#" class="hover:text-slate-900 transition-colors">Title Due Diligence Service</a></li>
+                            <li><a href="#" class="hover:text-slate-900 transition-colors">Inspection Scheduling Policy</a></li>
+                            <li><a href="#" class="hover:text-slate-900 transition-colors">Privacy Policy &amp; Terms</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="border-t border-slate-200 py-6">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-slate-500 text-xs">
+                <div class="flex items-center gap-2 text-emerald-600">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>All listings verified against state land registry archives.</span>
+                </div>
+                <p>&copy; <?php echo esc_html( date('Y') ); ?> <?php echo esc_html( $agent_name ); ?> &bull; <?php echo OFP_Brand::public_copyright(); ?></p>
+            </div>
+        </div>
+    </footer>
 
     <?php wp_footer(); ?>
 </body>
