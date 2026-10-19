@@ -362,7 +362,7 @@ $whatsapp_url       = ! empty( $extra['whatsapp_url'] ) ? $extra['whatsapp_url']
 $avatar_url = ! empty( $client->logo_url ) ? $client->logo_url : OFP_URL . 'assets/images/default-avatar.png';
 
 // Cover banner image URL
-$default_cover    = OFP_URL . 'assets/images/dashboard-hero-banner.jpg';
+$default_cover    = OFP_URL . 'assets/images/dashboard-hero-banner.webp';
 $cover_url        = ! empty( $client->cover_image_url ) ? $client->cover_image_url : $default_cover;
 $has_custom_cover = ! empty( $client->cover_image_url );
 

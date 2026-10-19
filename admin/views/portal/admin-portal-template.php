@@ -1740,7 +1740,7 @@ $titles = [
                                         <tr>
                                             <td>
                                                 <div class="ofp-user-cell">
-                                                    <img src="<?php echo esc_url( $prop->featured_image ?: OFP_URL . 'assets/images/dashboard-hero-banner.jpg' ); ?>" alt="" class="ofp-user-thumb">
+                                                    <img src="<?php echo esc_url( $prop->featured_image ?: OFP_URL . 'assets/images/dashboard-hero-banner.webp' ); ?>" alt="" class="ofp-user-thumb">
                                                     <div class="ofp-user-meta">
                                                         <span class="ofp-user-title"><?php echo esc_html( $prop->title ); ?></span>
                                                         <span class="ofp-user-sub">#<?php echo esc_html( $prop->id ); ?> • Added <?php echo esc_html( date( 'M j, Y', strtotime( $prop->created_at ) ) ); ?></span>

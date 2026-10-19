@@ -299,7 +299,7 @@ svg { max-width: 100%; box-sizing: border-box; }
 
     <main class="ofp-main">
         <?php
-        $ofp_hero_image_file = 'dashboard-hero-banner.jpg';
+        $ofp_hero_image_file = 'dashboard-hero-banner.webp';
         if ( ! empty( $ofp_hero_banner_image ) ) {
             $ofp_hero_image_file = $ofp_hero_banner_image;
         } else {
@@ -313,12 +313,12 @@ svg { max-width: 100%; box-sizing: border-box; }
                 strpos( $current_url, '/property-payments' ) !== false ||
                 isset( $ofp_sales_tab )
             ) {
-                $ofp_hero_image_file = 'Real Estate Deal Handshake.png';
+                $ofp_hero_image_file = 'Real Estate Deal Handshake.webp';
             } elseif (
                 strpos( $curr_uri, 'tenants' ) !== false ||
                 strpos( $current_url, '/tenants' ) !== false
             ) {
-                $ofp_hero_image_file = 'Keys, Contract, and New Beginnings.png';
+                $ofp_hero_image_file = 'Keys, Contract, and New Beginnings.webp';
             } elseif (
                 strpos( $curr_uri, 'credits' ) !== false ||
                 strpos( $curr_uri, 'pricing' ) !== false ||
@@ -328,7 +328,7 @@ svg { max-width: 100%; box-sizing: border-box; }
                 strpos( $current_url, '/pricing' ) !== false ||
                 strpos( $current_url, '/funding' ) !== false
             ) {
-                $ofp_hero_image_file = 'Miniature House and Coin Stacks.png';
+                $ofp_hero_image_file = 'Miniature House and Coin Stacks.webp';
             } elseif (
                 strpos( $curr_uri, 'properties' ) !== false ||
                 strpos( $curr_uri, 'my-listing' ) !== false ||
@@ -336,24 +336,24 @@ svg { max-width: 100%; box-sizing: border-box; }
                 strpos( $current_url, '/properties' ) !== false ||
                 strpos( $current_url, '/my-listing' ) !== false
             ) {
-                $ofp_hero_image_file = 'oleksandrpidvalnyi-real-estate-6688945_1920.jpg';
+                $ofp_hero_image_file = 'oleksandrpidvalnyi-real-estate-6688945_1920.webp';
             } elseif (
                 strpos( $curr_uri, 'reports' ) !== false ||
                 strpos( $current_url, '/reports' ) !== false
             ) {
-                $ofp_hero_image_file = 'elg21-architecture-10265145_1920.jpg';
+                $ofp_hero_image_file = 'elg21-architecture-10265145_1920.webp';
             } elseif (
                 strpos( $curr_uri, 'leads' ) !== false ||
                 strpos( $current_url, '/leads' ) !== false
             ) {
-                $ofp_hero_image_file = 'pexels-apartment-2179337_1920.jpg';
+                $ofp_hero_image_file = 'pexels-apartment-2179337_1920.webp';
             } elseif (
                 strpos( $curr_uri, 'communications' ) !== false ||
                 strpos( $curr_uri, 'message-templates' ) !== false ||
                 strpos( $current_url, '/communications' ) !== false ||
                 strpos( $current_url, '/message-templates' ) !== false
             ) {
-                $ofp_hero_image_file = '23555986-hallway-9011236_1920.jpg';
+                $ofp_hero_image_file = '23555986-hallway-9011236_1920.webp';
             } elseif (
                 strpos( $curr_uri, 'team' ) !== false ||
                 strpos( $curr_uri, 'pipeline-settings' ) !== false ||
@@ -361,23 +361,23 @@ svg { max-width: 100%; box-sizing: border-box; }
                 strpos( $current_url, '/team' ) !== false ||
                 strpos( $current_url, '/pipeline-settings' ) !== false
             ) {
-                $ofp_hero_image_file = 'ap301805-old-school-building-7576490_1920.jpg';
+                $ofp_hero_image_file = 'ap301805-old-school-building-7576490_1920.webp';
             } elseif (
                 strpos( $curr_uri, 'activity-logs' ) !== false ||
                 strpos( $curr_uri, 'notification' ) !== false ||
                 strpos( $current_url, '/activity-logs' ) !== false ||
                 strpos( $current_url, '/notifications' ) !== false
             ) {
-                $ofp_hero_image_file = 'piro4d-kitchen-1543493_1920.jpg';
+                $ofp_hero_image_file = 'piro4d-kitchen-1543493_1920.webp';
             } elseif (
                 strpos( $curr_uri, 'account' ) !== false ||
                 strpos( $curr_uri, 'profile' ) !== false ||
                 strpos( $current_url, '/account' ) !== false ||
                 strpos( $current_url, '/profile' ) !== false
             ) {
-                $ofp_hero_image_file = 'pexels-house-1836070.jpg';
+                $ofp_hero_image_file = 'pexels-house-1836070.webp';
             } else {
-                $ofp_hero_image_file = 'wal_172619-city-5974876_1920.jpg';
+                $ofp_hero_image_file = 'wal_172619-city-5974876_1920.webp';
             }
         }
         ?>

@@ -72,7 +72,7 @@ if ( ! empty( $client_properties ) ) {
         $price_val = (float) get_post_meta( $p_id, 'ofp_price', true );
         $ltype     = get_post_meta( $p_id, 'ofp_listing_type', true ) ?: 'sale';
         $db_status = get_post_meta( $p_id, 'ofp_status', true ) ?: 'live';
-        $thumb     = get_the_post_thumbnail_url( $p_id, 'medium' ) ?: OFP_URL . 'assets/images/dashboard-hero-banner.jpg';
+        $thumb     = get_the_post_thumbnail_url( $p_id, 'medium' ) ?: OFP_URL . 'assets/images/dashboard-hero-banner.webp';
         $status_ctx = class_exists( 'OFP_Property_CPT' )
             ? OFP_Property_CPT::get_status_context( $p_id )
             : [
@@ -112,7 +112,7 @@ if ( ! empty( $client_properties ) ) {
             'type'      => 'Rent',
             'is_rent'   => true,
             'status'    => 'Occupied',
-            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.jpg',
+            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.webp',
             'link'      => home_url( '/properties' ),
         ],
         [
@@ -124,7 +124,7 @@ if ( ! empty( $client_properties ) ) {
             'type'      => 'Sale',
             'is_rent'   => false,
             'status'    => 'Available',
-            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.jpg',
+            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.webp',
             'link'      => home_url( '/properties' ),
         ],
         [
@@ -136,7 +136,7 @@ if ( ! empty( $client_properties ) ) {
             'type'      => 'Rent',
             'is_rent'   => true,
             'status'    => 'Available',
-            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.jpg',
+            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.webp',
             'link'      => home_url( '/properties' ),
         ],
         [
@@ -148,7 +148,7 @@ if ( ! empty( $client_properties ) ) {
             'type'      => 'Sale',
             'is_rent'   => false,
             'status'    => 'Available',
-            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.jpg',
+            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.webp',
             'link'      => home_url( '/properties' ),
         ],
         [
@@ -160,7 +160,7 @@ if ( ! empty( $client_properties ) ) {
             'type'      => 'Sale',
             'is_rent'   => false,
             'status'    => 'Occupied',
-            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.jpg',
+            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.webp',
             'link'      => home_url( '/properties' ),
         ],
     ];

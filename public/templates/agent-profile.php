@@ -141,7 +141,7 @@ if ( $properties->have_posts() ) {
 // Cover image for the top banner
 $featured_cover = ! empty( $client->cover_image_url ) 
     ? $client->cover_image_url 
-    : ( OFP_URL . 'assets/images/dashboard-hero-banner.jpg' );
+    : ( OFP_URL . 'assets/images/dashboard-hero-banner.webp' );
 
 // If agent hasn't set an explicit custom cover, use first property thumbnail if available
 if ( empty( $client->cover_image_url ) && $properties->have_posts() ) {
@@ -450,7 +450,7 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                                     <?php if ( has_post_thumbnail() ) : ?>
                                         <?php the_post_thumbnail( 'large', [ 'class' => 'w-full h-full object-cover group-hover:scale-105 transition-transform duration-500' ] ); ?>
                                     <?php else : ?>
-                                        <img src="<?php echo esc_url( OFP_URL . 'assets/images/dashboard-hero-banner.jpg' ); ?>"
+                                        <img src="<?php echo esc_url( OFP_URL . 'assets/images/dashboard-hero-banner.webp' ); ?>"
                                             alt="<?php the_title_attribute(); ?>"
                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                                     <?php endif; ?>
