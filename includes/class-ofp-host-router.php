@@ -40,7 +40,10 @@ class OFP_Host_Router {
 	const APP_ROUTES = [
 		'login', 'signup', 'dashboard', 'credits', 'properties', 'tenants',
 		'leads', 'templates', 'team', 'api-settings', 'forgot-password',
-		'reset-password', 'account', 'notifications', 'notification-settings', 'funding'
+		'reset-password', 'account', 'profile', 'notifications', 'notification-settings',
+		'funding', 'pricing', 'inspections', 'pipeline-settings', 'message-templates',
+		'property-sales', 'property-purchases', 'property-payments', 'reports', 'activity-logs',
+		'my-listing'
 	];
 
 	public static function init(): void {
@@ -76,23 +79,34 @@ class OFP_Host_Router {
 	 * @return bool
 	 */
 	public static function is_reserved( string $subdomain_slug ): bool {
-		return in_array( strtolower( trim( $subdomain_slug ) ), self::RESERVED_SUBDOMAINS, true );
+		$slug = strtolower( trim( $subdomain_slug ) );
+		if ( in_array( $slug, self::RESERVED_SUBDOMAINS, true ) ) {
+			return true;
+		}
+		// Also reserve the site's own host subdomain if it has one (e.g. 'supreme')
+		$own_host = preg_replace( '/^www\./', '', strtolower( (string) parse_url( get_option( 'siteurl' ), PHP_URL_HOST ) ) );
+		$base_domain = get_option( 'ofp_crm_base_domain' );
+		if ( $base_domain && str_ends_with( $own_host, '.' . $base_domain ) ) {
+			$own_sub = substr( $own_host, 0, -strlen( '.' . $base_domain ) );
+			if ( $slug === $own_sub ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
 	 * The hostname of this request, lowercase, without a port.
 	 */
-	private static function normalized_host(): string {
+	public static function normalized_host(): string {
 		$host = strtolower( trim( $_SERVER['HTTP_HOST'] ?? '' ) );
 		return preg_replace( '/:\d+$/', '', $host );
 	}
 
 	/**
 	 * Whether the host is this WordPress site's own address.
-	 * Only used when no base domain is set, so the normal site never
-	 * triggers a client lookup.
 	 */
-	private static function is_own_site_host( string $host ): bool {
+	public static function is_own_site_host( string $host ): bool {
 		static $own = null;
 		if ( $own === null ) {
 			$own = preg_replace( '/^www\./', '', strtolower( (string) parse_url( get_option( 'siteurl' ), PHP_URL_HOST ) ) );
@@ -118,7 +132,7 @@ class OFP_Host_Router {
 		static $memo = [];
 
 		$host = self::normalized_host();
-		if ( $host === '' ) {
+		if ( $host === '' || self::is_own_site_host( $host ) ) {
 			return null;
 		}
 		if ( array_key_exists( $host, $memo ) ) {
@@ -224,6 +238,13 @@ class OFP_Host_Router {
 			return preg_replace( '#^https?://[^/]+#', 'https://' . self::current_client_host(), $url );
 		}
 
+		// If visitor is currently on the WordPress site's own host (e.g. supreme.ofastshop.com),
+		// keep them on this site host! Do NOT rewrite away to app.{base_domain}.
+		$current_host = self::normalized_host();
+		if ( self::is_own_site_host( $current_host ) ) {
+			return $url;
+		}
+
 		$base_domain = get_option( 'ofp_crm_base_domain' );
 		if ( ! $base_domain ) {
 			return $url; // option not set yet — fail safe to normal behaviour
@@ -288,6 +309,11 @@ class OFP_Host_Router {
 	public static function current_zone(): string {
 		$host = self::normalized_host();
 
+		// The WordPress site's own address is ALWAYS 'main'.
+		if ( $host === '' || self::is_own_site_host( $host ) ) {
+			return 'main';
+		}
+
 		$base_domain = get_option( 'ofp_crm_base_domain' );
 
 		if ( $base_domain ) {
@@ -295,14 +321,12 @@ class OFP_Host_Router {
 			if ( $host === 'property.' . $base_domain ) return 'property';
 			if ( $host === $base_domain || $host === 'www.' . $base_domain ) return 'main';
 
-			return 'client'; // anything else is assumed to be a client's own subdomain/domain
+			// A subdomain or custom domain: check if an actual registered client exists
+			return self::resolve_host_client() ? 'client' : 'main';
 		}
 
 		// No base domain set: the main site behaves exactly as before.
 		// Only a registered custom domain counts as a client host.
-		if ( $host === '' || self::is_own_site_host( $host ) ) {
-			return 'main';
-		}
 		return self::resolve_host_client() ? 'client' : 'main';
 	}
 }

@@ -318,7 +318,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
                         [ 'id' => $client->id ]
                     );
                     
-                    wp_safe_redirect( add_query_arg( 'success', 'logo', home_url( '/profile' ) ) );
+                    wp_safe_redirect( add_query_arg( 'success', 'logo', home_url( '/account' ) ) );
                     exit;
                 } else {
                     $error = $movefile['error'] ?? 'Failed to move uploaded file.';
@@ -1383,6 +1383,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
 
             fetch('<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>', {
                 method: 'POST',
+                credentials: 'same-origin',
                 body: formData
             })
             .then(res => res.json())
@@ -1448,6 +1449,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
 
             fetch('<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>', {
                 method: 'POST',
+                credentials: 'same-origin',
                 body: formData
             })
             .then(res => res.json())

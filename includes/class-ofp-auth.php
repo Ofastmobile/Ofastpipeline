@@ -230,10 +230,18 @@ class OFP_Auth {
             ]
         );
 
+        $cookie_domain = '';
+        $base_domain = get_option( 'ofp_crm_base_domain' );
+        $current_host = strtolower( trim( preg_replace( '/:\d+$/', '', $_SERVER['HTTP_HOST'] ?? '' ) ) );
+
+        if ( $base_domain && ( $current_host === $base_domain || str_ends_with( $current_host, '.' . $base_domain ) ) ) {
+            $cookie_domain = '.' . ltrim( $base_domain, '.' );
+        }
+
         $cookie_options = [
             'expires'  => time() + self::SESSION_TTL,
             'path'     => '/',
-            'domain'   => '',
+            'domain'   => $cookie_domain,
             'secure'   => is_ssl(),
             'httponly' => true,
             'samesite' => 'Lax',
@@ -281,8 +289,8 @@ class OFP_Auth {
             return null;
         }
 
-        // A client's own domain only serves that client's people.
-        if ( class_exists( 'OFP_Host_Router' ) ) {
+        // A client's own domain only serves that client's people (never blocks on the main WordPress site).
+        if ( class_exists( 'OFP_Host_Router' ) && ! OFP_Host_Router::is_own_site_host( OFP_Host_Router::normalized_host() ) ) {
             $host_client = OFP_Host_Router::current_client_record();
             if ( $host_client && (int) $session->client_id !== (int) $host_client->id && ! self::is_admin_user() ) {
                 return null;
@@ -736,13 +744,33 @@ class OFP_Auth {
     }
 
     private static function clear_cookie(): void {
+        $cookie_domain = '';
+        $base_domain = get_option( 'ofp_crm_base_domain' );
+        $current_host = strtolower( trim( preg_replace( '/:\d+$/', '', $_SERVER['HTTP_HOST'] ?? '' ) ) );
+        if ( $base_domain && ( $current_host === $base_domain || str_ends_with( $current_host, '.' . $base_domain ) ) ) {
+            $cookie_domain = '.' . ltrim( $base_domain, '.' );
+        }
+
         setcookie( self::COOKIE_NAME, '', [
             'expires'  => time() - 3600,
             'path'     => '/',
-            'domain'   => '',
+            'domain'   => $cookie_domain,
             'secure'   => is_ssl(),
             'httponly' => true,
             'samesite' => 'Lax',
         ] );
+        if ( $cookie_domain !== '' ) {
+            setcookie( self::COOKIE_NAME, '', [
+                'expires'  => time() - 3600,
+                'path'     => '/',
+                'domain'   => '',
+                'secure'   => is_ssl(),
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ] );
+        }
+        if ( isset( $_COOKIE[ self::COOKIE_NAME ] ) ) {
+            unset( $_COOKIE[ self::COOKIE_NAME ] );
+        }
     }
 }
