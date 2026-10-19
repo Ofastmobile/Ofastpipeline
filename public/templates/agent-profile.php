@@ -22,8 +22,9 @@ if ( empty( $agent_slug ) ) {
 global $wpdb;
 $client = $wpdb->get_row(
     $wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}ofp_clients WHERE profile_slug = %s LIMIT 1",
-        $agent_slug
+        "SELECT * FROM {$wpdb->prefix}ofp_clients WHERE profile_slug = %s OR id = %d LIMIT 1",
+        $agent_slug,
+        is_numeric( $agent_slug ) ? (int) $agent_slug : 0
     )
 );
 

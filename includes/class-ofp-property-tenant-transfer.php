@@ -272,12 +272,15 @@ class OFP_Property_Tenant_Transfer {
 	}
 
 	/** Links the tenant can use: their lease page (to pay and see receipts) and My Payments. */
-	private static function link_html( object $row ): string {
+	private static function link_html( object $row, string $mp_label = 'View or Download Receipt', string $button_color = '#16a34a' ): string {
 		$html = '';
+		$hub_url = class_exists( 'OFP_Property_My_Payments' )
+			? OFP_Property_My_Payments::url()
+			: home_url( '/my-payments/' );
+		$html .= '<p style="margin:22px 0 10px;"><a href="' . esc_url( $hub_url ) . '" style="display:inline-block;background:' . esc_attr( $button_color ) . ';color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;">' . esc_html( $mp_label ) . '</a></p>';
 		if ( ! empty( $row->offer_token ) ) {
-			$html .= '<p><a href="' . esc_url( home_url( '/tenant-lease/' . rawurlencode( $row->offer_token ) . '/' ) ) . '">Open your lease page</a></p>';
+			$html .= '<p style="margin:0 0 16px;"><a href="' . esc_url( home_url( '/tenant-lease/' . rawurlencode( $row->offer_token ) . '/' ) ) . '" style="color:#2563eb;text-decoration:underline;font-size:14px;">Open your lease page</a></p>';
 		}
-		$html .= '<p><a href="' . esc_url( OFP_Property_My_Payments::url() ) . '">See all your payments and receipts</a></p>';
 		return $html;
 	}
 
@@ -326,7 +329,7 @@ class OFP_Property_Tenant_Transfer {
 				$row->tenant_email,
 				$row->tenant_name ?: 'there',
 				'We received your payment notice — ' . $title,
-				sprintf( '<p>Hello %s,</p><p>We received your notice of <strong>₦%s</strong> for <strong>%s</strong>.</p><p>It is <strong>pending approval</strong>. The owner will confirm it after checking their bank account. You will get a message when it is confirmed.</p>', esc_html( $row->tenant_name ?: 'there' ), esc_html( $amount ), esc_html( $title ) ) . self::link_html( $row )
+				sprintf( '<p>Hello %s,</p><p>We received your notice of <strong>₦%s</strong> for <strong>%s</strong>.</p><p>It is <strong>pending approval</strong>. The owner will confirm it after checking their bank account. You will get a message when it is confirmed.</p>', esc_html( $row->tenant_name ?: 'there' ), esc_html( $amount ), esc_html( $title ) ) . self::link_html( $row, 'View Payment Status', '#2563eb' )
 			);
 		}
 		self::sms_to( $row, (string) $row->tenant_phone, sprintf( 'We got your rent payment notice of N%s for %s. It is pending approval. You will be told when it is confirmed.', $amount, $title ) );
@@ -345,10 +348,11 @@ class OFP_Property_Tenant_Transfer {
 				$row->tenant_email,
 				$row->tenant_name ?: 'there',
 				'Rent payment confirmed — ' . $title,
-				sprintf( '<p>Hello %s,</p><p>Your rent payment of <strong>₦%s</strong> for <strong>%s</strong> is <strong>confirmed</strong>.</p><p>You can see your payment history and download your receipt below.</p>', esc_html( $row->tenant_name ?: 'there' ), esc_html( $paid ), esc_html( $title ) ) . self::link_html( $row )
+				sprintf( '<p>Hello %s,</p><p>Your rent payment of <strong>₦%s</strong> for <strong>%s</strong> is <strong>confirmed</strong>.</p><p>You can see your payment history and download your official receipt below.</p>', esc_html( $row->tenant_name ?: 'there' ), esc_html( $paid ), esc_html( $title ) ) . self::link_html( $row, 'View or Download Receipt', '#16a34a' )
 			);
 		}
-		self::sms_to( $row, (string) $row->tenant_phone, sprintf( 'Your rent payment of N%s for %s is confirmed. Open your lease link to see your receipt.', $paid, $title ) );
+		$hub_url = class_exists( 'OFP_Property_My_Payments' ) ? OFP_Property_My_Payments::url() : home_url( '/my-payments/' );
+		self::sms_to( $row, (string) $row->tenant_phone, sprintf( 'Your rent payment of N%s for %s is confirmed. Receipt: %s', $paid, $title, $hub_url ) );
 	}
 
 	private static function notify_rejected( int $payment_id, string $reason ): void {
@@ -363,7 +367,7 @@ class OFP_Property_Tenant_Transfer {
 				$row->tenant_email,
 				$row->tenant_name ?: 'there',
 				'Rent payment not confirmed — ' . $title,
-				sprintf( '<p>Hello %s,</p><p>Your payment notice of <strong>₦%s</strong> for <strong>%s</strong> was <strong>not confirmed</strong>.</p><p>Reason: %s</p><p>If you did pay, open your lease link and send the notice again with the right details and proof.</p>', esc_html( $row->tenant_name ?: 'there' ), esc_html( $amount ), esc_html( $title ), esc_html( $reason ) ) . self::link_html( $row )
+				sprintf( '<p>Hello %s,</p><p>Your payment notice of <strong>₦%s</strong> for <strong>%s</strong> was <strong>not confirmed</strong>.</p><p>Reason: %s</p><p>If you did pay, open your lease link and send the notice again with the right details and proof.</p>', esc_html( $row->tenant_name ?: 'there' ), esc_html( $amount ), esc_html( $title ), esc_html( $reason ) ) . self::link_html( $row, 'View Payment Status', '#2563eb' )
 			);
 		}
 		self::sms_to( $row, (string) $row->tenant_phone, sprintf( 'Your rent payment notice of N%s for %s was not confirmed. Reason: %s. Open your lease link to send it again.', $amount, $title, $reason ) );

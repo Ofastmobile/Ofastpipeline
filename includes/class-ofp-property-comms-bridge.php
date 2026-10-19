@@ -61,16 +61,19 @@ class OFP_Property_Comms_Bridge {
         if ( ! $row ) return;
 
         $reference = $reference ?: ( $row->gateway_reference ?: 'PAY-' . $row->id );
+        $hub_url   = class_exists( 'OFP_Property_My_Payments' ) ? OFP_Property_My_Payments::url() : home_url( '/my-payments/' );
+        $receipt_btn = '<p style="margin:22px 0 10px;"><a href="' . esc_url( $hub_url ) . '" style="display:inline-block;background:#16a34a;color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;">View or Download Receipt</a></p><p style="color:#64748b;font-size:13px;margin:0 0 16px;">View all your payment history, balance and official receipts anytime on My Payments.</p>';
+
         if ( ! empty( $row->buyer_email ) ) {
             OFP_Mailer::send(
                 $row->buyer_email,
                 $row->buyer_name ?: 'there',
                 'Payment received — ' . ( $row->property_title ?: 'Property' ),
-                sprintf( '<p>Hello %s,</p><p>We received <strong>₦%s</strong> for <strong>%s</strong>.</p><p>Total paid: <strong>₦%s</strong><br>Remaining balance: <strong>₦%s</strong></p><p>Reference: <strong>%s</strong></p>', esc_html( $row->buyer_name ?: 'there' ), number_format( $amount, 2 ), esc_html( $row->property_title ?: 'the property' ), number_format( (float) $row->amount_paid, 2 ), number_format( (float) $row->balance, 2 ), esc_html( $reference ) )
+                sprintf( '<p>Hello %s,</p><p>We received <strong>₦%s</strong> for <strong>%s</strong>.</p><p>Total paid: <strong>₦%s</strong><br>Remaining balance: <strong>₦%s</strong></p><p>Reference: <strong>%s</strong></p>%s', esc_html( $row->buyer_name ?: 'there' ), number_format( $amount, 2 ), esc_html( $row->property_title ?: 'the property' ), number_format( (float) $row->amount_paid, 2 ), number_format( (float) $row->balance, 2 ), esc_html( $reference ), $receipt_btn )
             );
         }
 
-        self::sms( $row, sprintf( 'Payment received: N%s for %s. Paid N%s. Balance N%s. Ref %s.', number_format( $amount, 2 ), $row->property_title ?: 'property', number_format( (float) $row->amount_paid, 2 ), number_format( (float) $row->balance, 2 ), $reference ) );
+        self::sms( $row, sprintf( 'Payment received: N%s for %s. Paid N%s. Balance N%s. Ref %s. Receipt: %s', number_format( $amount, 2 ), $row->property_title ?: 'property', number_format( (float) $row->amount_paid, 2 ), number_format( (float) $row->balance, 2 ), $reference, $hub_url ) );
 
         if ( class_exists( 'OFP_Notification' ) && $row->client_id ) {
             OFP_Notification::create( (int) $row->client_id, 'property_payment_received', 'Property payment received', sprintf( '₦%s received for %s. Remaining balance: ₦%s.', number_format( $amount, 2 ), $row->property_title ?: 'property', number_format( (float) $row->balance, 2 ) ) );
@@ -122,11 +125,13 @@ class OFP_Property_Comms_Bridge {
 
         // Tell the buyer it was received and is waiting.
         if ( ! empty( $row->buyer_email ) ) {
+            $hub_url    = class_exists( 'OFP_Property_My_Payments' ) ? OFP_Property_My_Payments::url() : home_url( '/my-payments/' );
+            $status_btn = '<p style="margin:20px 0 10px;"><a href="' . esc_url( $hub_url ) . '" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;">View Payment Status</a></p><p style="color:#64748b;font-size:13px;margin:0 0 16px;">Track this notice and your complete payment history anytime on My Payments.</p>';
             OFP_Mailer::send(
                 $row->buyer_email,
                 $row->buyer_name ?: 'there',
                 'We received your payment notice — ' . $title,
-                sprintf( '<p>Hello %s,</p><p>We received your notice of <strong>₦%s</strong> for <strong>%s</strong>.</p><p>It is <strong>pending approval</strong>. The owner will confirm it after checking their bank account. You will get a message when it is approved.</p>', esc_html( $row->buyer_name ?: 'there' ), esc_html( $amount ), esc_html( $title ) ) . '<p><a href="' . esc_url( OFP_Property_My_Payments::url() ) . '">See all your payments and receipts</a></p>'
+                sprintf( '<p>Hello %s,</p><p>We received your notice of <strong>₦%s</strong> for <strong>%s</strong>.</p><p>It is <strong>pending approval</strong>. The owner will confirm it after checking their bank account. You will get a message when it is approved.</p>%s', esc_html( $row->buyer_name ?: 'there' ), esc_html( $amount ), esc_html( $title ), $status_btn )
             );
         }
         self::sms_to( $row, (string) $row->buyer_phone, sprintf( 'We got your payment notice of N%s for %s. It is pending approval. You will be told when it is confirmed.', $amount, $title ) );
@@ -179,7 +184,7 @@ class OFP_Property_Comms_Bridge {
         OFP_Mailer::send(
             $row->owner_email,
             $row->owner_name ?: 'there',
-            'Installment offer accepted â€” ' . ( $row->property_title ?: 'Property' ),
+            'Installment offer accepted — ' . ( $row->property_title ?: 'Property' ),
             sprintf( '<p>Hello %s,</p><p><strong>%s</strong> accepted the installment offer for <strong>%s</strong>.</p><p>The purchase has been created and is ready for payment tracking.</p>', esc_html( $row->owner_name ?: 'there' ), esc_html( $row->buyer_name ?: 'The buyer' ), esc_html( $row->property_title ?: 'the property' ) )
         );
     }
@@ -197,11 +202,14 @@ class OFP_Property_Comms_Bridge {
         ) );
         if ( ! $row || empty( $row->buyer_email ) ) return;
 
+        $hub_url     = class_exists( 'OFP_Property_My_Payments' ) ? OFP_Property_My_Payments::url() : home_url( '/my-payments/' );
+        $receipt_btn = '<p style="margin:22px 0 10px;"><a href="' . esc_url( $hub_url ) . '" style="display:inline-block;background:#16a34a;color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;">View or Download Final Receipt</a></p><p style="color:#64748b;font-size:13px;margin:0 0 16px;">Your completed purchase records and receipts are always available on My Payments.</p>';
+
         OFP_Mailer::send(
             $row->buyer_email,
             $row->buyer_name ?: 'there',
-            'Purchase completed â€” ' . ( $row->property_title ?: 'Property' ),
-            sprintf( '<p>Hello %s,</p><p>Your payment plan for <strong>%s</strong> is now <strong>fully paid</strong>.</p><p>Total purchase amount: <strong>â‚¦%s</strong>.</p><p>Thank you. Please keep this email as confirmation of completion.</p>', esc_html( $row->buyer_name ?: 'there' ), esc_html( $row->property_title ?: 'the property' ), number_format( (float) $row->total_price, 2 ) )
+            'Purchase completed — ' . ( $row->property_title ?: 'Property' ),
+            sprintf( '<p>Hello %s,</p><p>Your payment plan for <strong>%s</strong> is now <strong>fully paid</strong>.</p><p>Total purchase amount: <strong>₦%s</strong>.</p><p>Thank you. Please keep this email as confirmation of completion.</p>%s', esc_html( $row->buyer_name ?: 'there' ), esc_html( $row->property_title ?: 'the property' ), number_format( (float) $row->total_price, 2 ), $receipt_btn )
         );
     }
 

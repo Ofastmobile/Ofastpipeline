@@ -93,6 +93,21 @@ if ( strpos( $clean_phone, '0' ) === 0 ) {
     $clean_phone = '234' . substr( $clean_phone, 1 );
 }
 
+// Agent / Owner public profile link
+$agent_profile_url = '';
+if ( $agent ) {
+    $slug = ! empty( $agent->profile_slug ) ? $agent->profile_slug : ( ! empty( $agent->business_name ) ? sanitize_title( $agent->business_name ) : '' );
+    if ( empty( $slug ) && ! empty( $agent->owner_name ) ) {
+        $slug = sanitize_title( $agent->owner_name );
+    }
+    if ( empty( $agent->profile_slug ) && ! empty( $slug ) ) {
+        $wpdb->update( "{$wpdb->prefix}ofp_clients", [ 'profile_slug' => $slug ], [ 'id' => $agent->id ] );
+        $agent->profile_slug = $slug;
+    }
+    $final_slug = ! empty( $agent->profile_slug ) ? $agent->profile_slug : (string) $agent->id;
+    $agent_profile_url = home_url( '/agent/' . $final_slug );
+}
+
 $listing_label = 'FOR SALE';
 if ( $listing_type === 'rent' ) $listing_label = 'FOR RENT';
 if ( $listing_type === 'shortlet' ) $listing_label = 'SHORT LET';
@@ -364,6 +379,9 @@ if ( empty( $gallery_urls ) ) {
         }
         ofpInitPropertySingle();
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
     <script>
         window.tailwind = window.tailwind || {};
         window.tailwind.config = {
@@ -371,13 +389,84 @@ if ( empty( $gallery_urls ) ) {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['"Segoe UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Arial', 'sans-serif'],
-                        system: ['"Segoe UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Arial', 'sans-serif']
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],
+                        system: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif']
                     }
                 }
             }
         };
     </script>
+    <style>
+        body, html {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Crisp, High-Contrast Property Description Typography */
+        .ofp-property-description {
+            color: #0f172a !important; /* Rich ink slate-900 */
+            font-size: 15.5px;
+            line-height: 1.85;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+        }
+        .dark .ofp-property-description {
+            color: #f1f5f9 !important; /* Crisp luminous slate-100 */
+        }
+        .ofp-property-description p {
+            margin-bottom: 1.35rem;
+            color: inherit;
+            font-weight: 500;
+            line-height: 1.85;
+        }
+        .ofp-property-description strong,
+        .ofp-property-description b {
+            font-weight: 700;
+            color: #020617; /* Pure deep slate black */
+        }
+        .dark .ofp-property-description strong,
+        .dark .ofp-property-description b {
+            color: #ffffff;
+        }
+        .ofp-property-description ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .ofp-property-description ol {
+            list-style-type: decimal;
+            padding-left: 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .ofp-property-description li {
+            margin-bottom: 0.5rem;
+            color: inherit;
+        }
+        .ofp-property-description h1,
+        .ofp-property-description h2,
+        .ofp-property-description h3,
+        .ofp-property-description h4 {
+            font-weight: 800;
+            color: #0f172a;
+            margin-top: 1.75rem;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.02em;
+        }
+        .dark .ofp-property-description h1,
+        .dark .ofp-property-description h2,
+        .dark .ofp-property-description h3,
+        .dark .ofp-property-description h4 {
+            color: #ffffff;
+        }
+        .ofp-property-description a {
+            color: #2563eb;
+            font-weight: 600;
+            text-decoration: underline;
+        }
+        .dark .ofp-property-description a {
+            color: #60a5fa;
+        }
+    </style>
     <?php wp_head(); ?>
     <script>
         if (typeof tailwind !== 'undefined') {
@@ -386,8 +475,8 @@ if ( empty( $gallery_urls ) ) {
                 theme: {
                     extend: {
                         fontFamily: {
-                            sans: ['"Segoe UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Arial', 'sans-serif'],
-                            system: ['"Segoe UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Arial', 'sans-serif']
+                            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],
+                            system: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif']
                         }
                     }
                 }
@@ -618,17 +707,17 @@ if ( empty( $gallery_urls ) ) {
     <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 
         <!-- Property Hero: full-width cinematic image -->
-        <div class="relative w-full rounded-2xl overflow-hidden mb-3 cursor-pointer" style="height:480px"
+        <div class="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden mb-4 cursor-pointer shadow-2xl group transition-all h-[460px] sm:h-[560px] md:h-[620px] lg:h-[660px]" style="min-height:480px; height:620px;"
             @click="showGallery = true; currentImage = 0">
 
             <!-- Main image -->
             <img src="<?php $thumb = get_the_post_thumbnail_url(get_the_ID(), 'full'); echo $thumb ? esc_url($thumb) : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1600&q=80'; ?>"
                 alt="<?php the_title_attribute(); ?>"
-                class="w-full h-full object-cover transition-transform duration-700 hover:scale-[1.02]">
+                class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]">
 
             <!-- Bottom gradient -->
             <div class="absolute inset-0 pointer-events-none"
-                style="background: linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.35) 45%, transparent 100%);">
+                style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 45%, transparent 100%);">
             </div>
 
             <!-- Tags -- top-left -->
@@ -670,8 +759,8 @@ if ( empty( $gallery_urls ) ) {
             </div>
 
             <!-- Bottom-left: address + title -->
-            <div class="absolute bottom-5 left-5 z-20 max-w-[60%]">
-                <div class="flex items-center gap-1.5 text-white/70 text-xs mb-2">
+            <div class="absolute bottom-5 left-5 z-20 max-w-[65%]">
+                <div class="flex items-center gap-1.5 text-white/80 text-xs mb-2">
                     <svg class="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor"
                         viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -679,16 +768,16 @@ if ( empty( $gallery_urls ) ) {
                     </svg>
                     <?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_location_text', true ) ); ?>
                 </div>
-                <h1 class="text-white font-black leading-tight drop-shadow-lg" style="font-size:28px;line-height:1.15">
+                <h1 class="text-white font-black leading-tight drop-shadow-lg text-2xl sm:text-3xl md:text-4xl tracking-tight">
                     <?php the_title(); ?>
                 </h1>
             </div>
 
             <!-- Bottom-right: price card -->
             <div
-                class="absolute bottom-5 right-5 z-20 bg-slate-900/85 backdrop-blur-sm border border-slate-700/60 rounded-xl px-5 py-3 text-right shadow-2xl">
+                class="absolute bottom-5 right-5 z-20 bg-slate-900/90 backdrop-blur-md border border-slate-700/60 rounded-2xl px-5 py-3.5 text-right shadow-2xl">
                 <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-0.5">Price</p>
-                <p class="text-emerald-400 font-black text-xl leading-tight">₦<?php echo number_format( (float) get_post_meta( get_the_ID(), 'ofp_price', true ) ); ?></p>
+                <p class="text-emerald-400 font-black text-xl sm:text-2xl leading-tight">₦<?php echo number_format( (float) get_post_meta( get_the_ID(), 'ofp_price', true ) ); ?></p>
                 <?php if ( $listing_type === "rent" || $listing_type === "shortlet" ) : ?>
                     <p class="text-slate-400 text-xs font-semibold">/ <?php echo esc_html( get_post_meta( $post_id, "ofp_price_period", true ) ?: "year" ); ?></p>
                 <?php endif; ?>
@@ -702,11 +791,11 @@ if ( empty( $gallery_urls ) ) {
         </div>
 
         <!-- Thumbnail strip -->
-        <div class="flex gap-2 mb-8 overflow-x-auto hide-scrollbar pb-1">
+        <div class="flex gap-2.5 mb-8 overflow-x-auto hide-scrollbar pb-1">
             <template x-for="(img, idx) in galleryImages" :key="idx">
                 <button type="button" @click="currentImage = idx; showGallery = true"
-                    :class="currentImage === idx ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-transparent hover:border-slate-400'"
-                    class="shrink-0 w-24 h-16 rounded-xl overflow-hidden border-2 focus:outline-none transition-all cursor-pointer">
+                    :class="currentImage === idx ? 'border-blue-500 ring-2 ring-blue-500/40 shadow-md' : 'border-slate-300 dark:border-slate-800 hover:border-slate-500'"
+                    class="shrink-0 w-28 h-20 sm:w-32 sm:h-22 rounded-xl overflow-hidden border-2 focus:outline-none transition-all cursor-pointer">
                     <img :src="img" class="w-full h-full object-cover">
                 </button>
             </template>
@@ -805,8 +894,11 @@ if ( empty( $gallery_urls ) ) {
                 <!-- Tab Content: Overview -->
                 <div x-show="activeTab === 'overview'" class="space-y-6 animate-fade-in">
                     <div>
-                        <h2 class="text-xl font-bold mb-4">Property Description</h2>
-                        <div class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed space-y-4">
+                        <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-4 flex items-center gap-2.5">
+                            <span class="w-1.5 h-5 bg-blue-600 rounded-full inline-block"></span>
+                            <span>Property Description</span>
+                        </h2>
+                        <div class="ofp-property-description text-slate-900 dark:text-slate-100 font-medium text-[15.5px] leading-relaxed space-y-4">
                             <?php the_content(); ?>
                         </div>
                     </div>

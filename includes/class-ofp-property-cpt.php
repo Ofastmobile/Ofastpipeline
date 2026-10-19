@@ -64,6 +64,7 @@ class OFP_Property_CPT {
         add_filter( 'template_include',                        [ $this, 'load_templates' ] );
         add_filter( 'post_type_link',                          [ $this, 'rewrite_permalink_to_property_subdomain' ], 10, 2 );
         add_filter( 'use_block_editor_for_post_type',          [ $this, 'disable_block_editor' ], 10, 2 );
+        add_action( 'template_redirect',                       [ $this, 'maybe_redirect_old_property_url' ], 1 );
     }
 
     /**
@@ -109,18 +110,18 @@ class OFP_Property_CPT {
             'show_ui'             => true,
             'show_in_menu'        => true,           // Top-level menu.
             'show_in_rest'        => true,           // Required for RankMath and Gutenberg.
-            'has_archive'         => true,
-            'rewrite'             => [ 'slug' => 'properties', 'with_front' => false ],
+            'has_archive'         => false,
+            'rewrite'             => [ 'slug' => 'property', 'with_front' => false ],
             'supports'            => [ 'title', 'editor', 'thumbnail' ],
             'menu_icon'           => 'dashicons-building',
             'capability_type'     => 'post',
             'map_meta_cap'        => true,
         ] );
 
-        // Flush rewrite rules when the CPT is first registered.
-        // We check a transient to only flush once, not on every page load.
-        if ( get_transient( 'ofp_flush_rewrite_rules' ) ) {
-            flush_rewrite_rules();
+        // Flush rewrite rules when the CPT slug is updated.
+        if ( get_option( 'ofp_property_slug_version' ) !== '2' || get_transient( 'ofp_flush_rewrite_rules' ) ) {
+            flush_rewrite_rules( false );
+            update_option( 'ofp_property_slug_version', '2' );
             delete_transient( 'ofp_flush_rewrite_rules' );
         }
     }
@@ -2037,12 +2038,38 @@ class OFP_Property_CPT {
             return $post_link;
         }
 
+        // On a solo company (white label) domain, keep the property permalink on that custom domain
+        if ( class_exists( 'OFP_Brand' ) && OFP_Brand::is_solo_host() ) {
+            $host = OFP_Host_Router::current_client_host();
+            if ( $host ) {
+                return preg_replace( '#^https?://[^/]+#', 'https://' . $host, $post_link );
+            }
+        }
+
         $base_domain = get_option( 'ofp_crm_base_domain' );
         if ( ! $base_domain ) {
             return $post_link;
         }
 
         return preg_replace( '#^https?://[^/]+#', 'https://property.' . $base_domain, $post_link );
+    }
+
+    /**
+     * Backward-compatibility redirect:
+     * If someone visits legacy /properties/{slug}, redirect 301 to /property/{slug}.
+     * This protects existing bookmarks, shared links, and search indexing.
+     */
+    public function maybe_redirect_old_property_url(): void {
+        $path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+        $segments = array_values( array_filter( explode( '/', $path ) ) );
+        if ( count( $segments ) === 2 && $segments[0] === 'properties' ) {
+            $slug = sanitize_title( $segments[1] );
+            $post = get_page_by_path( $slug, OBJECT, 'ofp_property' );
+            if ( $post && $post->post_status === 'publish' ) {
+                wp_safe_redirect( get_permalink( $post ), 301 );
+                exit;
+            }
+        }
     }
 
     public static function get_plan_prices(): array {

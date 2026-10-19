@@ -196,6 +196,14 @@ class OFP_Client_Portal {
      * Determines whether the current request is for a client portal page.
      */
     public function is_portal_page(): bool {
+        // Never treat single property CPT requests as client portal pages
+        if ( is_singular( 'ofp_property' ) || ( function_exists( 'get_query_var' ) && get_query_var( 'ofp_property' ) ) || ( is_single() && get_post_type() === 'ofp_property' ) ) {
+            return false;
+        }
+        if ( class_exists( 'OFP_Host_Router' ) && OFP_Host_Router::current_zone() === 'property' ) {
+            return false;
+        }
+
         $route = get_query_var( 'ofp_route', '' );
         if ( ! empty( $route ) && array_key_exists( $route, $this->routes ) ) {
             return true;
@@ -204,8 +212,15 @@ class OFP_Client_Portal {
             return true;
         }
         $path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
-        $first_segment = explode( '/', $path )[0] ?? '';
-        if ( array_key_exists( $first_segment, $this->routes ) || in_array( $first_segment, [ 'property-sales', 'property-purchases', 'property-payments', 'tenants' ], true ) ) {
+        $segments = array_values( array_filter( explode( '/', $path ) ) );
+        if ( empty( $segments ) ) {
+            return false;
+        }
+        // Single property listing is never a portal page
+        if ( $segments[0] === 'property' || ( $segments[0] === 'properties' && count( $segments ) > 1 ) ) {
+            return false;
+        }
+        if ( count( $segments ) === 1 && ( array_key_exists( $segments[0], $this->routes ) || in_array( $segments[0], [ 'property-sales', 'property-purchases', 'property-payments', 'tenants' ], true ) ) ) {
             return true;
         }
         return false;
@@ -416,6 +431,16 @@ class OFP_Client_Portal {
     }
 
     public function handle_routes(): void {
+        // ── 1. Never intercept single property CPT requests ─────────────
+        if ( is_singular( 'ofp_property' ) || ( function_exists( 'get_query_var' ) && get_query_var( 'ofp_property' ) ) || ( is_single() && get_post_type() === 'ofp_property' ) ) {
+            return;
+        }
+
+        // ── 2. On property marketplace subdomain, never intercept client portal routes ──
+        if ( class_exists( 'OFP_Host_Router' ) && OFP_Host_Router::current_zone() === 'property' ) {
+            return;
+        }
+
         $agent_slug = get_query_var( 'ofp_agent_slug', '' );
         if ( ! empty( $agent_slug ) ) {
             $template_file = OFP_PATH . 'public/templates/agent-profile.php';
@@ -425,9 +450,11 @@ class OFP_Client_Portal {
         $route = get_query_var( 'ofp_route', '' );
         if ( empty( $route ) ) {
             $path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
-            $first_segment = explode( '/', $path )[0] ?? '';
-            if ( array_key_exists( $first_segment, $this->routes ) ) {
-                $route = $first_segment;
+            $segments = array_values( array_filter( explode( '/', $path ) ) );
+            // Portal routes are strictly 1-segment top-level routes (e.g. /dashboard, /properties, /leads).
+            // A multi-segment path like /properties/luxury-villa is a property single page, NOT a portal route.
+            if ( count( $segments ) === 1 && array_key_exists( $segments[0], $this->routes ) ) {
+                $route = $segments[0];
             }
         }
         if ( empty( $route ) || ! array_key_exists( $route, $this->routes ) ) return;

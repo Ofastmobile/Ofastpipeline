@@ -204,178 +204,200 @@ class OFP_Property_My_Payments {
 		}
 		nocache_headers();
 
-		$msg   = '';
-		$error = '';
-		$step  = 'ask'; // ask | code
-		$token = '';
-		$hint  = '';
+		global $wpdb;
+		$wpdb->hide_errors();
 
-		if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
-			OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'my_payments', 12, 600 );
+		try {
+			$ip = OFP_Security::get_client_ip();
+			OFP_Security::check_rate_limit( $ip, 'my_payments_view', 60, 60 );
 
-			$nonce_ok = isset( $_POST['ofp_mp_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ofp_mp_nonce'] ) ), 'ofp_my_payments' );
-			$act      = sanitize_key( wp_unslash( $_POST['mp_action'] ?? '' ) );
+			$msg   = '';
+			$error = '';
+			$step  = 'ask'; // ask | code
+			$token = '';
+			$hint  = '';
 
-			if ( ! $nonce_ok ) {
-				$error = 'This page has expired. Please reload it and try again.';
-			} elseif ( ! empty( $_POST['ofp_website'] ) ) {
-				$error = 'We could not process this request.';
-			} elseif ( $act === 'logout' ) {
-				self::end_session();
-				wp_safe_redirect( self::url() );
-				exit;
-			} elseif ( $act === 'request' ) {
-				$who = self::parse_identity( (string) wp_unslash( $_POST['identity'] ?? '' ) );
-				if ( ! $who ) {
-					$error = 'Enter the email address or phone number you used.';
-				} else {
-					$limited = false;
-					$k_ident = 'ofp_mp_i_' . md5( $who['type'] . $who['ident'] );
-					$n       = (int) get_transient( $k_ident );
-					if ( $n >= 3 ) {
-						$limited = true;
-					} else {
-						set_transient( $k_ident, $n + 1, HOUR_IN_SECONDS );
-					}
-					if ( $who['type'] === 'phone' ) {
-						$k_day = 'ofp_mp_sms_' . gmdate( 'Y-m-d' );
-						$d     = (int) get_transient( $k_day );
-						if ( $d >= 300 ) {
-							$limited = true;
-						} elseif ( ! $limited ) {
-							set_transient( $k_day, $d + 1, DAY_IN_SECONDS );
-						}
-					}
-					if ( $limited ) {
-						$error = 'Too many codes were requested. Please try again later.';
-					} else {
-						$token = wp_generate_password( 32, false, false );
-						$code  = (string) random_int( 100000, 999999 );
-						// The same message is shown whether or not records exist, so nobody can test who has an account.
-						set_transient( 'ofp_mp_c_' . $token, [
-							'hash'     => hash_hmac( 'sha256', $code, wp_salt( 'auth' ) ),
-							'type'     => $who['type'],
-							'ident'    => $who['ident'],
-							'attempts' => 0,
-							'real'     => self::has_records( $who['type'], $who['ident'] ),
-						], self::CODE_TTL );
-						if ( self::has_records( $who['type'], $who['ident'] ) ) {
-							if ( $who['type'] === 'email' ) {
-								OFP_Mailer::send(
-									$who['send_to'],
-									'there',
-									'Your code to view your payments',
-									'<p>Your code is <strong style="font-size:22px;letter-spacing:3px;">' . esc_html( $code ) . '</strong></p><p>It expires in 10 minutes. If you did not ask for it, ignore this message.</p>'
-								);
-							} else {
-								OFP_SMS::send_system_sms( $who['send_to'], 'Your code to view your payments is ' . $code . '. It expires in 10 minutes.' );
-							}
-						}
-						$step = 'code';
-						$hint = self::mask( $who['type'], $who['ident'] );
-						$msg  = 'If we found payments for that ' . ( $who['type'] === 'email' ? 'email address' : 'phone number' ) . ', we sent a 6 digit code to it.';
-					}
-				}
-			} elseif ( $act === 'verify' ) {
-				$token = preg_replace( '/[^a-zA-Z0-9]/', '', (string) wp_unslash( $_POST['token'] ?? '' ) );
-				$code  = preg_replace( '/\D/', '', (string) wp_unslash( $_POST['code'] ?? '' ) );
-				$saved = $token ? get_transient( 'ofp_mp_c_' . $token ) : false;
-				if ( ! is_array( $saved ) ) {
-					$error = 'That code has expired. Please start again.';
-				} elseif ( (int) $saved['attempts'] >= 5 ) {
-					delete_transient( 'ofp_mp_c_' . $token );
-					$error = 'Too many wrong codes. Please start again.';
-				} elseif ( ! empty( $saved['real'] ) && $code !== '' && hash_equals( (string) $saved['hash'], hash_hmac( 'sha256', $code, wp_salt( 'auth' ) ) ) ) {
-					delete_transient( 'ofp_mp_c_' . $token );
-					self::start_session( $saved['type'], $saved['ident'] );
+			if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
+				OFP_Security::check_rate_limit( $ip, 'my_payments', 15, 600 );
+
+				$nonce_ok = isset( $_POST['ofp_mp_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ofp_mp_nonce'] ) ), 'ofp_my_payments' );
+				$act      = sanitize_key( wp_unslash( $_POST['mp_action'] ?? '' ) );
+
+				if ( ! $nonce_ok ) {
+					$error = 'This page has expired. Please reload it and try again.';
+				} elseif ( ! empty( $_POST['ofp_website'] ) ) {
+					$error = 'We could not process this request.';
+				} elseif ( $act === 'logout' ) {
+					self::end_session();
 					wp_safe_redirect( self::url() );
 					exit;
-				} else {
-					$saved['attempts'] = (int) $saved['attempts'] + 1;
-					set_transient( 'ofp_mp_c_' . $token, $saved, self::CODE_TTL );
-					$error = 'That code is not correct.';
-					$step  = 'code';
-					$hint  = self::mask( $saved['type'], $saved['ident'] );
+				} elseif ( $act === 'request' ) {
+					OFP_Security::check_rate_limit( $ip, 'my_payments_request_code', 5, 300 );
+					$who = self::parse_identity( (string) wp_unslash( $_POST['identity'] ?? '' ) );
+					if ( ! $who ) {
+						$error = 'Enter the email address or phone number you used.';
+					} else {
+						$limited = false;
+						$k_ident = 'ofp_mp_i_' . md5( $who['type'] . $who['ident'] );
+						$n       = (int) get_transient( $k_ident );
+						if ( $n >= 3 ) {
+							$limited = true;
+						} else {
+							set_transient( $k_ident, $n + 1, HOUR_IN_SECONDS );
+						}
+						if ( $who['type'] === 'phone' ) {
+							$k_day = 'ofp_mp_sms_' . gmdate( 'Y-m-d' );
+							$d     = (int) get_transient( $k_day );
+							if ( $d >= 300 ) {
+								$limited = true;
+							} elseif ( ! $limited ) {
+								set_transient( $k_day, $d + 1, DAY_IN_SECONDS );
+							}
+						}
+						if ( $limited ) {
+							$error = 'Too many codes were requested. Please try again later.';
+						} else {
+							$token = wp_generate_password( 32, false, false );
+							$code  = (string) random_int( 100000, 999999 );
+							// The same message is shown whether or not records exist, so nobody can test who has an account.
+							set_transient( 'ofp_mp_c_' . $token, [
+								'hash'     => hash_hmac( 'sha256', $code, wp_salt( 'auth' ) ),
+								'type'     => $who['type'],
+								'ident'    => $who['ident'],
+								'attempts' => 0,
+								'real'     => self::has_records( $who['type'], $who['ident'] ),
+							], self::CODE_TTL );
+							if ( self::has_records( $who['type'], $who['ident'] ) ) {
+								if ( $who['type'] === 'email' ) {
+									OFP_Mailer::send(
+										$who['send_to'],
+										'there',
+										'Your code to view your payments',
+										'<p>Your code is <strong style="font-size:22px;letter-spacing:3px;">' . esc_html( $code ) . '</strong></p><p>It expires in 10 minutes. If you did not ask for it, ignore this message.</p>'
+									);
+								} else {
+									OFP_SMS::send_system_sms( $who['send_to'], 'Your code to view your payments is ' . $code . '. It expires in 10 minutes.' );
+								}
+							}
+							$step = 'code';
+							$hint = self::mask( $who['type'], $who['ident'] );
+							$msg  = 'If we found payments for that ' . ( $who['type'] === 'email' ? 'email address' : 'phone number' ) . ', we sent a 6 digit code to it.';
+						}
+					}
+				} elseif ( $act === 'verify' ) {
+					OFP_Security::check_rate_limit( $ip, 'my_payments_verify_code', 10, 300 );
+					$token = preg_replace( '/[^a-zA-Z0-9]/', '', (string) wp_unslash( $_POST['token'] ?? '' ) );
+					$code  = preg_replace( '/\D/', '', (string) wp_unslash( $_POST['code'] ?? '' ) );
+					$saved = $token ? get_transient( 'ofp_mp_c_' . $token ) : false;
+					if ( ! is_array( $saved ) ) {
+						$error = 'That code has expired. Please start again.';
+					} elseif ( (int) $saved['attempts'] >= 5 ) {
+						delete_transient( 'ofp_mp_c_' . $token );
+						$error = 'Too many wrong codes. Please start again.';
+					} elseif ( ! empty( $saved['real'] ) && $code !== '' && hash_equals( (string) $saved['hash'], hash_hmac( 'sha256', $code, wp_salt( 'auth' ) ) ) ) {
+						delete_transient( 'ofp_mp_c_' . $token );
+						self::start_session( $saved['type'], $saved['ident'] );
+						wp_safe_redirect( self::url() );
+						exit;
+					} else {
+						$saved['attempts'] = (int) $saved['attempts'] + 1;
+						set_transient( 'ofp_mp_c_' . $token, $saved, self::CODE_TTL );
+						$error = 'That code is not correct.';
+						$step  = 'code';
+						$hint  = self::mask( $saved['type'], $saved['ident'] );
+					}
 				}
 			}
-		}
 
-		$sess = self::session();
-		self::render( $sess, $step, $token, $hint, $msg, $error );
-		exit;
+			$sess = self::session();
+			self::render( $sess, $step, $token, $hint, $msg, $error );
+			exit;
+		} catch ( \Throwable $e ) {
+			error_log( '[OFP_My_Payments] Route error: ' . $e->getMessage() );
+			wp_die( 'An unexpected error occurred. Please try again later.', 'Error', [ 'response' => 500 ] );
+		}
 	}
 
 	// ------------------------------------------------------------------ receipts
 
 	public static function serve_receipt(): void {
 		global $wpdb;
-		$p    = $wpdb->prefix;
-		$type = ( ( $_GET['type'] ?? '' ) === 'rent' ) ? 'rent' : 'purchase';
-		$id   = absint( $_GET['id'] ?? 0 );
-		$n    = sanitize_text_field( wp_unslash( $_GET['n'] ?? '' ) );
-		$sess = self::session();
-		if ( ! $id || ! $sess || ! wp_verify_nonce( $n, 'ofp_my_receipt_' . $type . '_' . $id ) ) {
-			wp_die( 'This link has expired. Please log in again.', 'Not allowed', [ 'response' => 403 ] );
-		}
-		$only = self::only_client_id();
-		$html = '';
+		$wpdb->hide_errors();
 
-		if ( $type === 'purchase' ) {
-			$row = $wpdb->get_row( $wpdb->prepare(
-				"SELECT py.*, pu.buyer_name, pu.buyer_email, pu.buyer_phone, pu.balance, pu.property_id, pu.client_id,
-				        pr.title AS property_title, pr.listing_type,
-				        c.business_name, c.owner_name, c.email AS client_email, c.phone AS client_phone, c.business_phone AS client_business_phone
-				 FROM {$p}ofp_property_payments py
-				 INNER JOIN {$p}ofp_property_purchases pu ON pu.id = py.purchase_id
-				 LEFT JOIN {$p}ofp_properties pr ON pr.id = pu.property_id
-				 LEFT JOIN {$p}ofp_clients c ON c.id = pu.client_id
-				 WHERE py.id = %d LIMIT 1",
-				$id
-			) );
-			$mine = $row && ( $sess['t'] === 'email'
-				? strtolower( (string) $row->buyer_email ) === $sess['i']
-				: substr( preg_replace( '/\D/', '', (string) $row->buyer_phone ), -10 ) === $sess['i'] );
-			if ( ! $mine || $row->status !== 'successful' || ( $only && (int) $row->client_id !== $only ) ) {
-				wp_die( 'Receipt not found.', 'Not found', [ 'response' => 404 ] );
+		try {
+			OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'my_payments_receipt', 30, 60 );
+
+			$p    = $wpdb->prefix;
+			$type = ( ( $_GET['type'] ?? '' ) === 'rent' ) ? 'rent' : 'purchase';
+			$id   = absint( $_GET['id'] ?? 0 );
+			$n    = sanitize_text_field( wp_unslash( $_GET['n'] ?? '' ) );
+			$sess = self::session();
+			if ( ! $id || ! $sess || ! wp_verify_nonce( $n, 'ofp_my_receipt_' . $type . '_' . $id ) ) {
+				wp_die( 'This link has expired. Please log in again.', 'Not allowed', [ 'response' => 403 ] );
 			}
-			$html = OFP_Property_Receipt_Generator::render_receipt(
-				OFP_Property_Receipt_Generator::TYPE_PURCHASE,
-				OFP_Property_Receipt_Generator::build_purchase_data( $row, (int) $row->purchase_id, $id )
-			);
-		} else {
-			$row = $wpdb->get_row( $wpdb->prepare(
-				"SELECT py.status, l.client_id, t.email AS t_email, t.phone AS t_phone
-				 FROM {$p}ofp_property_lease_payments py
-				 INNER JOIN {$p}ofp_property_leases l ON l.id = py.lease_id
-				 INNER JOIN {$p}ofp_property_tenants t ON t.id = l.tenant_id
-				 WHERE py.id = %d LIMIT 1",
-				$id
-			) );
-			$mine = $row && ( $sess['t'] === 'email'
-				? strtolower( (string) $row->t_email ) === $sess['i']
-				: substr( preg_replace( '/\D/', '', (string) $row->t_phone ), -10 ) === $sess['i'] );
-			if ( ! $mine || $row->status !== 'successful' || ( $only && (int) $row->client_id !== $only ) ) {
-				wp_die( 'Receipt not found.', 'Not found', [ 'response' => 404 ] );
-			}
-			$saved = OFP_Property_Receipt_Generator::get_or_create_lease_receipt( $id );
-			if ( $saved && ! empty( $saved['path'] ) ) {
-				$uploads = wp_upload_dir();
-				$file    = $uploads['basedir'] . '/' . $saved['path'];
-				if ( is_file( $file ) ) {
-					$html = (string) file_get_contents( $file );
+			$only = self::only_client_id();
+			$html = '';
+
+			if ( $type === 'purchase' ) {
+				$row = $wpdb->get_row( $wpdb->prepare(
+					"SELECT py.*, pu.buyer_name, pu.buyer_email, pu.buyer_phone, pu.balance, pu.property_id, pu.client_id,
+					        pr.title AS property_title, pr.listing_type,
+					        c.business_name, c.owner_name, c.email AS client_email, c.phone AS client_phone, c.business_phone AS client_business_phone
+					 FROM {$p}ofp_property_payments py
+					 INNER JOIN {$p}ofp_property_purchases pu ON pu.id = py.purchase_id
+					 LEFT JOIN {$p}ofp_properties pr ON pr.id = pu.property_id
+					 LEFT JOIN {$p}ofp_clients c ON c.id = pu.client_id
+					 WHERE py.id = %d LIMIT 1",
+					$id
+				) );
+				$mine = $row && ( $sess['t'] === 'email'
+					? strtolower( (string) $row->buyer_email ) === $sess['i']
+					: substr( preg_replace( '/\D/', '', (string) $row->buyer_phone ), -10 ) === $sess['i'] );
+				if ( ! $mine || $row->status !== 'successful' || ( $only && (int) $row->client_id !== $only ) ) {
+					wp_die( 'Receipt not found.', 'Not found', [ 'response' => 404 ] );
+				}
+				$html = OFP_Property_Receipt_Generator::render_receipt(
+					OFP_Property_Receipt_Generator::TYPE_PURCHASE,
+					OFP_Property_Receipt_Generator::build_purchase_data( $row, (int) $row->purchase_id, $id )
+				);
+			} else {
+				$row = $wpdb->get_row( $wpdb->prepare(
+					"SELECT py.status, l.client_id, t.email AS t_email, t.phone AS t_phone
+					 FROM {$p}ofp_property_lease_payments py
+					 INNER JOIN {$p}ofp_property_leases l ON l.id = py.lease_id
+					 INNER JOIN {$p}ofp_property_tenants t ON t.id = l.tenant_id
+					 WHERE py.id = %d LIMIT 1",
+					$id
+				) );
+				$mine = $row && ( $sess['t'] === 'email'
+					? strtolower( (string) $row->t_email ) === $sess['i']
+					: substr( preg_replace( '/\D/', '', (string) $row->t_phone ), -10 ) === $sess['i'] );
+				if ( ! $mine || $row->status !== 'successful' || ( $only && (int) $row->client_id !== $only ) ) {
+					wp_die( 'Receipt not found.', 'Not found', [ 'response' => 404 ] );
+				}
+				$saved = OFP_Property_Receipt_Generator::get_or_create_lease_receipt( $id );
+				if ( $saved && ! empty( $saved['path'] ) ) {
+					$uploads = wp_upload_dir();
+					$file    = $uploads['basedir'] . '/' . $saved['path'];
+					if ( is_file( $file ) ) {
+						$html = (string) file_get_contents( $file );
+					}
 				}
 			}
-		}
 
-		if ( $html === '' ) {
-			wp_die( 'Receipt not available.', 'Not found', [ 'response' => 404 ] );
+			if ( $html === '' ) {
+				wp_die( 'Receipt not available.', 'Not found', [ 'response' => 404 ] );
+			}
+			nocache_headers();
+			header( 'Content-Type: text/html; charset=utf-8' );
+			header( 'X-Content-Type-Options: nosniff' );
+			header( "Content-Security-Policy: default-src 'none'; img-src https: data:; style-src 'unsafe-inline' https:; font-src https: data:" );
+			echo $html; // Built from the receipt template, with every value escaped.
+			exit;
+		} catch ( \Throwable $e ) {
+			error_log( '[OFP_My_Payments] Receipt error: ' . $e->getMessage() );
+			wp_die( 'Unable to load receipt. Please try again later.', 'Error', [ 'response' => 500 ] );
 		}
-		nocache_headers();
-		header( 'Content-Type: text/html; charset=utf-8' );
-		header( 'X-Content-Type-Options: nosniff' );
-		header( "Content-Security-Policy: default-src 'none'; img-src https: data:; style-src 'unsafe-inline' https:; font-src https: data:" );
-		echo $html; // Built from the receipt template, with every value escaped.
-		exit;
 	}
 
 	// ------------------------------------------------------------------ page
@@ -396,7 +418,13 @@ class OFP_Property_My_Payments {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
 <title><?php echo esc_html( $title ); ?></title>
+<script>
+if (window.history && window.history.replaceState && window.location.search) {
+	window.history.replaceState(null, document.title, window.location.pathname);
+}
+</script>
 <?php if ( $solo ) { OFP_Brand::print_head( null ); } ?>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f1f5f9;color:#0f172a}

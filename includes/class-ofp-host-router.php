@@ -206,7 +206,13 @@ class OFP_Host_Router {
 	 */
 	public static function rewrite_portal_links( string $url, string $path ): string {
 		$clean_path    = ltrim( (string) parse_url( $path, PHP_URL_PATH ), '/' );
-		$first_segment = strtok( $clean_path, '/' );
+		$segments      = array_values( array_filter( explode( '/', $clean_path ) ) );
+		$first_segment = $segments[0] ?? '';
+
+		// A path like 'property/my-luxury-apartment' is a single property listing, not the client portal.
+		if ( $first_segment === 'property' || ( $first_segment === 'properties' && count( $segments ) > 1 ) ) {
+			return $url;
+		}
 
 		if ( ! in_array( $first_segment, self::APP_ROUTES, true ) ) {
 			return $url; // not a portal route — leave untouched
