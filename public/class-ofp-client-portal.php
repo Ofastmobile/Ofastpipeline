@@ -480,6 +480,13 @@ class OFP_Client_Portal {
 
         $template_file = OFP_PATH . 'public/templates/' . $this->routes[ $route ];
         if ( ! file_exists( $template_file ) ) { $this->render_placeholder( $route ); exit; }
+
+        nocache_headers();
+        if ( ! headers_sent() ) {
+            header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+            header( 'Pragma: no-cache' );
+        }
+
         include $template_file;
         exit;
     }

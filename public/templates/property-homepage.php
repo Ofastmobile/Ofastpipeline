@@ -104,8 +104,8 @@
 
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
 
-    <!-- Mega Menu Backdrop Overlay -->
-    <div x-show="megaMenuOpen" class="fixed inset-0 bg-slate-900/20 backdrop-blur-md z-40"
+    <!-- Mega Menu Backdrop Overlay (Desktop) -->
+    <div x-show="megaMenuOpen" class="hidden lg:block fixed inset-0 bg-slate-900/20 backdrop-blur-md z-40"
         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="display: none;"
@@ -125,8 +125,8 @@
             <div class="flex justify-between items-center h-16 transition-all duration-300 mt-2">
                 <!-- Left: Logo & Hamburger -->
                 <div class="flex items-center gap-3 sm:gap-5">
-                    <!-- Logo (No icon, Uppercase, Small font) -->
-                    <a href="<?php echo esc_url( home_url('/') ); ?>" class="flex items-center">
+                    <!-- Logo (Hidden on mobile so only hamburger displays, visible from sm up) -->
+                    <a href="<?php echo esc_url( home_url('/') ); ?>" class="hidden sm:flex items-center">
                         <span
                             class="text-[13px] sm:text-sm font-black tracking-[0.25em] uppercase transition-colors text-slate-900 dark:text-white drop-shadow-sm">
                             <?php echo OFP_Brand::public_logo_html( 'BOFAST HOMES' ); ?>
@@ -161,105 +161,253 @@
                             </path>
                         </svg>
                     </button>
-                    <!-- Post Property Button -->
+                    <!-- List Property Button -->
                     <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap uppercase inline-flex items-center justify-center">
-                        Post Property
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 sm:px-7 py-2 sm:py-2.5 rounded-[7px] text-[11px] sm:text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap uppercase inline-flex items-center justify-center">
+                        List Property
                     </a>
                 </div>
             </div>
 
-            <!-- Mega Menu Dropdown (Boxed, not full width) -->
+            <?php $ofp_header_social = OFP_Brand::social_links(); ?>
+
+            <!-- Desktop Mega Menu Dropdown (hidden lg:block) -->
             <div x-show="megaMenuOpen" style="display: none;" @click.away="megaMenuOpen = false"
-                class="absolute top-full left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 mt-2 z-[100] bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden font-sans"
+                class="hidden lg:block absolute top-full left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 mt-2 z-[100] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden font-sans"
                 x-transition:enter="transition ease-out duration-300"
                 x-transition:enter-start="opacity-0 -translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
                 x-transition:leave="transition ease-in duration-200"
                 x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-4">
 
                 <!-- Main Content Area -->
-                <div class="p-5 sm:p-8 grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
+                <div class="p-8 grid grid-cols-4 gap-8">
                     <!-- Image Cards Area (Takes 3 columns) -->
-                    <div class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="col-span-3 grid grid-cols-4 gap-4">
 
                         <!-- Card 1: Properties -->
                         <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
-                            class="group relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
+                            class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
                             <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80"
                                 alt="Properties"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
-                            </div>
-                            <div
-                                class="absolute bottom-4 left-4 text-white font-black text-lg sm:text-xl uppercase tracking-wide group-hover:text-blue-400 transition-colors">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors">
                                 PROPERTIES</div>
                         </a>
 
                         <!-- Card 2: Off-Plan -->
-                        <a href="#"
-                            class="group relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
+                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                            class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
                             <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=600&q=80"
                                 alt="Off-Plan"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
-                            </div>
-                            <div
-                                class="absolute bottom-4 left-4 text-white font-black text-lg sm:text-xl uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
                                 OFF-PLAN</div>
                         </a>
 
                         <!-- Card 3: Map -->
-                        <a href="#"
-                            class="group relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-blue-50 dark:bg-blue-900/20">
+                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                            class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-blue-50 dark:bg-blue-900/20">
                             <div class="absolute inset-0 bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors z-10"
-                                style="background-image: radial-gradient(circle, #3B82F6 1px, transparent 1px); background-size: 20px 20px;">
-                            </div>
-                            <div
-                                class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20">
-                            </div>
-                            <div
-                                class="absolute bottom-4 left-4 text-white font-black text-lg sm:text-xl uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
+                                style="background-image: radial-gradient(circle, #3B82F6 1px, transparent 1px); background-size: 20px 20px;"></div>
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20"></div>
+                            <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
                                 MAP SEARCH</div>
                         </a>
 
                         <!-- Card 4: Agents -->
-                        <a href="#"
-                            class="group relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
+                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                            class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
                             <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80"
                                 alt="Agents"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
-                            </div>
-                            <div
-                                class="absolute bottom-4 left-4 text-white font-black text-lg sm:text-xl uppercase tracking-wide group-hover:text-blue-400 transition-colors">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors">
                                 OUR AGENTS</div>
                         </a>
                     </div>
 
                     <!-- Side Links (Takes 1 column) -->
-                    <div
-                        class="flex flex-col justify-between h-full pt-4 lg:pt-0 lg:pl-8 lg:border-l border-slate-200 dark:border-slate-800">
-                        <ul class="space-y-4">
-                            <li><a href="#"
-                                    class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-[11px] sm:text-sm tracking-widest transition-colors uppercase flex items-center gap-2"><span
-                                        class="w-2 h-2 rounded-full bg-blue-500"></span> BECOME A PARTNER</a></li>
-                            <li><a href="#"
-                                    class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-[11px] sm:text-sm tracking-widest transition-colors uppercase flex items-center gap-2"><span
-                                        class="w-2 h-2 rounded-full bg-blue-500"></span> DEVELOPERS HUB</a></li>
-                            <li><a href="#"
-                                    class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-[11px] sm:text-sm tracking-widest transition-colors uppercase flex items-center gap-2"><span
-                                        class="w-2 h-2 rounded-full bg-blue-500"></span> CAREERS</a></li>
-                        </ul>
-                        <div class="mt-8 lg:mt-0 pt-4 border-t border-slate-200 dark:border-slate-800 lg:border-none">
-                            <a href="#"
-                                class="text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 text-[10px] sm:text-xs font-bold tracking-widest transition-colors uppercase">PRIVACY
-                                POLICY</a>
+                    <div class="flex flex-col justify-between h-full pl-8 border-l border-slate-200 dark:border-slate-800">
+                        <div class="space-y-6">
+                            <ul class="space-y-4">
+                                <li><a href="<?php echo esc_url( home_url('/login') ); ?>"
+                                        class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs tracking-widest transition-colors uppercase flex items-center gap-2"><span
+                                            class="w-2 h-2 rounded-full bg-blue-500"></span> BECOME A PARTNER</a></li>
+                                <li><a href="<?php echo esc_url( home_url('/login') ); ?>"
+                                        class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs tracking-widest transition-colors uppercase flex items-center gap-2"><span
+                                            class="w-2 h-2 rounded-full bg-blue-500"></span> DEVELOPERS HUB</a></li>
+                                <li><a href="<?php echo esc_url( home_url('/careers') ); ?>"
+                                        class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs tracking-widest transition-colors uppercase flex items-center gap-2"><span
+                                            class="w-2 h-2 rounded-full bg-blue-500"></span> CAREERS</a></li>
+                            </ul>
+
+                            <!-- Under Careers, Above Privacy Policy: Social Media -->
+                            <?php if ( ! empty( $ofp_header_social ) ) : ?>
+                                <div class="pt-4 border-t border-slate-200 dark:border-slate-800">
+                                    <div class="flex items-center gap-3 flex-wrap">
+                                        <?php foreach ( $ofp_header_social as $sm ) : ?>
+                                            <a href="<?php echo esc_url( $sm['url'] ); ?>" target="_blank" rel="noopener noreferrer"
+                                               aria-label="<?php echo esc_attr( $sm['label'] ); ?>" title="<?php echo esc_attr( $sm['label'] ); ?>"
+                                               class="p-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                                <?php echo $sm['svg']; ?>
+                                            </a>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Privacy Policy (Below Social Media) -->
+                        <div class="pt-4 border-t border-slate-200 dark:border-slate-800">
+                            <a href="<?php echo esc_url( home_url('/privacy-policy/') ); ?>"
+                                class="text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 text-xs font-bold tracking-widest transition-colors uppercase whitespace-nowrap">PRIVACY POLICY</a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </header>
+
+    <!-- Mobile Full-Page Navigation Screen (lg:hidden, placed outside <header> so transform doesn't clip/break fixed inset-0) -->
+    <div x-show="megaMenuOpen" style="display: none;"
+        class="lg:hidden fixed inset-0 z-[100] bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-6 font-sans overflow-y-auto"
+        x-transition:enter="transform transition-transform ease-in-out duration-500"
+        x-transition:enter-start="-translate-y-full"
+        x-transition:enter-end="translate-y-0"
+        x-transition:leave="transform transition-transform ease-in-out duration-500"
+        x-transition:leave-start="translate-y-0"
+        x-transition:leave-end="-translate-y-full">
+
+        <!-- Mobile Top Bar: Brand Logo & Close Button -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
+            <a href="<?php echo esc_url( home_url('/') ); ?>" class="flex items-center">
+                <span class="text-xs sm:text-sm font-black tracking-[0.25em] text-slate-900 dark:text-white uppercase">
+                    <?php echo OFP_Brand::public_logo_html( 'BOFAST HOMES' ); ?>
+                </span>
+            </a>
+            <button type="button" @click="megaMenuOpen = false"
+                class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Mobile Mid: 2x2 Visual Cards Grid (Compact, no tedious scrolling) -->
+        <div class="my-auto py-2 space-y-3">
+            <div class="grid grid-cols-2 gap-2.5">
+                <!-- Card 1: Properties -->
+                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                    class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
+                    <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80"
+                        alt="Properties" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
+                        Properties
+                    </div>
+                </a>
+
+                <!-- Card 2: Off-Plan -->
+                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                    class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
+                    <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=400&q=80"
+                        alt="Off-Plan" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
+                        Off-Plan
+                    </div>
+                </a>
+
+                <!-- Card 3: Map Search -->
+                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                    class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-blue-950">
+                    <div class="absolute inset-0 bg-blue-500/10" style="background-image: radial-gradient(circle, #3B82F6 1px, transparent 1px); background-size: 16px 16px;"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
+                        Map Search
+                    </div>
+                </a>
+
+                <!-- Card 4: Our Agents -->
+                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                    class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
+                    <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80"
+                        alt="Agents" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
+                        Our Agents
+                    </div>
+                </a>
+            </div>
+
+            <!-- Secondary List Links (Arrows removed, line height increased) -->
+            <div class="py-1 divide-y divide-slate-100 dark:divide-slate-800/80">
+                <a href="<?php echo esc_url( home_url('/login') ); ?>"
+                    class="py-3 sm:py-3.5 flex items-center text-slate-800 dark:text-slate-200 font-bold text-xs uppercase tracking-wider hover:text-blue-600 transition-colors">
+                    <span class="flex items-center gap-2.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Become a Partner
+                    </span>
+                </a>
+                <a href="<?php echo esc_url( home_url('/login') ); ?>"
+                    class="py-3 sm:py-3.5 flex items-center text-slate-800 dark:text-slate-200 font-bold text-xs uppercase tracking-wider hover:text-blue-600 transition-colors">
+                    <span class="flex items-center gap-2.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Developers Hub
+                    </span>
+                </a>
+                <a href="<?php echo esc_url( home_url('/careers') ); ?>"
+                    class="py-3 sm:py-3.5 flex items-center text-slate-800 dark:text-slate-200 font-bold text-xs uppercase tracking-wider hover:text-blue-600 transition-colors">
+                    <span class="flex items-center gap-2.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Careers
+                    </span>
+                </a>
+            </div>
+
+            <!-- Under Careers: Social Media channels (above Privacy Policy) -->
+            <?php if ( ! empty( $ofp_header_social ) ) : ?>
+                <div class="pt-3 pb-1 border-t border-slate-100 dark:border-slate-800/80">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <?php foreach ( $ofp_header_social as $sm ) : ?>
+                            <a href="<?php echo esc_url( $sm['url'] ); ?>" target="_blank" rel="noopener noreferrer"
+                               aria-label="<?php echo esc_attr( $sm['label'] ); ?>" title="<?php echo esc_attr( $sm['label'] ); ?>"
+                               class="p-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                <?php echo $sm['svg']; ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Privacy Policy (Below Social Media) -->
+            <div class="pt-2">
+                <a href="<?php echo esc_url( home_url('/privacy-policy/') ); ?>"
+                    class="text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-bold tracking-widest uppercase transition-colors inline-block">
+                    Privacy Policy
+                </a>
+            </div>
+        </div>
+
+        <!-- Mobile Bottom Action Row -->
+        <div class="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-3 shrink-0">
+            <button type="button" onclick="ofpToggleTheme()" aria-label="Toggle Dark Mode"
+                class="p-3 rounded-[7px] border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all cursor-pointer">
+                <svg class="w-5 h-5 theme-toggle-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                </svg>
+                <svg class="w-5 h-5 text-amber-400 theme-toggle-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+            </button>
+            <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-[7px] text-center text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all uppercase">
+                List Property
+            </a>
+        </div>
+    </div>
 
     <!-- 1. Hero Section -->
     <section

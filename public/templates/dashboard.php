@@ -44,16 +44,21 @@ $monthly_rent_collected = (float) $wpdb->get_var( $wpdb->prepare(
     $client->id
 ) );
 
+$sales_revenue_collected = (float) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COALESCE(SUM(amount_paid), 0) FROM {$pfx}ofp_property_purchases WHERE client_id = %d",
+    (int) $client->id
+) );
+$total_income_collected = $sales_revenue_collected + $monthly_rent_collected;
+
 $occupancy_percentage = $total_units_count > 0 ? round( ( $active_leases_cnt / $total_units_count ) * 100 ) : 0;
 if ( $occupancy_percentage > 100 ) $occupancy_percentage = 100;
 
-// Smart Display with Fallbacks matching reference
-$has_real_properties = $total_units_count > 0;
-$display_portfolio = $has_real_properties && $portfolio_value > 0 ? '₦' . number_format( $portfolio_value ) : '₦1,482,900,000';
-$display_units = $has_real_properties ? $total_units_count . ' Units' : '12 Units';
-$display_occupancy = $has_real_properties ? $occupancy_percentage . '%' : '91%';
-$display_occupied_units = $has_real_properties ? $active_leases_cnt . ' Units currently occupied' : '5 Units currently occupied';
-$display_rent = $has_real_properties && $monthly_rent_collected > 0 ? '₦' . number_format( $monthly_rent_collected ) : '₦18,240,000';
+// Real Display Values
+$display_portfolio      = $portfolio_value > 0 ? '₦' . number_format( $portfolio_value ) : '₦0';
+$display_units          = $total_units_count . ' Units';
+$display_occupancy      = $occupancy_percentage . '%';
+$display_occupied_units = $active_leases_cnt . ' Units currently occupied';
+$display_rent           = $monthly_rent_collected > 0 ? '₦' . number_format( $monthly_rent_collected ) : '₦0';
 
 // ── Property Locations & Portfolio Dataset for Interactive Map ──
 $properties_by_loc = [];
@@ -239,61 +244,11 @@ if ( ! empty( $recent_buyers_raw ) ) {
     }
 }
 
-// Demo fallback buyers if fewer than 3 in database
-$demo_buyer_templates = [
-    [
-        'name'           => 'Chief Adeleke Adeleke',
-        'phone'          => '+234 803 456 7890',
-        'email'          => 'adeleke@gmail.com',
-        'initials'       => 'AA',
-        'avatar_bg'      => 'linear-gradient(135deg, var(--btn-primary, #3b82f6), #1d4ed8)',
-        'amount_paid'    => '₦182,900,000',
-        'property_title' => 'Greenlake Luxury Residence',
-        'status_label'   => 'Completed',
-        'status_style'   => 'background:rgba(16, 185, 129, 0.12); color:#10b981; border:1px solid rgba(16, 185, 129, 0.25);',
-        'time_ago'       => '2 days ago',
-        'link'           => home_url( '/property-sales' ),
-    ],
-    [
-        'name'           => 'Dr. Folashade Alakija',
-        'phone'          => '+234 812 345 6789',
-        'email'          => 'folashade.a@outlook.com',
-        'initials'       => 'FA',
-        'avatar_bg'      => 'linear-gradient(135deg, #10b981, #047857)',
-        'amount_paid'    => '₦240,000,000',
-        'property_title' => 'Ocean Crest Penthouse',
-        'status_label'   => 'Installment',
-        'status_style'   => 'background:var(--brand-color-alpha-15, rgba(59, 130, 246, 0.12)); color:var(--brand-color, var(--btn-primary, #3b82f6)); border:1px solid var(--brand-color-alpha-25, rgba(59, 130, 246, 0.25));',
-        'time_ago'       => '5 days ago',
-        'link'           => home_url( '/property-sales' ),
-    ],
-    [
-        'name'           => 'Engr. Tunde Bakare',
-        'phone'          => '+234 701 987 6543',
-        'email'          => 'tunde.bakare@live.com',
-        'initials'       => 'TB',
-        'avatar_bg'      => 'linear-gradient(135deg, #f59e0b, #b45309)',
-        'amount_paid'    => '₦95,000,000',
-        'property_title' => 'Admiralty Point Luxury Flat',
-        'status_label'   => 'Verified',
-        'status_style'   => 'background:rgba(59, 130, 246, 0.12); color:#3b82f6; border:1px solid rgba(59, 130, 246, 0.25);',
-        'time_ago'       => '1 week ago',
-        'link'           => home_url( '/property-sales' ),
-    ],
-];
-
-while ( count( $recent_buyers_display ) < 3 ) {
-    $demo_idx = count( $recent_buyers_display );
-    $recent_buyers_display[] = $demo_buyer_templates[ $demo_idx ];
-}
-$recent_buyers_display = array_slice( $recent_buyers_display, 0, 3 );
+// Real count of client's buyers
 $total_buyers_count = (int) $wpdb->get_var( $wpdb->prepare(
     "SELECT COUNT(*) FROM {$pfx}ofp_property_purchases WHERE client_id = %d",
     (int) $client->id
 ) );
-if ( $total_buyers_count < 3 ) {
-    $total_buyers_count = 3;
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -388,12 +343,12 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 <div>
                     <div class="ofp-zentra-card-title">Cash Flow Trajectory</div>
                     <div style="font-size:20px; font-weight:700; color:var(--text-main); margin-top:4px;">
-                        ₦12,320,000 <span style="font-size:12px; font-weight:600; color:#10b981; background:rgba(16,185,129,0.1); padding:2px 8px; border-radius:9999px;">+18.4% Flow</span>
+                        ₦<?php echo number_format( $total_income_collected ); ?> <span style="font-size:12px; font-weight:600; color:<?php echo $total_income_collected > 0 ? '#10b981' : 'var(--text-muted)'; ?>; background:<?php echo $total_income_collected > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)'; ?>; padding:2px 8px; border-radius:9999px;"><?php echo $total_income_collected > 0 ? '+100% Flow' : '0% Flow'; ?></span>
                     </div>
                 </div>
                 <div class="ofp-chart-header-controls">
                     <select class="ofp-zentra-select" id="ofp-cashflow-period">
-                        <option value="1year">This Year (2026)</option>
+                        <option value="1year">This Year (<?php echo date('Y'); ?>)</option>
                         <option value="6months">Last 6 Months</option>
                         <option value="30days">Last 30 Days</option>
                     </select>
@@ -408,7 +363,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
         <div class="ofp-zentra-card">
             <div class="ofp-zentra-card-header">
                 <div class="ofp-zentra-card-title"><?php echo date('F'); ?></div>
-                <span class="ofp-kpi-badge badge-green" style="font-size:11px;">+8% Compared to last month</span>
+                <span class="ofp-kpi-badge badge-green" style="font-size:11px;"><?php echo $total_income_collected > 0 ? 'Active Performance' : 'Awaiting Deals'; ?></span>
             </div>
             
             <div class="ofp-breakdown-list">
@@ -416,10 +371,10 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 <div class="ofp-breakdown-item">
                     <div class="ofp-breakdown-meta">
                         <span class="ofp-breakdown-label">Income</span>
-                        <span class="ofp-breakdown-amount">₦12,320,000</span>
+                        <span class="ofp-breakdown-amount">₦<?php echo number_format( $total_income_collected ); ?></span>
                     </div>
                     <div class="ofp-breakdown-track">
-                        <div class="ofp-breakdown-fill income" style="width: 82%;"></div>
+                        <div class="ofp-breakdown-fill income" style="width: <?php echo $total_income_collected > 0 ? '100%' : '0%'; ?>;"></div>
                     </div>
                 </div>
 
@@ -427,10 +382,10 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 <div class="ofp-breakdown-item">
                     <div class="ofp-breakdown-meta">
                         <span class="ofp-breakdown-label">Expense</span>
-                        <span class="ofp-breakdown-amount">₦4,540,000</span>
+                        <span class="ofp-breakdown-amount">₦0</span>
                     </div>
                     <div class="ofp-breakdown-track">
-                        <div class="ofp-breakdown-fill expense" style="width: 38%;"></div>
+                        <div class="ofp-breakdown-fill expense" style="width: 0%;"></div>
                     </div>
                 </div>
 
@@ -438,10 +393,10 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 <div class="ofp-breakdown-item">
                     <div class="ofp-breakdown-meta">
                         <span class="ofp-breakdown-label">Net</span>
-                        <span class="ofp-breakdown-amount">₦7,780,000</span>
+                        <span class="ofp-breakdown-amount">₦<?php echo number_format( $total_income_collected ); ?></span>
                     </div>
                     <div class="ofp-breakdown-track">
-                        <div class="ofp-breakdown-fill net" style="width: 58%;"></div>
+                        <div class="ofp-breakdown-fill net" style="width: <?php echo $total_income_collected > 0 ? '100%' : '0%'; ?>;"></div>
                     </div>
                 </div>
             </div>

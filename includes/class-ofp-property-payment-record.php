@@ -63,4 +63,13 @@ class OFP_Property_Payment_Record {
         }
         return $ok;
     }
+
+    /**
+     * Backward-compatibility forwarder to OFP_Property_Payment_Records::render_admin().
+     */
+    public static function render_admin(): void {
+        if ( class_exists( 'OFP_Property_Payment_Records' ) ) {
+            OFP_Property_Payment_Records::render_admin();
+        }
+    }
 }

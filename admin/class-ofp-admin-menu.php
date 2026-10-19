@@ -589,6 +589,29 @@ class OFP_Admin_Menu {
     }
 
     /**
+     * Normalize and sanitize a social URL or contact handle.
+     */
+    public static function clean_social_url( $val, bool $is_wa = false ): string {
+        $val = trim( (string) wp_unslash( $val ?? '' ) );
+        if ( $val === '' ) {
+            return '';
+        }
+        if ( $is_wa && ! preg_match( '#^https?://#i', $val ) ) {
+            $digits = preg_replace( '/[^0-9]/', '', $val );
+            if ( ! empty( $digits ) ) {
+                if ( str_starts_with( $digits, '0' ) ) {
+                    $digits = '234' . substr( $digits, 1 );
+                }
+                return 'https://wa.me/' . $digits;
+            }
+        }
+        if ( ! preg_match( '#^https?://#i', $val ) ) {
+            $val = 'https://' . $val;
+        }
+        return esc_url_raw( $val );
+    }
+
+    /**
      * Handle saving plugin settings.
      *
      * @return void
@@ -640,6 +663,15 @@ class OFP_Admin_Menu {
             // Prembly (Identitypass) Verification & KYC
             'ofp_prembly_app_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_prembly_app_id'] ?? '' ) ),
             'ofp_prembly_env'        => sanitize_text_field( wp_unslash( $_POST['ofp_prembly_env'] ?? 'test' ) ),
+            // Social Media Channels
+            'ofp_social_facebook'    => self::clean_social_url( $_POST['ofp_social_facebook'] ?? '' ),
+            'ofp_social_instagram'   => self::clean_social_url( $_POST['ofp_social_instagram'] ?? '' ),
+            'ofp_social_twitter'     => self::clean_social_url( $_POST['ofp_social_twitter'] ?? '' ),
+            'ofp_social_linkedin'    => self::clean_social_url( $_POST['ofp_social_linkedin'] ?? '' ),
+            'ofp_social_youtube'     => self::clean_social_url( $_POST['ofp_social_youtube'] ?? '' ),
+            'ofp_social_tiktok'      => self::clean_social_url( $_POST['ofp_social_tiktok'] ?? '' ),
+            'ofp_social_whatsapp'    => self::clean_social_url( $_POST['ofp_social_whatsapp'] ?? '', true ),
+            'ofp_social_telegram'    => self::clean_social_url( $_POST['ofp_social_telegram'] ?? '' ),
         ];
 
         // Encrypted fields — only update if a new value was submitted.

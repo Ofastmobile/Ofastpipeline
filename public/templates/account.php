@@ -166,13 +166,17 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
                     $bank_msg = 'The default bank account was changed.';
                 }
             }
-            if ( $bank_msg && ! empty( $client->email ) ) {
-                OFP_Mailer::send(
-                    $client->email,
-                    $client->owner_name ?: 'there',
-                    'Your bank account details were changed',
-                    '<p>' . esc_html( $bank_msg ) . ' Buyers and tenants will now see the new details.</p><p>If you did not do this, change your password right away.</p>'
-                );
+            if ( $bank_msg ) {
+                if ( ! empty( $client->email ) ) {
+                    OFP_Mailer::send(
+                        $client->email,
+                        $client->owner_name ?: 'there',
+                        'Your bank account details were changed',
+                        '<p>' . esc_html( $bank_msg ) . ' Buyers and tenants will now see the new details.</p><p>If you did not do this, change your password right away.</p>'
+                    );
+                }
+                wp_safe_redirect( add_query_arg( 'success', 'bank_updated', home_url( '/account' ) ) );
+                exit;
             }
         }
     } elseif ( isset( $_POST['update_branding'] ) ) {
@@ -332,6 +336,8 @@ if ( isset( $_GET['success'] ) ) {
         $success = 'Cover image updated successfully! It is now live on your public /agent profile.';
     } elseif ( $_GET['success'] === 'cover_reset' ) {
         $success = 'Cover image reset to default platform banner.';
+    } elseif ( $_GET['success'] === 'bank_updated' ) {
+        $success = 'Bank account details updated successfully.';
     }
 }
 
@@ -1300,16 +1306,13 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
 
     // Auto-open modal on error or success if returning from an action
     <?php if ( ! empty( $error ) || ( ! empty( $success ) && ( isset($_POST['update_profile']) || isset($_POST['bank_do']) || isset($_POST['change_password']) || isset($_POST['update_branding']) ) ) ) : ?>
-        // If bank error, switch to bank tab
+        // If bank action/error, open bank tab in modal
         <?php if ( isset($_POST['bank_do']) ) : ?>
-            const bankTab = document.querySelector('[data-tab="tab-banking"]');
-            if (bankTab) bankTab.click();
+            if (typeof openEditModal === 'function') openEditModal('tab-banking');
         <?php elseif ( isset($_POST['change_password']) ) : ?>
-            const secTab = document.querySelector('[data-tab="tab-security"]');
-            if (secTab) secTab.click();
+            if (typeof openEditModal === 'function') openEditModal('tab-security');
         <?php elseif ( isset($_POST['update_branding']) ) : ?>
-            const brandTab = document.querySelector('[data-tab="tab-branding"]');
-            if (brandTab) brandTab.click();
+            if (typeof openEditModal === 'function') openEditModal('tab-branding');
         <?php endif; ?>
     <?php endif; ?>
 

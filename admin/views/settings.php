@@ -69,6 +69,16 @@ $bank_acc_no        = get_option( 'ofp_company_account_no', '' );
 $bank_acc_name      = get_option( 'ofp_company_account_name', '' );
 $has_bank_set       = ! empty( $bank_name ) && ! empty( $bank_acc_no );
 
+// Social Media Channels
+$social_facebook    = get_option( 'ofp_social_facebook', '' );
+$social_instagram   = get_option( 'ofp_social_instagram', '' );
+$social_twitter     = get_option( 'ofp_social_twitter', '' );
+$social_linkedin    = get_option( 'ofp_social_linkedin', '' );
+$social_youtube     = get_option( 'ofp_social_youtube', '' );
+$social_tiktok      = get_option( 'ofp_social_tiktok', '' );
+$social_whatsapp    = get_option( 'ofp_social_whatsapp', '' );
+$social_telegram    = get_option( 'ofp_social_telegram', '' );
+
 // Plans & Pricing
 $listing_prices     = OFP_Property_CPT::get_plan_prices();
 $listing_caps       = OFP_Property_CPT::get_plan_caps();
@@ -458,6 +468,130 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                     <span class="ofp-slider"></span>
                                 </label>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Social Media Channels Card -->
+                    <div class="ofp-card" style="margin-top: 24px;">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-purple">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="18" cy="5" r="3"/>
+                                        <circle cx="6" cy="12" r="3"/>
+                                        <circle cx="18" cy="19" r="3"/>
+                                        <line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/>
+                                        <line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Social Media Channels</h3>
+                                    <p>Connect your brand's official social media profiles. Only channels with a configured link will appear across the global navigation menu and footer.</p>
+                                </div>
+                            </div>
+                            <span class="ofp-pill ofp-pill-purple">Public Links</span>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-field-grid">
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">Facebook URL</label>
+                                    </div>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_social_facebook"
+                                               value="<?php echo esc_attr( $social_facebook ); ?>"
+                                               placeholder="https://facebook.com/yourpage">
+                                    </div>
+                                    <p class="ofp-field-hint">e.g. https://facebook.com/bofasthomes</p>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">Instagram URL</label>
+                                    </div>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_social_instagram"
+                                               value="<?php echo esc_attr( $social_instagram ); ?>"
+                                               placeholder="https://instagram.com/yourprofile">
+                                    </div>
+                                    <p class="ofp-field-hint">e.g. https://instagram.com/bofasthomes</p>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">X / Twitter URL</label>
+                                    </div>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_social_twitter"
+                                               value="<?php echo esc_attr( $social_twitter ); ?>"
+                                               placeholder="https://x.com/yourhandle">
+                                    </div>
+                                    <p class="ofp-field-hint">e.g. https://x.com/bofasthomes</p>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">LinkedIn URL</label>
+                                    </div>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_social_linkedin"
+                                               value="<?php echo esc_attr( $social_linkedin ); ?>"
+                                               placeholder="https://linkedin.com/company/yourbrand">
+                                    </div>
+                                    <p class="ofp-field-hint">e.g. https://linkedin.com/company/bofasthomes</p>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">YouTube URL</label>
+                                    </div>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_social_youtube"
+                                               value="<?php echo esc_attr( $social_youtube ); ?>"
+                                               placeholder="https://youtube.com/@yourchannel">
+                                    </div>
+                                    <p class="ofp-field-hint">e.g. https://youtube.com/@bofasthomes</p>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">TikTok URL</label>
+                                    </div>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_social_tiktok"
+                                               value="<?php echo esc_attr( $social_tiktok ); ?>"
+                                               placeholder="https://tiktok.com/@yourhandle">
+                                    </div>
+                                    <p class="ofp-field-hint">e.g. https://tiktok.com/@bofasthomes</p>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">WhatsApp Direct Link / Number</label>
+                                    </div>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_social_whatsapp"
+                                               value="<?php echo esc_attr( $social_whatsapp ); ?>"
+                                               placeholder="https://wa.me/2348000000000 or phone number">
+                                    </div>
+                                    <p class="ofp-field-hint">e.g. https://wa.me/2348123456789 or 08012345678</p>
+                                </div>
+
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">Telegram Channel / Support</label>
+                                    </div>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_social_telegram"
+                                               value="<?php echo esc_attr( $social_telegram ); ?>"
+                                               placeholder="https://t.me/yourchannel">
+                                    </div>
+                                    <p class="ofp-field-hint">e.g. https://t.me/bofasthomes</p>
+                                </div>
+                            </div>
+                            <p class="ofp-field-hint" style="margin-top: 16px;">
+                                <strong>Note:</strong> Leave any unused social channels completely blank. Only channels with a valid link will be visible to public visitors.
+                            </p>
                         </div>
                     </div>
                 </section>

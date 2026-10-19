@@ -118,6 +118,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_admin_action'] 
 
 // ── Filters ──────────────────────────────────────────────────────────────────
 $filter_client = absint( $_GET['client_id'] ?? 0 );
+$filter_status = sanitize_key( $_GET['status'] ?? '' );
 $is_portal = ( isset( $_GET['tab'] ) && $_GET['tab'] === 'rent-oversight' )
     || isset( $_GET['subtab'] )
     || ( strpos( $_SERVER['REQUEST_URI'] ?? '', 'admin-portal' ) !== false );

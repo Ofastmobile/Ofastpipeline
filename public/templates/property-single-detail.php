@@ -491,10 +491,10 @@ if ( empty( $gallery_urls ) ) {
     </script>
 </head>
 
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 pb-20 lg:pb-0">
 
-    <!-- Mega Menu Backdrop Overlay -->
-    <div x-show="megaMenuOpen" class="fixed inset-0 bg-slate-900/20 backdrop-blur-md z-40"
+    <!-- Mega Menu Backdrop Overlay (Desktop) -->
+    <div x-show="megaMenuOpen" class="hidden lg:block fixed inset-0 bg-slate-900/20 backdrop-blur-md z-40"
         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="display: none;"
@@ -515,8 +515,8 @@ if ( empty( $gallery_urls ) ) {
             <div class="flex justify-between items-center h-16 transition-all duration-300">
                 <!-- Left: Logo & Hamburger -->
                 <div class="flex items-center gap-3 sm:gap-5">
-                    <!-- Logo (No icon, Uppercase, Small font) -->
-                    <a href="<?php echo esc_url( home_url('/') ); ?>" class="flex items-center">
+                    <!-- Logo (Hidden on mobile so only hamburger displays, visible from sm up) -->
+                    <a href="<?php echo esc_url( home_url('/') ); ?>" class="hidden sm:flex items-center">
                         <span
                             class="text-[13px] sm:text-sm font-black tracking-[0.25em] text-slate-900 dark:text-white uppercase transition-colors">
                             <?php echo OFP_Brand::public_logo_html( 'BOFAST HOMES' ); ?>
@@ -552,105 +552,253 @@ if ( empty( $gallery_urls ) ) {
                             </path>
                         </svg>
                     </button>
-                    <!-- Post Property Button -->
+                    <!-- List Property Button -->
                     <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap uppercase inline-flex items-center justify-center">
-                        Post Property
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 sm:px-7 py-2 sm:py-2.5 rounded-[7px] text-[11px] sm:text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap uppercase inline-flex items-center justify-center">
+                        List Property
                     </a>
                 </div>
             </div>
 
-            <!-- Mega Menu Dropdown (Boxed, not full width) -->
+            <?php $ofp_header_social = OFP_Brand::social_links(); ?>
+
+            <!-- Desktop Mega Menu Dropdown (hidden lg:block) -->
             <div x-show="megaMenuOpen" style="display: none;" @click.away="megaMenuOpen = false"
-                class="absolute top-full left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 mt-2 z-[100] bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden font-sans"
+                class="hidden lg:block absolute top-full left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 mt-2 z-[100] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden font-sans"
                 x-transition:enter="transition ease-out duration-300"
                 x-transition:enter-start="opacity-0 -translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
                 x-transition:leave="transition ease-in duration-200"
                 x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-4">
 
                 <!-- Main Content Area -->
-                <div class="p-5 sm:p-8 grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
+                <div class="p-8 grid grid-cols-4 gap-8">
                     <!-- Image Cards Area (Takes 3 columns) -->
-                    <div class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="col-span-3 grid grid-cols-4 gap-4">
 
                         <!-- Card 1: Properties -->
                         <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
-                            class="group relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
+                            class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
                             <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80"
                                 alt="Properties"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
-                            </div>
-                            <div
-                                class="absolute bottom-4 left-4 text-white font-black text-lg sm:text-xl uppercase tracking-wide group-hover:text-blue-400 transition-colors">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors">
                                 PROPERTIES</div>
                         </a>
 
                         <!-- Card 2: Off-Plan -->
-                        <a href="#"
-                            class="group relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
+                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                            class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
                             <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=600&q=80"
                                 alt="Off-Plan"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
-                            </div>
-                            <div
-                                class="absolute bottom-4 left-4 text-white font-black text-lg sm:text-xl uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
                                 OFF-PLAN</div>
                         </a>
 
                         <!-- Card 3: Map -->
-                        <a href="#"
-                            class="group relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-blue-50 dark:bg-blue-900/20">
+                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                            class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-blue-50 dark:bg-blue-900/20">
                             <div class="absolute inset-0 bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors z-10"
-                                style="background-image: radial-gradient(circle, #3B82F6 1px, transparent 1px); background-size: 20px 20px;">
-                            </div>
-                            <div
-                                class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20">
-                            </div>
-                            <div
-                                class="absolute bottom-4 left-4 text-white font-black text-lg sm:text-xl uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
+                                style="background-image: radial-gradient(circle, #3B82F6 1px, transparent 1px); background-size: 20px 20px;"></div>
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20"></div>
+                            <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
                                 MAP SEARCH</div>
                         </a>
 
                         <!-- Card 4: Agents -->
-                        <a href="#"
-                            class="group relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
+                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                            class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
                             <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80"
                                 alt="Agents"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
-                            </div>
-                            <div
-                                class="absolute bottom-4 left-4 text-white font-black text-lg sm:text-xl uppercase tracking-wide group-hover:text-blue-400 transition-colors">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors">
                                 OUR AGENTS</div>
                         </a>
                     </div>
 
                     <!-- Side Links (Takes 1 column) -->
-                    <div
-                        class="flex flex-col justify-between h-full pt-4 lg:pt-0 lg:pl-8 lg:border-l border-slate-200 dark:border-slate-800">
-                        <ul class="space-y-4">
-                            <li><a href="#"
-                                    class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-[11px] sm:text-sm tracking-widest transition-colors uppercase flex items-center gap-2"><span
-                                        class="w-2 h-2 rounded-full bg-blue-500"></span> BECOME A PARTNER</a></li>
-                            <li><a href="#"
-                                    class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-[11px] sm:text-sm tracking-widest transition-colors uppercase flex items-center gap-2"><span
-                                        class="w-2 h-2 rounded-full bg-blue-500"></span> DEVELOPERS HUB</a></li>
-                            <li><a href="#"
-                                    class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-[11px] sm:text-sm tracking-widest transition-colors uppercase flex items-center gap-2"><span
-                                        class="w-2 h-2 rounded-full bg-blue-500"></span> CAREERS</a></li>
-                        </ul>
-                        <div class="mt-8 lg:mt-0 pt-4 border-t border-slate-200 dark:border-slate-800 lg:border-none">
-                            <a href="#"
-                                class="text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 text-[10px] sm:text-xs font-bold tracking-widest transition-colors uppercase">PRIVACY
-                                POLICY</a>
+                    <div class="flex flex-col justify-between h-full pl-8 border-l border-slate-200 dark:border-slate-800">
+                        <div class="space-y-6">
+                            <ul class="space-y-4">
+                                <li><a href="<?php echo esc_url( home_url('/login') ); ?>"
+                                        class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs tracking-widest transition-colors uppercase flex items-center gap-2"><span
+                                            class="w-2 h-2 rounded-full bg-blue-500"></span> BECOME A PARTNER</a></li>
+                                <li><a href="<?php echo esc_url( home_url('/login') ); ?>"
+                                        class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs tracking-widest transition-colors uppercase flex items-center gap-2"><span
+                                            class="w-2 h-2 rounded-full bg-blue-500"></span> DEVELOPERS HUB</a></li>
+                                <li><a href="<?php echo esc_url( home_url('/careers') ); ?>"
+                                        class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs tracking-widest transition-colors uppercase flex items-center gap-2"><span
+                                            class="w-2 h-2 rounded-full bg-blue-500"></span> CAREERS</a></li>
+                            </ul>
+
+                            <!-- Under Careers, Above Privacy Policy: Social Media -->
+                            <?php if ( ! empty( $ofp_header_social ) ) : ?>
+                                <div class="pt-4 border-t border-slate-200 dark:border-slate-800">
+                                    <div class="flex items-center gap-3 flex-wrap">
+                                        <?php foreach ( $ofp_header_social as $sm ) : ?>
+                                            <a href="<?php echo esc_url( $sm['url'] ); ?>" target="_blank" rel="noopener noreferrer"
+                                               aria-label="<?php echo esc_attr( $sm['label'] ); ?>" title="<?php echo esc_attr( $sm['label'] ); ?>"
+                                               class="p-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                                <?php echo $sm['svg']; ?>
+                                            </a>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Privacy Policy (Below Social Media) -->
+                        <div class="pt-4 border-t border-slate-200 dark:border-slate-800">
+                            <a href="<?php echo esc_url( home_url('/privacy-policy/') ); ?>"
+                                class="text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 text-xs font-bold tracking-widest transition-colors uppercase whitespace-nowrap">PRIVACY POLICY</a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </header>
+
+    <!-- Mobile Full-Page Navigation Screen (lg:hidden, placed outside <header> so transform doesn't clip/break fixed inset-0) -->
+    <div x-show="megaMenuOpen" style="display: none;"
+        class="lg:hidden fixed inset-0 z-[100] bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-6 font-sans overflow-y-auto"
+        x-transition:enter="transform transition-transform ease-in-out duration-500"
+        x-transition:enter-start="-translate-y-full"
+        x-transition:enter-end="translate-y-0"
+        x-transition:leave="transform transition-transform ease-in-out duration-500"
+        x-transition:leave-start="translate-y-0"
+        x-transition:leave-end="-translate-y-full">
+
+        <!-- Mobile Top Bar: Brand Logo & Close Button -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
+            <a href="<?php echo esc_url( home_url('/') ); ?>" class="flex items-center">
+                <span class="text-xs sm:text-sm font-black tracking-[0.25em] text-slate-900 dark:text-white uppercase">
+                    <?php echo OFP_Brand::public_logo_html( 'BOFAST HOMES' ); ?>
+                </span>
+            </a>
+            <button type="button" @click="megaMenuOpen = false"
+                class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Mobile Mid: 2x2 Visual Cards Grid (Compact, no tedious scrolling) -->
+        <div class="my-auto py-2 space-y-3">
+            <div class="grid grid-cols-2 gap-2.5">
+                <!-- Card 1: Properties -->
+                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                    class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
+                    <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80"
+                        alt="Properties" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
+                        Properties
+                    </div>
+                </a>
+
+                <!-- Card 2: Off-Plan -->
+                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                    class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
+                    <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=400&q=80"
+                        alt="Off-Plan" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
+                        Off-Plan
+                    </div>
+                </a>
+
+                <!-- Card 3: Map Search -->
+                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                    class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-blue-950">
+                    <div class="absolute inset-0 bg-blue-500/10" style="background-image: radial-gradient(circle, #3B82F6 1px, transparent 1px); background-size: 16px 16px;"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
+                        Map Search
+                    </div>
+                </a>
+
+                <!-- Card 4: Our Agents -->
+                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                    class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
+                    <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80"
+                        alt="Agents" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
+                        Our Agents
+                    </div>
+                </a>
+            </div>
+
+            <!-- Secondary List Links (Arrows removed, line height increased) -->
+            <div class="py-1 divide-y divide-slate-100 dark:divide-slate-800/80">
+                <a href="<?php echo esc_url( home_url('/login') ); ?>"
+                    class="py-3 sm:py-3.5 flex items-center text-slate-800 dark:text-slate-200 font-bold text-xs uppercase tracking-wider hover:text-blue-600 transition-colors">
+                    <span class="flex items-center gap-2.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Become a Partner
+                    </span>
+                </a>
+                <a href="<?php echo esc_url( home_url('/login') ); ?>"
+                    class="py-3 sm:py-3.5 flex items-center text-slate-800 dark:text-slate-200 font-bold text-xs uppercase tracking-wider hover:text-blue-600 transition-colors">
+                    <span class="flex items-center gap-2.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Developers Hub
+                    </span>
+                </a>
+                <a href="<?php echo esc_url( home_url('/careers') ); ?>"
+                    class="py-3 sm:py-3.5 flex items-center text-slate-800 dark:text-slate-200 font-bold text-xs uppercase tracking-wider hover:text-blue-600 transition-colors">
+                    <span class="flex items-center gap-2.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Careers
+                    </span>
+                </a>
+            </div>
+
+            <!-- Under Careers: Social Media channels (above Privacy Policy) -->
+            <?php if ( ! empty( $ofp_header_social ) ) : ?>
+                <div class="pt-3 pb-1 border-t border-slate-100 dark:border-slate-800/80">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <?php foreach ( $ofp_header_social as $sm ) : ?>
+                            <a href="<?php echo esc_url( $sm['url'] ); ?>" target="_blank" rel="noopener noreferrer"
+                               aria-label="<?php echo esc_attr( $sm['label'] ); ?>" title="<?php echo esc_attr( $sm['label'] ); ?>"
+                               class="p-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                <?php echo $sm['svg']; ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Privacy Policy (Below Social Media) -->
+            <div class="pt-2">
+                <a href="<?php echo esc_url( home_url('/privacy-policy/') ); ?>"
+                    class="text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-bold tracking-widest uppercase transition-colors inline-block">
+                    Privacy Policy
+                </a>
+            </div>
+        </div>
+
+        <!-- Mobile Bottom Action Row -->
+        <div class="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-3 shrink-0">
+            <button type="button" onclick="ofpToggleTheme()" aria-label="Toggle Dark Mode"
+                class="p-3 rounded-[7px] border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all cursor-pointer">
+                <svg class="w-5 h-5 theme-toggle-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                </svg>
+                <svg class="w-5 h-5 text-amber-400 theme-toggle-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+            </button>
+            <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-[7px] text-center text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all uppercase">
+                List Property
+            </a>
+        </div>
+    </div>
 
     <!-- Breadcrumb Bar (fits directly under nav bar) -->
     <div class="bg-slate-900 dark:bg-slate-950 border-b border-slate-800">
@@ -666,7 +814,7 @@ if ( empty( $gallery_urls ) ) {
             </a>
 
             <!-- Breadcrumb trail -->
-            <nav class="flex items-center gap-1 text-xs text-slate-400 overflow-hidden min-w-0" aria-label="Breadcrumb">
+            <nav class="hidden md:flex items-center gap-1 text-xs text-slate-400 overflow-hidden min-w-0" aria-label="Breadcrumb">
                 <a href="<?php echo esc_url( home_url('/') ); ?>" class="hover:text-white transition-colors shrink-0">Home</a>
                 <span class="text-slate-600 mx-1">/</span>
                 <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
@@ -713,7 +861,7 @@ if ( empty( $gallery_urls ) ) {
     <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 
         <!-- Property Hero: full-width cinematic image -->
-        <div class="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden mb-4 cursor-pointer shadow-2xl group transition-all h-[460px] sm:h-[560px] md:h-[620px] lg:h-[660px]" style="min-height:480px; height:620px;"
+        <div class="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden mb-4 cursor-pointer shadow-2xl group transition-all h-[360px] sm:h-[480px] md:h-[560px] lg:h-[620px]"
             @click="showGallery = true; currentImage = 0">
 
             <!-- Main image -->
@@ -727,36 +875,36 @@ if ( empty( $gallery_urls ) ) {
             </div>
 
             <!-- Tags -- top-left -->
-            <div class="absolute top-4 left-4 z-20 flex items-center gap-2 flex-wrap">
-                <span class="bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg"><?php echo esc_html( $listing_label ); ?></span>
+            <div class="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex items-center gap-1.5 sm:gap-2 flex-wrap max-w-[calc(100%-1.5rem)]">
+                <span class="bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg"><?php echo esc_html( $listing_label ); ?></span>
                 <?php if ( $is_featured ) : ?>
-                    <span class="bg-amber-400 text-slate-950 text-[10px] font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                    <span class="bg-amber-400 text-slate-950 text-[10px] font-extrabold uppercase tracking-wider px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg flex items-center gap-1">
                         <svg class="w-3 h-3 text-slate-950" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                         Featured
                     </span>
                 <?php endif; ?>
                 <?php if ( ! empty( $status_ctx['is_occupied'] ) ) : ?>
-                    <span class="bg-purple-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+                    <span class="bg-purple-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                         Occupied
                     </span>
                 <?php elseif ( ! empty( $status_ctx['is_taken'] ) ) : ?>
-                    <span class="bg-rose-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                    <span class="bg-rose-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg flex items-center gap-1">
                         ● <?php echo esc_html( $status_ctx['label'] ); ?>
                     </span>
                 <?php elseif ( ! empty( $status_ctx['key'] ) && $status_ctx['key'] === 'under_offer' ) : ?>
-                    <span class="bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                    <span class="bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg flex items-center gap-1">
                         ● Under Offer
                     </span>
                 <?php else : ?>
-                    <span class="bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                    <span class="bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
                         Available
                     </span>
                 <?php endif; ?>
                 <?php if ( ! empty( $is_property_verified ) ) : ?>
                     <span
-                        class="bg-emerald-500/90 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                        class="bg-emerald-500/90 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg flex items-center gap-1">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -766,44 +914,46 @@ if ( empty( $gallery_urls ) ) {
                 <?php endif; ?>
             </div>
 
-            <!-- Bottom-left: address + title -->
-            <div class="absolute bottom-5 left-5 z-20 max-w-[65%]">
-                <div class="flex items-center gap-1.5 text-white/80 text-xs mb-2">
-                    <svg class="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    </svg>
-                    <?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_location_text', true ) ); ?>
-                </div>
-                <h1 class="text-white font-black leading-tight drop-shadow-lg text-2xl sm:text-3xl md:text-4xl tracking-tight">
-                    <?php the_title(); ?>
-                </h1>
-            </div>
-
-            <!-- Bottom-right: price card -->
-            <div
-                class="absolute bottom-5 right-5 z-20 bg-slate-900/90 backdrop-blur-md border border-slate-700/60 rounded-2xl px-5 py-3.5 text-right shadow-2xl">
-                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-0.5">Price</p>
-                <p class="text-emerald-400 font-black text-xl sm:text-2xl leading-tight">₦<?php echo number_format( (float) get_post_meta( get_the_ID(), 'ofp_price', true ) ); ?></p>
-                <?php if ( $listing_type === "rent" || $listing_type === "shortlet" ) : ?>
-                    <p class="text-slate-400 text-xs font-semibold">/ <?php echo esc_html( get_post_meta( $post_id, "ofp_price_period", true ) ?: "year" ); ?></p>
-                <?php endif; ?>
-                <?php if ( ( $listing_type === 'rent' || $listing_type === 'shortlet' ) && $total_package > 0 ) : ?>
-                    <div class="mt-1.5 pt-1.5 border-t border-slate-700/70">
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Total Move-in Package</span>
-                        <span class="text-xs font-black text-blue-400">₦<?php echo number_format( $total_package ); ?></span>
+            <!-- Bottom overlay: Non-colliding address, title, and price card -->
+            <div class="absolute inset-x-0 bottom-0 z-20 p-4 sm:p-6 bg-gradient-to-t from-black/95 via-black/50 to-transparent flex flex-col sm:flex-row sm:items-end justify-between gap-3 pointer-events-none">
+                <!-- Address + title -->
+                <div class="min-w-0 pointer-events-auto max-w-full sm:max-w-[65%]">
+                    <div class="flex items-center gap-1.5 text-white/90 text-xs mb-1.5 truncate">
+                        <svg class="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        </svg>
+                        <span class="truncate"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_location_text', true ) ); ?></span>
                     </div>
-                <?php endif; ?>
+                    <h1 class="text-white font-black leading-tight drop-shadow-lg text-xl sm:text-3xl md:text-4xl tracking-tight line-clamp-2">
+                        <?php the_title(); ?>
+                    </h1>
+                </div>
+
+                <!-- Price card -->
+                <div class="pointer-events-auto bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-xl sm:rounded-2xl px-3.5 py-2.5 sm:px-5 sm:py-3.5 self-start sm:self-auto text-left sm:text-right shadow-2xl shrink-0">
+                    <p class="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-0.5">Price</p>
+                    <p class="text-emerald-400 font-black text-lg sm:text-2xl leading-tight">₦<?php echo number_format( (float) get_post_meta( get_the_ID(), 'ofp_price', true ) ); ?></p>
+                    <?php if ( $listing_type === "rent" || $listing_type === "shortlet" ) : ?>
+                        <p class="text-slate-400 text-[11px] sm:text-xs font-semibold">/ <?php echo esc_html( get_post_meta( $post_id, "ofp_price_period", true ) ?: "year" ); ?></p>
+                    <?php endif; ?>
+                    <?php if ( ( $listing_type === 'rent' || $listing_type === 'shortlet' ) && $total_package > 0 ) : ?>
+                        <div class="mt-1 pt-1 sm:mt-1.5 sm:pt-1.5 border-t border-slate-700/70">
+                            <span class="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Total Move-in Package</span>
+                            <span class="text-xs font-black text-blue-400">₦<?php echo number_format( $total_package ); ?></span>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
 
         <!-- Thumbnail strip -->
-        <div class="flex gap-2.5 mb-8 overflow-x-auto hide-scrollbar pb-1">
+        <div class="flex gap-2 sm:gap-2.5 mb-8 overflow-x-auto hide-scrollbar pb-1">
             <template x-for="(img, idx) in galleryImages" :key="idx">
                 <button type="button" @click="currentImage = idx; showGallery = true"
                     :class="currentImage === idx ? 'border-blue-500 ring-2 ring-blue-500/40 shadow-md' : 'border-slate-300 dark:border-slate-800 hover:border-slate-500'"
-                    class="shrink-0 w-28 h-20 sm:w-32 sm:h-22 rounded-xl overflow-hidden border-2 focus:outline-none transition-all cursor-pointer">
+                    class="shrink-0 w-20 h-14 sm:w-28 sm:h-20 sm:w-32 sm:h-22 rounded-xl overflow-hidden border-2 focus:outline-none transition-all cursor-pointer">
                     <img :src="img" class="w-full h-full object-cover">
                 </button>
             </template>
@@ -817,70 +967,65 @@ if ( empty( $gallery_urls ) ) {
 
                 <!-- Quick Info Ribbon -->
                 <div
-                    class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap justify-between items-center gap-4 mb-8">
-                    <div class="flex flex-col items-center flex-1 min-w-[80px]">
-                        <svg class="w-6 h-6 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mb-8">
+                    <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 sm:bg-transparent sm:dark:bg-transparent">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
                             </path>
                         </svg>
-                        <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Type</span>
-                        <span class="font-bold" style="text-transform: capitalize;"><?php echo esc_html( str_replace('-', ' ', get_post_meta( get_the_ID(), 'ofp_property_type', true )) ); ?></span>
+                        <span class="text-[11px] sm:text-xs text-slate-500 font-semibold uppercase tracking-wider">Type</span>
+                        <span class="font-bold text-xs sm:text-sm capitalize truncate max-w-full"><?php echo esc_html( str_replace('-', ' ', get_post_meta( get_the_ID(), 'ofp_property_type', true )) ); ?></span>
                     </div>
                     <?php if ( $listing_type !== 'land' ) : ?>
-                    <div class="w-px h-10 bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
-                    <div class="flex flex-col items-center flex-1 min-w-[80px]">
-                        <svg class="w-6 h-6 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 sm:bg-transparent sm:dark:bg-transparent">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
                             </path>
                         </svg>
-                        <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Bedrooms</span>
-                        <span class="font-bold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_bedrooms', true ) ?: '-' ); ?> Beds</span>
+                        <span class="text-[11px] sm:text-xs text-slate-500 font-semibold uppercase tracking-wider">Bedrooms</span>
+                        <span class="font-bold text-xs sm:text-sm"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_bedrooms', true ) ?: '-' ); ?> Beds</span>
                     </div>
-                    <div class="w-px h-10 bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
-                    <div class="flex flex-col items-center flex-1 min-w-[80px]">
-                        <svg class="w-6 h-6 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 sm:bg-transparent sm:dark:bg-transparent">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9">
                             </path>
                         </svg>
-                        <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Bathrooms</span>
-                        <span class="font-bold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_bathrooms', true ) ?: '-' ); ?> Baths</span>
+                        <span class="text-[11px] sm:text-xs text-slate-500 font-semibold uppercase tracking-wider">Bathrooms</span>
+                        <span class="font-bold text-xs sm:text-sm"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_bathrooms', true ) ?: '-' ); ?> Baths</span>
                     </div>
                     <?php else : ?>
-                    <div class="w-px h-10 bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
-                    <div class="flex flex-col items-center flex-1 min-w-[80px]">
-                        <svg class="w-6 h-6 text-emerald-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 sm:bg-transparent sm:dark:bg-transparent">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                         </svg>
-                        <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Plot Count</span>
-                        <span class="font-bold text-emerald-600 dark:text-emerald-400"><?php echo esc_html( ! empty( $land_metrics['plot_short'] ) && $land_metrics['plot_short'] !== '-' ? $land_metrics['plot_short'] : ( $land_metrics['plots_formatted'] !== '-' ? $land_metrics['plots_formatted'] . ' Plot(s)' : 'On Request' ) ); ?></span>
+                        <span class="text-[11px] sm:text-xs text-slate-500 font-semibold uppercase tracking-wider">Plot Count</span>
+                        <span class="font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400"><?php echo esc_html( ! empty( $land_metrics['plot_short'] ) && $land_metrics['plot_short'] !== '-' ? $land_metrics['plot_short'] : ( $land_metrics['plots_formatted'] !== '-' ? $land_metrics['plots_formatted'] . ' Plot(s)' : 'On Request' ) ); ?></span>
                     </div>
-                    <div class="w-px h-10 bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
-                    <div class="flex flex-col items-center flex-1 min-w-[80px]">
-                        <svg class="w-6 h-6 text-amber-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 sm:bg-transparent sm:dark:bg-transparent">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
-                        <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Land Title</span>
-                        <span class="font-bold truncate max-w-[120px] text-center" title="<?php echo esc_attr( $title_doc ?: 'Pending' ); ?>"><?php echo esc_html( $title_doc ?: 'On Request' ); ?></span>
+                        <span class="text-[11px] sm:text-xs text-slate-500 font-semibold uppercase tracking-wider">Land Title</span>
+                        <span class="font-bold text-xs sm:text-sm truncate max-w-[120px] text-center" title="<?php echo esc_attr( $title_doc ?: 'Pending' ); ?>"><?php echo esc_html( $title_doc ?: 'On Request' ); ?></span>
                     </div>
                     <?php endif; ?>
-                    <div class="w-px h-10 bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
-                    <div class="flex flex-col items-center flex-1 min-w-[80px]">
-                        <svg class="w-6 h-6 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 sm:bg-transparent sm:dark:bg-transparent">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4">
                             </path>
                         </svg>
-                        <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider"><?php echo $listing_type === 'land' ? 'Total Area' : 'Area Size'; ?></span>
-                        <span class="font-bold"><?php echo esc_html( ! empty( $land_metrics['sqm_formatted'] ) && $land_metrics['sqm_formatted'] !== '-' ? $land_metrics['sqm_formatted'] . ' SQM' : ( get_post_meta( get_the_ID(), 'ofp_area_sqm', true ) ? get_post_meta( get_the_ID(), 'ofp_area_sqm', true ) . ' SQM' : 'On Request' ) ); ?></span>
+                        <span class="text-[11px] sm:text-xs text-slate-500 font-semibold uppercase tracking-wider"><?php echo $listing_type === 'land' ? 'Total Area' : 'Area Size'; ?></span>
+                        <span class="font-bold text-xs sm:text-sm"><?php echo esc_html( ! empty( $land_metrics['sqm_formatted'] ) && $land_metrics['sqm_formatted'] !== '-' ? $land_metrics['sqm_formatted'] . ' SQM' : ( get_post_meta( get_the_ID(), 'ofp_area_sqm', true ) ? get_post_meta( get_the_ID(), 'ofp_area_sqm', true ) . ' SQM' : 'On Request' ) ); ?></span>
                     </div>
                 </div>
 
                 <!-- Tabs -->
                 <div
-                    class="border-b border-slate-200 dark:border-slate-800 mb-6 flex gap-8 overflow-x-auto hide-scrollbar">
+                    class="border-b border-slate-200 dark:border-slate-800 mb-6 flex gap-4 sm:gap-8 overflow-x-auto hide-scrollbar">
                     <button @click="activeTab = 'overview'"
                         :class="activeTab === 'overview' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'"
                         class="pb-4 font-bold text-sm whitespace-nowrap border-b-2 transition-colors cursor-pointer">Overview</button>
@@ -1142,19 +1287,19 @@ if ( empty( $gallery_urls ) ) {
 
                     <!-- Quick Financing Teaser linking to Calculator Tab -->
                     <div @click="activeTab = 'calculator'"
-                        class="cursor-pointer bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-900 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center justify-between transition-all group shadow-sm">
-                        <div class="flex items-center gap-3">
+                        class="cursor-pointer bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-900 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all group shadow-sm">
+                        <div class="flex items-center gap-3 min-w-0">
                             <div class="w-10 h-10 rounded-xl bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                                 </svg>
                             </div>
-                            <div>
+                            <div class="min-w-0">
                                 <p class="text-xs font-bold text-slate-900 dark:text-white">Planning to finance this property with a mortgage?</p>
                                 <p class="text-[11px] text-slate-500 dark:text-slate-400">Estimate your monthly repayment from ₦5.2M/mo with standard 16% p.a. rates</p>
                             </div>
                         </div>
-                        <span class="text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                        <span class="text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center gap-1 group-hover:translate-x-1 transition-transform self-end sm:self-auto shrink-0">
                             Calculate <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         </span>
                     </div>
@@ -1162,8 +1307,8 @@ if ( empty( $gallery_urls ) ) {
 
                 <!-- Tab Content: Features -->
                 <div x-show="activeTab === 'features'" style="display: none;" class="space-y-6">
-                    <h2 class="text-xl font-bold mb-4">Amenities & Features</h2>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <h2 class="text-xl font-bold mb-4">Amenities &amp; Features</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                         <?php
                         $standard_amenities = [
                             'swimming_pool'   => 'Swimming Pool',
@@ -1180,11 +1325,11 @@ if ( empty( $gallery_urls ) ) {
                         foreach ( $standard_amenities as $key => $lbl ) :
                             $is_active = in_array( $key, $amenities, true );
                         ?>
-                            <div class="flex items-center gap-3 <?php echo $is_active ? 'text-slate-900 dark:text-white' : 'text-slate-400 opacity-40'; ?>">
-                                <div class="w-8 h-8 rounded-full <?php echo $is_active ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'; ?> flex items-center justify-center">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                            <div class="flex items-center gap-2.5 sm:gap-3 <?php echo $is_active ? 'text-slate-900 dark:text-white' : 'text-slate-400 opacity-40'; ?>">
+                                <div class="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-full <?php echo $is_active ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'; ?> flex items-center justify-center">
+                                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
                                 </div>
-                                <span class="text-sm font-medium"><?php echo esc_html( $lbl ); ?></span>
+                                <span class="text-xs sm:text-sm font-medium leading-tight"><?php echo esc_html( $lbl ); ?></span>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -1205,7 +1350,7 @@ if ( empty( $gallery_urls ) ) {
                         <?php endif; ?>
                     </div>
                     <div
-                        class="relative w-full h-[500px] rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-slate-100 dark:bg-slate-900">
+                        class="relative w-full h-[320px] sm:h-[420px] md:h-[500px] rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-slate-100 dark:bg-slate-900">
                         <iframe
                             class="w-full h-full border-0"
                             src="<?php echo esc_url( $map_embed_url ); ?>"
@@ -1214,7 +1359,7 @@ if ( empty( $gallery_urls ) ) {
                         </iframe>
 
                         <!-- Floating Location Badge -->
-                        <div class="absolute top-4 right-4 z-10 bg-slate-900/90 backdrop-blur-md border border-slate-700/60 rounded-xl px-4 py-2.5 shadow-xl text-white flex items-center gap-2.5 max-w-[85%] sm:max-w-sm">
+                        <div class="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 bg-slate-900/90 backdrop-blur-md border border-slate-700/60 rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 shadow-xl text-white flex items-center gap-2 max-w-[calc(100%-1.5rem)] sm:max-w-sm">
                             <div class="relative flex items-center justify-center shrink-0">
                                 <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></div>
                                 <div class="absolute w-2 h-2 rounded-full bg-emerald-500"></div>
@@ -1226,13 +1371,13 @@ if ( empty( $gallery_urls ) ) {
                         </div>
 
                         <!-- External Maps link button -->
-                        <div class="absolute bottom-4 right-4 z-10">
+                        <div class="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-10">
                             <a href="<?php echo esc_url( $map_external_url ); ?>" target="_blank" rel="noopener noreferrer"
-                                class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md hover:bg-white dark:hover:bg-slate-800 text-slate-800 dark:text-white text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg flex items-center gap-1.5 transition-all cursor-pointer">
+                                class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md hover:bg-white dark:hover:bg-slate-800 text-slate-800 dark:text-white text-xs font-bold px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg flex items-center gap-1.5 transition-all cursor-pointer">
                                 <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                 </svg>
-                                Open in Google Maps
+                                <span>Google Maps</span>
                             </a>
                         </div>
                     </div>
@@ -1372,7 +1517,7 @@ if ( empty( $gallery_urls ) ) {
             </div>
 
             <!-- Sidebar -->
-            <div class="w-full lg:w-[380px] xl:w-[420px] shrink-0 space-y-4 sticky top-24">
+            <div id="schedule-tour" class="w-full lg:w-[380px] xl:w-[420px] shrink-0 space-y-4 sticky top-24 scroll-mt-20">
 
                 <!-- Agent Card -->
                 <div
@@ -1525,17 +1670,17 @@ if ( empty( $gallery_urls ) ) {
                             <div x-show="inquiryError" x-cloak class="p-3 bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/40 rounded-xl text-rose-700 dark:text-rose-300 text-xs font-semibold" x-text="inquiryError"></div>
 
                             <!-- Date & Time Row -->
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
                                 <div>
                                     <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">Preferred Date</label>
                                     <input type="date" x-model="inquiryDate" required
-                                        class="w-full bg-slate-50 dark:bg-[#050B18] border border-slate-200 dark:border-slate-800/90 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer">
+                                        class="w-full bg-slate-50 dark:bg-[#050B18] border border-slate-200 dark:border-slate-800/90 rounded-xl px-2.5 sm:px-3 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer">
                                 </div>
                                 <div>
                                     <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">Preferred Time</label>
                                     <div class="relative">
                                         <select x-model="inquiryTime"
-                                            class="w-full bg-slate-50 dark:bg-[#050B18] border border-slate-200 dark:border-slate-800/90 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 pr-7">
+                                            class="w-full bg-slate-50 dark:bg-[#050B18] border border-slate-200 dark:border-slate-800/90 rounded-xl px-2.5 sm:px-3 py-2.5 text-xs text-slate-900 dark:text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 pr-7">
                                             <option value="10:00 AM">10:00 AM</option>
                                             <option value="11:30 AM">11:30 AM</option>
                                             <option value="01:00 PM">01:00 PM</option>
@@ -1557,7 +1702,7 @@ if ( empty( $gallery_urls ) ) {
                             </div>
 
                             <!-- WhatsApp Phone & Email -->
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">WhatsApp Phone</label>
                                     <input type="tel" x-model="inquiryPhone" placeholder="0801 234 5678" required
@@ -1726,22 +1871,22 @@ if ( empty( $gallery_urls ) ) {
     <!-- Fullscreen Image Gallery Modal (Alpine.js controlled) -->
     <div x-show="showGallery" x-cloak class="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4">
         <!-- Close Button -->
-        <button @click="showGallery = false" class="absolute top-6 right-6 text-white hover:text-red-500 z-50">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button @click="showGallery = false" class="absolute top-4 right-4 sm:top-6 sm:right-6 text-white hover:text-red-500 z-50 p-2 cursor-pointer transition-colors">
+            <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
         </button>
 
         <!-- Next/Prev Buttons -->
         <button @click="currentImage = currentImage > 0 ? currentImage - 1 : (galleryImages.length - 1)"
-            class="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur cursor-pointer transition-all z-40">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg>
         </button>
         <button @click="currentImage = currentImage < (galleryImages.length - 1) ? currentImage + 1 : 0"
-            class="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur cursor-pointer transition-all z-40">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
             </svg>
         </button>
@@ -1752,7 +1897,7 @@ if ( empty( $gallery_urls ) ) {
         </div>
 
         <!-- Image Counter -->
-        <div class="absolute bottom-6 text-white font-bold bg-black/50 px-4 py-2 rounded-full backdrop-blur">
+        <div class="absolute bottom-4 sm:bottom-6 text-white font-bold bg-black/60 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full backdrop-blur text-xs sm:text-sm">
             <span x-text="currentImage + 1"></span> / <span x-text="galleryImages.length"></span>
         </div>
     </div>
@@ -1766,7 +1911,7 @@ if ( empty( $gallery_urls ) ) {
              @click="shareModalOpen = false"></div>
 
         <!-- Modal Box -->
-        <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl z-10 text-slate-900 dark:text-white"
+        <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-7 max-w-md w-full shadow-2xl z-10 text-slate-900 dark:text-white max-h-[90vh] overflow-y-auto"
              @click.stop>
             
             <!-- Modal Header -->
@@ -2076,6 +2221,42 @@ if ( empty( $gallery_urls ) ) {
             </div>
         </div>
     </footer>
+
+    <!-- Mobile Sticky Floating Contact & Price Bar -->
+    <div class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200/90 dark:border-slate-800 px-4 py-2.5 shadow-[0_-4px_25px_rgba(0,0,0,0.12)] flex items-center justify-between gap-3">
+        <!-- Left: Price Info -->
+        <div class="min-w-0 flex-1">
+            <p class="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider leading-none mb-1">Asking Price</p>
+            <div class="flex items-baseline gap-1 truncate">
+                <span class="text-emerald-600 dark:text-emerald-400 font-black text-base sm:text-lg leading-none tracking-tight">₦<?php echo number_format( (float) $price ); ?></span>
+                <?php if ( $listing_type === 'rent' || $listing_type === 'shortlet' ) : ?>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold leading-none">/<?php echo esc_html( get_post_meta( $post_id, "ofp_price_period", true ) ?: "yr" ); ?></span>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Right: Actions -->
+        <div class="flex items-center gap-2 shrink-0">
+            <!-- WhatsApp Button -->
+            <button type="button" @click="submitInquiry('whatsapp')" :disabled="inquiryLoading"
+                class="bg-[#25D366] hover:bg-[#20ba59] disabled:opacity-50 text-white font-bold rounded-xl px-3 sm:px-3.5 py-2.5 text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer">
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z" fill="#ffffff"/>
+                    <path d="M17.84 16.03c-.24.68-1.2 1.26-1.98 1.42-.53.11-1.22.2-3.56-.76-2.99-1.24-4.91-4.28-5.06-4.48-.15-.2-1.2-1.6-1.2-3.05s.76-2.16 1.03-2.46c.27-.3.59-.37.78-.37.2 0 .39 0 .56.01.18.01.42-.07.66.5.24.58.83 2.03.9 2.18.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.18-.32.4-.45.53-.15.15-.31.31-.13.61.18.3.8 1.32 1.72 2.14 1.18 1.05 2.18 1.38 2.48 1.53.3.15.48.13.66-.08.18-.2.76-.89.96-1.19.2-.3.4-.25.66-.15.27.1 1.72.81 2.01.96.3.15.49.22.56.35.07.13.07.73-.17 1.41z" fill="#25D366"/>
+                </svg>
+                <span>WhatsApp</span>
+            </button>
+
+            <!-- Book Inspection Button -->
+            <a href="#schedule-tour"
+                class="bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-3 sm:px-3.5 py-2.5 text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/20 active:scale-95 transition-all cursor-pointer whitespace-nowrap">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span>Book Tour</span>
+            </a>
+        </div>
+    </div>
 
     <?php wp_footer(); ?>
 </body>

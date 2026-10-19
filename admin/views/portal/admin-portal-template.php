@@ -738,8 +738,8 @@ $titles = [
             <?php elseif ( $tab === 'property-payments' ) : ?>
                 <!-- Embedded Property Transactions / Payments -->
                 <?php
-                if ( class_exists( 'OFP_Property_Payment_Record' ) ) {
-                    OFP_Property_Payment_Record::render_admin();
+                if ( class_exists( 'OFP_Property_Payment_Records' ) ) {
+                    OFP_Property_Payment_Records::render_admin();
                 }
                 ?>
 
