@@ -20,6 +20,7 @@ class OFP_Prembly {
     public static function init(): void {
         self::ensure_client_schema();
         add_action( 'wp_ajax_ofp_submit_client_verification', [ __CLASS__, 'ajax_verify' ] );
+        add_action( 'wp_ajax_nopriv_ofp_submit_client_verification', [ __CLASS__, 'ajax_verify' ] );
     }
 
     /**
@@ -142,7 +143,7 @@ class OFP_Prembly {
             ];
         }
 
-        $msg = $body['message'] ?? 'Could not verify CAC registration. Please verify your RC or BN number.';
+        $msg = $body['message'] ?? ( $body['detail'] ?? 'Could not verify CAC registration. Please verify your RC or BN number.' );
         return [ 'success' => false, 'message' => $msg ];
     }
 
@@ -202,7 +203,7 @@ class OFP_Prembly {
             ];
         }
 
-        $msg = $body['message'] ?? 'Could not verify NIN. Please check the 11-digit number.';
+        $msg = $body['message'] ?? ( $body['detail'] ?? 'Could not verify NIN. Please check the 11-digit number.' );
         return [ 'success' => false, 'message' => $msg ];
     }
 
@@ -262,7 +263,7 @@ class OFP_Prembly {
             ];
         }
 
-        $msg = $body['message'] ?? 'Could not verify BVN. Please check the 11-digit number.';
+        $msg = $body['message'] ?? ( $body['detail'] ?? 'Could not verify BVN. Please check the 11-digit number.' );
         return [ 'success' => false, 'message' => $msg ];
     }
 
@@ -272,20 +273,24 @@ class OFP_Prembly {
     public static function ajax_verify(): void {
         global $wpdb;
 
-        // Verify current client session
+        // Verify current client session via official auth system
         $client_id = 0;
-        if ( class_exists( 'OFP_Client_Portal' ) && method_exists( 'OFP_Client_Portal', 'get_current_client' ) ) {
-            $c = OFP_Client_Portal::get_current_client();
-            if ( $c ) $client_id = (int) $c->id;
+        if ( class_exists( 'OFP_Auth' ) ) {
+            $c = OFP_Auth::current_client();
+            if ( $c && ! empty( $c->id ) ) {
+                $client_id = (int) $c->id;
+            }
         }
 
-        if ( $client_id <= 0 ) {
-            if ( ! empty( $_COOKIE['ofp_client_session'] ) ) {
-                $token_hash = hash( 'sha256', sanitize_text_field( $_COOKIE['ofp_client_session'] ) );
-                $client_id = (int) $wpdb->get_var( $wpdb->prepare(
-                    "SELECT client_id FROM {$wpdb->prefix}ofp_sessions WHERE session_token = %s LIMIT 1",
-                    $token_hash
-                ) );
+        // Direct session cookie fallback if OFP_Auth wasn't reached
+        if ( $client_id <= 0 && ! empty( $_COOKIE['ofp_client_session'] ) ) {
+            $token = sanitize_text_field( wp_unslash( $_COOKIE['ofp_client_session'] ) );
+            $sess = $wpdb->get_row( $wpdb->prepare(
+                "SELECT client_id FROM {$wpdb->prefix}ofp_client_sessions WHERE token = %s AND expires_at > NOW() LIMIT 1",
+                $token
+            ) );
+            if ( $sess && ! empty( $sess->client_id ) ) {
+                $client_id = (int) $sess->client_id;
             }
         }
 
