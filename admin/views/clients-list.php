@@ -245,6 +245,16 @@ include OFP_PATH . 'admin/views/partials/header.php';
         ?>
         <div><strong>SMS Provider:</strong> <?php echo esc_html( $detail_sms_label ); ?></div>
         <div><strong>Subscription Expires:</strong> <?php echo esc_html( $client->subscription_expires ?: '—' ); ?></div>
+        <div>
+            <strong>KYC / KYB Status:</strong>
+            <?php if ( ! empty( $client->is_verified ) ) : ?>
+                <span style="color:#15803d; font-weight:700;">
+                    ✅ Verified (CAC: <?php echo esc_html( $client->cac_number ?: 'Yes' ); ?><?php echo ! empty( $client->verified_company_name ) ? ' — ' . esc_html( $client->verified_company_name ) : ''; ?>)
+                </span>
+            <?php else : ?>
+                <span style="color:#9ca3af;">Unverified</span>
+            <?php endif; ?>
+        </div>
 
         <div><strong>Created:</strong> <?php echo esc_html( $client->created_at ); ?></div>
         <div><strong>Source:</strong> <?php echo esc_html( $client->onboarding_source ); ?></div>
@@ -578,7 +588,11 @@ include OFP_PATH . 'admin/views/partials/header.php';
                         <td>
                             <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-clients&client_id=' . $c->id ) ); ?>">
                                 <strong><?php echo esc_html( $c->business_name ); ?></strong>
-                            </a><br>
+                            </a>
+                            <?php if ( ! empty( $c->is_verified ) ) : ?>
+                                <span style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-size:10.5px; padding:2px 7px; border-radius:4px; font-weight:600; margin-left:6px; display:inline-flex; align-items:center; gap:3px;" title="CAC &amp; Identity Verified">✓ Verified</span>
+                            <?php endif; ?>
+                            <br>
                             <small><?php echo esc_html( $c->email ); ?></small>
                         </td>
                         <td><?php echo esc_html( $c->owner_name ); ?></td>

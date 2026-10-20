@@ -1399,13 +1399,24 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                     <p class="ofp-field-hint">Your <code>x-api-key</code> from Prembly dashboard. Encrypted with AES-256 in database.</p>
                                 </div>
 
-                                <div class="ofp-field-group ofp-field-full" style="position:relative; z-index:30;">
+                                <div class="ofp-field-group ofp-field-full">
                                     <label class="ofp-field-label">Environment Mode</label>
-                                    <div class="ofp-input-box" style="position:relative; z-index:30;">
-                                        <select name="ofp_prembly_env" class="ofp-select" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--ofp-slate-200); background:#fff; font-size:14px; cursor:pointer;">
-                                            <option value="test" <?php selected( $prembly_env, 'test' ); ?>>Test Sandbox Mode (Simulated verification, no wallet charge)</option>
-                                            <option value="live" <?php selected( $prembly_env, 'live' ); ?>>Live Production Mode (Direct NIMC / NIBSS / CAC queries)</option>
-                                        </select>
+                                    <div class="ofp-mode-grid ofp-prembly-mode-grid" style="margin-bottom:0; margin-top:6px;">
+                                        <label class="ofp-mode-card <?php echo $prembly_env !== 'live' ? 'is-active' : ''; ?>">
+                                            <input type="radio" name="ofp_prembly_env" value="test" <?php checked( $prembly_env !== 'live', true ); ?>>
+                                            <div class="ofp-mode-text">
+                                                <strong>Test Sandbox Mode</strong>
+                                                <small>Simulated verification without charging your Prembly wallet balance. Perfect for testing workflows.</small>
+                                            </div>
+                                        </label>
+
+                                        <label class="ofp-mode-card <?php echo $prembly_env === 'live' ? 'is-active' : ''; ?>">
+                                            <input type="radio" name="ofp_prembly_env" value="live" <?php checked( $prembly_env, 'live' ); ?>>
+                                            <div class="ofp-mode-text">
+                                                <strong>Live Production Mode</strong>
+                                                <small>Direct queries against Nigerian CAC, NIMC (NIN), and NIBSS (BVN) registries. Uses live wallet balance.</small>
+                                            </div>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
@@ -1657,26 +1668,38 @@ include OFP_PATH . 'admin/views/partials/header.php';
     }
     syncBankPreview();
 
-    // ── 7. SMTP Mode Visual Card Toggle ──────────────────────────────────────
+    // ── 7. Mode Visual Cards Toggle (SMTP & Prembly) ─────────────────────────
+    function syncRadioCards(name) {
+        var radios = document.querySelectorAll('input[name="' + name + '"]');
+        radios.forEach(function(radio) {
+            var card = radio.closest('.ofp-mode-card');
+            if ( card ) {
+                if ( radio.checked ) {
+                    card.classList.add('is-active');
+                } else {
+                    card.classList.remove('is-active');
+                }
+            }
+        });
+    }
+
     function syncSmtpCards() {
+        syncRadioCards('ofp_smtp_mode');
         var selected = document.querySelector('input[name="ofp_smtp_mode"]:checked');
-        if ( ! selected ) return;
-
         var panel = document.getElementById('ofp-smtp-credentials-panel');
-        var cards = document.querySelectorAll('.ofp-mode-card');
-
-        cards.forEach(function(c) { c.classList.remove('is-active'); });
-        if ( selected.closest('.ofp-mode-card') ) {
-            selected.closest('.ofp-mode-card').classList.add('is-active');
-        }
-
-        if ( panel ) {
+        if ( panel && selected ) {
             panel.style.display = selected.value === 'custom' ? '' : 'none';
         }
     }
 
     document.querySelectorAll('input[name="ofp_smtp_mode"]').forEach(function(radio) {
         radio.addEventListener('change', syncSmtpCards);
+    });
+
+    document.querySelectorAll('input[name="ofp_prembly_env"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            syncRadioCards('ofp_prembly_env');
+        });
     });
 
 })();

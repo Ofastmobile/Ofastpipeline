@@ -30,25 +30,19 @@ class OFP_Prembly {
         global $wpdb;
         $table = $wpdb->prefix . 'ofp_clients';
 
-        $cols = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
-        if ( empty( $cols ) ) {
-            return;
-        }
+        $columns = [
+            'is_verified'           => "ALTER TABLE {$table} ADD COLUMN is_verified TINYINT(1) NOT NULL DEFAULT 0",
+            'cac_number'            => "ALTER TABLE {$table} ADD COLUMN cac_number VARCHAR(50) DEFAULT NULL",
+            'verified_company_name' => "ALTER TABLE {$table} ADD COLUMN verified_company_name VARCHAR(150) DEFAULT NULL",
+            'id_type_verified'      => "ALTER TABLE {$table} ADD COLUMN id_type_verified VARCHAR(20) DEFAULT NULL",
+            'verified_at'           => "ALTER TABLE {$table} ADD COLUMN verified_at DATETIME DEFAULT NULL",
+        ];
 
-        if ( ! in_array( 'is_verified', $cols, true ) ) {
-            $wpdb->query( "ALTER TABLE {$table} ADD COLUMN is_verified TINYINT(1) NOT NULL DEFAULT 0" );
-        }
-        if ( ! in_array( 'cac_number', $cols, true ) ) {
-            $wpdb->query( "ALTER TABLE {$table} ADD COLUMN cac_number VARCHAR(50) DEFAULT NULL" );
-        }
-        if ( ! in_array( 'verified_company_name', $cols, true ) ) {
-            $wpdb->query( "ALTER TABLE {$table} ADD COLUMN verified_company_name VARCHAR(150) DEFAULT NULL" );
-        }
-        if ( ! in_array( 'id_type_verified', $cols, true ) ) {
-            $wpdb->query( "ALTER TABLE {$table} ADD COLUMN id_type_verified VARCHAR(20) DEFAULT NULL" );
-        }
-        if ( ! in_array( 'verified_at', $cols, true ) ) {
-            $wpdb->query( "ALTER TABLE {$table} ADD COLUMN verified_at DATETIME DEFAULT NULL" );
+        foreach ( $columns as $col => $sql ) {
+            $exists = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM {$table} LIKE %s", $col ) );
+            if ( empty( $exists ) ) {
+                $wpdb->query( $sql );
+            }
         }
     }
 
@@ -327,18 +321,35 @@ class OFP_Prembly {
         }
 
         // 3. Mark client as verified in database
+        self::ensure_client_schema();
+
         $company_name = $cac_res['company_name'] ?? 'Verified Enterprise';
-        $wpdb->update(
+        $update_data  = [
+            'is_verified'           => 1,
+            'cac_number'            => $cac_res['rc_number'],
+            'verified_company_name' => $company_name,
+            'id_type_verified'      => strtoupper( $id_type ),
+            'verified_at'           => current_time( 'mysql' ),
+        ];
+
+        $updated = $wpdb->update(
             $wpdb->prefix . 'ofp_clients',
-            [
-                'is_verified'           => 1,
-                'cac_number'            => $cac_res['rc_number'],
-                'verified_company_name' => $company_name,
-                'id_type_verified'      => strtoupper( $id_type ),
-                'verified_at'           => current_time( 'mysql' ),
-            ],
+            $update_data,
             [ 'id' => $client_id ]
         );
+
+        if ( false === $updated ) {
+            // Direct query fallback
+            $wpdb->query( $wpdb->prepare(
+                "UPDATE {$wpdb->prefix}ofp_clients 
+                 SET is_verified = 1, cac_number = %s, verified_company_name = %s, id_type_verified = %s, verified_at = NOW() 
+                 WHERE id = %d",
+                $cac_res['rc_number'],
+                $company_name,
+                strtoupper( $id_type ),
+                $client_id
+            ) );
+        }
 
         wp_send_json_success( [
             'message'      => 'Business & Identity verification approved successfully!',

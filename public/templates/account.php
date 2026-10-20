@@ -39,6 +39,11 @@ if (empty($has_extra)) {
     $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN profile_extra TEXT DEFAULT NULL");
 }
 
+// Ensure verification audit columns exist
+if ( class_exists( 'OFP_Prembly' ) ) {
+    OFP_Prembly::ensure_client_schema();
+}
+
 // ── Form POST Handlers ───────────────────────────────────────────────────────
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce'] ) ) {
     if ( ! wp_verify_nonce(
@@ -419,7 +424,15 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
         <div class="ofp-profile-card ofp-avatar-card">
             <div class="ofp-avatar-meta">
                 <h2 class="ofp-avatar-name"><?php echo esc_html( $display_name ); ?></h2>
-                <div class="ofp-avatar-tier"><?php echo esc_html( $plan_badge ); ?></div>
+                <div style="display:flex; align-items:center; gap:8px; justify-content:center; flex-wrap:wrap;">
+                    <div class="ofp-avatar-tier"><?php echo esc_html( $plan_badge ); ?></div>
+                    <?php if ( ! empty( $client->is_verified ) ) : ?>
+                        <span style="display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:11px; font-weight:600; padding:2px 8px; border-radius:12px;" title="Government CAC & Identity Verified">
+                            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            Verified Agency
+                        </span>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <div class="ofp-avatar-frame-outer" onclick="document.getElementById('ofp-logo-input').click();" title="Click to upload profile photo">
@@ -722,6 +735,67 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                             <button type="button" onclick="openEditModal('tab-banking')" class="ofp-btn-edit-profile" style="padding:6px 16px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
                                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                                 <span>Add Bank Account</span>
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- ── Official Business & Identity Verification Status ──────────── -->
+                <div style="margin-top:16px;">
+                    <h4 style="font-size:13.5px; font-weight:600; color:#ffffff; margin:0 0 10px; display:flex; align-items:center; gap:8px;">
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:<?php echo ! empty( $client->is_verified ) ? '#10b981' : '#f59e0b'; ?>;"></span>
+                        KYC / KYB Verification
+                    </h4>
+
+                    <?php if ( ! empty( $client->is_verified ) ) : ?>
+                        <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:12px; padding:16px; position:relative; overflow:hidden;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <div style="width:34px; height:34px; border-radius:50%; background:#10b981; color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 10px rgba(16,185,129,0.4);">
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    </div>
+                                    <div>
+                                        <h5 style="margin:0; font-size:13.5px; font-weight:700; color:#ffffff;">Business &amp; Identity Verified</h5>
+                                        <span style="font-size:11.5px; color:#10b981; font-weight:600;">CAC Government Registry Validated</span>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="openEditModal('tab-verification')" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#10b981; font-size:11.5px; padding:4px 10px; border-radius:6px; cursor:pointer; font-weight:600;">
+                                    View Certificate
+                                </button>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:rgba(0,0,0,0.25); border-radius:8px; padding:12px; border:1px solid rgba(255,255,255,0.06); font-size:12px;">
+                                <div>
+                                    <span style="color:var(--prof-text-sub); display:block; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Registered Entity</span>
+                                    <strong style="color:#ffffff; font-size:12.5px; word-break:break-word;"><?php echo esc_html( $client->verified_company_name ?: $client->business_name ); ?></strong>
+                                </div>
+                                <div>
+                                    <span style="color:var(--prof-text-sub); display:block; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">CAC Reg. No</span>
+                                    <strong style="color:var(--prof-teal); font-family:monospace; font-size:12.5px;"><?php echo esc_html( $client->cac_number ?: 'Verified' ); ?></strong>
+                                </div>
+                                <div>
+                                    <span style="color:var(--prof-text-sub); display:block; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Identity Check</span>
+                                    <span style="color:#10b981; font-weight:600; font-size:12px;">✓ <?php echo esc_html( $client->id_type_verified ?: 'NIN/BVN' ); ?> Matched</span>
+                                </div>
+                                <div>
+                                    <span style="color:var(--prof-text-sub); display:block; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Verified Since</span>
+                                    <strong style="color:#ffffff; font-size:12px;"><?php echo esc_html( ! empty( $client->verified_at ) ? date( 'M d, Y', strtotime( $client->verified_at ) ) : 'Active' ); ?></strong>
+                                </div>
+                            </div>
+                        </div>
+                    <?php else : ?>
+                        <div style="background:rgba(255,255,255,0.02); border:1px dashed rgba(255,255,255,0.1); border-radius:12px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div style="width:34px; height:34px; border-radius:8px; background:rgba(234,179,8,0.1); color:#eab308; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                </div>
+                                <div>
+                                    <div style="color:#ffffff; font-size:13px; font-weight:600;">Business Unverified</div>
+                                    <div style="color:var(--prof-text-sub); font-size:11.5px;">Verify CAC &amp; NIN/BVN to unlock listing publishing and Verified Partner status.</div>
+                                </div>
+                            </div>
+                            <button type="button" onclick="openEditModal('tab-verification')" style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#60a5fa; font-size:12px; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:600; white-space:nowrap;">
+                                Verify Business →
                             </button>
                         </div>
                     <?php endif; ?>
@@ -1316,6 +1390,16 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
         <?php endif; ?>
     <?php endif; ?>
 
+    // Check URL hash to auto-open specific tab (e.g. #tab-verification, #tab-banking)
+    if (window.location.hash) {
+        var hashTab = window.location.hash.replace('#', '');
+        if (hashTab && document.getElementById(hashTab)) {
+            if (typeof openEditModal === 'function') {
+                openEditModal(hashTab);
+            }
+        }
+    }
+
     // ── Live Bank Account Resolution via Paystack ──────────────────────────────
     (function() {
         const bankSelect   = document.getElementById('ofp-bank-code-select');
@@ -1461,8 +1545,9 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                 if (data && data.success) {
                     showMsg('✓ ' + (data.data.message || 'Verification successful! Reloading...'), true);
                     setTimeout(() => {
+                        window.location.hash = 'tab-verification';
                         window.location.reload();
-                    }, 1200);
+                    }, 1100);
                 } else {
                     const err = (data && data.data && data.data.message) ? data.data.message : 'Verification check failed. Please check your details.';
                     showMsg(err, false);
