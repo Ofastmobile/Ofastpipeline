@@ -632,6 +632,8 @@ class OFP_Admin_Menu {
             'ofp_use_app_host'        => empty( $_POST['ofp_use_app_host'] ) ? '0' : '1',
             'ofp_online_buyer_payments' => empty( $_POST['ofp_online_buyer_payments'] ) ? '0' : '1',
             'ofp_hide_admin_bar'      => empty( $_POST['ofp_hide_admin_bar'] ) ? '0' : '1',
+            'ofp_watermark_enabled'   => empty( $_POST['ofp_watermark_enabled'] ) ? '0' : '1',
+            'ofp_watermark_text'      => sanitize_text_field( wp_unslash( $_POST['ofp_watermark_text'] ?? '' ) ),
             'ofp_global_pixel_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_global_pixel_id']     ?? '' ) ),
             'ofp_app_name'            => sanitize_text_field( wp_unslash( $_POST['ofp_app_name']            ?? '' ) ),
             // Default pipeline messages

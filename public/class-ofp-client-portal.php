@@ -48,9 +48,11 @@ class OFP_Client_Portal {
         'property-purchases' => 'property-purchases.php',
         'property-payments' => 'property-payments.php',
         'activity-logs' => 'activity-logs.php',
+        'agents' => 'agents.php',
+        'our-agents' => 'agents.php',
     ];
 
-    private array $public_routes = [ 'login', 'signup', 'forgot-password', 'reset-password', 'team-invite' ];
+    private array $public_routes = [ 'login', 'signup', 'forgot-password', 'reset-password', 'team-invite', 'agents', 'our-agents' ];
 
     public function __construct() {
         add_action( 'init', [ $this, 'register_rewrite_rules' ] );
@@ -205,6 +207,9 @@ class OFP_Client_Portal {
         }
 
         $route = get_query_var( 'ofp_route', '' );
+        if ( in_array( $route, [ 'agents', 'our-agents' ], true ) ) {
+            return false;
+        }
         if ( ! empty( $route ) && array_key_exists( $route, $this->routes ) ) {
             return true;
         }
@@ -218,6 +223,9 @@ class OFP_Client_Portal {
         }
         // Single property listing is never a portal page
         if ( $segments[0] === 'property' || ( $segments[0] === 'properties' && count( $segments ) > 1 ) ) {
+            return false;
+        }
+        if ( count( $segments ) === 1 && in_array( $segments[0], [ 'agents', 'our-agents' ], true ) ) {
             return false;
         }
         if ( count( $segments ) === 1 && ( array_key_exists( $segments[0], $this->routes ) || in_array( $segments[0], [ 'property-sales', 'property-purchases', 'property-payments', 'tenants' ], true ) ) ) {

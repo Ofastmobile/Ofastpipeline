@@ -70,13 +70,26 @@ if ( ! empty( $current_price_max ) ) {
     ];
 }
 
-// 7. Verified only filter
+// 7. Verified only filter (Properties owned by verified clients or flagged verified)
 if ( $current_verified ) {
-    $args['meta_query'][] = [
-        'key'     => 'ofp_status',
-        'value'   => 'live',
-        'compare' => '=',
+    global $wpdb;
+    $verified_cids = $wpdb->get_col( "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE is_verified = 1" );
+    $verified_meta = [
+        'relation' => 'OR',
+        [
+            'key'     => 'ofp_is_verified',
+            'value'   => '1',
+            'compare' => '=',
+        ],
     ];
+    if ( ! empty( $verified_cids ) ) {
+        $verified_meta[] = [
+            'key'     => 'ofp_client_id',
+            'value'   => array_map( 'intval', $verified_cids ),
+            'compare' => 'IN',
+        ];
+    }
+    $args['meta_query'][] = $verified_meta;
 }
 
 // 8. Sorting
@@ -324,7 +337,7 @@ $marketplace_query = new WP_Query( $args );
                         </a>
 
                         <!-- Card 4: Agents -->
-                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                        <a href="<?php echo esc_url( home_url('/agents') ); ?>"
                             class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
                             <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80"
                                 alt="Agents"
@@ -438,7 +451,7 @@ $marketplace_query = new WP_Query( $args );
                 </a>
 
                 <!-- Card 4: Our Agents -->
-                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                <a href="<?php echo esc_url( home_url('/agents') ); ?>"
                     class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
                     <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80"
                         alt="Agents" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
@@ -759,20 +772,21 @@ $marketplace_query = new WP_Query( $args );
                     $baths        = get_post_meta( get_the_ID(), 'ofp_bathrooms', true );
                     $parking      = get_post_meta( get_the_ID(), 'ofp_parking', true );
                     $sqm          = get_post_meta( get_the_ID(), 'ofp_area_sqm', true );
-                    $is_verified  = get_post_meta( get_the_ID(), 'ofp_status', true ) === 'live';
                     $client_id    = get_post_meta( get_the_ID(), 'ofp_client_id', true );
                     $is_featured  = get_post_meta( get_the_ID(), 'ofp_is_featured', true );
                     $status_ctx   = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_status_context( get_the_ID() ) : null;
                     
-                    $agent_name = 'Admin';
-                    $agent_company = '';
+                    $agent_name        = 'Admin';
+                    $agent_company     = '';
                     $agent_profile_url = '';
+                    $client_is_verified = false;
                     if ( $client_id ) {
                         global $wpdb;
-                        $client = $wpdb->get_row( $wpdb->prepare( "SELECT owner_name, business_name, profile_slug FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1", $client_id ) );
+                        $client = $wpdb->get_row( $wpdb->prepare( "SELECT owner_name, business_name, profile_slug, is_verified FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1", $client_id ) );
                         if ( $client ) {
-                            $agent_name = $client->owner_name ?: $client->business_name;
-                            $agent_company = $client->business_name;
+                            $agent_name         = $client->owner_name ?: $client->business_name;
+                            $agent_company      = $client->business_name;
+                            $client_is_verified = ! empty( $client->is_verified );
                             if ( ! empty( $client->profile_slug ) ) {
                                 $agent_profile_url = home_url( '/agent/' . $client->profile_slug );
                             } else {
@@ -780,6 +794,7 @@ $marketplace_query = new WP_Query( $args );
                             }
                         }
                     }
+                    $is_verified = $client_is_verified || ( '1' === (string) get_post_meta( get_the_ID(), 'ofp_is_verified', true ) );
                     
                     $listing_label = 'FOR SALE';
                     if ( $listing_type === 'rent' ) $listing_label = 'FOR RENT';

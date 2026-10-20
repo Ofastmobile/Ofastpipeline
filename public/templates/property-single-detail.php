@@ -608,7 +608,7 @@ if ( empty( $gallery_urls ) ) {
                         </a>
 
                         <!-- Card 4: Agents -->
-                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                        <a href="<?php echo esc_url( home_url('/agents') ); ?>"
                             class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
                             <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80"
                                 alt="Agents"
@@ -722,7 +722,7 @@ if ( empty( $gallery_urls ) ) {
                 </a>
 
                 <!-- Card 4: Our Agents -->
-                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                <a href="<?php echo esc_url( home_url('/agents') ); ?>"
                     class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
                     <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80"
                         alt="Agents" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">

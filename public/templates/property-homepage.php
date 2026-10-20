@@ -217,7 +217,7 @@
                         </a>
 
                         <!-- Card 4: Agents -->
-                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                        <a href="<?php echo esc_url( home_url('/agents') ); ?>"
                             class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
                             <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80"
                                 alt="Agents"
@@ -331,7 +331,7 @@
                 </a>
 
                 <!-- Card 4: Our Agents -->
-                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                <a href="<?php echo esc_url( home_url('/agents') ); ?>"
                     class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
                     <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80"
                         alt="Agents" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
@@ -1066,20 +1066,10 @@
             $featured_query = new WP_Query([
                 'post_type'      => 'ofp_property',
                 'post_status'    => 'publish',
-                'meta_key'       => 'ofp_is_featured',
-                'meta_value'     => '1',
-                'posts_per_page' => 3,
+                'posts_per_page' => 6,
+                'orderby'        => 'date',
+                'order'          => 'DESC',
             ]);
-
-            if ( ! $featured_query->have_posts() ) {
-                $featured_query = new WP_Query([
-                    'post_type'      => 'ofp_property',
-                    'post_status'    => 'publish',
-                    'posts_per_page' => 3,
-                    'orderby'        => 'date',
-                    'order'          => 'DESC',
-                ]);
-            }
 
             $cards_data = [];
 
@@ -1235,15 +1225,9 @@
                             <span class="bg-[#00875A] text-white text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">
                                 <?php echo esc_html( [ 'rent' => 'FOR RENT', 'shortlet' => 'SHORT LET', 'commercial' => 'COMMERCIAL', 'land' => 'LAND' ][ $card['listing_type'] ] ?? 'FOR SALE' ); ?>
                             </span>
-                            <?php if ( ! empty( $card['is_featured'] ) ) : ?>
-                                <span class="bg-amber-400 text-slate-950 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1">
-                                    <svg class="w-2.5 h-2.5 text-slate-950" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                                    Featured
-                                </span>
-                            <?php endif; ?>
                         </div>
                         <?php if ( ! empty( $card['is_verified'] ) ) : ?>
-                            <span class="bg-emerald-950/70 text-emerald-400 border border-emerald-500/50 backdrop-blur-md text-[11px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <span class="bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 backdrop-blur-md text-[11px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
                                 <svg class="w-3 h-3 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" /></svg>
                                 Verified
                             </span>

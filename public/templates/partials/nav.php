@@ -377,7 +377,8 @@ svg { max-width: 100%; box-sizing: border-box; }
             ) {
                 $ofp_hero_image_file = 'pexels-house-1836070.webp';
             } else {
-                $ofp_hero_image_file = 'wal_172619-city-5974876_1920.webp';
+                // Default dashboard hero banner
+                $ofp_hero_image_file = 'pexels-apartment-2179337_1920.webp';
             }
         }
         ?>

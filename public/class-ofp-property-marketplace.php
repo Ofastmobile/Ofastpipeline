@@ -20,8 +20,8 @@ class OFP_Property_Marketplace {
     }
 
     public static function enqueue_scripts(): void {
-        // Only load on the marketplace route, property single pages, property archive, or homepage
-        if ( '1' === (string) get_query_var( 'ofp_marketplace', '' ) || is_singular( 'ofp_property' ) || is_front_page() || is_home() || is_post_type_archive( 'ofp_property' ) || is_page( [ 'home', 'homepage', 'marketplace', 'properties' ] ) ) {
+        // Only load on the marketplace route, property single pages, property archive, homepage, or agents directory
+        if ( '1' === (string) get_query_var( 'ofp_marketplace', '' ) || is_singular( 'ofp_property' ) || is_front_page() || is_home() || is_post_type_archive( 'ofp_property' ) || is_page( [ 'home', 'homepage', 'marketplace', 'properties' ] ) || in_array( get_query_var( 'ofp_route' ), [ 'agents', 'our-agents' ], true ) ) {
             wp_enqueue_script( 'tailwind-js', 'https://cdn.tailwindcss.com', [], null, false );
             $tailwind_cfg = "window.tailwind = window.tailwind || {}; window.tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['\"Segoe UI\"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Arial', 'sans-serif'], system: ['\"Segoe UI\"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Arial', 'sans-serif'] } } };";
             wp_add_inline_script( 'tailwind-js', $tailwind_cfg, 'before' );

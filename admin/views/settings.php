@@ -24,6 +24,8 @@ $app_name           = get_option( 'ofp_app_name', '' );
 $use_app_host       = get_option( 'ofp_use_app_host', '1' );
 $online_payments    = get_option( 'ofp_online_buyer_payments', '0' );
 $hide_admin_bar     = get_option( 'ofp_hide_admin_bar', '1' );
+$watermark_enabled  = get_option( 'ofp_watermark_enabled', '1' );
+$watermark_text     = get_option( 'ofp_watermark_text', '' );
 $pixel_id           = get_option( 'ofp_global_pixel_id', '' );
 
 // SMTP
@@ -467,6 +469,30 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                     <input type="checkbox" name="ofp_hide_admin_bar" value="1" <?php checked( $hide_admin_bar, '1' ); ?>>
                                     <span class="ofp-slider"></span>
                                 </label>
+                            </div>
+
+                            <!-- Switch 4: Auto Watermark Property Photos -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Auto Watermark Property Photos with Platform/Agency Brand</span>
+                                    <p class="ofp-switch-desc">Automatically brands all uploaded property photos (JPEG, PNG, WebP) with your platform name or the white-labeled agency name to protect listing images from unauthorized scraping.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_watermark_enabled" value="1" <?php checked( $watermark_enabled, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
+                            <div class="ofp-field-group ofp-field-full" style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--ofp-slate-200, #e2e8f0);">
+                                <div class="ofp-field-label-row">
+                                    <label class="ofp-field-label">Custom Watermark Text (Optional)</label>
+                                </div>
+                                <div class="ofp-input-box" style="max-width: 420px;">
+                                    <input type="text" name="ofp_watermark_text"
+                                           value="<?php echo esc_attr( $watermark_text ); ?>"
+                                           placeholder="e.g. <?php echo esc_attr( OFP_Brand::name() ); ?>">
+                                </div>
+                                <p class="ofp-field-hint">Leave blank to automatically use your configured Platform App Name (<code><?php echo esc_html( OFP_Brand::name() ); ?></code>) or the client's White-Label Agency name.</p>
                             </div>
                         </div>
                     </div>
