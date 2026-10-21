@@ -30,7 +30,9 @@ class OFP_Property_Installment_Reminders {
             $days = (int) floor( ( $due_ts - $today_ts ) / DAY_IN_SECONDS );
             $type = null;
 
-            if ( in_array( $days, [ 7, 3, 1 ], true ) ) {
+            if ( 0 === $days ) {
+                $type = 'due_today';
+            } elseif ( in_array( $days, [ 7, 3, 1 ], true ) ) {
                 $type = 'due_' . $days . '_days';
             } elseif ( -1 === $days ) {
                 $type = 'overdue';
@@ -46,6 +48,9 @@ class OFP_Property_Installment_Reminders {
             if ( 'overdue' === $type ) {
                 $message = sprintf( 'Your installment of ₦%s for %s is overdue. Due date was %s. Outstanding on this installment: ₦%s.', number_format( (float) $row->amount_due, 2 ), $row->property_title ?: 'your property', $date_text, number_format( $amount, 2 ) );
                 $subject = 'Property installment overdue';
+            } elseif ( 'due_today' === $type ) {
+                $message = sprintf( 'Reminder: your property installment of ₦%s for %s is due today. Outstanding on this installment: ₦%s.', number_format( (float) $row->amount_due, 2 ), $row->property_title ?: 'your property', number_format( $amount, 2 ) );
+                $subject = 'Property installment due today';
             } else {
                 $message = sprintf( 'Reminder: your property installment of ₦%s for %s is due on %s. Outstanding on this installment: ₦%s.', number_format( (float) $row->amount_due, 2 ), $row->property_title ?: 'your property', $date_text, number_format( $amount, 2 ) );
                 $subject = 'Property installment payment reminder';
@@ -68,6 +73,22 @@ class OFP_Property_Installment_Reminders {
                 $sms = new OFP_SMS( $row->sms_provider, (int) $row->client_id );
                 $sent = $sms->send( $row->buyer_phone, $message );
                 if ( ! empty( $sent['success'] ) ) OFP_Credit::deduct( (int) $row->client_id, 'sms', self::SMS_COST );
+            }
+
+            // Due day only: also place a short voice call, if the client switched it on.
+            if ( 'due_today' === $type && class_exists( 'OFP_Voice_Notice' ) && ! empty( $row->buyer_phone ) && (int) $row->client_id ) {
+                OFP_Voice_Notice::queue_reminder(
+                    'installment',
+                    (int) $row->client_id,
+                    (string) $row->buyer_phone,
+                    [
+                        'name'     => $row->buyer_name,
+                        'property' => $row->property_title,
+                        'amount'   => $amount,
+                        'due_date' => wp_date( 'F j', $due_ts ),
+                    ],
+                    'installment:' . (int) $row->id . ':' . $row->due_date
+                );
             }
 
             if ( (int) $row->client_id && class_exists( 'OFP_Notification' ) ) {

@@ -251,6 +251,12 @@ class OFP_REST_API {
         // Automation queue only runs for clients with CRM configs
         if ( $client_id > 0 ) {
             OFP_Queue::populate_triggers( $client_id, $lead_id );
+
+            // Simple "an agent will reach out" call, if the client switched it on.
+            // Only form leads reach this point. Manual uploads never do.
+            if ( class_exists( 'OFP_Voice_Notice' ) ) {
+                OFP_Voice_Notice::schedule_interest_call( $client_id, $lead_id );
+            }
         }
 
         // ── 8. Handle property inquiry extras (v2.1) ──────────────────────────

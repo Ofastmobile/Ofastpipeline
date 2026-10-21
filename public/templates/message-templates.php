@@ -30,8 +30,19 @@ if ( empty( $has_ebc ) ) {
 // Refresh client row from DB so all columns are present
 $client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p}ofp_clients WHERE id = %d LIMIT 1", $client->id ) );
 
+// ── Call Scripts tab: save ────────────────────────────────────────────────
+$call_error = '';
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_voice_notice_nonce'] ) ) {
+    if ( wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ofp_voice_notice_nonce'] ) ), 'ofp_voice_notice_' . (int) $client->id ) ) {
+        OFP_Voice_Notice::save_settings( (int) $client->id, $_POST );
+        wp_safe_redirect( home_url( '/message-templates?tab=calls&saved=1' ) );
+        exit;
+    }
+    $call_error = 'Security check failed. Please refresh the page and try again.';
+}
+
 $tab = sanitize_text_field( $_GET['tab'] ?? 'log' );
-$allowed_tabs = [ 'log', 'send', 'templates', 'branding' ];
+$allowed_tabs = [ 'log', 'calls', 'send', 'templates', 'branding' ];
 if ( ! in_array( $tab, $allowed_tabs, true ) ) {
     $tab = 'log';
 }
@@ -376,6 +387,7 @@ $type_badges = [
     <!-- Tabs -->
     <div class="ofp-tabs" style="margin-bottom: 24px; border-bottom: 1px solid var(--border-color);">
         <a href="<?php echo esc_url( home_url( '/message-templates?tab=log' ) ); ?>" class="ofp-tab <?php echo $tab === 'log' ? 'active' : ''; ?>">Communications Log</a>
+        <a href="<?php echo esc_url( home_url( '/message-templates?tab=calls' ) ); ?>" class="ofp-tab <?php echo $tab === 'calls' ? 'active' : ''; ?>">Call Scripts</a>
         <?php if ( OFP_Subscription::allows_email_templates( (int) $client->id ) ) : ?>
         <a href="<?php echo esc_url( home_url( '/message-templates?tab=send' ) ); ?>" class="ofp-tab <?php echo $tab === 'send' ? 'active' : ''; ?>">Send Broadcast</a>
         <a href="<?php echo esc_url( home_url( '/message-templates?tab=templates' ) ); ?>" class="ofp-tab <?php echo $tab === 'templates' ? 'active' : ''; ?>">Message Templates</a>
@@ -499,6 +511,71 @@ $type_badges = [
     // TAB 2: SEND BROADCAST
     // =====================================================================
     ?>
+    <?php if ( $tab === 'calls' ) :
+        $call_settings = OFP_Voice_Notice::settings( (int) $client->id );
+        $call_hours    = OFP_Voice_Notice::hours();
+        $call_credits  = class_exists( 'OFP_Credit' ) ? OFP_Credit::get( (int) $client->id ) : null;
+        $call_balance  = (float) ( $call_credits->voice_remaining ?? 0 );
+        $call_cost     = (float) OFP_Queue::VOICE_COST;
+        $call_sections = [
+            'interest' => [
+                'title' => 'When a new lead fills your contact or inspection form',
+                'hint'  => 'Calls the lead right after they submit the form. Leads you upload yourself are never called.',
+                'tags'  => [ '{{name}}', '{{business_name}}', '{{property}}' ],
+            ],
+            'installment' => [
+                'title' => 'When a buyer\'s installment is due today',
+                'hint'  => 'One call on the due day. The buyer still gets the email and SMS reminders.',
+                'tags'  => [ '{{name}}', '{{business_name}}', '{{property}}', '{{amount}}', '{{due_date}}' ],
+            ],
+            'rent' => [
+                'title' => 'When a tenant\'s rent is due today',
+                'hint'  => 'One call on the due day (the lease end date), only if the tenant still owes money.',
+                'tags'  => [ '{{name}}', '{{business_name}}', '{{property}}', '{{amount}}', '{{due_date}}' ],
+            ],
+        ];
+    ?>
+        <?php if ( ! empty( $_GET['saved'] ) ) : ?>
+            <div class="ofp-card" style="padding:14px 20px; margin-bottom:16px; border-left:4px solid #10b981;">Your call scripts were saved.</div>
+        <?php endif; ?>
+        <?php if ( $call_error ) : ?>
+            <div class="ofp-card" style="padding:14px 20px; margin-bottom:16px; border-left:4px solid #ef4444;"><?php echo esc_html( $call_error ); ?></div>
+        <?php endif; ?>
+
+        <div class="ofp-card" style="padding: 24px; margin-bottom: 16px;">
+            <h3 style="margin-top:0;">Automatic Calls</h3>
+            <p class="ofp-subtitle" style="margin-bottom: 12px;">A short phone call that reads your message and hangs up. There are no key presses. Each call uses &#8358;<?php echo esc_html( number_format( $call_cost, 0 ) ); ?> of voice credit, and you have &#8358;<?php echo esc_html( number_format( $call_balance, 0 ) ); ?> left.</p>
+            <?php if ( $call_hours['enabled'] ) : ?>
+                <p class="ofp-subtitle" style="margin:0;">Calls only go out between <?php echo esc_html( gmdate( 'g A', mktime( (int) $call_hours['start'], 0, 0, 1, 1, 2000 ) ) ); ?> and <?php echo esc_html( gmdate( 'g A', mktime( (int) $call_hours['end'] % 24, 0, 0, 1, 1, 2000 ) ) ); ?>. A call due outside those hours waits until the next morning.</p>
+            <?php endif; ?>
+            <?php if ( $call_balance < $call_cost ) : ?>
+                <p style="margin:12px 0 0; color:#b45309;">Your voice credit is too low to place a call. Top up on the Credits page.</p>
+            <?php endif; ?>
+        </div>
+
+        <form method="post" action="<?php echo esc_url( home_url( '/message-templates?tab=calls' ) ); ?>">
+            <?php wp_nonce_field( 'ofp_voice_notice_' . (int) $client->id, 'ofp_voice_notice_nonce' ); ?>
+
+            <?php foreach ( $call_sections as $type => $section ) : ?>
+                <div class="ofp-card" style="padding: 24px; margin-bottom: 16px;">
+                    <label style="display:flex; align-items:center; gap:10px; font-weight:700; font-size:15px; cursor:pointer;">
+                        <input type="checkbox" name="call_<?php echo esc_attr( $type ); ?>_enabled" value="1" <?php checked( ! empty( $call_settings[ $type . '_enabled' ] ) ); ?>>
+                        <?php echo esc_html( $section['title'] ); ?>
+                    </label>
+                    <p class="ofp-subtitle" style="margin:6px 0 14px;"><?php echo esc_html( $section['hint'] ); ?></p>
+
+                    <div class="ofp-field">
+                        <label for="call_<?php echo esc_attr( $type ); ?>_message">What the call says</label>
+                        <textarea id="call_<?php echo esc_attr( $type ); ?>_message" name="call_<?php echo esc_attr( $type ); ?>_message" rows="4" maxlength="<?php echo (int) OFP_Voice_Notice::MAX_CHARS; ?>"><?php echo esc_textarea( $call_settings[ $type . '_message' ] ); ?></textarea>
+                        <p class="ofp-subtitle" style="margin:6px 0 0; font-size:12px;">You can use: <?php echo esc_html( implode( '  ', $section['tags'] ) ); ?>. Keep it short and clear. Maximum <?php echo (int) OFP_Voice_Notice::MAX_CHARS; ?> characters.</p>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+
+            <button type="submit" class="ofp-btn ofp-btn-primary">Save Call Scripts</button>
+        </form>
+    <?php endif; ?>
+
     <?php if ( $tab === 'send' ) : ?>
 
         <div class="ofp-card" style="padding: 32px;">

@@ -100,8 +100,75 @@ class OFP_Communications_Log {
      * Sync historical communication events from activity logs and pending triggers into ofp_communications_log.
      * Ensures all past transaction emails/SMS and current pending triggers show up in the Communications Log.
      */
+    /**
+     * One time clean up of the double rows that older versions wrote for queued
+     * follow up SMS and voice calls (once by the sender, once by the queue).
+     *
+     *  Voice: keep the sender's row (it has the provider reference), copy the cost
+     *         from the queue's row onto it, and remove the queue's row.
+     *  SMS:   keep the queue's row (it knows the lead), remove the sender's row that
+     *         has no lead. Rows are only paired when the provider reference is the same.
+     *
+     * It only runs once. Anything that does not pair up exactly is left alone.
+     */
+    public static function merge_duplicate_queue_rows(): void {
+        if ( get_option( 'ofp_comms_dupes_merged_v1' ) ) {
+            return;
+        }
+        global $wpdb;
+        $t = $wpdb->prefix . 'ofp_communications_log';
+
+        $voice_pairs = (array) $wpdb->get_results(
+            "SELECT a.id AS keep_id, b.id AS dup_id, b.cost AS dup_cost
+             FROM {$t} a
+             INNER JOIN {$t} b
+                ON b.client_id = a.client_id AND b.lead_id = a.lead_id AND b.id <> a.id
+               AND ABS( TIMESTAMPDIFF( SECOND, a.sent_at, b.sent_at ) ) <= 120
+             WHERE a.type = 'voice' AND b.type = 'voice'
+               AND a.lead_id IS NOT NULL
+               AND a.status = 'queued' AND a.cost = 0
+               AND b.status = 'sent' AND b.cost > 0
+               AND ( b.provider_ref IS NULL OR b.provider_ref = '' )
+             LIMIT 2000"
+        );
+
+        $used = [];
+        foreach ( $voice_pairs as $pair ) {
+            if ( isset( $used[ $pair->keep_id ] ) || isset( $used[ $pair->dup_id ] ) ) {
+                continue;
+            }
+            $used[ $pair->keep_id ] = $used[ $pair->dup_id ] = true;
+            $wpdb->update( $t, [ 'cost' => $pair->dup_cost ], [ 'id' => (int) $pair->keep_id ] );
+            $wpdb->delete( $t, [ 'id' => (int) $pair->dup_id ] );
+        }
+
+        $sms_pairs = (array) $wpdb->get_results(
+            "SELECT a.id AS dup_id
+             FROM {$t} a
+             INNER JOIN {$t} b
+                ON b.client_id = a.client_id AND b.id <> a.id
+               AND b.provider_ref = a.provider_ref
+               AND ABS( TIMESTAMPDIFF( SECOND, a.sent_at, b.sent_at ) ) <= 120
+             WHERE a.type = 'sms' AND b.type = 'sms'
+               AND a.lead_id IS NULL AND b.lead_id IS NOT NULL
+               AND a.provider_ref IS NOT NULL AND a.provider_ref <> ''
+               AND a.message = b.message
+             LIMIT 2000"
+        );
+        foreach ( $sms_pairs as $pair ) {
+            if ( isset( $used[ $pair->dup_id ] ) ) {
+                continue;
+            }
+            $used[ $pair->dup_id ] = true;
+            $wpdb->delete( $t, [ 'id' => (int) $pair->dup_id ] );
+        }
+
+        update_option( 'ofp_comms_dupes_merged_v1', 1, false );
+    }
+
     public static function sync_historical_activity( int $client_id ): void {
         self::ensure_schema();
+        self::merge_duplicate_queue_rows();
         global $wpdb;
 
         $p = $wpdb->prefix;

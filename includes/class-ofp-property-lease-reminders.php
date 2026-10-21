@@ -169,6 +169,29 @@ class OFP_Property_Lease_Reminders {
             }
         }
 
+        // Due day only (the lease end date is when rent for this cycle is due).
+        // Place a short voice call, but only if money is still owed.
+        if (
+            0 === $days_until_expiry &&
+            $client_id &&
+            ! empty( $lease->tenant_phone ) &&
+            (float) $lease->balance > 0 &&
+            class_exists( 'OFP_Voice_Notice' )
+        ) {
+            OFP_Voice_Notice::queue_reminder(
+                'rent',
+                $client_id,
+                (string) $lease->tenant_phone,
+                [
+                    'name'     => $tenant_name,
+                    'property' => $property,
+                    'amount'   => (float) $lease->balance,
+                    'due_date' => wp_date( 'F j', strtotime( $lease->end_date ) ),
+                ],
+                'rent:' . (int) $lease->id . ':' . $lease->end_date
+            );
+        }
+
         // In-app notification to the landlord/client.
         if ( $client_id && class_exists( 'OFP_Notification' ) ) {
             OFP_Notification::create(

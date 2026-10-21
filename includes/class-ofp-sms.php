@@ -63,7 +63,7 @@ class OFP_SMS {
      *     @type string $error        Error message if success = false.
      * }
      */
-    public function send( string $phone, string $message ): array {
+    public function send( string $phone, string $message, ?int $lead_id = null ): array {
 
         $phone  = $this->normalise_phone( $phone );
         $result = match ( $this->provider ) {
@@ -90,7 +90,7 @@ class OFP_SMS {
         if ( class_exists( 'OFP_Communications_Log' ) && ! empty( $this->client_id ) ) {
             OFP_Communications_Log::log(
                 (int) $this->client_id,
-                null,
+                $lead_id ?: null,
                 'sms',
                 $phone,
                 'outbound',

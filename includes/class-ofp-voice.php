@@ -38,17 +38,24 @@ class OFP_Voice {
         string $phone,
         string $message,
         int $client_id,
-        int $lead_id
+        int $lead_id,
+        string $notice_token = '',
+        float $cost = 0.0
     ): array {
 
         $phone = $this->normalise_phone( $phone );
 
         // Build the IVR callback URL — AT will POST digit responses here.
+        $callback_args = [
+            'client_id' => $client_id,
+            'lead_id'   => $lead_id,
+        ];
+        // One way notice calls carry a token. The webhook uses it to read out the saved text.
+        if ( $notice_token !== '' ) {
+            $callback_args['notice'] = $notice_token;
+        }
         $callback_url = add_query_arg(
-            [
-                'client_id' => $client_id,
-                'lead_id'   => $lead_id,
-            ],
+            $callback_args,
             home_url( '/wp-json/ofp/v1/webhook/voice-ivr' )
         );
 
@@ -57,6 +64,9 @@ class OFP_Voice {
         $from     = get_option( 'ofp_at_phone_number', '' );
 
         if ( empty( $api_key ) || empty( $username ) ) {
+            if ( class_exists( 'OFP_Communications_Log' ) && ! empty( $client_id ) ) {
+                OFP_Communications_Log::log( (int) $client_id, $lead_id ?: null, 'voice', $phone, 'outbound', $message, 0.00, 'failed', 'africastalking', null );
+            }
             return [
                 'success'    => false,
                 'session_id' => '',
@@ -119,7 +129,7 @@ class OFP_Voice {
                 $phone,
                 'outbound',
                 $message,
-                0.00,
+                $is_success ? $cost : 0.00,
                 $is_success ? 'queued' : 'failed',
                 'africastalking',
                 $provider_ref

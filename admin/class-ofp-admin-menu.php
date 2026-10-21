@@ -632,6 +632,7 @@ class OFP_Admin_Menu {
             'ofp_use_app_host'        => empty( $_POST['ofp_use_app_host'] ) ? '0' : '1',
             'ofp_online_buyer_payments' => empty( $_POST['ofp_online_buyer_payments'] ) ? '0' : '1',
             'ofp_hide_admin_bar'      => empty( $_POST['ofp_hide_admin_bar'] ) ? '0' : '1',
+            'ofp_portal_default_dashboard' => empty( $_POST['ofp_portal_default_dashboard'] ) ? '0' : '1',
             'ofp_watermark_enabled'   => empty( $_POST['ofp_watermark_enabled'] ) ? '0' : '1',
             'ofp_watermark_text'      => sanitize_text_field( wp_unslash( $_POST['ofp_watermark_text'] ?? '' ) ),
             'ofp_global_pixel_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_global_pixel_id']     ?? '' ) ),
@@ -641,6 +642,13 @@ class OFP_Admin_Menu {
             'ofp_default_followup_1'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_1']  ?? '' ) ),
             'ofp_default_followup_2'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_2']  ?? '' ) ),
             'ofp_default_followup_3'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_3']  ?? '' ) ),
+            // Automatic one way calls: starting text and calling hours
+            'ofp_default_call_interest'    => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_call_interest']    ?? '' ) ),
+            'ofp_default_call_installment' => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_call_installment'] ?? '' ) ),
+            'ofp_default_call_rent'        => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_call_rent']        ?? '' ) ),
+            'ofp_voice_hours_enabled'      => empty( $_POST['ofp_voice_hours_enabled'] ) ? '0' : '1',
+            'ofp_voice_hours_start'        => min( 23, absint( $_POST['ofp_voice_hours_start'] ?? 8 ) ),
+            'ofp_voice_hours_end'          => max( 1, min( 24, absint( $_POST['ofp_voice_hours_end'] ?? 19 ) ) ),
             // Payment gateway
             'ofp_payment_provider'       => 'paystack',
             // SMTP mode + fields

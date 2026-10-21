@@ -22,6 +22,14 @@ class OFP_Admin_Portal {
         add_action( 'admin_bar_menu', [ $instance, 'add_admin_bar_link' ], 80 );
         add_action( 'admin_menu', [ $instance, 'add_wp_menu_shortcut' ], 2 );
         add_filter( 'wp_redirect', [ $instance, 'filter_admin_redirects' ], 999 );
+
+        // ── Default Dashboard Redirect ──────────────────────────────────
+        // When the "Use Modern Portal as Default Dashboard" setting is on,
+        // redirect admins to /admin-portal after WP login and when they
+        // visit /wp-admin/ (the dashboard index page).
+        // Safety hatch: append ?classic=1 to any wp-admin URL to bypass.
+        add_filter( 'login_redirect', [ $instance, 'redirect_after_login' ], 999, 3 );
+        add_action( 'admin_init', [ $instance, 'redirect_dashboard_to_portal' ], 1 );
     }
 
     public function register_rewrite(): void {
@@ -345,7 +353,7 @@ class OFP_Admin_Portal {
     }
 
     /**
-     * Adds an eye-catching "🚀 Admin Portal" button to the WordPress top admin bar.
+     * Adds an "Admin Portal" button to the WordPress top admin bar.
      */
     public function add_admin_bar_link( WP_Admin_Bar $admin_bar ): void {
         if ( ! current_user_can( 'manage_options' ) ) {
@@ -354,7 +362,7 @@ class OFP_Admin_Portal {
 
         $admin_bar->add_node( [
             'id'    => 'ofp-admin-portal-switch',
-            'title' => '<span style="color:#10b981;font-weight:700;">🚀 Admin Portal</span>',
+            'title' => '<span style="color:#10b981;font-weight:700;">Admin Portal</span>',
             'href'  => home_url( '/admin-portal' ),
             'meta'  => [
                 'title' => 'Launch Modern Admin Dashboard',
@@ -372,8 +380,8 @@ class OFP_Admin_Portal {
 
         add_submenu_page(
             'ofp-overview',
-            '🚀 Modern Admin Portal',
-            '<span style="color:#10b981;font-weight:600;">🚀 Modern Portal</span>',
+            'Modern Admin Portal',
+            '<span style="color:#10b981;font-weight:600;">Modern Portal</span>',
             'read',
             'ofp-launch-modern-portal',
             function() {
@@ -440,6 +448,109 @@ class OFP_Admin_Portal {
         }
 
         return $location;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DEFAULT DASHBOARD REDIRECT
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * After a successful WordPress login, redirect administrators straight
+     * to the modern Admin Portal instead of /wp-admin/.
+     *
+     * Security:
+     * - Only fires when ofp_portal_default_dashboard option is '1'
+     * - Only affects users with manage_options capability (admins)
+     * - Preserves any explicit redirect_to that points outside wp-admin
+     * - ?classic=1 on the login form's redirect_to bypasses this entirely
+     *
+     * @param string           $redirect_to           The destination URL.
+     * @param string           $requested_redirect_to The originally requested redirect.
+     * @param WP_User|WP_Error $user                  The logged-in user object.
+     * @return string
+     */
+    public function redirect_after_login( string $redirect_to, string $requested_redirect_to, $user ): string {
+        // Only when the feature is enabled
+        if ( '1' !== (string) get_option( 'ofp_portal_default_dashboard', '0' ) ) {
+            return $redirect_to;
+        }
+
+        // Must be a successful login (not a WP_Error)
+        if ( ! ( $user instanceof WP_User ) ) {
+            return $redirect_to;
+        }
+
+        // Only redirect administrators
+        if ( ! user_can( $user, 'manage_options' ) ) {
+            return $redirect_to;
+        }
+
+        // Safety escape: if the requested URL has ?classic=1, honour it
+        if ( strpos( $requested_redirect_to, 'classic=1' ) !== false ) {
+            return $redirect_to;
+        }
+
+        // If the user explicitly requested a specific admin page (not just
+        // /wp-admin/ or /wp-admin/index.php), honour that destination
+        if ( $requested_redirect_to && ! preg_match( '#/wp-admin/?(?:index\.php)?(?:\?.*)?$#', $requested_redirect_to ) ) {
+            return $redirect_to;
+        }
+
+        return home_url( '/admin-portal' );
+    }
+
+    /**
+     * When an administrator navigates directly to /wp-admin/ or
+     * /wp-admin/index.php (the WordPress Dashboard), redirect them
+     * to the modern Admin Portal.
+     *
+     * Does NOT intercept other wp-admin pages (posts, plugins, settings…)
+     * so nothing in WordPress breaks.
+     *
+     * Safety hatches:
+     * - ?classic=1 in the URL always lets you through
+     * - AJAX, REST, and WP-CLI requests are never redirected
+     * - POST requests are never redirected (form submissions)
+     */
+    public function redirect_dashboard_to_portal(): void {
+        // Only when the feature is enabled
+        if ( '1' !== (string) get_option( 'ofp_portal_default_dashboard', '0' ) ) {
+            return;
+        }
+
+        // Never redirect AJAX, REST API, Cron, or CLI requests
+        if ( wp_doing_ajax() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+            return;
+        }
+
+        // Never redirect POST requests (form submissions, plugin actions)
+        if ( isset( $_SERVER['REQUEST_METHOD'] ) && $_SERVER['REQUEST_METHOD'] === 'POST' ) {
+            return;
+        }
+
+        // Only redirect administrators
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        // Safety escape: ?classic=1 bypasses the redirect
+        if ( ! empty( $_GET['classic'] ) && $_GET['classic'] === '1' ) {
+            return;
+        }
+
+        // Only intercept the Dashboard page itself, not other admin pages
+        global $pagenow;
+        if ( $pagenow !== 'index.php' ) {
+            return;
+        }
+
+        // Don't redirect if a specific dashboard widget/action is requested
+        if ( ! empty( $_GET['action'] ) || ! empty( $_GET['page'] ) ) {
+            return;
+        }
+
+        wp_safe_redirect( home_url( '/admin-portal' ) );
+        exit;
     }
 
     /**

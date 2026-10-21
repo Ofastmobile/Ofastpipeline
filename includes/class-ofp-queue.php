@@ -224,12 +224,13 @@ class OFP_Queue {
                         return;
                     }
                     $sms    = new OFP_SMS( $trigger->sms_provider, $trigger->client_id );
-                    $result = $sms->send( $lead->phone, $message );
+                    // OFP_SMS records the message in the communications log itself,
+                    // and now carries the lead id, so we do not log it a second time here.
+                    $result = $sms->send( $lead->phone, $message, (int) $lead->id );
                     if ( $result['success'] ) {
                         OFP_Credit::deduct( $trigger->client_id, 'sms', self::SMS_COST );
                         OFP_Lead::update_status( $lead->id, 'contacted' );
                     }
-                    self::log( $trigger, $result, $message, self::SMS_COST );
                     $success = $result['success'];
                     break;
 
@@ -239,12 +240,13 @@ class OFP_Queue {
                         return;
                     }
                     $voice  = new OFP_Voice();
-                    $result = $voice->make_call( $lead->phone, $message, $trigger->client_id, $trigger->lead_id );
+                    // make_call records the call (with the lead and the cost) in the
+                    // communications log itself, so we do not log it a second time here.
+                    $result = $voice->make_call( $lead->phone, $message, $trigger->client_id, $trigger->lead_id, '', self::VOICE_COST );
                     if ( $result['success'] ) {
                         OFP_Credit::deduct( $trigger->client_id, 'voice', self::VOICE_COST );
                         OFP_Lead::update_status( $lead->id, 'contacted' );
                     }
-                    self::log( $trigger, $result, $message, self::VOICE_COST );
                     $success = $result['success'];
                     break;
 

@@ -99,6 +99,23 @@ class OFP_IVR {
         global $wpdb;
         $p = $wpdb->prefix;
 
+        // One way notice call (lead interest, installment or rent reminder).
+        // Speak the saved text and hang up. No key presses.
+        $notice_token = sanitize_text_field( (string) ( $request->get_param( 'notice' ) ?? '' ) );
+        if ( $notice_token !== '' ) {
+            header( 'Content-Type: text/xml; charset=utf-8' );
+
+            // Africa's Talking also calls back when the call ends. Nothing to say then.
+            if ( '0' === (string) ( $request->get_param( 'isActive' ) ?? '' ) ) {
+                echo '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
+                exit;
+            }
+
+            $notice = class_exists( 'OFP_Voice_Notice' ) ? OFP_Voice_Notice::get_notice( $notice_token ) : null;
+            echo self::say_and_hangup( $notice ? $notice['text'] : 'Hello. This is an automated message. Thank you. Goodbye.' );
+            exit;
+        }
+
         // AT sends these as POST or GET params.
         $client_id  = (int) ( $request->get_param( 'client_id' )  ?? 0 );
         $lead_id    = (int) ( $request->get_param( 'lead_id' )    ?? 0 );

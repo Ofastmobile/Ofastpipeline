@@ -24,6 +24,7 @@ $app_name           = get_option( 'ofp_app_name', '' );
 $use_app_host       = get_option( 'ofp_use_app_host', '1' );
 $online_payments    = get_option( 'ofp_online_buyer_payments', '0' );
 $hide_admin_bar     = get_option( 'ofp_hide_admin_bar', '1' );
+$portal_default     = get_option( 'ofp_portal_default_dashboard', '0' );
 $watermark_enabled  = get_option( 'ofp_watermark_enabled', '1' );
 $watermark_text     = get_option( 'ofp_watermark_text', '' );
 $pixel_id           = get_option( 'ofp_global_pixel_id', '' );
@@ -239,6 +240,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <?php wp_nonce_field( 'ofp_save_settings' ); ?>
         <input type="hidden" name="action" value="ofp_save_settings">
         <input type="hidden" name="ofp_active_tab" id="ofp_active_tab" value="tab-general">
+        <input type="hidden" name="ofp_in_portal" value="<?php echo ( isset( $tab ) && $tab === 'settings' ) ? '1' : '0'; ?>">
 
         <div class="ofp-settings-layout">
 
@@ -467,6 +469,18 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                 </div>
                                 <label class="ofp-switch">
                                     <input type="checkbox" name="ofp_hide_admin_bar" value="1" <?php checked( $hide_admin_bar, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Switch 3b: Use Modern Portal as Default Dashboard -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Use Modern Portal as Default Admin Dashboard</span>
+                                    <p class="ofp-switch-desc">When enabled, logging into WordPress will open the <strong>Modern Admin Portal</strong> instead of the standard WordPress dashboard. This also redirects direct <code>/wp-admin/</code> visits to the portal. You can always access the classic WP dashboard by appending <code>?classic=1</code> to any wp-admin URL, or by toggling this switch off.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_portal_default_dashboard" value="1" <?php checked( $portal_default, '1' ); ?>>
                                     <span class="ofp-slider"></span>
                                 </label>
                             </div>
@@ -711,6 +725,51 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                     <span class="ofp-field-hint">Final automated touchpoint for cold leads.</span>
                                     <span class="ofp-char-pill">0 chars (1 SMS)</span>
                                 </div>
+                            </div>
+
+                            <!-- Automatic one way calls -->
+                            <?php
+                            $vn_hours = OFP_Voice_Notice::hours();
+                            $vn_fields = [
+                                'interest'    => [ '5. Lead interest call (right after a form lead is captured)', '{{name}} {{business_name}} {{property}}' ],
+                                'installment' => [ '6. Installment due day call', '{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}' ],
+                                'rent'        => [ '7. Rent due day call', '{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}' ],
+                            ];
+                            foreach ( $vn_fields as $vn_type => $vn_info ) : ?>
+                            <div class="ofp-field-group">
+                                <div class="ofp-field-label-row">
+                                    <label class="ofp-field-label"><?php echo esc_html( $vn_info[0] ); ?></label>
+                                </div>
+                                <textarea id="ofp_default_call_<?php echo esc_attr( $vn_type ); ?>" name="ofp_default_call_<?php echo esc_attr( $vn_type ); ?>" rows="3"><?php echo esc_textarea( OFP_Voice_Notice::default_script( $vn_type ) ); ?></textarea>
+                                <p class="ofp-field-hint">One way call, no key presses. Starting text for clients who have not written their own. You can use: <?php echo esc_html( $vn_info[1] ); ?></p>
+                            </div>
+                            <?php endforeach; ?>
+
+                            <div class="ofp-field-group">
+                                <div class="ofp-field-label-row">
+                                    <label class="ofp-field-label">8. Calling hours for all automatic calls</label>
+                                </div>
+                                <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                                    <input type="checkbox" name="ofp_voice_hours_enabled" value="1" <?php checked( $vn_hours['enabled'] ); ?>>
+                                    Only call inside these hours (a call due outside them waits for the next morning)
+                                </label>
+                                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                                    <label>From
+                                        <select name="ofp_voice_hours_start">
+                                            <?php for ( $h = 0; $h <= 23; $h++ ) : ?>
+                                                <option value="<?php echo (int) $h; ?>" <?php selected( $vn_hours['start'], $h ); ?>><?php echo esc_html( gmdate( 'g A', mktime( $h, 0, 0, 1, 1, 2000 ) ) ); ?></option>
+                                            <?php endfor; ?>
+                                        </select>
+                                    </label>
+                                    <label>To
+                                        <select name="ofp_voice_hours_end">
+                                            <?php for ( $h = 1; $h <= 24; $h++ ) : ?>
+                                                <option value="<?php echo (int) $h; ?>" <?php selected( $vn_hours['end'], $h ); ?>><?php echo esc_html( gmdate( 'g A', mktime( $h % 24, 0, 0, 1, 1, 2000 ) ) ); ?></option>
+                                            <?php endfor; ?>
+                                        </select>
+                                    </label>
+                                </div>
+                                <p class="ofp-field-hint">Hours use the time zone set in WordPress Settings, General. Make sure it is set to your city (for example Lagos).</p>
                             </div>
 
                         </div>
