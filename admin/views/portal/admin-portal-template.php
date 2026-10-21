@@ -121,10 +121,10 @@ $titles = [
         <!-- Brand Header -->
         <div class="ofp-sb-header">
             <a href="<?php echo esc_url( home_url( '/admin-portal' ) ); ?>" class="ofp-sb-brand">
-                <div class="ofp-sb-logo-icon">OP</div>
+                <div class="ofp-sb-logo-icon" style="font-size:16px;">⚡</div>
                 <div class="ofp-sb-brand-info">
-                    <span class="ofp-sb-brand-title">OFast Pipeline</span>
-                    <span class="ofp-sb-brand-badge">Executive Portal</span>
+                    <span class="ofp-sb-brand-title">NaijaHub</span>
+                    <span class="ofp-sb-brand-badge">v2.2.3</span>
                 </div>
             </a>
             <button type="button" class="ofp-sb-collapse-btn" id="ofp-sb-collapse" title="Collapse sidebar">
@@ -348,10 +348,19 @@ $titles = [
         <!-- Top Header Navigation Bar (Reduced Height) -->
         <header class="ofp-portal-header">
             <div class="ofp-portal-header-left">
-                <h1 class="ofp-page-title">
-                    <?php echo esc_html( $titles[ $tab ] ?? 'Dashboard' ); ?>
-                </h1>
-                <span class="ofp-page-subtitle">Welcome back, <?php echo esc_html( $admin_name ); ?> — all controls unified in modern design.</span>
+                <div class="ofp-nav-app-branding">
+                    <span class="ofp-nav-app-name">⚡ NaijaHub</span>
+                    <span class="ofp-nav-app-version">v2.2.3</span>
+                </div>
+                <div class="ofp-portal-header-title-row">
+                    <h3 class="ofp-page-title">
+                        <?php echo esc_html( $titles[ $tab ] ?? 'Dashboard' ); ?>
+                    </h3>
+                    <span class="ofp-topbar-badge">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:2px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        Super Admin Console
+                    </span>
+                </div>
             </div>
 
             <div class="ofp-portal-header-right">
@@ -364,12 +373,6 @@ $titles = [
                 <a href="<?php echo esc_url( admin_url( 'index.php?classic=1' ) ); ?>" class="ofp-btn ofp-btn-wp" title="Switch to Classic WordPress Admin">
                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                     <span>WP Admin</span>
-                </a>
-
-                <!-- Add New Property Button (Stays inside the Portal) -->
-                <a href="<?php echo esc_url( home_url( '/admin-portal?tab=property-add' ) ); ?>" class="ofp-btn ofp-btn-primary">
-                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                    <span>+ Add Property</span>
                 </a>
             </div>
         </header>

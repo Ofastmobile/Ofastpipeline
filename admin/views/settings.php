@@ -95,146 +95,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
 <div class="ofp-settings-wrap">
 
-    <!-- ── Top Header & Global Actions ───────────────────────────────────── -->
-    <div class="ofp-settings-topbar">
-        <div class="ofp-topbar-left">
-            <div class="ofp-settings-title-row">
-                <h2 class="ofp-settings-title">Platform Settings</h2>
-                <span class="ofp-topbar-badge">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    Super Admin Console
-                </span>
-                <?php if ( $has_vault_key ) : ?>
-                    <span class="ofp-pill ofp-pill-purple" title="AES-256-CBC Encryption Active at rest">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        AES-256 Encrypted
-                    </span>
-                <?php endif; ?>
-            </div>
-            <p class="ofp-settings-desc">Manage API credentials, communications relays, domain multi-tenancy, and pricing tiers.</p>
-        </div>
-        <div class="ofp-topbar-actions">
-            <button type="button" class="ofp-btn-save-master" onclick="document.getElementById('ofp-master-settings-form').submit();">
-                <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-                Save All Changes
-            </button>
-        </div>
-    </div>
-
-    <!-- ── System Health Bar (Clean Color SVG Icons) ─────────────────────── -->
-    <div class="ofp-health-grid">
-        <!-- Email Health -->
-        <a href="#tab-email" class="ofp-health-card ofp-nav-trigger" data-target="tab-email">
-            <div class="ofp-icon-box ofp-icon-md icon-sky">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect width="20" height="16" x="2" y="4" rx="2"/>
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                </svg>
-            </div>
-            <div class="ofp-health-meta">
-                <span class="ofp-health-label">Email Service</span>
-                <span class="ofp-health-status">
-                    <?php if ( $smtp_mode === 'custom' ) : ?>
-                        <span class="ofp-status-dot dot-green"></span> Custom SMTP
-                    <?php else : ?>
-                        <span class="ofp-status-dot dot-blue"></span> WP Default Mail
-                    <?php endif; ?>
-                </span>
-            </div>
-        </a>
-
-        <!-- Paystack Health -->
-        <a href="#tab-payments" class="ofp-health-card ofp-nav-trigger" data-target="tab-payments">
-            <div class="ofp-icon-box ofp-icon-md icon-emerald">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect width="20" height="14" x="2" y="5" rx="2"/>
-                    <line x1="2" x2="22" y1="10" y2="10"/>
-                </svg>
-            </div>
-            <div class="ofp-health-meta">
-                <span class="ofp-health-label">Paystack Gateway</span>
-                <span class="ofp-health-status">
-                    <?php if ( $paystack_is_live ) : ?>
-                        <span class="ofp-status-dot dot-green"></span> Live Active
-                    <?php elseif ( $paystack_is_test ) : ?>
-                        <span class="ofp-status-dot dot-yellow"></span> Sandbox / Test
-                    <?php elseif ( $has_paystack_key ) : ?>
-                        <span class="ofp-status-dot dot-green"></span> Configured
-                    <?php else : ?>
-                        <span class="ofp-status-dot dot-gray"></span> Needs Setup
-                    <?php endif; ?>
-                </span>
-            </div>
-        </a>
-
-        <!-- SMS Health -->
-        <a href="#tab-sms" class="ofp-health-card ofp-nav-trigger" data-target="tab-sms">
-            <div class="ofp-icon-box ofp-icon-md icon-violet">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-            </div>
-            <div class="ofp-health-meta">
-                <span class="ofp-health-label">SMS Relays</span>
-                <span class="ofp-health-status">
-                    <?php if ( $has_at_key ) : ?>
-                        <span class="ofp-status-dot dot-green"></span> Africa's Talking
-                    <?php elseif ( $has_smartsms_key ) : ?>
-                        <span class="ofp-status-dot dot-green"></span> SmartSMS
-                    <?php elseif ( $has_bsmsn_key ) : ?>
-                        <span class="ofp-status-dot dot-green"></span> BulkSMS NG
-                    <?php else : ?>
-                        <span class="ofp-status-dot dot-yellow"></span> None Active
-                    <?php endif; ?>
-                </span>
-            </div>
-        </a>
-
-        <!-- Anti-Bot Health -->
-        <a href="#tab-security" class="ofp-health-card ofp-nav-trigger" data-target="tab-security">
-            <div class="ofp-icon-box ofp-icon-md icon-rose">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    <path d="m9 12 2 2 4-4"/>
-                </svg>
-            </div>
-            <div class="ofp-health-meta">
-                <span class="ofp-health-label">Bot Protection</span>
-                <span class="ofp-health-status">
-                    <?php if ( ! empty( $turnstile_site ) && $has_turnstile_sec ) : ?>
-                        <span class="ofp-status-dot dot-green"></span> Turnstile Active
-                    <?php else : ?>
-                        <span class="ofp-status-dot dot-blue"></span> Dev Bypass
-                    <?php endif; ?>
-                </span>
-            </div>
-        </a>
-
-        <!-- Bank Details -->
-        <a href="#tab-bank" class="ofp-health-card ofp-nav-trigger" data-target="tab-bank">
-            <div class="ofp-icon-box ofp-icon-md icon-teal">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="3" x2="21" y1="22" y2="22"/>
-                    <line x1="6" x2="6" y1="18" y2="11"/>
-                    <line x1="10" x2="10" y1="18" y2="11"/>
-                    <line x1="14" x2="14" y1="18" y2="11"/>
-                    <line x1="18" x2="18" y1="18" y2="11"/>
-                    <polygon points="12 2 20 7 4 7"/>
-                </svg>
-            </div>
-            <div class="ofp-health-meta">
-                <span class="ofp-health-label">Company Bank</span>
-                <span class="ofp-health-status">
-                    <?php if ( $has_bank_set ) : ?>
-                        <span class="ofp-status-dot dot-green"></span> <?php echo esc_html( $bank_name ); ?>
-                    <?php else : ?>
-                        <span class="ofp-status-dot dot-gray"></span> Not Set
-                    <?php endif; ?>
-                </span>
-            </div>
-        </a>
-    </div>
-
     <!-- ── Master Settings Form ─────────────────────────────────────────── -->
     <form id="ofp-master-settings-form" method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
         <?php wp_nonce_field( 'ofp_save_settings' ); ?>
@@ -244,135 +104,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
 
         <div class="ofp-settings-layout">
 
-            <!-- ── Left Sidebar Navigation (Crisp Color SVGs) ─────────────── -->
-            <aside class="ofp-settings-nav">
-                <!-- Group: Core -->
-                <div class="ofp-nav-group">
-                    <span class="ofp-nav-group-title">Core Platform</span>
-                    
-                    <button type="button" class="ofp-nav-item is-active" data-tab="tab-general">
-                        <span class="ofp-nav-item-left">
-                            <span class="ofp-icon-box ofp-icon-sm icon-blue">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <line x1="2" x2="22" y1="12" y2="12"/>
-                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                                </svg>
-                            </span>
-                            <span>General & Routing</span>
-                        </span>
-                        <span class="ofp-nav-pill">Domain</span>
-                    </button>
-
-                    <button type="button" class="ofp-nav-item" data-tab="tab-pipeline">
-                        <span class="ofp-nav-item-left">
-                            <span class="ofp-icon-box ofp-icon-sm icon-indigo">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                                </svg>
-                            </span>
-                            <span>Message Templates</span>
-                        </span>
-                        <span class="ofp-nav-pill">Auto</span>
-                    </button>
-                </div>
-
-                <!-- Group: Integrations -->
-                <div class="ofp-nav-group">
-                    <span class="ofp-nav-group-title">Integrations & Relays</span>
-                    
-                    <button type="button" class="ofp-nav-item" data-tab="tab-email">
-                        <span class="ofp-nav-item-left">
-                            <span class="ofp-icon-box ofp-icon-sm icon-sky">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect width="20" height="16" x="2" y="4" rx="2"/>
-                                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                                </svg>
-                            </span>
-                            <span>Email (SMTP)</span>
-                        </span>
-                        <span class="ofp-nav-pill"><?php echo $smtp_mode === 'custom' ? 'SMTP' : 'WP'; ?></span>
-                    </button>
-
-                    <button type="button" class="ofp-nav-item" data-tab="tab-payments">
-                        <span class="ofp-nav-item-left">
-                            <span class="ofp-icon-box ofp-icon-sm icon-emerald">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect width="20" height="14" x="2" y="5" rx="2"/>
-                                    <line x1="2" x2="22" y1="10" y2="10"/>
-                                </svg>
-                            </span>
-                            <span>Payment Gateway</span>
-                        </span>
-                        <span class="ofp-nav-pill">Paystack</span>
-                    </button>
-
-                    <button type="button" class="ofp-nav-item" data-tab="tab-sms">
-                        <span class="ofp-nav-item-left">
-                            <span class="ofp-icon-box ofp-icon-sm icon-violet">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M4.93 4.93a10 10 0 0 1 14.14 0"/>
-                                    <path d="M7.76 7.76a6 6 0 0 1 8.48 0"/>
-                                    <circle cx="12" cy="12" r="2"/>
-                                    <line x1="12" x2="12" y1="14" y2="22"/>
-                                </svg>
-                            </span>
-                            <span>SMS & Voice</span>
-                        </span>
-                        <span class="ofp-nav-pill">3 Providers</span>
-                    </button>
-                </div>
-
-                <!-- Group: Commerce & Security -->
-                <div class="ofp-nav-group">
-                    <span class="ofp-nav-group-title">Commerce & Access</span>
-                    
-                    <button type="button" class="ofp-nav-item" data-tab="tab-pricing">
-                        <span class="ofp-nav-item-left">
-                            <span class="ofp-icon-box ofp-icon-sm icon-amber">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
-                                    <circle cx="7" cy="7" r="1.5"/>
-                                </svg>
-                            </span>
-                            <span>Plans & Pricing</span>
-                        </span>
-                        <span class="ofp-nav-pill">Tiers</span>
-                    </button>
-
-                    <button type="button" class="ofp-nav-item" data-tab="tab-bank">
-                        <span class="ofp-nav-item-left">
-                            <span class="ofp-icon-box ofp-icon-sm icon-teal">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="3" x2="21" y1="22" y2="22"/>
-                                    <line x1="6" x2="6" y1="18" y2="11"/>
-                                    <line x1="10" x2="10" y1="18" y2="11"/>
-                                    <line x1="14" x2="14" y1="18" y2="11"/>
-                                    <line x1="18" x2="18" y1="18" y2="11"/>
-                                    <polygon points="12 2 20 7 4 7"/>
-                                </svg>
-                            </span>
-                            <span>Company Bank</span>
-                        </span>
-                        <span class="ofp-nav-pill">Wire</span>
-                    </button>
-
-                    <button type="button" class="ofp-nav-item" data-tab="tab-security">
-                        <span class="ofp-nav-item-left">
-                            <span class="ofp-icon-box ofp-icon-sm icon-rose">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                                    <rect width="8" height="6" x="8" y="10" rx="1"/>
-                                </svg>
-                            </span>
-                            <span>Security & Anti-Bot</span>
-                        </span>
-                        <span class="ofp-nav-pill">Turnstile</span>
-                    </button>
-                </div>
-            </aside>
-
-            <!-- ── Right Content Panels ──────────────────────────────────── -->
+            <!-- ── Settings Panels ──────────────────────────────────── -->
             <main class="ofp-settings-panels">
 
                 <!-- ════════ TAB 1: GENERAL & ROUTING ════════ -->
@@ -1505,57 +1237,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Security & Vault Specs Card -->
-                    <div class="ofp-card">
-                        <div class="ofp-card-header">
-                            <div class="ofp-card-header-main">
-                                <div class="ofp-icon-box ofp-icon-lg icon-violet">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                                    </svg>
-                                </div>
-                                <div class="ofp-card-title-group">
-                                    <h3>Platform Security & Encryption Vault</h3>
-                                    <p>Architecture specifications for data protection and credentials security at rest.</p>
-                                </div>
-                            </div>
-                            <span class="ofp-pill ofp-pill-purple">AES-256-CBC Active</span>
-                        </div>
-                        <div class="ofp-card-body">
-                            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;">
-                                <div style="background:var(--ofp-slate-50);border:1px solid var(--ofp-slate-200);border-radius:8px;padding:16px;">
-                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                                        <span class="ofp-icon-box ofp-icon-sm icon-amber">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
-                                        </span>
-                                        <strong style="font-size:13px;color:var(--ofp-slate-900);">Cipher Suite</strong>
-                                    </div>
-                                    <p style="margin:0;font-size:12px;color:var(--ofp-slate-600);line-height:1.5;">AES-256-CBC with randomized 16-byte initialization vectors (IV) generated uniquely for each installation.</p>
-                                </div>
-                                <div style="background:var(--ofp-slate-50);border:1px solid var(--ofp-slate-200);border-radius:8px;padding:16px;">
-                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                                        <span class="ofp-icon-box ofp-icon-sm icon-violet">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                                        </span>
-                                        <strong style="font-size:13px;color:var(--ofp-slate-900);">Encrypted Fields</strong>
-                                    </div>
-                                    <p style="margin:0;font-size:12px;color:var(--ofp-slate-600);line-height:1.5;">SMTP passwords, Paystack secret keys, Africa's Talking API keys, BulkSMS & SmartSMS tokens, and Turnstile secrets.</p>
-                                </div>
-                                <div style="background:var(--ofp-slate-50);border:1px solid var(--ofp-slate-200);border-radius:8px;padding:16px;">
-                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                                        <span class="ofp-icon-box ofp-icon-sm icon-blue">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                                        </span>
-                                        <strong style="font-size:13px;color:var(--ofp-slate-900);">Rate Limiting Engine</strong>
-                                    </div>
-                                    <p style="margin:0;font-size:12px;color:var(--ofp-slate-600);line-height:1.5;">Active on all public REST endpoints and lead capture webhooks to prevent brute-force attacks and credit draining.</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                 </section>
@@ -1563,14 +1244,14 @@ include OFP_PATH . 'admin/views/partials/header.php';
             </main>
         </div>
 
-        <!-- ── Sticky Floating Save Action Bar ──────────────────────────── -->
+        <!-- ── Sticky Floating Save Action Bar (Pure White) ──────────────────────────── -->
         <div class="ofp-sticky-footer-bar">
             <div class="ofp-sticky-left">
                 <span class="ofp-pulse-dot"></span>
                 <span>Settings Console Active</span>
             </div>
             <div class="ofp-sticky-right">
-                <button type="submit" class="ofp-btn-save-master">
+                <button type="submit" form="ofp-master-settings-form" class="ofp-btn-save-master">
                     <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
                     Save All Settings
                 </button>

@@ -420,13 +420,172 @@ body.ofp-admin-portal-body {
 .ofp-portal-header-left {
     display: flex;
     flex-direction: column;
+    justify-content: center;
 }
 
+.ofp-nav-app-branding {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 2px;
+}
+
+.ofp-nav-app-name {
+    font-size: 13.5px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--ofp-text-main);
+    display: inline-flex;
+    align-items: center;
+}
+
+.ofp-nav-app-version {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 1.5px 7px;
+    border-radius: 9999px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.28);
+    line-height: 1.2;
+}
+
+.ofp-topbar-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2.5px 8.5px;
+    border-radius: 9999px;
+    background: #f5f3ff;
+    color: #7c3aed;
+    border: 1px solid #ddd6fe;
+    line-height: 1.2;
+}
+
+[data-theme="dark"] .ofp-topbar-badge,
+body.ofp-dark-mode .ofp-topbar-badge {
+    background: rgba(124, 58, 237, 0.18);
+    color: #c4b5fd;
+    border-color: rgba(124, 58, 237, 0.35);
+}
+
+.ofp-portal-header-title-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ofp-portal-header-left h3.ofp-page-title,
 .ofp-page-title {
-    font-size: 20px;
+    margin: 0;
+    padding: 0;
+    font-size: 18px;
     font-weight: 700;
     color: var(--ofp-text-main);
     line-height: 1.25;
+}
+
+/* Single-column settings layout when tabs are removed */
+.ofp-settings-layout {
+    display: block !important;
+    width: 100% !important;
+}
+
+.ofp-settings-panels {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-bottom: 96px !important;
+}
+
+.ofp-tab-pane {
+    display: block !important;
+    margin-bottom: 24px !important;
+    animation: none !important;
+}
+
+/* White Sticky / Floating Save Section - Stays Fixed on ANY Scroll */
+.ofp-sticky-footer-bar {
+    position: fixed !important;
+    bottom: 20px !important;
+    left: calc(240px + 28px) !important;
+    right: 28px !important;
+    max-width: calc(100vw - 240px - 56px) !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 14px 24px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08) !important;
+    z-index: 9999 !important;
+    margin: 0 !important;
+    color: #1e293b !important;
+    gap: 16px !important;
+    box-sizing: border-box !important;
+}
+
+@media (max-width: 900px) {
+    .ofp-sticky-footer-bar {
+        left: 16px !important;
+        right: 16px !important;
+        max-width: calc(100vw - 32px) !important;
+        bottom: 16px !important;
+        padding: 12px 16px !important;
+    }
+}
+
+.ofp-sticky-footer-bar .ofp-sticky-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    color: #1e293b !important;
+    font-weight: 600 !important;
+    font-size: 13.5px !important;
+}
+
+.ofp-sticky-footer-bar .ofp-sticky-left span {
+    color: #1e293b !important;
+}
+
+.ofp-sticky-footer-bar .ofp-pulse-dot {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    background: #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+    flex-shrink: 0 !important;
+}
+
+.ofp-sticky-footer-bar .ofp-btn-save-master {
+    background: #10b981 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+    border: none !important;
+    font-weight: 700 !important;
+    padding: 10px 24px !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+.ofp-sticky-footer-bar .ofp-btn-save-master:hover {
+    background: #059669 !important;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4) !important;
+}
+
+/* Remove redundant app name headers from inside page content */
+.ofp-admin-header,
+.ofp-portal-content .ofp-admin-header,
+.ofp-wrap > .ofp-admin-header {
+    display: none !important;
 }
 
 .ofp-page-subtitle {
