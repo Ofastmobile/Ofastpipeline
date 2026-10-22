@@ -400,6 +400,63 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // Admin Custom Amenity Inline Add
+    var btnAdminAddAmenity = document.getElementById('ofp_admin_btn_add_amenity');
+    var inputAdminAmenity  = document.getElementById('ofp_admin_new_amenity');
+    var adminAmenityBox    = document.querySelector('.ofp-amenities-tiles');
+
+    function handleAdminAddAmenity() {
+        if (!inputAdminAmenity || !adminAmenityBox) return;
+        var val = inputAdminAmenity.value.trim();
+        if (!val) {
+            inputAdminAmenity.focus();
+            return;
+        }
+
+        var key = val.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        if (!key) key = 'amenity_' + Date.now();
+
+        var existing = adminAmenityBox.querySelector('input[value="' + key + '"]');
+        if (existing) {
+            existing.checked = true;
+            var tile = existing.closest('.ofp-amenity-tile');
+            if (tile) tile.classList.add('is-checked');
+            existing.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            inputAdminAmenity.value = '';
+            return;
+        }
+
+        var label = document.createElement('label');
+        label.className = 'ofp-amenity-tile is-checked';
+        label.innerHTML = '<input type="checkbox" name="amenities[]" value="' + key + '" checked>' +
+                          '<span style="font-size:16px;">✨</span>' +
+                          '<span>' + val + '</span>';
+
+        label.querySelector('input').addEventListener('change', function() {
+            this.closest('.ofp-amenity-tile').classList.toggle('is-checked', this.checked);
+        });
+
+        adminAmenityBox.appendChild(label);
+        label.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        inputAdminAmenity.value = '';
+        inputAdminAmenity.focus();
+    }
+
+    if (btnAdminAddAmenity) {
+        btnAdminAddAmenity.addEventListener('click', function(e) {
+            e.preventDefault();
+            handleAdminAddAmenity();
+        });
+    }
+    if (inputAdminAmenity) {
+        inputAdminAmenity.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAdminAddAmenity();
+            }
+        });
+    }
+
     // Video Embed Preview
     var videoInput = document.getElementById('ofp_video_url_input');
     var videoWrap  = document.getElementById('ofp_video_embed_preview');

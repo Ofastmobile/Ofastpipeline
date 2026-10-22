@@ -174,7 +174,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                     $furnishing = '';
                 }
                 $video_url     = esc_url_raw( $_POST['video_url'] ?? '' );
-                $amenities     = json_encode( array_map( 'sanitize_text_field', (array) ( $_POST['amenities'] ?? [] ) ) );
+                $raw_amenities = (array) ( $_POST['amenities'] ?? [] );
+                if ( class_exists( 'OFP_Property_Amenities' ) ) {
+                    OFP_Property_Amenities::register_custom_items( $raw_amenities );
+                }
+                $amenities     = json_encode( array_values( array_map( 'sanitize_text_field', $raw_amenities ) ) );
 
                 update_post_meta( $post_id, 'ofp_parking', $parking );
                 update_post_meta( $post_id, 'ofp_area_sqm', $area_sqm );
@@ -1300,81 +1304,102 @@ $prop_tabs = [
                             </div>
                         </div>
 
-                        <!-- 5. Features & Amenities -->
-                        <div class="ofp-form-card-section">
-                            <div class="ofp-form-section-header">
-                                <div class="ofp-form-section-icon" style="background:rgba(236,72,153,0.1); color:#ec4899;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" /></svg>
+                        <!-- 5 & 6 Dual Row (50% / 50%) -->
+                        <div class="ofp-form-row-duo">
+                            <!-- 5. Features & Amenities (Scrollable + Add Custom) -->
+                            <div class="ofp-form-card-section" style="display:flex; flex-direction:column;">
+                                <div class="ofp-form-section-header" style="margin-bottom:14px; padding-bottom:12px;">
+                                    <div class="ofp-form-section-icon" style="background:rgba(236,72,153,0.1); color:#ec4899;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" /></svg>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                                            <h4 class="ofp-form-section-title">5. Features &amp; Amenities</h4>
+                                            <div style="display:flex; gap:6px;">
+                                                <button type="button" class="ofp-mini-chip-btn" id="ofp-btn-amenities-select-all" title="Select All">+ All</button>
+                                                <button type="button" class="ofp-mini-chip-btn" id="ofp-btn-amenities-clear-all" title="Clear All">&times; Clear</button>
+                                            </div>
+                                        </div>
+                                        <p class="ofp-form-section-desc" style="font-size:12px;">Select on-site features or type below to add custom amenities.</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h4 class="ofp-form-section-title">5. Features &amp; Amenities</h4>
-                                    <p class="ofp-form-section-desc">Select all amenities, security provisions, and utilities available on-site.</p>
-                                </div>
-                            </div>
 
-                            <?php
-                            $all_amenities = [
-                                'swimming_pool'   => 'Swimming Pool',
-                                'smart_home'      => 'Smart Home Automation',
-                                'power_247'       => '24/7 Electricity',
-                                'cctv_security'   => 'CCTV & Security',
-                                'gym'             => 'Gym / Fitness',
-                                'elevator'        => 'Elevator / Lift',
-                                'playground'      => 'Children Play Area',
-                                'bq'              => 'Boys Quarters (BQ)',
-                                'water_treatment' => 'Water Treatment',
-                                'fitted_kitchen'  => 'Fitted Kitchen',
-                            ];
-                            $selected_amenities = $editing_post ? ( json_decode( get_post_meta( $editing_post->ID, 'ofp_amenities', true ) ?: '[]', true ) ?: [] ) : [];
-                            ?>
-                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:12px;">
-                                <?php foreach ( $all_amenities as $key => $label ) :
-                                    $is_checked = in_array( $key, $selected_amenities, true );
+                                <!-- Add Custom Amenity Input Bar -->
+                                <div class="ofp-add-amenity-bar">
+                                    <input type="text" id="ofp-new-amenity-input" class="ofp-add-amenity-input" placeholder="Type custom amenity (e.g. Solar Inverter, Rooftop Bar)...">
+                                    <button type="button" id="ofp-btn-add-custom-amenity" class="ofp-add-amenity-btn">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                                        <span>Add</span>
+                                    </button>
+                                </div>
+
+                                <?php
+                                $catalog_amenities = class_exists( 'OFP_Property_Amenities' ) ? OFP_Property_Amenities::get_all() : [];
+                                $selected_amenities = $editing_post ? ( json_decode( get_post_meta( $editing_post->ID, 'ofp_amenities', true ) ?: '[]', true ) ?: [] ) : [];
+
+                                // Make sure any selected custom amenities on the current post are in the catalog
+                                foreach ( $selected_amenities as $s_key ) {
+                                    if ( ! isset( $catalog_amenities[ $s_key ] ) ) {
+                                        $label = class_exists( 'OFP_Property_Amenities' ) ? OFP_Property_Amenities::get_label( $s_key ) : ucwords( str_replace( '_', ' ', $s_key ) );
+                                        $catalog_amenities[ $s_key ] = [
+                                            'label'    => $label,
+                                            'icon_svg' => class_exists( 'OFP_Property_Amenities' ) ? OFP_Property_Amenities::get_icon_svg( $s_key, 'w-4 h-4' ) : '',
+                                        ];
+                                    }
+                                }
                                 ?>
-                                    <label class="ofp-amenity-card">
-                                        <input type="checkbox" name="amenities[]" value="<?php echo esc_attr( $key ); ?>"
-                                            <?php checked( $is_checked ); ?>>
-                                        <span><?php echo esc_html( $label ); ?></span>
-                                    </label>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
 
-                        <!-- 6. Inspection & Viewing Schedule -->
-                        <div class="ofp-form-card-section">
-                            <div class="ofp-form-section-header">
-                                <div class="ofp-form-section-icon" style="background:rgba(16,185,129,0.1); color:#10b981;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>
-                                </div>
-                                <div>
-                                    <h4 class="ofp-form-section-title">6. Inspection &amp; Viewing Schedule</h4>
-                                    <p class="ofp-form-section-desc">Set available showing days, viewing hours, and estate security gate clearance notices.</p>
+                                <!-- Scrollable Amenities List -->
+                                <div class="ofp-amenities-scrollable-container" id="ofp-amenities-grid-container">
+                                    <?php foreach ( $catalog_amenities as $key => $adata ) :
+                                        $is_checked = in_array( $key, $selected_amenities, true ) || in_array( $adata['label'], $selected_amenities, true );
+                                        $svg_icon = ! empty( $adata['icon_svg'] ) ? $adata['icon_svg'] : ( class_exists( 'OFP_Property_Amenities' ) ? OFP_Property_Amenities::get_icon_svg( $key . ' ' . $adata['label'], 'w-4 h-4' ) : '' );
+                                    ?>
+                                        <label class="ofp-amenity-card <?php echo $is_checked ? 'is-checked' : ''; ?>">
+                                            <input type="checkbox" name="amenities[]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $is_checked ); ?>>
+                                            <span class="ofp-amenity-icon-mini"><?php echo $svg_icon; ?></span>
+                                            <span><?php echo esc_html( $adata['label'] ); ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
 
-                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
-                                <div class="ofp-field">
-                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Available Inspection Days</label>
-                                    <input type="text" name="inspection_days" placeholder="e.g. Mondays - Saturdays, or Weekends Only"
-                                           value="<?php echo esc_attr( $editing_post ? ( get_post_meta( $editing_post->ID, 'ofp_inspection_days', true ) ?: 'Mondays - Saturdays' ) : 'Mondays - Saturdays' ); ?>"
-                                           style="width:100%; padding:11px 14px; border-radius:8px;">
-                                    <span class="ofp-hint" style="font-size:11.5px; margin-top:4px; display:block;">Days you are available to host physical tours or WhatsApp video walkthroughs.</span>
+                            <!-- 6. Inspection & Viewing Schedule -->
+                            <div class="ofp-form-card-section" style="display:flex; flex-direction:column;">
+                                <div class="ofp-form-section-header" style="margin-bottom:14px; padding-bottom:12px;">
+                                    <div class="ofp-form-section-icon" style="background:rgba(16,185,129,0.1); color:#10b981;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="ofp-form-section-title">6. Inspection &amp; Viewing Schedule</h4>
+                                        <p class="ofp-form-section-desc" style="font-size:12px;">Set showing days, hours, and gate clearance notice.</p>
+                                    </div>
                                 </div>
 
-                                <div class="ofp-field">
-                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Available Inspection Hours</label>
-                                    <input type="text" name="inspection_hours" placeholder="e.g. 10:00 AM - 5:00 PM"
-                                           value="<?php echo esc_attr( $editing_post ? ( get_post_meta( $editing_post->ID, 'ofp_inspection_hours', true ) ?: '10:00 AM - 5:00 PM' ) : '10:00 AM - 5:00 PM' ); ?>"
-                                           style="width:100%; padding:11px 14px; border-radius:8px;">
-                                    <span class="ofp-hint" style="font-size:11.5px; margin-top:4px; display:block;">Daily inspection time window.</span>
-                                </div>
+                                <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr; gap:14px; flex:1;">
+                                    <div class="ofp-field">
+                                        <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:5px; display:block;">Available Inspection Days</label>
+                                        <input type="text" name="inspection_days" placeholder="e.g. Mondays - Saturdays, or Weekends Only"
+                                               value="<?php echo esc_attr( $editing_post ? ( get_post_meta( $editing_post->ID, 'ofp_inspection_days', true ) ?: 'Mondays - Saturdays' ) : 'Mondays - Saturdays' ); ?>"
+                                               style="width:100%; padding:10px 14px; border-radius:8px;">
+                                        <span class="ofp-hint" style="font-size:11px; margin-top:3px; display:block;">Days available for physical tours &amp; video walkthroughs.</span>
+                                    </div>
 
-                                <div class="ofp-field" style="grid-column:1/-1;">
-                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Estate Gate Access &amp; Notice Protocol</label>
-                                    <input type="text" name="inspection_notice" placeholder="e.g. 24 hours advance notice required for estate security clearance code."
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_inspection_notice', true ) : '' ); ?>"
-                                           style="width:100%; padding:11px 14px; border-radius:8px;">
-                                    <span class="ofp-hint" style="font-size:11.5px; margin-top:4px; display:block;">Displayed on single property booking card so prospective buyers/tenants know entry requirements in advance.</span>
+                                    <div class="ofp-field">
+                                        <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:5px; display:block;">Available Inspection Hours</label>
+                                        <input type="text" name="inspection_hours" placeholder="e.g. 10:00 AM - 5:00 PM"
+                                               value="<?php echo esc_attr( $editing_post ? ( get_post_meta( $editing_post->ID, 'ofp_inspection_hours', true ) ?: '10:00 AM - 5:00 PM' ) : '10:00 AM - 5:00 PM' ); ?>"
+                                               style="width:100%; padding:10px 14px; border-radius:8px;">
+                                        <span class="ofp-hint" style="font-size:11px; margin-top:3px; display:block;">Daily inspection time window.</span>
+                                    </div>
+
+                                    <div class="ofp-field">
+                                        <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:5px; display:block;">Estate Gate Access &amp; Notice Protocol</label>
+                                        <input type="text" name="inspection_notice" placeholder="e.g. 24 hours advance notice required for estate security clearance code."
+                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_inspection_notice', true ) : '' ); ?>"
+                                               style="width:100%; padding:10px 14px; border-radius:8px;">
+                                        <span class="ofp-hint" style="font-size:11px; margin-top:3px; display:block;">Displayed on single property booking card for entry requirements.</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1902,8 +1927,115 @@ function ofpSetExistingMain(id) {
                 tb.textContent = 'Main Cover (On Save)';
             }
         }
+// Amenities selection & Custom addition handlers
+(function() {
+    var btnAll = document.getElementById('ofp-btn-amenities-select-all');
+    var btnNone = document.getElementById('ofp-btn-amenities-clear-all');
+    var container = document.getElementById('ofp-amenities-grid-container');
+    var btnAdd = document.getElementById('ofp-btn-add-custom-amenity');
+    var inpAdd = document.getElementById('ofp-new-amenity-input');
+
+    if (btnAll && container) {
+        btnAll.addEventListener('click', function(e) {
+            e.preventDefault();
+            var boxes = container.querySelectorAll('input[type="checkbox"]');
+            boxes.forEach(function(b) {
+                b.checked = true;
+                var card = b.closest('.ofp-amenity-card');
+                if (card) card.classList.add('is-checked');
+            });
+        });
     }
-}
+
+    if (btnNone && container) {
+        btnNone.addEventListener('click', function(e) {
+            e.preventDefault();
+            var boxes = container.querySelectorAll('input[type="checkbox"]');
+            boxes.forEach(function(b) {
+                b.checked = false;
+                var card = b.closest('.ofp-amenity-card');
+                if (card) card.classList.remove('is-checked');
+            });
+        });
+    }
+
+    if (container) {
+        container.addEventListener('change', function(e) {
+            if (e.target && e.target.type === 'checkbox') {
+                var card = e.target.closest('.ofp-amenity-card');
+                if (card) {
+                    if (e.target.checked) card.classList.add('is-checked');
+                    else card.classList.remove('is-checked');
+                }
+            }
+        });
+    }
+
+    function addCustomAmenity() {
+        if (!inpAdd || !container) return;
+        var val = inpAdd.value.trim();
+        if (!val) {
+            inpAdd.focus();
+            return;
+        }
+
+        var key = val.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        if (!key) key = 'amenity_' + Date.now();
+
+        // Check if already in container
+        var existing = container.querySelector('input[value="' + key + '"]');
+        if (existing) {
+            existing.checked = true;
+            var card = existing.closest('.ofp-amenity-card');
+            if (card) card.classList.add('is-checked');
+            existing.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            inpAdd.value = '';
+            return;
+        }
+
+        // Send AJAX to register in background
+        if (window.fetch) {
+            var formData = new FormData();
+            formData.append('action', 'ofp_add_custom_amenity');
+            formData.append('name', val);
+            formData.append('nonce', '<?php echo esc_js( wp_create_nonce( "ofp_amenity_nonce" ) ); ?>');
+            fetch('<?php echo esc_url( admin_url( "admin-ajax.php" ) ); ?>', {
+                method: 'POST',
+                body: formData
+            }).then(function(r) { return r.json(); }).catch(function() {});
+        }
+
+        // Fallback icon SVG
+        var iconSvg = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"/></svg>';
+
+        var labelEl = document.createElement('label');
+        labelEl.className = 'ofp-amenity-card is-checked';
+        labelEl.innerHTML = '<input type="checkbox" name="amenities[]" value="' + key + '" checked>' +
+            '<span class="ofp-amenity-icon-mini">' + iconSvg + '</span>' +
+            '<span>' + val + '</span>';
+
+        container.appendChild(labelEl);
+        labelEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        inpAdd.value = '';
+        inpAdd.focus();
+    }
+
+    if (btnAdd) {
+        btnAdd.addEventListener('click', function(e) {
+            e.preventDefault();
+            addCustomAmenity();
+        });
+    }
+
+    if (inpAdd) {
+        inpAdd.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addCustomAmenity();
+            }
+        });
+    }
+})();
 </script>
 <?php wp_footer(); ?>
 </body>

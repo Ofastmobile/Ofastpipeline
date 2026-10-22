@@ -997,8 +997,8 @@ $titles = [
                 $sel_loc_term    = ! empty( $curr_loc_terms ) ? $curr_loc_terms[0] : '';
                 $sel_type_term   = ! empty( $curr_type_terms ) ? $curr_type_terms[0] : '';
 
-                // Catalog of all 10 amenities
-                $amenity_items = [
+                // Catalog of all amenities (standard + custom)
+                $amenity_items = class_exists( 'OFP_Property_Amenities' ) ? OFP_Property_Amenities::get_all() : [
                     'swimming_pool'   => [ 'label' => 'Swimming Pool',            'icon' => '🏊' ],
                     'smart_home'      => [ 'label' => 'Smart Home Automation',   'icon' => '🏠' ],
                     'power_247'       => [ 'label' => '24/7 Electricity / Gen',  'icon' => '⚡' ],
@@ -1010,6 +1010,16 @@ $titles = [
                     'water_treatment' => [ 'label' => 'Water Treatment Plant',   'icon' => '💧' ],
                     'fitted_kitchen'  => [ 'label' => 'Fully Fitted Kitchen',    'icon' => '🍳' ],
                 ];
+                foreach ( (array) $val_amenities as $s_key ) {
+                    if ( ! isset( $amenity_items[ $s_key ] ) ) {
+                        $label = class_exists( 'OFP_Property_Amenities' ) ? OFP_Property_Amenities::get_label( $s_key ) : ucwords( str_replace( '_', ' ', $s_key ) );
+                        $amenity_items[ $s_key ] = [
+                            'label'    => $label,
+                            'icon'     => '✨',
+                            'icon_svg' => class_exists( 'OFP_Property_Amenities' ) ? OFP_Property_Amenities::get_icon_svg( $s_key, 'w-4 h-4' ) : '',
+                        ];
+                    }
+                }
 
                 // Gallery preview list
                 $display_gallery = (array) $val_gallery_ids;
@@ -1539,67 +1549,77 @@ $titles = [
                             </div>
                         </div>
 
-                        <!-- ── 7. Amenities & Facility Provisions ─────────────────── -->
-                        <div class="ofp-sec-card">
-                            <div class="ofp-sec-header">
-                                <div class="ofp-sec-icon">✨</div>
-                                <div style="flex:1;">
-                                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <h4 class="ofp-sec-title">7. Amenities &amp; Facility Provisions</h4>
-                                        <div style="display:flex; gap:8px;">
-                                            <button type="button" class="ofp-chip-btn" id="ofp_amenities_all">+ Select All</button>
-                                            <button type="button" class="ofp-chip-btn" id="ofp_amenities_clear">&times; Clear All</button>
+                        <!-- ── 7 & 8 Dual Row: Amenities (50%) & Inspection Schedule (50%) ── -->
+                        <div class="ofp-sec-row-duo">
+                            <!-- ── 7. Amenities & Facility Provisions ─────────────────── -->
+                            <div class="ofp-sec-card" style="display:flex; flex-direction:column;">
+                                <div class="ofp-sec-header">
+                                    <div class="ofp-sec-icon">✨</div>
+                                    <div style="flex:1;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <h4 class="ofp-sec-title">7. Amenities &amp; Facility Provisions</h4>
+                                            <div style="display:flex; gap:8px;">
+                                                <button type="button" class="ofp-chip-btn" id="ofp_amenities_all">+ Select All</button>
+                                                <button type="button" class="ofp-chip-btn" id="ofp_amenities_clear">&times; Clear All</button>
+                                            </div>
                                         </div>
+                                        <p class="ofp-sec-subtitle">Select provisions or add custom ones below.</p>
                                     </div>
-                                    <p class="ofp-sec-subtitle">Select on-site residential security, backup utilities, smart automation, and leisure provisions.</p>
+                                </div>
+
+                                <!-- Inline Add Custom Amenity Bar -->
+                                <div style="display:flex; gap:8px; margin-top:10px; margin-bottom:4px;">
+                                    <input type="text" id="ofp_admin_new_amenity" class="ofp-input-text" style="flex:1; padding:7px 12px; font-size:12px;" placeholder="Add custom amenity (e.g. Solar Inverter, Rooftop Bar)...">
+                                    <button type="button" id="ofp_admin_btn_add_amenity" class="ofp-chip-btn" style="background:#10b981; color:#fff; border-color:#10b981; font-weight:600; padding:0 14px; font-size:12px; white-space:nowrap;">+ Add</button>
+                                </div>
+
+                                <div class="ofp-amenities-tiles" style="flex:1;">
+                                    <?php foreach ( $amenity_items as $akey => $adata ) :
+                                        $is_checked = in_array( $akey, (array) $val_amenities, true ) || in_array( $adata['label'], (array) $val_amenities, true );
+                                        $ico = ! empty( $adata['icon'] ) ? $adata['icon'] : '✨';
+                                    ?>
+                                        <label class="ofp-amenity-tile <?php echo $is_checked ? 'is-checked' : ''; ?>">
+                                            <input type="checkbox" name="amenities[]" value="<?php echo esc_attr( $akey ); ?>" <?php checked( $is_checked ); ?>>
+                                            <span style="font-size:16px;"><?php echo esc_html( $ico ); ?></span>
+                                            <span><?php echo esc_html( $adata['label'] ); ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
 
-                            <div class="ofp-amenities-tiles">
-                                <?php foreach ( $amenity_items as $akey => $adata ) :
-                                    $is_checked = in_array( $akey, (array) $val_amenities, true );
-                                ?>
-                                    <label class="ofp-amenity-tile <?php echo $is_checked ? 'is-checked' : ''; ?>">
-                                        <input type="checkbox" name="amenities[]" value="<?php echo esc_attr( $akey ); ?>" <?php checked( $is_checked ); ?>>
-                                        <span style="font-size:16px;"><?php echo esc_html( $adata['icon'] ); ?></span>
-                                        <span><?php echo esc_html( $adata['label'] ); ?></span>
-                                    </label>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-
-                        <!-- ── 8. Inspection & Viewing Schedule ───────────────────── -->
-                        <div class="ofp-sec-card">
-                            <div class="ofp-sec-header">
-                                <div class="ofp-sec-icon">📅</div>
-                                <div>
-                                    <h4 class="ofp-sec-title">8. Inspection &amp; Viewing Schedule</h4>
-                                    <p class="ofp-sec-subtitle">Showing availability windows and estate security gate protocol.</p>
-                                </div>
-                            </div>
-
-                            <div class="ofp-form-grid-2">
-                                <div class="ofp-form-group">
-                                    <label>Available Inspection Days</label>
-                                    <input type="text" name="inspection_days" class="ofp-input-text"
-                                           value="<?php echo esc_attr( $val_inspection_days ); ?>"
-                                           placeholder="e.g. Mondays - Saturdays, or Weekends Only">
+                            <!-- ── 8. Inspection & Viewing Schedule ───────────────────── -->
+                            <div class="ofp-sec-card" style="display:flex; flex-direction:column;">
+                                <div class="ofp-sec-header">
+                                    <div class="ofp-sec-icon">📅</div>
+                                    <div>
+                                        <h4 class="ofp-sec-title">8. Inspection &amp; Viewing Schedule</h4>
+                                        <p class="ofp-sec-subtitle">Showing availability windows and estate gate protocol.</p>
+                                    </div>
                                 </div>
 
-                                <div class="ofp-form-group">
-                                    <label>Available Inspection Hours</label>
-                                    <input type="text" name="inspection_hours" class="ofp-input-text"
-                                           value="<?php echo esc_attr( $val_inspection_hours ); ?>"
-                                           placeholder="e.g. 10:00 AM - 5:00 PM">
-                                </div>
-                            </div>
+                                <div class="ofp-form-grid-2" style="margin-top:10px;">
+                                    <div class="ofp-form-group">
+                                        <label>Available Inspection Days</label>
+                                        <input type="text" name="inspection_days" class="ofp-input-text"
+                                               value="<?php echo esc_attr( $val_inspection_days ); ?>"
+                                               placeholder="e.g. Mondays - Saturdays, or Weekends Only">
+                                    </div>
 
-                            <div class="ofp-form-group" style="margin-top:10px;">
-                                <label>Estate Gate Access Protocol &amp; Advance Notice</label>
-                                <input type="text" name="inspection_notice" class="ofp-input-text"
-                                       value="<?php echo esc_attr( $val_inspection_notice ); ?>"
-                                       placeholder="e.g. 24 hours advance notice required for estate security gate clearance code.">
-                                <span style="font-size:11.5px; color:var(--ofp-text-muted); margin-top:4px;">Displayed on the public booking card so prospects know estate entry requirements in advance.</span>
+                                    <div class="ofp-form-group">
+                                        <label>Available Inspection Hours</label>
+                                        <input type="text" name="inspection_hours" class="ofp-input-text"
+                                               value="<?php echo esc_attr( $val_inspection_hours ); ?>"
+                                               placeholder="e.g. 10:00 AM - 5:00 PM">
+                                    </div>
+                                </div>
+
+                                <div class="ofp-form-group" style="margin-top:14px; flex:1;">
+                                    <label>Estate Gate Access Protocol &amp; Advance Notice</label>
+                                    <input type="text" name="inspection_notice" class="ofp-input-text"
+                                           value="<?php echo esc_attr( $val_inspection_notice ); ?>"
+                                           placeholder="e.g. 24 hours advance notice required for estate security gate clearance code.">
+                                    <span style="font-size:11.5px; color:var(--ofp-text-muted); margin-top:4px; display:block;">Displayed on the public booking card for advance security entry requirements.</span>
+                                </div>
                             </div>
                         </div>
 

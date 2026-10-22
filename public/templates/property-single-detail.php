@@ -60,6 +60,11 @@ $condition     = get_post_meta( $post_id, 'ofp_condition', true );
 $furnishing    = get_post_meta( $post_id, 'ofp_furnishing', true );
 $video_url     = get_post_meta( $post_id, 'ofp_video_url', true );
 $amenities     = json_decode( get_post_meta( $post_id, 'ofp_amenities', true ) ?: '[]', true ) ?: [];
+$amenity_lists = class_exists( 'OFP_Property_Amenities' )
+    ? OFP_Property_Amenities::get_single_display_lists( (array) $amenities )
+    : [ 'active' => [], 'inactive' => [] ];
+$active_amenities   = $amenity_lists['active'];
+$inactive_amenities = $amenity_lists['inactive'];
 $client_id     = (int) get_post_meta( $post_id, 'ofp_client_id', true );
 $total_package = (float) get_post_meta( $post_id, 'ofp_total_package', true );
 $insp_days     = get_post_meta( $post_id, 'ofp_inspection_days', true ) ?: 'Mondays - Saturdays';
@@ -1076,6 +1081,38 @@ if ( empty( $gallery_urls ) ) {
                         </div>
                     </div>
 
+                    <?php if ( ! empty( $active_amenities ) ) : ?>
+                    <!-- Confirmed Available Amenities (Quick Focus) -->
+                    <div class="my-8 bg-white dark:bg-slate-900/60 rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="font-bold text-sm sm:text-base text-slate-900 dark:text-white flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span>Confirmed Available Amenities (<?php echo count( $active_amenities ); ?>)</span>
+                                </h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Ticked on-site features active and confirmed on this property.</p>
+                            </div>
+                            <button type="button" @click="activeTab = 'features'" class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer">
+                                <span>See All Features</span>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                            <?php foreach ( array_slice( $active_amenities, 0, 12 ) as $amen_item ) : ?>
+                                <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-emerald-50/50 dark:bg-slate-800/60 border border-emerald-100/80 dark:border-slate-700/60 text-xs font-semibold text-slate-800 dark:text-slate-100">
+                                    <span class="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0"><?php echo $amen_item['icon_svg']; ?></span>
+                                    <span class="truncate"><?php echo esc_html( $amen_item['label'] ); ?></span>
+                                </div>
+                            <?php endforeach; ?>
+                            <?php if ( count( $active_amenities ) > 12 ) : ?>
+                                <button type="button" @click="activeTab = 'features'" class="flex items-center justify-center gap-1 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-colors cursor-pointer">
+                                    <span>+<?php echo count( $active_amenities ) - 12; ?> more confirmed</span>
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
                     <!-- Nigerian Land Sizing & Plot Breakdown -->
                     <?php if ( $listing_type === 'land' || ( ! empty( $land_metrics['has_data'] ) && $land_metrics['sqm'] > 0 ) ) : ?>
                     <div class="my-8 bg-gradient-to-br from-emerald-950/20 via-slate-900/40 to-slate-900/60 dark:from-emerald-950/30 dark:via-slate-900 dark:to-slate-900 rounded-3xl p-6 sm:p-8 border border-emerald-500/20 dark:border-emerald-500/30 shadow-lg relative overflow-hidden">
@@ -1306,33 +1343,133 @@ if ( empty( $gallery_urls ) ) {
                 </div>
 
                 <!-- Tab Content: Features -->
-                <div x-show="activeTab === 'features'" style="display: none;" class="space-y-6">
-                    <h2 class="text-xl font-bold mb-4">Amenities &amp; Features</h2>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                        <?php
-                        $standard_amenities = [
-                            'swimming_pool'   => 'Swimming Pool',
-                            'smart_home'      => 'Smart Home Automation',
-                            'power_247'       => '24/7 Electricity',
-                            'cctv_security'   => 'CCTV & Uniformed Security',
-                            'gym'             => 'Gym / Fitness Center',
-                            'elevator'        => 'Elevator / Lift',
-                            'playground'      => 'Children Play Area',
-                            'bq'              => 'Boys Quarters (BQ)',
-                            'water_treatment' => 'Water Treatment Plant',
-                            'fitted_kitchen'  => 'Fully Fitted Kitchen',
-                        ];
-                        foreach ( $standard_amenities as $key => $lbl ) :
-                            $is_active = in_array( $key, $amenities, true );
-                        ?>
-                            <div class="flex items-center gap-2.5 sm:gap-3 <?php echo $is_active ? 'text-slate-900 dark:text-white' : 'text-slate-400 opacity-40'; ?>">
-                                <div class="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-full <?php echo $is_active ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'; ?> flex items-center justify-center">
-                                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                                </div>
-                                <span class="text-xs sm:text-sm font-medium leading-tight"><?php echo esc_html( $lbl ); ?></span>
-                            </div>
-                        <?php endforeach; ?>
+                <div x-show="activeTab === 'features'" style="display: none;" class="space-y-6 animate-fade-in" x-data="{ amenityFilter: 'all' }">
+                    <?php
+                    $amenity_lists = class_exists( 'OFP_Property_Amenities' )
+                        ? OFP_Property_Amenities::get_single_display_lists( (array) $amenities )
+                        : [ 'active' => [], 'inactive' => [] ];
+                    $active_amenities   = $amenity_lists['active'];
+                    $inactive_amenities = $amenity_lists['inactive'];
+                    $total_active       = count( $active_amenities );
+                    $total_inactive     = count( $inactive_amenities );
+                    $total_all          = $total_active + $total_inactive;
+                    ?>
+
+                    <!-- Header & Interactive Filter Bar -->
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+                        <div>
+                            <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+                                <span class="w-1.5 h-5 bg-blue-600 rounded-full inline-block"></span>
+                                <span>Amenities &amp; Features</span>
+                            </h2>
+                            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Ticked features are displayed first to help you focus on confirmed facilities.</p>
+                        </div>
+
+                        <!-- Filter Switcher -->
+                        <div class="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 text-xs font-semibold self-start md:self-auto">
+                            <button type="button" @click="amenityFilter = 'all'"
+                                :class="amenityFilter === 'all' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+                                class="px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5">
+                                <span>All</span>
+                                <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200/70 dark:bg-slate-700 font-bold"><?php echo $total_all; ?></span>
+                            </button>
+                            <button type="button" @click="amenityFilter = 'active'"
+                                :class="amenityFilter === 'active' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'"
+                                class="px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full" :class="amenityFilter === 'active' ? 'bg-white' : 'bg-emerald-500'"></span>
+                                <span>Available</span>
+                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-bold" :class="amenityFilter === 'active' ? 'bg-emerald-700 text-white' : 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300'"><?php echo $total_active; ?></span>
+                            </button>
+                            <?php if ( $total_inactive > 0 ) : ?>
+                            <button type="button" @click="amenityFilter = 'inactive'"
+                                :class="amenityFilter === 'inactive' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+                                class="px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5">
+                                <span>Not Included</span>
+                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-bold" :class="amenityFilter === 'inactive' ? 'bg-slate-800 text-white' : 'bg-slate-200/70 dark:bg-slate-700 text-slate-500 dark:text-slate-400'"><?php echo $total_inactive; ?></span>
+                            </button>
+                            <?php endif; ?>
+                        </div>
                     </div>
+
+                    <!-- 1. PRIMARY SECTION: TICKED / AVAILABLE AMENITIES (COME FIRST) -->
+                    <div x-show="amenityFilter === 'all' || amenityFilter === 'active'" class="space-y-4">
+                        <div class="flex items-center justify-between flex-wrap gap-2 pt-1">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <h3 class="font-bold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">Available on this Property</h3>
+                                <span class="text-xs text-slate-400 font-normal hidden sm:inline">(Ticked in listing details)</span>
+                            </div>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/40">
+                                <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                <span><?php echo $total_active; ?> Verified Active</span>
+                            </span>
+                        </div>
+
+                        <?php if ( ! empty( $active_amenities ) ) : ?>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                                <?php foreach ( $active_amenities as $item ) : ?>
+                                    <div class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-500/20 dark:border-emerald-500/30 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all flex items-center justify-between group">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-100 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                                <?php echo $item['icon_svg']; ?>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                                                    <?php echo esc_html( $item['label'] ); ?>
+                                                </p>
+                                                <span class="text-[10.5px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
+                                                    <svg class="w-2.5 h-2.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                                    <span>Available On-Site</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="w-6 h-6 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 flex items-center justify-center shrink-0 ml-2 shadow-xs">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else : ?>
+                            <div class="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center text-slate-500 dark:text-slate-400 text-sm">
+                                <p class="font-semibold text-slate-700 dark:text-slate-200 mb-1">No Specific Amenities Ticked</p>
+                                <p class="text-xs">The seller has not ticked specific amenities on this listing yet. Inquire directly via WhatsApp or phone below for facility details.</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- 2. SECONDARY SECTION: UNTICKED / NOT INCLUDED AMENITIES (FOLLOWS AFTER) -->
+                    <?php if ( ! empty( $inactive_amenities ) ) : ?>
+                    <div x-show="amenityFilter === 'all' || amenityFilter === 'inactive'" class="pt-8 border-t border-slate-200 dark:border-slate-800 space-y-4">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <div>
+                                <h3 class="font-bold text-sm sm:text-base text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-600"></span>
+                                    <span>Other Amenities (Not Available on this Property)</span>
+                                </h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">The following features are not provided with this listing:</p>
+                            </div>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                <span><?php echo $total_inactive; ?> Not Included</span>
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                            <?php foreach ( $inactive_amenities as $item ) : ?>
+                                <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50 opacity-60 hover:opacity-100 transition-opacity">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <div class="w-7 h-7 rounded-lg bg-slate-200/70 dark:bg-slate-700/60 text-slate-400 dark:text-slate-400 flex items-center justify-center shrink-0">
+                                            <?php echo $item['icon_svg']; ?>
+                                        </div>
+                                        <span class="text-xs font-medium text-slate-600 dark:text-slate-400 truncate"><?php echo esc_html( $item['label'] ); ?></span>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 shrink-0">
+                                        No
+                                    </span>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Tab Content: Location -->

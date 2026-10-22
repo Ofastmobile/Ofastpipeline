@@ -1020,6 +1020,16 @@ class OFP_Property_CPT {
                                 'svg'   => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.5 6.5H7.5L5 14.5m14 0H5" /></svg>',
                             ],
                         ];
+                        if ( class_exists( 'OFP_Property_Amenities' ) ) {
+                            foreach ( OFP_Property_Amenities::get_all() as $ckey => $cdata ) {
+                                if ( ! isset( $amenities_catalog[ $ckey ] ) ) {
+                                    $amenities_catalog[ $ckey ] = [
+                                        'label' => $cdata['label'],
+                                        'svg'   => OFP_Property_Amenities::get_icon_svg( $ckey . ' ' . $cdata['label'], 'w-4 h-4' ),
+                                    ];
+                                }
+                            }
+                        }
                         $selected_amenities = is_array( $meta['ofp_amenities'] ) ? $meta['ofp_amenities'] : [];
                         ?>
 
@@ -1523,6 +1533,9 @@ class OFP_Property_CPT {
         $amenities = isset( $_POST['ofp_amenities'] ) && is_array( $_POST['ofp_amenities'] )
             ? array_map( 'sanitize_text_field', wp_unslash( $_POST['ofp_amenities'] ) )
             : [];
+        if ( class_exists( 'OFP_Property_Amenities' ) && ! empty( $amenities ) ) {
+            OFP_Property_Amenities::register_custom_items( $amenities );
+        }
         update_post_meta( $post_id, 'ofp_amenities', json_encode( array_values( $amenities ) ) );
 
         // Save gallery attachment IDs array

@@ -159,6 +159,9 @@ class OFP_Admin_Portal {
             $amenities = isset( $_POST['amenities'] ) && is_array( $_POST['amenities'] )
                 ? array_values( array_map( 'sanitize_text_field', wp_unslash( $_POST['amenities'] ) ) )
                 : [];
+            if ( class_exists( 'OFP_Property_Amenities' ) && ! empty( $amenities ) ) {
+                OFP_Property_Amenities::register_custom_items( $amenities );
+            }
 
             // Gallery Attachment IDs
             $gallery_ids = [];

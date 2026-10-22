@@ -5462,23 +5462,145 @@ html.dark .ofp-stylized-map-box {
     margin: 0;
 }
 
+/* Dual Column 50/50 Row for Form Card Sections */
+.ofp-form-row-duo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+    align-items: stretch;
+}
+
+@media (max-width: 960px) {
+    .ofp-form-row-duo {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+}
+
+.ofp-form-row-duo .ofp-form-card-section {
+    margin-bottom: 0 !important;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Scrollable Amenities List */
+.ofp-amenities-scrollable-container {
+    max-height: 290px;
+    overflow-y: auto;
+    padding-right: 6px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.ofp-amenities-scrollable-container::-webkit-scrollbar {
+    width: 6px;
+}
+.ofp-amenities-scrollable-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 4px;
+}
+.ofp-amenities-scrollable-container::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: 4px;
+}
+.ofp-amenities-scrollable-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.6);
+}
+
+/* Inline Add Amenity Bar */
+.ofp-add-amenity-bar {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    margin-bottom: 4px;
+}
+
+.ofp-add-amenity-input {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    background: var(--bg-body, #f8fafc);
+    color: var(--text-main, #0f172a);
+    font-size: 12.5px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.ofp-add-amenity-input:focus {
+    border-color: var(--accent-blue, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    background: #ffffff;
+}
+
+.ofp-add-amenity-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: var(--accent-blue, #2563eb);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+}
+
+.ofp-add-amenity-btn:hover {
+    background: #1d4ed8;
+}
+
+.ofp-add-amenity-btn:active {
+    transform: scale(0.97);
+}
+
+.ofp-mini-chip-btn {
+    border: 1px solid var(--border-color, #cbd5e1);
+    background: var(--bg-body, #f1f5f9);
+    color: var(--text-muted, #64748b);
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.ofp-mini-chip-btn:hover {
+    color: var(--text-main, #0f172a);
+    border-color: var(--accent-blue, #2563eb);
+}
+
 .ofp-amenity-card {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    border-radius: 10px;
+    gap: 9px;
+    padding: 9px 12px;
+    border-radius: 9px;
     background: var(--bg-body);
     border: 1px solid var(--border-color);
     cursor: pointer;
     transition: all 0.15s ease;
-    font-size: 13px;
+    font-size: 12.5px;
     color: var(--text-main);
     user-select: none;
 }
 
 .ofp-amenity-card:hover {
     border-color: var(--accent-blue);
+    background: rgba(37, 99, 235, 0.03);
+}
+
+.ofp-amenity-card.is-checked {
+    border-color: var(--accent-blue);
+    background: rgba(37, 99, 235, 0.08);
 }
 
 .ofp-amenity-card input[type="checkbox"] {
@@ -5486,6 +5608,22 @@ html.dark .ofp-stylized-map-box {
     width: 16px;
     height: 16px;
     cursor: pointer;
+    flex-shrink: 0;
+}
+
+.ofp-amenity-icon-mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: var(--accent-blue, #2563eb);
+    flex-shrink: 0;
+}
+
+.ofp-amenity-icon-mini svg {
+    width: 15px;
+    height: 15px;
 }
 
 .ofp-file-dropzone {
