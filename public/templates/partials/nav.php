@@ -89,16 +89,6 @@ $nav_items[] = [
     'locked' => false,
 ];
 
-// Listing Billing is a plan subscription page, so solo companies do not get it.
-if ( ! OFP_Brand::hide_plan_prompts( $client ) ) {
-    $nav_items[] = [
-        'label'  => 'Listing Billing',
-        'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zM7.5 12h.008v.008H7.5V12zm3 0h.008v.008h-.008V12z" /></svg>',
-        'url'    => home_url( '/listing-billing' ),
-        'slug'   => 'listing-billing',
-        'locked' => false,
-    ];
-}
 
 $nav_items[] = [
     'label'  => 'Rent & Tenants',

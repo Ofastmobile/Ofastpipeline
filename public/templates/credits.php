@@ -31,7 +31,7 @@ $credits = OFP_Credit::get( $client->id );
 $sms_pct   = $credits && $credits->sms_loaded   > 0 ? round( ( $credits->sms_remaining   / $credits->sms_loaded   ) * 100 ) : 0;
 $voice_pct = $credits && $credits->voice_loaded > 0 ? round( ( $credits->voice_remaining / $credits->voice_loaded ) * 100 ) : 0;
 
-// Subscription rows
+// Subscription rows (all types: CRM, Listing, etc.)
 $subscriptions = OFP_Subscription::get_all_for_client( $client->id );
 
 // Transaction history
@@ -156,20 +156,26 @@ $transactions = $wpdb->get_results(
                     <tbody>
                         <?php foreach ( $subscriptions as $sub ) : ?>
                             <tr>
-                                <td><?php echo esc_html( strtoupper( $sub->type ) ); ?></td>
-                                <td><?php echo esc_html( strtoupper( $sub->plan ?: '—' ) ); ?></td>
-                                <td><strong>NGN <?php echo esc_html( number_format( (float) $sub->amount, 0 ) ); ?></strong></td>
+                                <td><span style="font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:4px; background:rgba(59,130,246,0.1); color:#3b82f6; letter-spacing:0.04em;"><?php echo esc_html( strtoupper( $sub->type ) ); ?></span></td>
+                                <td style="font-weight:600; color:var(--text-main);"><?php echo esc_html( strtoupper( $sub->plan ?: '—' ) ); ?></td>
+                                <td><strong style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $sub->amount, 2 ) ); ?></strong></td>
                                 <td>
-                                    <?php
-                                    $sc = $sub->status === 'paid' ? 'ofp-badge-green' : 'ofp-badge-yellow';
-                                    $s_label = $sub->status === 'pending'
-                                        ? 'Awaiting Payment'
-                                        : ucfirst( $sub->status );
-                                    echo '<span class="ofp-badge ' . esc_attr( $sc ) . '">'
-                                        . esc_html( $s_label ) . '</span>';
+                                    <?php 
+                                        $status_styles = [
+                                            'paid'    => 'background:#dcfce7; color:#16a34a;',
+                                            'active'  => 'background:#dcfce7; color:#16a34a;',
+                                            'expired' => 'background:rgba(128,128,128,0.1); color:var(--text-muted);',
+                                            'pending' => 'background:#fef3c7; color:#d97706;',
+                                            'failed'  => 'background:#fee2e2; color:#ef4444;'
+                                        ];
+                                        $style = $status_styles[ strtolower( $sub->status ) ] ?? 'background:rgba(128,128,128,0.1); color:var(--text-muted);';
+                                        $s_label = $sub->status === 'pending' ? 'Awaiting Payment' : ucfirst( $sub->status );
                                     ?>
+                                    <span style="font-size:12px; font-weight:600; padding:4px 10px; border-radius:100px; <?php echo esc_attr( $style ); ?>">
+                                        <?php echo esc_html( $s_label ); ?>
+                                    </span>
                                 </td>
-                                <td style="font-size:12px;color:#9ca3af;">
+                                <td style="font-size:13px; color:var(--text-muted);">
                                     <?php echo $sub->period_start ? esc_html( $sub->period_start . ' → ' . $sub->period_end ) : '—'; ?>
                                 </td>
                                 <td>
@@ -177,7 +183,7 @@ $transactions = $wpdb->get_results(
                                         <?php echo esc_html( $sub->payment_ref ?? '—' ); ?>
                                     </code>
                                 </td>
-                                <td style="font-size:12px;color:#9ca3af;">
+                                <td style="font-size:13px; color:var(--text-muted);">
                                     <?php echo $sub->paid_at ? esc_html( gmdate( 'M j, Y', strtotime( $sub->paid_at ) ) ) : '—'; ?>
                                 </td>
                             </tr>
