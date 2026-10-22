@@ -174,6 +174,33 @@ class OFP_Client_Portal {
             );
         }
 
+        if ( in_array( $route, [ 'communications', 'message-templates' ], true ) ) {
+            wp_enqueue_style(
+                'ofp-communications',
+                OFP_URL . 'assets/css/communications.css',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION
+            );
+        }
+
+        if ( 'customers' === $route ) {
+            wp_enqueue_style(
+                'ofp-customers',
+                OFP_URL . 'assets/css/customers.css',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION
+            );
+        }
+
+        if ( 'import' === $route ) {
+            wp_enqueue_style(
+                'ofp-import',
+                OFP_URL . 'assets/css/import.css',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION
+            );
+        }
+
         $js_deps = [];
         if ( in_array( $route, [ 'dashboard', 'leads', 'reports' ], true ) ) {
             wp_enqueue_script(
@@ -197,6 +224,26 @@ class OFP_Client_Portal {
             'ajaxurl' => admin_url( 'admin-ajax.php' ),
             'nonce'   => wp_create_nonce( 'ofp_client_ajax' ),
         ] );
+
+        if ( in_array( $route, [ 'communications', 'message-templates' ], true ) ) {
+            wp_enqueue_script(
+                'ofp-communications',
+                OFP_URL . 'assets/js/communications.js',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION,
+                true
+            );
+        }
+
+        if ( 'import' === $route ) {
+            wp_enqueue_script(
+                'ofp-import',
+                OFP_URL . 'assets/js/import.js',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION,
+                true
+            );
+        }
     }
 
 

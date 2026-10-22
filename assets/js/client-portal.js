@@ -165,31 +165,6 @@
         }
     }
 
-    // ── IVR digit action labels ───────────────────────────────────────────────
-    // Shows a hint below the voice message field reminding the client
-    // what each digit maps to, so they can write the script accordingly.
-    function initIVRHints() {
-        var voiceTypeSelect = document.querySelector('[name="followup_2_type"]');
-        var voiceMessageField = document.querySelector('[name="followup_2_message"]');
-        if ( ! voiceTypeSelect || ! voiceMessageField ) return;
-
-        var hintEl = document.createElement('p');
-        hintEl.className = 'ofp-hint';
-        hintEl.style.marginTop = '4px';
-        voiceMessageField.parentNode.appendChild(hintEl);
-
-        function updateHint() {
-            if ( voiceTypeSelect.value === 'voice' ) {
-                hintEl.textContent = 'Digit 1 = live transfer | Digit 2 = WhatsApp SMS | Digit 3 = callback in 2h';
-                hintEl.style.display = '';
-            } else {
-                hintEl.style.display = 'none';
-            }
-        }
-
-        voiceTypeSelect.addEventListener('change', updateHint);
-        updateHint();
-    }
 
     // ── Status change confirm on leads page ──────────────────────────────────
     function initLeadStatusConfirm() {
@@ -466,7 +441,6 @@
         initFormLoadingState();
         initAutoDismissAlerts();
         initSignupPlanToggle();
-        initIVRHints();
         initLeadStatusConfirm();
         initPasswordStrength();
         initThemeToggle();

@@ -156,53 +156,6 @@ $properties = ( 'sales' === $type ) ? OFP_Import::property_index( $client_id )['
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Import', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
-    <style>
-        .ofp-im-tabs{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px;}
-        .ofp-im-tab{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:9px;background:transparent;border:1px solid var(--border-color,rgba(255,255,255,.08));text-decoration:none;color:var(--text-muted,#94a3b8);font-size:13px;font-weight:500;transition:all .2s;}
-        .ofp-im-tab:hover{color:var(--text-main,#f8fafc);border-color:var(--border-highlight,rgba(255,255,255,.18));background:rgba(255,255,255,.02);}
-        .ofp-im-tab.active{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.4);color:#60a5fa;font-weight:600;}
-        .ofp-im-note{padding:14px 18px;border-radius:10px;margin-bottom:18px;font-size:14px;}
-        .ofp-im-note.bad{background:rgba(239,68,68,.12);border-left:4px solid #ef4444;color:#fca5a5;}
-        .ofp-im-note.ok{background:rgba(16,185,129,.12);border-left:4px solid #10b981;color:#6ee7b7;}
-        .ofp-im-note.warn{background:rgba(245,158,11,.14);border-left:4px solid #f59e0b;color:#fcd34d;}
-        .ofp-im-grid{display:grid;grid-template-columns:minmax(160px,240px) 1fr;gap:12px 18px;align-items:center;}
-        .ofp-im-table{width:100%;border-collapse:collapse;font-size:13px;}
-        .ofp-im-table th,.ofp-im-table td{padding:10px 12px;border-bottom:1px solid var(--border-color,rgba(128,128,128,.18));text-align:left;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis;}
-        .ofp-im-table tbody tr:hover{background:var(--bg-card-hover,rgba(255,255,255,.02));}
-        .ofp-im-sub{font-size:12px;opacity:.75;}
-        .ofp-im-stat{display:inline-block;margin-right:24px;padding:12px 18px;border-radius:10px;background:var(--bg-body,#131722);border:1px solid var(--border-color,rgba(255,255,255,.06));}
-        .ofp-im-stat b{font-size:24px;display:block;color:var(--brand-color,#3b82f6);}
-        @media (max-width:640px){.ofp-im-grid{grid-template-columns:1fr}}
-
-        /* Light Back Button */
-        .ofp-btn-back-light{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:9px;background:rgba(255,255,255,.08);border:1px solid var(--border-color,rgba(255,255,255,.12));color:var(--text-main,#f8fafc);font-size:13px;font-weight:600;text-decoration:none;transition:all .2s;}
-        .ofp-btn-back-light:hover{background:rgba(255,255,255,.15);color:#ffffff;border-color:rgba(255,255,255,.24);}
-        [data-theme="light"] .ofp-btn-back-light,html.light .ofp-btn-back-light{background:#f1f5f9;border-color:#e2e8f0;color:#334155;}
-        [data-theme="light"] .ofp-btn-back-light:hover,html.light .ofp-btn-back-light:hover{background:#e2e8f0;color:#0f172a;}
-
-        /* Light CSV Template Download Button */
-        .ofp-btn-tpl-light{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:9px;background:#ffffff;color:#0f172a !important;border:1px solid #e2e8f0;font-size:13px;font-weight:600;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.15);transition:all .2s;}
-        .ofp-btn-tpl-light:hover{background:#f1f5f9;color:#000000 !important;box-shadow:0 4px 12px rgba(0,0,0,.2);transform:translateY(-1px);}
-        .ofp-btn-tpl-light svg{color:#0f172a;}
-        [data-theme="light"] .ofp-btn-tpl-light,html.light .ofp-btn-tpl-light{background:#ffffff;color:#0f172a !important;border:1px solid #cbd5e1;box-shadow:0 1px 3px rgba(0,0,0,.08);}
-        [data-theme="light"] .ofp-btn-tpl-light:hover,html.light .ofp-btn-tpl-light:hover{background:#f8fafc;border-color:#94a3b8;}
-
-        /* Modern dropzone */
-        .ofp-dropzone{border:2px dashed var(--border-color,rgba(255,255,255,.15));border-radius:12px;padding:32px 20px;text-align:center;background:var(--bg-body,#131722);cursor:pointer;transition:all .2s;position:relative;margin-bottom:18px;}
-        .ofp-dropzone:hover,.ofp-dropzone.dragover{border-color:var(--brand-color,#3b82f6);background:rgba(59,130,246,.04);}
-        .ofp-dropzone-icon{width:44px;height:44px;border-radius:50%;background:rgba(59,130,246,.12);color:var(--brand-color,#3b82f6);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;}
-        .ofp-dropzone-title{font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:4px;}
-        .ofp-dropzone-sub{font-size:12px;color:var(--text-muted);}
-        .ofp-dropzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-        .ofp-badge-pill{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.06);font-size:11px;font-weight:600;color:var(--text-muted);margin:0 2px;}
-
-        /* Template banner */
-        .ofp-tpl-banner{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 18px;border-radius:12px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.18);margin-bottom:20px;}
-        .ofp-guide-card{background:var(--bg-body,#131722);border:1px solid var(--border-color,rgba(255,255,255,.06));border-radius:12px;padding:18px;margin-top:22px;}
-        .ofp-guide-list{list-style:none;padding:0;margin:12px 0 0;display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--text-muted);}
-        .ofp-guide-list li{display:flex;align-items:flex-start;gap:10px;line-height:1.5;}
-        .ofp-guide-bullet{color:#10b981;flex-shrink:0;margin-top:2px;}
-    </style>
 </head>
 <body class="ofp-portal-body">
 
@@ -317,19 +270,6 @@ $properties = ( 'sales' === $type ) ? OFP_Import::property_index( $client_id )['
                 </div>
             </form>
 
-            <script>
-                function handleFileSelected(input) {
-                    if (input.files && input.files[0]) {
-                        var file = input.files[0];
-                        var sizeMb = (file.size / (1024 * 1024)).toFixed(2);
-                        var textElem = document.getElementById('ofp-dropzone-text');
-                        if (textElem) {
-                            textElem.innerHTML = 'Selected: <strong>' + file.name + '</strong> (' + sizeMb + ' MB)';
-                            textElem.style.color = '#10b981';
-                        }
-                    }
-                }
-            </script>
 
             <div class="ofp-guide-card">
                 <div style="font-weight:700;font-size:13px;color:var(--text-main);display:flex;align-items:center;gap:6px;">

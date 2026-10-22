@@ -1,7 +1,7 @@
 <?php
 /**
  * Template: /pipeline-settings
- * Client customises their own pipeline messages and IVR configuration.
+ * Client customises their own pipeline messages and voice scripts.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -19,6 +19,23 @@ $config = $wpdb->get_row(
 
 $saved   = false;
 $error   = '';
+
+// ── Handle Call Scripts save (standalone) ──────────────────────────────────
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_voice_notice_nonce'] ) && ! isset( $_POST['ofp_pipeline_nonce'] ) ) {
+    if ( ! wp_verify_nonce(
+        sanitize_text_field( wp_unslash( $_POST['ofp_voice_notice_nonce'] ) ),
+        'ofp_voice_notice_' . (int) $client->id
+    ) ) {
+        wp_die( 'Security check failed. Please refresh and try again.', 'Security Check', [ 'response' => 403 ] );
+    }
+
+    if ( class_exists( 'OFP_Voice_Notice' ) ) {
+        OFP_Voice_Notice::save_settings( (int) $client->id, $_POST );
+    }
+
+    wp_safe_redirect( add_query_arg( [ 'saved_calls' => '1' ], home_url( '/pipeline-settings' ) ) . '#call-scripts' );
+    exit;
+}
 
 // ── Handle audio upload (Phase 22) ────────────────────────────────────────
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_audio_upload_nonce'] ) ) {
@@ -81,12 +98,20 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_pipeline_nonce'
                 'followup_3_delay_hours' => absint( $_POST['followup_3_delay_hours'] ?? 72 ),
                 'followup_3_type'        => sanitize_text_field( wp_unslash( $_POST['followup_3_type'] ?? 'sms' ) ),
                 'followup_3_message'     => sanitize_textarea_field( wp_unslash( $_POST['followup_3_message']     ?? '' ) ),
-                'transfer_phone'         => OFP_Security::sanitize_phone( wp_unslash( $_POST['transfer_phone']   ?? '' ) ),
-                'whatsapp_link'          => sanitize_text_field( wp_unslash( $_POST['whatsapp_link']             ?? '' ) ),
                 'updated_at'             => current_time( 'mysql' ),
             ],
             [ 'client_id' => $client->id ]
         );
+
+        // Also save voice notice / call scripts if submitted with pipeline form.
+        if ( class_exists( 'OFP_Voice_Notice' ) && isset( $_POST['ofp_voice_notice_nonce'] ) ) {
+            if ( wp_verify_nonce(
+                sanitize_text_field( wp_unslash( $_POST['ofp_voice_notice_nonce'] ) ),
+                'ofp_voice_notice_' . (int) $client->id
+            ) ) {
+                OFP_Voice_Notice::save_settings( (int) $client->id, $_POST );
+            }
+        }
 
         // Reload updated config.
         $config = $wpdb->get_row(
@@ -101,9 +126,17 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_pipeline_nonce'
 
 $type_options = [
     'sms'   => 'SMS',
-    'voice' => 'Voice / IVR Call',
+    'voice' => 'Voice Call',
     'email' => 'Email',
 ];
+
+// ── Data for Call Scripts ──────────────────────────────────────────────────
+$call_settings = class_exists( 'OFP_Voice_Notice' ) ? OFP_Voice_Notice::settings( (int) $client->id ) : [];
+$call_hours    = class_exists( 'OFP_Voice_Notice' ) ? OFP_Voice_Notice::hours() : [ 'enabled' => false, 'start' => 8, 'end' => 19 ];
+$call_credits  = class_exists( 'OFP_Credit' ) ? OFP_Credit::get( (int) $client->id ) : null;
+$call_balance  = (float) ( $call_credits->voice_remaining ?? 0 );
+$call_cost     = defined( 'OFP_Queue::VOICE_COST' ) ? (float) OFP_Queue::VOICE_COST : 15.0;
+$max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Notice::MAX_CHARS : 400;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -121,22 +154,21 @@ $type_options = [
 
         <div class="ofp-pipeline-layout">
             <div class="ofp-pipeline-main">
-                <div class="ofp-card" style="padding: 14px 20px; margin-bottom: 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px; color: var(--text-muted);">
-                    <strong style="color: var(--text-main);">Available Placeholders:</strong>
-                    <span style="white-space: nowrap;"><code>{{name}}</code> &ndash; lead's name</span>
-                    <span style="white-space: nowrap;"><code>{{phone}}</code> &ndash; lead's phone</span>
-                    <span style="white-space: nowrap;"><code>{{business_name}}</code> &ndash; your business</span>
-                </div>
-
                 <?php if ( $saved ) : ?>
-                    <div class="ofp-alert ofp-alert-success">✅ Pipeline settings saved successfully.</div>
+                    <div class="ofp-alert ofp-alert-success" style="margin-bottom: 20px;">✅ Pipeline settings saved successfully.</div>
+                <?php endif; ?>
+                <?php if ( ! empty( $_GET['saved_calls'] ) ) : ?>
+                    <div class="ofp-alert ofp-alert-success" style="margin-bottom: 20px;">✅ Your call scripts were saved.</div>
                 <?php endif; ?>
                 <?php if ( $error ) : ?>
-                    <div class="ofp-alert ofp-alert-error"><?php echo esc_html( $error ); ?></div>
+                    <div class="ofp-alert ofp-alert-error" style="margin-bottom: 20px;"><?php echo esc_html( $error ); ?></div>
                 <?php endif; ?>
+
+                <?php if ( $config ) : ?>
 
                 <form method="POST" action="" class="ofp-form ofp-pipeline-form">
             <?php wp_nonce_field( 'ofp_save_pipeline_' . $client->id, 'ofp_pipeline_nonce' ); ?>
+            <?php wp_nonce_field( 'ofp_voice_notice_' . (int) $client->id, 'ofp_voice_notice_nonce' ); ?>
 
             <div class="ofp-pipeline-timeline" id="ofpPipelineTimeline">
                 <div class="ofp-timeline-progress" id="ofpTimelineProgress"></div>
@@ -150,9 +182,8 @@ $type_options = [
                                 <h3>Instant SMS</h3>
                                 <label class="ofp-toggle">
                                     <input type="checkbox" name="instant_sms_enabled" value="1"
-                                        <?php checked( $config->instant_sms_enabled ?? 1, 1 ); ?>>
+                                        <?php checked( $config?->instant_sms_enabled ?? 1, 1 ); ?>>
                                     <span class="ofp-toggle-slider"></span>
-                                    <span class="ofp-toggle-label">Enabled</span>
                                 </label>
                             </div>
                             <p class="ofp-hint" style="margin-bottom:12px;">Sent within 5 minutes of a lead submitting your form.</p>
@@ -160,7 +191,7 @@ $type_options = [
                                 <label>Message</label>
                                 <textarea name="instant_sms_message" rows="3" maxlength="320"
                                           placeholder="Hi {{name}}, thank you for your interest! We will be in touch shortly. - {{business_name}}"><?php
-                                    echo esc_textarea( $config->instant_sms_message ?? '' );
+                                    echo esc_textarea( $config?->instant_sms_message ?? '' );
                                 ?></textarea>
                                 <p class="ofp-hint" style="margin-top:6px;">Keep under 160 characters for a single SMS credit. Current:
                                     <span id="ofp-sms-count-0">0</span> characters.
@@ -182,14 +213,14 @@ $type_options = [
                                 <div class="ofp-field">
                                     <label>Delay (hours after lead capture)</label>
                                     <input type="number" name="followup_1_delay_hours" min="1" max="168"
-                                           value="<?php echo esc_attr( $config->followup_1_delay_hours ?? 1 ); ?>">
+                                           value="<?php echo esc_attr( $config?->followup_1_delay_hours ?? 1 ); ?>">
                                 </div>
                                 <div class="ofp-field">
                                     <label>Type</label>
                                     <select name="followup_1_type" class="ofp-select">
                                         <?php foreach ( $type_options as $val => $label ) : ?>
                                             <option value="<?php echo esc_attr( $val ); ?>"
-                                                <?php selected( $config->followup_1_type ?? 'sms', $val ); ?>>
+                                                <?php selected( $config?->followup_1_type ?? 'sms', $val ); ?>>
                                                 <?php echo esc_html( $label ); ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -200,7 +231,7 @@ $type_options = [
                                 <label>Message</label>
                                 <textarea name="followup_1_message" rows="3"
                                           placeholder="Hi {{name}}, just checking in — did you get our earlier message? - {{business_name}}"><?php
-                                    echo esc_textarea( $config->followup_1_message ?? '' );
+                                    echo esc_textarea( $config?->followup_1_message ?? '' );
                                 ?></textarea>
                             </div>
                         </div>
@@ -213,20 +244,20 @@ $type_options = [
                     <div class="ofp-timeline-content">
                         <div class="ofp-card">
                             <div class="ofp-card-header">
-                                <h3>Follow-up 2 (Voice Call / IVR)</h3>
+                                <h3>Follow-up 2 (Voice Call)</h3>
                             </div>
                             <div class="ofp-form-row">
                                 <div class="ofp-field">
                                     <label>Delay (hours after lead capture)</label>
                                     <input type="number" name="followup_2_delay_hours" min="1" max="168"
-                                           value="<?php echo esc_attr( $config->followup_2_delay_hours ?? 24 ); ?>">
+                                           value="<?php echo esc_attr( $config?->followup_2_delay_hours ?? 24 ); ?>">
                                 </div>
                                 <div class="ofp-field">
                                     <label>Type</label>
                                     <select name="followup_2_type" class="ofp-select">
                                         <?php foreach ( $type_options as $val => $label ) : ?>
                                             <option value="<?php echo esc_attr( $val ); ?>"
-                                                <?php selected( $config->followup_2_type ?? 'voice', $val ); ?>>
+                                                <?php selected( $config?->followup_2_type ?? 'voice', $val ); ?>>
                                                 <?php echo esc_html( $label ); ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -234,21 +265,24 @@ $type_options = [
                                 </div>
                             </div>
                             <div class="ofp-field" style="margin-bottom:0;">
-                                <label>IVR Script (read aloud during the call)</label>
+                                <label>Voice Script (read aloud during the call)</label>
                                 <textarea name="followup_2_message" rows="3"
-                                          placeholder="Hello, this is a message from {{business_name}}. Press 1 to speak with us now. Press 2 for our WhatsApp contact. Press 3 for a callback later."><?php
-                                    echo esc_textarea( $config->followup_2_message ?? '' );
+                                          placeholder="Hello {{name}}, this is a message from {{business_name}} regarding your recent inquiry. We would love to connect with you."><?php
+                                    echo esc_textarea( $config?->followup_2_message ?? '' );
                                 ?></textarea>
                                 <p class="ofp-hint" style="margin-top:6px;">Write this as natural speech — it is read aloud by a text-to-speech engine.</p>
                                 
                                 <hr style="border:none; border-top:1px solid var(--border-color); margin:16px 0;">
-                                <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:8px;">Custom Voice Audio (Optional)</label>
-                                <?php if ( ! empty( $config->voice_audio_url ) ) : ?>
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                    <label style="display:inline-block; font-size:12px; font-weight:600; color:var(--text-muted); margin:0;">Custom Voice Audio (Optional)</label>
+                                    <span class="ofp-badge ofp-badge-yellow" style="font-size:10px; font-weight:700; letter-spacing:0.04em; padding:2px 8px;">Coming Soon</span>
+                                </div>
+                                <?php if ( ! empty( $config?->voice_audio_url ) ) : ?>
                                     <div style="margin-bottom:12px; padding:12px; background:rgba(16,185,129,0.1); border-radius:8px; border:1px solid rgba(16,185,129,0.2);">
                                         <p style="margin:0 0 8px; font-size:13px; color:var(--text-main); font-weight:500;">
                                             ✅ Custom audio active. This overrides the text script.
                                         </p>
-                                        <audio controls src="<?php echo esc_url( $config->voice_audio_url ); ?>" style="width:100%; height:32px;"></audio>
+                                        <audio controls src="<?php echo esc_url( $config?->voice_audio_url ); ?>" style="width:100%; height:32px;"></audio>
                                     </div>
                                 <?php endif; ?>
                                 <div style="font-size:13px; padding:12px; border:1px dashed var(--border-color); border-radius:8px; background:var(--bg-body);">
@@ -259,7 +293,7 @@ $type_options = [
                                         <input type="file" name="voice_audio" accept=".mp3,.wav,audio/mpeg,audio/wav" style="flex:1; font-size:13px; min-width:180px;" required form="ofp_audio_upload_form">
                                         <button type="submit" class="ofp-btn ofp-btn-secondary" style="padding:6px 14px; min-width:auto; height:auto; width:auto;" form="ofp_audio_upload_form">Upload Audio</button>
                                     </div>
-                                    <?php if ( ! empty( $config->voice_audio_url ) ) : ?>
+                                    <?php if ( ! empty( $config?->voice_audio_url ) ) : ?>
                                         <div style="margin-top:8px;">
                                             <button type="submit" class="ofp-btn ofp-btn-secondary" style="padding:4px 12px; min-width:auto; height:auto; width:auto; font-size:12px; color:var(--accent-red);" form="ofp_audio_remove_form">
                                                 Remove Audio (revert to text-to-speech)
@@ -284,14 +318,14 @@ $type_options = [
                                 <div class="ofp-field">
                                     <label>Delay (hours after lead capture)</label>
                                     <input type="number" name="followup_3_delay_hours" min="1" max="720"
-                                           value="<?php echo esc_attr( $config->followup_3_delay_hours ?? 72 ); ?>">
+                                           value="<?php echo esc_attr( $config?->followup_3_delay_hours ?? 72 ); ?>">
                                 </div>
                                 <div class="ofp-field">
                                     <label>Type</label>
                                     <select name="followup_3_type" class="ofp-select">
                                         <?php foreach ( $type_options as $val => $label ) : ?>
                                             <option value="<?php echo esc_attr( $val ); ?>"
-                                                <?php selected( $config->followup_3_type ?? 'sms', $val ); ?>>
+                                                <?php selected( $config?->followup_3_type ?? 'sms', $val ); ?>>
                                                 <?php echo esc_html( $label ); ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -302,47 +336,100 @@ $type_options = [
                                 <label>Message</label>
                                 <textarea name="followup_3_message" rows="3"
                                           placeholder="Hi {{name}}, we have been trying to reach you. We would love to help. Call or message us anytime. - {{business_name}}"><?php
-                                    echo esc_textarea( $config->followup_3_message ?? '' );
+                                    echo esc_textarea( $config?->followup_3_message ?? '' );
                                 ?></textarea>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ── IVR Actions ─────────────────────────────────────────── -->
-                <div class="ofp-timeline-step">
-                    <div class="ofp-timeline-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg></div>
+                <!-- ── Call Scripts (below Follow-up 3) ─────────────────────── -->
+                <div class="ofp-timeline-step" id="call-scripts" style="margin-bottom: 0;">
+                    <div class="ofp-timeline-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></div>
                     <div class="ofp-timeline-content">
                         <div class="ofp-card">
-                            <div class="ofp-card-header">
-                                <h3>IVR Response Settings</h3>
-                            </div>
-                            <p class="ofp-hint" style="margin-bottom:16px;">Configure what happens when a lead presses a digit during the voice call.</p>
-                            <div class="ofp-form-row">
-                                <div class="ofp-field">
-                                    <label>Transfer Phone (Digit 1)</label>
-                                    <input type="tel" name="transfer_phone"
-                                           value="<?php echo esc_attr( $config->transfer_phone ?? $client->business_phone ); ?>"
-                                           placeholder="e.g. 08012345678">
-                                    <p class="ofp-hint" style="margin-top:6px;">Lead is live-transferred to this number when they press 1.</p>
-                                </div>
-                                <div class="ofp-field">
-                                    <label>WhatsApp Number (Digit 2)</label>
-                                    <input type="tel" name="whatsapp_link"
-                                           value="<?php echo esc_attr( $config->whatsapp_link ?? $client->whatsapp_number ); ?>"
-                                           placeholder="e.g. 2348012345678 (international format, no +)">
-                                    <p class="ofp-hint" style="margin-top:6px;">Lead receives an SMS with your WhatsApp link when they press 2.</p>
+                            <div class="ofp-card-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 10px;">
+                                <h3 style="margin: 0;">Call Scripts</h3>
+                                <div style="display: flex; align-items: center; gap: 10px; font-size: 13px;">
+                                    <span class="ofp-badge ofp-badge-blue">Voice Credit: &#8358;<?php echo esc_html( number_format( $call_balance, 0 ) ); ?></span>
+                                    <span class="ofp-badge ofp-badge-gray">&#8358;<?php echo esc_html( number_format( $call_cost, 0 ) ); ?> / call</span>
                                 </div>
                             </div>
-                            <p class="ofp-hint" style="margin-top:8px;"><strong>Digit 3:</strong> Lead is scheduled for a callback in 2 hours (automatic).</p>
+
+                            <?php if ( $call_hours['enabled'] ) : ?>
+                                <p class="ofp-hint" style="margin-bottom: 12px;">
+                                    Calls only go out between <?php echo esc_html( gmdate( 'g A', mktime( (int) $call_hours['start'], 0, 0, 1, 1, 2000 ) ) ); ?> and <?php echo esc_html( gmdate( 'g A', mktime( (int) $call_hours['end'] % 24, 0, 0, 1, 1, 2000 ) ) ); ?>. A call due outside those hours waits until the next morning.
+                                </p>
+                            <?php endif; ?>
+                            <?php if ( $call_balance < $call_cost ) : ?>
+                                <div style="margin-bottom: 16px; padding: 10px 14px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; border-radius: 6px; font-size: 13px; color: #b45309;">
+                                    Your voice credit is too low to place a call. Top up on the Credits page.
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Group A: Instant call to new leads -->
+                            <div style="border-top: 1px solid var(--border-color); padding-top: 18px; margin-top: 8px; margin-bottom: 24px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+                                    <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: var(--text-main);">Instant call to new leads</h4>
+                                    <label class="ofp-toggle">
+                                        <input type="checkbox" name="call_interest_enabled" value="1" <?php checked( ! empty( $call_settings['interest_enabled'] ) ); ?>>
+                                        <span class="ofp-toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="ofp-field" style="margin-bottom:0;">
+                                    <label for="call_interest_message">What the call says</label>
+                                    <textarea id="call_interest_message" name="call_interest_message" rows="3" maxlength="<?php echo (int) $max_chars; ?>"><?php echo esc_textarea( $call_settings['interest_message'] ?? '' ); ?></textarea>
+                                    <p class="ofp-hint" style="margin-top:4px; font-size:11px; margin-bottom:0; white-space:nowrap;">{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}. 400 characters max.</p>
+                                </div>
+                            </div>
+
+                            <!-- Group B: Payment reminder calls -->
+                            <div style="border-top: 1px solid var(--border-color); padding-top: 18px;">
+                                <div style="margin-bottom: 14px;">
+                                    <h4 style="margin: 0 0 4px; font-size: 15px; font-weight: 600; color: var(--text-main);">Payment reminder calls</h4>
+                                    <p class="ofp-subtitle" style="margin: 0; font-size: 13px; color: var(--text-muted);">Automated voice reminders triggered on payment due dates.</p>
+                                </div>
+
+                                <!-- Installment Due Day Call -->
+                                <div style="margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px dashed var(--border-color);">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+                                        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">When a buyer's installment is due today</span>
+                                        <label class="ofp-toggle">
+                                            <input type="checkbox" name="call_installment_enabled" value="1" <?php checked( ! empty( $call_settings['installment_enabled'] ) ); ?>>
+                                            <span class="ofp-toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="ofp-field" style="margin-bottom:0;">
+                                        <label for="call_installment_message">What the call says</label>
+                                        <textarea id="call_installment_message" name="call_installment_message" rows="3" maxlength="<?php echo (int) $max_chars; ?>"><?php echo esc_textarea( $call_settings['installment_message'] ?? '' ); ?></textarea>
+                                        <p class="ofp-hint" style="margin-top:4px; font-size:11px; margin-bottom:0; white-space:nowrap;">{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}. 400 characters max.</p>
+                                    </div>
+                                </div>
+
+                                <!-- Rent Due Day Call -->
+                                <div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+                                        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">When a tenant's rent is due today</span>
+                                        <label class="ofp-toggle">
+                                            <input type="checkbox" name="call_rent_enabled" value="1" <?php checked( ! empty( $call_settings['rent_enabled'] ) ); ?>>
+                                            <span class="ofp-toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="ofp-field" style="margin-bottom:0;">
+                                        <label for="call_rent_message">What the call says</label>
+                                        <textarea id="call_rent_message" name="call_rent_message" rows="3" maxlength="<?php echo (int) $max_chars; ?>"><?php echo esc_textarea( $call_settings['rent_message'] ?? '' ); ?></textarea>
+                                        <p class="ofp-hint" style="margin-top:4px; font-size:11px; margin-bottom:0; white-space:nowrap;">{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}. 400 characters max.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
             </div>
 
-            <div class="ofp-form-actions" style="margin-left: 60px; margin-top: 24px; display: flex; align-items: center; gap: 12px;">
-                <button type="submit" class="ofp-btn ofp-btn-primary ofp-btn-save">Save</button>
+            <div class="ofp-form-actions" style="margin-left: 56px; margin-top: 14px; display: flex; align-items: center; gap: 12px;">
+                <button type="submit" class="ofp-btn ofp-btn-primary ofp-btn-save">Save Settings</button>
                 <a href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>" class="ofp-btn ofp-btn-secondary ofp-btn-reduced">Cancel</a>
             </div>
 
@@ -352,14 +439,15 @@ $type_options = [
                 <form id="ofp_audio_upload_form" method="POST" action="" enctype="multipart/form-data" style="display:none;">
                     <?php wp_nonce_field( 'ofp_upload_audio_' . $client->id, 'ofp_audio_upload_nonce' ); ?>
                 </form>
-                <?php if ( ! empty( $config->voice_audio_url ) ) : ?>
+                <?php if ( ! empty( $config?->voice_audio_url ) ) : ?>
                     <form id="ofp_audio_remove_form" method="POST" action="" style="display:none;">
                         <?php wp_nonce_field( 'ofp_remove_audio_' . $client->id, 'ofp_audio_remove_nonce' ); ?>
                     </form>
                 <?php endif; ?>
-
+                <?php endif; // $config ?>
 
             </div>
+            <?php if ( $config ) : ?>
             <div class="ofp-pipeline-sidebar">
                 <div class="ofp-phone-mockup">
                     <img class="ofp-phone-frame-overlay" src="<?php echo esc_url( OFP_URL . 'assets/images/Smartphone-Mockup.png' ); ?>" alt="Smartphone Mockup" loading="lazy">
@@ -374,17 +462,30 @@ $type_options = [
                             <div class="ofp-chat-bubble" id="preview_followup_1_message">
                                 Hi John, just checking in — did you get our earlier message? - My Business
                             </div>
-                            <div class="ofp-chat-bubble call-bubble" id="preview_followup_2_message">
-                                <strong>📞 Voice Call Script</strong>
-                                <p>Hello, this is a message from My Business. Press 1 to speak with us now. Press 2 for our WhatsApp contact. Press 3 for a callback later.</p>
+                            <div class="ofp-chat-bubble call-bubble" id="preview_followup_2_message" style="color: #0f172a !important;">
+                                <strong style="color: #be185d !important;">📞 Voice Call Script</strong>
+                                <p style="margin:0; color: #0f172a !important;">Hello John, this is a quick follow-up from My Business regarding your inquiry.</p>
                             </div>
                             <div class="ofp-chat-bubble" id="preview_followup_3_message">
                                 Hi John, we have been trying to reach you. We would love to help. Call or message us anytime. - My Business
+                            </div>
+                            <div class="ofp-chat-bubble call-bubble" id="preview_call_interest_message" style="color: #0f172a !important;">
+                                <strong style="color: #be185d !important;">📞 Instant Call: New Lead</strong>
+                                <p style="margin:0; color: #0f172a !important;"><?php echo esc_html( $call_settings['interest_message'] ?? 'Hello John, this is My Business regarding your recent inquiry.' ); ?></p>
+                            </div>
+                            <div class="ofp-chat-bubble call-bubble" id="preview_call_installment_message" style="color: #0f172a !important;">
+                                <strong style="color: #be185d !important;">📞 Reminder Call: Installment Due</strong>
+                                <p style="margin:0; color: #0f172a !important;"><?php echo esc_html( $call_settings['installment_message'] ?? 'Hello John, this is My Business. Your installment of 250,000 naira for Sunset Villa is due today.' ); ?></p>
+                            </div>
+                            <div class="ofp-chat-bubble call-bubble" id="preview_call_rent_message" style="color: #0f172a !important;">
+                                <strong style="color: #be185d !important;">📞 Reminder Call: Rent Due</strong>
+                                <p style="margin:0; color: #0f172a !important;"><?php echo esc_html( $call_settings['rent_message'] ?? 'Hello John, this is My Business. Your rent payment for Sunset Villa is due today.' ); ?></p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
     </div>
 </main>
@@ -449,7 +550,10 @@ var previewData = {
     'instant_sms_message': 'preview_instant_sms_message',
     'followup_1_message': 'preview_followup_1_message',
     'followup_2_message': 'preview_followup_2_message',
-    'followup_3_message': 'preview_followup_3_message'
+    'followup_3_message': 'preview_followup_3_message',
+    'call_interest_message': 'preview_call_interest_message',
+    'call_installment_message': 'preview_call_installment_message',
+    'call_rent_message': 'preview_call_rent_message'
 };
 
 var businessName = "<?php echo esc_js($client->business_name ?? 'My Business'); ?>";
@@ -459,7 +563,11 @@ function formatPreviewText(text) {
     // Replace placeholders with dummy data
     var formatted = text.replace(/\{\{name\}\}/gi, 'John')
                         .replace(/\{\{phone\}\}/gi, '07123456789')
-                        .replace(/\{\{business_name\}\}/gi, businessName);
+                        .replace(/\{\{email\}\}/gi, 'john@example.com')
+                        .replace(/\{\{business_name\}\}/gi, businessName)
+                        .replace(/\{\{property\}\}/gi, 'Sunset Villa')
+                        .replace(/\{\{amount\}\}/gi, '250,000')
+                        .replace(/\{\{due_date\}\}/gi, 'today');
     
     // Convert newlines to <br> for HTML display
     return formatted.replace(/\n/g, '<br>');
@@ -474,10 +582,14 @@ Object.keys(previewData).forEach(function(inputName) {
         // Sync on input
         input.addEventListener('input', function() {
             var rawText = this.value;
-            var isVoice = inputName === 'followup_2_message'; // Follow-up 2 is voice usually
+            var isVoice = inputName === 'followup_2_message' || inputName.indexOf('call_') === 0;
             
             if (isVoice) {
-                preview.innerHTML = '<strong>📞 Voice Call Script</strong>' + formatPreviewText(rawText);
+                var title = '📞 Voice Call Script';
+                if (inputName === 'call_interest_message') title = '📞 Instant Call: New Lead';
+                if (inputName === 'call_installment_message') title = '📞 Reminder Call: Installment Due';
+                if (inputName === 'call_rent_message') title = '📞 Reminder Call: Rent Due';
+                preview.innerHTML = '<strong style="color:#be185d !important;">' + title + '</strong><p style="margin:0; color:#0f172a !important;">' + formatPreviewText(rawText) + '</p>';
             } else {
                 preview.innerHTML = formatPreviewText(rawText);
             }

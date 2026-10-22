@@ -2325,17 +2325,19 @@ input[type="date"].ofp-input,
 }
 
 .ofp-pipeline-sidebar {
-    width: 370px;
+    width: 360px;
     position: sticky;
-    top: 96px;
+    top: 20px;
     flex-shrink: 0;
+    align-self: flex-start;
 }
 
 .ofp-phone-mockup {
     position: relative;
-    width: 370px;
-    height: 760px;
-    max-height: calc(100vh - 80px);
+    width: 360px;
+    max-width: 100%;
+    height: min(700px, calc(100vh - 40px));
+    aspect-ratio: 625 / 1200;
     margin: 0 auto;
     filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.45));
     background: transparent;
@@ -2438,10 +2440,10 @@ body.ofp-dark-mode .ofp-phone-body::-webkit-scrollbar-thumb {
 
 /* Template Preview Sidebar & Email view inside phone */
 .ofp-template-preview-sidebar {
-    width: 370px;
+    width: 360px;
     flex-shrink: 0;
     position: sticky;
-    top: 96px;
+    top: 20px;
     align-self: flex-start;
 }
 
@@ -2483,13 +2485,16 @@ body.ofp-dark-mode #ofp-tpl-email-body {
     border: 1px solid var(--border-color, #cbd5e1) !important;
     color: var(--text-main, #0f172a) !important;
     font-weight: 600 !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    font-size: 13px !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
     transition: all 0.2s ease !important;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
 }
 
 .ofp-btn-send-test:hover {
@@ -2497,7 +2502,7 @@ body.ofp-dark-mode #ofp-tpl-email-body {
     border-color: var(--accent-blue, #3b82f6) !important;
     color: var(--accent-blue, #3b82f6) !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.12) !important;
 }
 
 [data-theme="dark"] .ofp-btn-send-test,
@@ -2505,6 +2510,7 @@ body.ofp-dark-mode .ofp-btn-send-test {
     background: #1e293b !important;
     border-color: #334155 !important;
     color: #f1f5f9 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 }
 
 [data-theme="dark"] .ofp-btn-send-test:hover,
@@ -2535,21 +2541,37 @@ body.ofp-dark-mode .ofp-btn-send-test:hover {
     box-shadow: 0 8px 20px -4px rgba(59, 130, 246, 0.5);
 }
 
-.ofp-chat-bubble.call-bubble {
+.ofp-chat-bubble.call-bubble,
+.ofp-chat-bubble.call-bubble p,
+[data-theme="dark"] .ofp-chat-bubble.call-bubble,
+[data-theme="dark"] .ofp-chat-bubble.call-bubble p,
+body.ofp-dark-mode .ofp-chat-bubble.call-bubble,
+body.ofp-dark-mode .ofp-chat-bubble.call-bubble p {
     background: #fce7f3;
     border: 1px solid #fbcfe8;
+    color: #0f172a !important;
 }
 
-.ofp-chat-bubble.call-bubble.active {
-    background: #fbcfe8;
-    box-shadow: 0 8px 16px -4px rgba(219, 39, 119, 0.2);
+.ofp-chat-bubble.call-bubble.active,
+.ofp-chat-bubble.call-bubble.active p,
+[data-theme="dark"] .ofp-chat-bubble.call-bubble.active,
+[data-theme="dark"] .ofp-chat-bubble.call-bubble.active p,
+body.ofp-dark-mode .ofp-chat-bubble.call-bubble.active,
+body.ofp-dark-mode .ofp-chat-bubble.call-bubble.active p {
+    background: #fbcfe8 !important;
+    border-color: #f472b6 !important;
+    color: #0f172a !important;
+    box-shadow: 0 8px 16px -4px rgba(219, 39, 119, 0.25);
 }
 
-.ofp-chat-bubble strong {
+.ofp-chat-bubble strong,
+.ofp-chat-bubble.call-bubble strong,
+[data-theme="dark"] .ofp-chat-bubble.call-bubble strong,
+body.ofp-dark-mode .ofp-chat-bubble.call-bubble strong {
     display: block;
     font-size: 12px;
     margin-bottom: 6px;
-    color: #be185d;
+    color: #be185d !important;
 }
 
 @media (max-width: 1024px) {

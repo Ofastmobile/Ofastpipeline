@@ -43,19 +43,14 @@ if ( empty( $sel_ids ) ) {
 }
 $aud_batches = OFP_Contacts::batches( (int) $client->id );
 
-// ── Call Scripts tab: save ────────────────────────────────────────────────
-$call_error = '';
-if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_voice_notice_nonce'] ) ) {
-    if ( wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ofp_voice_notice_nonce'] ) ), 'ofp_voice_notice_' . (int) $client->id ) ) {
-        OFP_Voice_Notice::save_settings( (int) $client->id, $_POST );
-        wp_safe_redirect( home_url( '/message-templates?tab=calls&saved=1' ) );
-        exit;
-    }
-    $call_error = 'Security check failed. Please refresh the page and try again.';
+// ── Redirect old 'calls' tab to Automation page (#call-scripts) ────────────
+if ( isset( $_GET['tab'] ) && $_GET['tab'] === 'calls' ) {
+    wp_safe_redirect( home_url( '/pipeline-settings#call-scripts' ) );
+    exit;
 }
 
 $tab = sanitize_text_field( $_GET['tab'] ?? 'log' );
-$allowed_tabs = [ 'log', 'calls', 'send', 'templates', 'branding' ];
+$allowed_tabs = [ 'log', 'send', 'templates', 'branding' ];
 if ( ! in_array( $tab, $allowed_tabs, true ) ) {
     $tab = 'log';
 }
@@ -114,282 +109,6 @@ $type_badges = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Communications', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
-    <style>
-    /* ── STAT CARDS GRID: 4 columns on desktop, 2 columns on mobile ─── */
-    .ofp-comm-stat-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 20px;
-        margin-bottom: 32px;
-    }
-
-    .ofp-comm-stat-card {
-        border-radius: 16px;
-        padding: 24px;
-        color: #fff;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .ofp-comm-stat-card .stat-bg-icon {
-        position: absolute;
-        top: -10px;
-        right: -10px;
-        opacity: 0.15;
-        width: 90px;
-        height: 90px;
-    }
-
-    .ofp-comm-stat-card .stat-title {
-        font-size: 13px;
-        font-weight: 500;
-        opacity: 0.9;
-        margin-bottom: 8px;
-    }
-
-    .ofp-comm-stat-card .stat-val {
-        font-size: 28px;
-        font-weight: 700;
-    }
-
-    @media (max-width: 768px) {
-        .ofp-comm-stat-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 12px !important;
-            margin-bottom: 20px !important;
-        }
-        .ofp-comm-stat-card {
-            padding: 16px 14px !important;
-            border-radius: 12px !important;
-        }
-        .ofp-comm-stat-card .stat-bg-icon {
-            width: 55px !important;
-            height: 55px !important;
-            top: -5px !important;
-            right: -5px !important;
-        }
-        .ofp-comm-stat-card .stat-title {
-            font-size: 11.5px !important;
-            margin-bottom: 4px !important;
-        }
-        .ofp-comm-stat-card .stat-val {
-            font-size: 20px !important;
-        }
-    }
-
-    /* ── SINGLE STRAIGHT-LINE HORIZONTAL FILTER BAR ─────────────────── */
-    .ofp-comm-filter-wrapper {
-        background: var(--bg-card, #ffffff);
-        border: 1px solid var(--border-color, #e2e8f0);
-        border-radius: 12px;
-        padding: 12px 16px;
-        margin-bottom: 24px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-        position: relative;
-        z-index: 1000;
-        overflow: visible;
-    }
-
-    .ofp-comm-filter-bar {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: nowrap;
-        position: relative;
-        z-index: 1000;
-        overflow: visible;
-    }
-
-    @media (max-width: 768px) {
-        .ofp-comm-filter-wrapper {
-            overflow-x: auto;
-            overflow-y: visible;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-        .ofp-comm-filter-wrapper::-webkit-scrollbar {
-            display: none;
-            width: 0;
-            height: 0;
-        }
-    }
-
-    .ofp-comm-filter-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        flex-shrink: 0;
-        white-space: nowrap;
-        position: relative;
-        z-index: 1001;
-    }
-
-    .ofp-comm-filter-label {
-        font-size: 11.5px;
-        font-weight: 700;
-        color: var(--text-muted, #64748b);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        user-select: none;
-        margin: 0;
-    }
-
-    .ofp-comm-search-box {
-        position: relative;
-        flex-shrink: 0;
-        width: 250px;
-        min-width: 190px;
-    }
-
-    .ofp-comm-search-box svg {
-        position: absolute;
-        left: 11px;
-        top: 50%;
-        transform: translateY(-50%);
-        pointer-events: none;
-        color: var(--text-muted, #94a3b8);
-    }
-
-    .ofp-comm-search-input {
-        height: 38px !important;
-        padding: 0 12px 0 34px !important;
-        font-size: 13px !important;
-        border-radius: 8px !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
-
-    /* ── Remove ALL arrows on dropdowns & enforce visible options with high z-index ── */
-    .ofp-comm-filter-bar .ofp-custom-select-trigger::after,
-    .ofp-custom-select-trigger::after {
-        display: none !important;
-        content: none !important;
-    }
-
-    .ofp-comm-select,
-    select.ofp-comm-select {
-        height: 38px !important;
-        padding: 0 14px !important;
-        font-size: 13px !important;
-        border-radius: 8px !important;
-        width: auto !important;
-        min-width: 130px !important;
-        cursor: pointer !important;
-        box-sizing: border-box !important;
-        background-image: none !important;
-        -webkit-appearance: none !important;
-        -moz-appearance: none !important;
-        appearance: none !important;
-    }
-
-    .ofp-comm-filter-bar .ofp-custom-select-wrapper {
-        position: relative !important;
-        width: auto !important;
-        min-width: 130px !important;
-        z-index: 1002 !important;
-    }
-
-    .ofp-comm-filter-bar .ofp-custom-select-wrapper.open {
-        z-index: 99999 !important;
-    }
-
-    .ofp-comm-filter-bar .ofp-custom-select-trigger {
-        height: 38px !important;
-        padding: 0 14px !important;
-        font-size: 13px !important;
-        font-weight: 500 !important;
-        border-radius: 8px !important;
-        background: var(--bg-body, #f8fafc) !important;
-        border: 1px solid var(--border-color, #e2e8f0) !important;
-        color: var(--text-main, #0f172a) !important;
-        min-width: 130px !important;
-        white-space: nowrap !important;
-        box-sizing: border-box !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-        cursor: pointer !important;
-    }
-
-    .ofp-comm-filter-bar .ofp-custom-select-options {
-        position: absolute !important;
-        top: calc(100% + 4px) !important;
-        left: 0 !important;
-        min-width: 160px !important;
-        width: max-content !important;
-        max-width: 280px !important;
-        z-index: 999999 !important;
-        background: var(--bg-card, #ffffff) !important;
-        border: 1px solid var(--border-color, #e2e8f0) !important;
-        border-radius: 8px !important;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
-        max-height: 260px !important;
-        overflow-y: auto !important;
-    }
-
-    .ofp-comm-filter-bar .ofp-custom-select-wrapper.open .ofp-custom-select-options {
-        display: block !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-        transform: translateY(0) !important;
-    }
-
-    .ofp-comm-filter-bar .ofp-custom-select-option {
-        padding: 9px 14px !important;
-        font-size: 13px !important;
-        font-weight: 500 !important;
-        color: var(--text-main, #0f172a) !important;
-        cursor: pointer !important;
-        white-space: nowrap !important;
-        transition: background 0.15s ease, color 0.15s ease !important;
-    }
-
-    .ofp-comm-filter-bar .ofp-custom-select-option:hover,
-    .ofp-comm-filter-bar .ofp-custom-select-option.selected {
-        background: var(--bg-lighter, #f1f5f9) !important;
-        color: var(--primary, #3b82f6) !important;
-    }
-
-    .ofp-comm-clear-btn {
-        height: 38px;
-        padding: 0 14px;
-        border-radius: 8px;
-        border: 1px solid var(--border-color, #e2e8f0);
-        background: transparent;
-        color: var(--text-muted, #64748b);
-        font-size: 13px;
-        font-weight: 600;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        flex-shrink: 0;
-        white-space: nowrap;
-        cursor: pointer;
-        transition: all 0.15s ease;
-    }
-    .ofp-comm-clear-btn:hover {
-        color: var(--text-main, #0f172a);
-        border-color: var(--text-muted, #94a3b8);
-        background: var(--bg-lighter, #f8fafc);
-    }
-
-    .ofp-comm-count-badge {
-        margin-left: auto;
-        flex-shrink: 0;
-        white-space: nowrap;
-        font-size: 13px;
-        color: var(--text-muted, #64748b);
-        font-weight: 500;
-    }
-
-    #comm-feed-container {
-        transition: opacity 0.2s ease;
-    }
-    </style>
 </head>
 <body class="ofp-portal-body">
 
@@ -400,7 +119,6 @@ $type_badges = [
     <!-- Tabs -->
     <div class="ofp-tabs" style="margin-bottom: 24px; border-bottom: 1px solid var(--border-color);">
         <a href="<?php echo esc_url( home_url( '/message-templates?tab=log' ) ); ?>" class="ofp-tab <?php echo $tab === 'log' ? 'active' : ''; ?>">Communications Log</a>
-        <a href="<?php echo esc_url( home_url( '/message-templates?tab=calls' ) ); ?>" class="ofp-tab <?php echo $tab === 'calls' ? 'active' : ''; ?>">Call Scripts</a>
         <?php if ( OFP_Subscription::allows_email_templates( (int) $client->id ) ) : ?>
         <a href="<?php echo esc_url( home_url( '/message-templates?tab=send' ) ); ?>" class="ofp-tab <?php echo $tab === 'send' ? 'active' : ''; ?>">Send Broadcast</a>
         <a href="<?php echo esc_url( home_url( '/message-templates?tab=templates' ) ); ?>" class="ofp-tab <?php echo $tab === 'templates' ? 'active' : ''; ?>">Message Templates</a>
@@ -503,7 +221,7 @@ $type_badges = [
 
         <!-- Feed Card -->
         <div class="ofp-card" style="padding:0; overflow:hidden;">
-            <div id="comm-feed-container">
+            <div id="comm-feed-container" data-current-page="<?php echo (int) $current_page; ?>">
                 <?php echo OFP_Communications_Log::render_feed_html( $comms, (int) $client->id ); ?>
             </div>
 
@@ -524,71 +242,6 @@ $type_badges = [
     // TAB 2: SEND BROADCAST
     // =====================================================================
     ?>
-    <?php if ( $tab === 'calls' ) :
-        $call_settings = OFP_Voice_Notice::settings( (int) $client->id );
-        $call_hours    = OFP_Voice_Notice::hours();
-        $call_credits  = class_exists( 'OFP_Credit' ) ? OFP_Credit::get( (int) $client->id ) : null;
-        $call_balance  = (float) ( $call_credits->voice_remaining ?? 0 );
-        $call_cost     = (float) OFP_Queue::VOICE_COST;
-        $call_sections = [
-            'interest' => [
-                'title' => 'When a new lead fills your contact or inspection form',
-                'hint'  => 'Calls the lead right after they submit the form. Leads you upload yourself are never called.',
-                'tags'  => [ '{{name}}', '{{business_name}}', '{{property}}' ],
-            ],
-            'installment' => [
-                'title' => 'When a buyer\'s installment is due today',
-                'hint'  => 'One call on the due day. The buyer still gets the email and SMS reminders.',
-                'tags'  => [ '{{name}}', '{{business_name}}', '{{property}}', '{{amount}}', '{{due_date}}' ],
-            ],
-            'rent' => [
-                'title' => 'When a tenant\'s rent is due today',
-                'hint'  => 'One call on the due day (the lease end date), only if the tenant still owes money.',
-                'tags'  => [ '{{name}}', '{{business_name}}', '{{property}}', '{{amount}}', '{{due_date}}' ],
-            ],
-        ];
-    ?>
-        <?php if ( ! empty( $_GET['saved'] ) ) : ?>
-            <div class="ofp-card" style="padding:14px 20px; margin-bottom:16px; border-left:4px solid #10b981;">Your call scripts were saved.</div>
-        <?php endif; ?>
-        <?php if ( $call_error ) : ?>
-            <div class="ofp-card" style="padding:14px 20px; margin-bottom:16px; border-left:4px solid #ef4444;"><?php echo esc_html( $call_error ); ?></div>
-        <?php endif; ?>
-
-        <div class="ofp-card" style="padding: 24px; margin-bottom: 16px;">
-            <h3 style="margin-top:0;">Automatic Calls</h3>
-            <p class="ofp-subtitle" style="margin-bottom: 12px;">A short phone call that reads your message and hangs up. There are no key presses. Each call uses &#8358;<?php echo esc_html( number_format( $call_cost, 0 ) ); ?> of voice credit, and you have &#8358;<?php echo esc_html( number_format( $call_balance, 0 ) ); ?> left.</p>
-            <?php if ( $call_hours['enabled'] ) : ?>
-                <p class="ofp-subtitle" style="margin:0;">Calls only go out between <?php echo esc_html( gmdate( 'g A', mktime( (int) $call_hours['start'], 0, 0, 1, 1, 2000 ) ) ); ?> and <?php echo esc_html( gmdate( 'g A', mktime( (int) $call_hours['end'] % 24, 0, 0, 1, 1, 2000 ) ) ); ?>. A call due outside those hours waits until the next morning.</p>
-            <?php endif; ?>
-            <?php if ( $call_balance < $call_cost ) : ?>
-                <p style="margin:12px 0 0; color:#b45309;">Your voice credit is too low to place a call. Top up on the Credits page.</p>
-            <?php endif; ?>
-        </div>
-
-        <form method="post" action="<?php echo esc_url( home_url( '/message-templates?tab=calls' ) ); ?>">
-            <?php wp_nonce_field( 'ofp_voice_notice_' . (int) $client->id, 'ofp_voice_notice_nonce' ); ?>
-
-            <?php foreach ( $call_sections as $type => $section ) : ?>
-                <div class="ofp-card" style="padding: 24px; margin-bottom: 16px;">
-                    <label style="display:flex; align-items:center; gap:10px; font-weight:700; font-size:15px; cursor:pointer;">
-                        <input type="checkbox" name="call_<?php echo esc_attr( $type ); ?>_enabled" value="1" <?php checked( ! empty( $call_settings[ $type . '_enabled' ] ) ); ?>>
-                        <?php echo esc_html( $section['title'] ); ?>
-                    </label>
-                    <p class="ofp-subtitle" style="margin:6px 0 14px;"><?php echo esc_html( $section['hint'] ); ?></p>
-
-                    <div class="ofp-field">
-                        <label for="call_<?php echo esc_attr( $type ); ?>_message">What the call says</label>
-                        <textarea id="call_<?php echo esc_attr( $type ); ?>_message" name="call_<?php echo esc_attr( $type ); ?>_message" rows="4" maxlength="<?php echo (int) OFP_Voice_Notice::MAX_CHARS; ?>"><?php echo esc_textarea( $call_settings[ $type . '_message' ] ); ?></textarea>
-                        <p class="ofp-subtitle" style="margin:6px 0 0; font-size:12px;">You can use: <?php echo esc_html( implode( '  ', $section['tags'] ) ); ?>. Keep it short and clear. Maximum <?php echo (int) OFP_Voice_Notice::MAX_CHARS; ?> characters.</p>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-
-            <button type="submit" class="ofp-btn ofp-btn-primary">Save Call Scripts</button>
-        </form>
-    <?php endif; ?>
-
     <?php if ( $tab === 'send' ) : ?>
 
         <div class="ofp-card" style="padding: 32px;">
@@ -797,89 +450,107 @@ $type_badges = [
     ?>
     <?php if ( $tab === 'templates' ) : ?>
 
-        <div style="margin-bottom: 24px;">
-            <h2 style="margin: 0 0 6px; font-size: 20px; font-weight: 700; color: var(--text-main);">Reusable Message Templates</h2>
-            <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Create and manage reusable SMS and email templates to speed up broadcasts and lead messages.</p>
-        </div>
 
         <!-- Manage Message Templates (SMS/Email) -->
-        <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+        <div class="ofp-pipeline-layout">
             <!-- Left: Template Form -->
-            <div class="ofp-card" style="flex: 1; min-width: 400px; padding: 24px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 id="form-title" style="margin:0;">Create Message Template</h3>
-                    <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" onclick="resetForm()" id="btn-new-tpl" style="display:none;">+ New</button>
-                </div>
-
-                <form id="template-form">
-                    <input type="hidden" id="tpl-id" name="id" value="">
-
-                    <div class="ofp-field" style="margin-bottom: 16px;">
-                        <label>Channel <span class="required">*</span></label>
-                        <select id="tpl-type" name="type" required onchange="toggleTemplateChannel()">
-                            <option value="sms">SMS</option>
-                            <option value="email">Email</option>
-                        </select>
+            <div class="ofp-pipeline-main">
+                <div class="ofp-card" style="padding: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 id="form-title" style="margin:0;">Create Message Template</h3>
+                        <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" onclick="resetForm()" id="btn-new-tpl" style="display:none;">+ New</button>
                     </div>
 
-                    <div class="ofp-field" style="margin-bottom: 16px;">
-                        <label>Template Name <span class="required">*</span></label>
-                        <input type="text" id="tpl-name" name="name" required placeholder="e.g. Welcome Message">
-                    </div>
+                    <form id="template-form">
+                        <input type="hidden" id="tpl-id" name="id" value="">
 
-                    <div class="ofp-field" id="tpl-subject-wrap" style="margin-bottom: 16px; display:none;">
-                        <label>Subject <span class="required">*</span></label>
-                        <input type="text" id="tpl-subject" name="subject" placeholder="Email subject">
-                    </div>
+                        <div class="ofp-field" style="margin-bottom: 16px;">
+                            <label>Channel <span class="required">*</span></label>
+                            <select id="tpl-type" name="type" required onchange="toggleTemplateChannel()">
+                                <option value="sms">SMS</option>
+                                <option value="email">Email</option>
+                            </select>
+                        </div>
 
-                    <div class="ofp-field" style="margin-bottom: 16px;">
-                        <label>Message Body <span class="required">*</span></label>
-                        <p class="ofp-hint" style="margin-top:0;">You can use placeholders: <code>{{name}}</code>, <code>{{phone}}</code>, <code>{{email}}</code></p>
-                        <textarea id="tpl-body" name="body" rows="8" required placeholder="Your message here..." style="font-family: monospace; font-size:13px;"></textarea>
-                    </div>
+                        <div class="ofp-field" style="margin-bottom: 16px;">
+                            <label>Template Name <span class="required">*</span></label>
+                            <input type="text" id="tpl-name" name="name" required placeholder="e.g. Welcome Message">
+                        </div>
 
-                    <div style="display: flex; gap: 12px; margin-top: 24px;">
-                        <button type="submit" class="ofp-btn ofp-btn-primary" id="tpl-submit">Save Template</button>
-                        <button type="button" class="ofp-btn ofp-btn-ghost ofp-btn-danger" id="tpl-delete" style="display:none;" onclick="deleteActiveTemplate()">Delete</button>
-                    </div>
-                </form>
+                        <div class="ofp-field" id="tpl-subject-wrap" style="margin-bottom: 16px; display:none;">
+                            <label>Subject <span class="required">*</span></label>
+                            <input type="text" id="tpl-subject" name="subject" placeholder="Email subject">
+                        </div>
 
-                <hr style="border:0; border-top:1px solid var(--border-color); margin: 32px 0;">
+                        <div class="ofp-field" style="margin-bottom: 16px;">
+                            <label>Message Body <span class="required">*</span></label>
+                            <p class="ofp-hint" style="margin-top:0;">You can use placeholders: <code>{{name}}</code>, <code>{{phone}}</code>, <code>{{email}}</code>, <code>{{business_name}}</code>, <code>{{property}}</code></p>
+                            <textarea id="tpl-body" name="body" rows="8" required placeholder="Your message here..." style="font-family: inherit; font-size:13px;"></textarea>
+                        </div>
 
-                <h3 style="margin-bottom: 16px;">Existing Templates</h3>
-                <div style="display: flex; flex-direction: column; gap: 8px;" id="templates-list-container">
-                    <?php if ( empty( $templates ) ) : ?>
-                        <p class="ofp-hint">No templates saved yet.</p>
-                    <?php else : ?>
-                        <?php foreach ( $templates as $t ) : ?>
-                            <div class="ofp-template-list-item" id="template-item-<?php echo (int) $t->id; ?>"
-                                 style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; transition: all 0.2s; background: var(--bg-lighter); display: flex; justify-content: space-between; align-items: center; gap: 12px;">
-                                <div onclick='editTemplate(<?php echo json_encode( $t, JSON_HEX_APOS | JSON_HEX_QUOT ); ?>)' style="cursor: pointer; flex: 1;">
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <strong><?php echo esc_html( $t->name ); ?></strong>
-                                        <span class="ofp-badge <?php echo $t->type === 'sms' ? 'ofp-badge-blue' : 'ofp-badge-purple'; ?>">
-                                            <?php echo esc_html( strtoupper( $t->type ) ); ?>
-                                        </span>
+                        <div style="display: flex; gap: 12px; margin-top: 24px;">
+                            <button type="submit" class="ofp-btn ofp-btn-primary" id="tpl-submit">Save Template</button>
+                            <button type="button" class="ofp-btn ofp-btn-ghost ofp-btn-danger" id="tpl-delete" style="display:none;" onclick="deleteActiveTemplate()">Delete</button>
+                        </div>
+                    </form>
+
+                    <hr style="border:0; border-top:1px solid var(--border-color); margin: 32px 0;">
+
+                    <h3 style="margin-bottom: 16px;">Existing Templates</h3>
+                    <div style="display: flex; flex-direction: column; gap: 8px;" id="templates-list-container">
+                        <?php if ( empty( $templates ) ) : ?>
+                            <p class="ofp-hint">No templates saved yet.</p>
+                        <?php else : ?>
+                            <?php foreach ( $templates as $t ) : ?>
+                                <div class="ofp-template-list-item" id="template-item-<?php echo (int) $t->id; ?>"
+                                     style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; transition: all 0.2s; background: var(--bg-lighter); display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                                    <div onclick='editTemplate(<?php echo json_encode( $t, JSON_HEX_APOS | JSON_HEX_QUOT ); ?>)' style="cursor: pointer; flex: 1;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <strong><?php echo esc_html( $t->name ); ?></strong>
+                                            <span class="ofp-badge <?php echo $t->type === 'sms' ? 'ofp-badge-blue' : 'ofp-badge-purple'; ?>">
+                                                <?php echo esc_html( strtoupper( $t->type ) ); ?>
+                                            </span>
+                                        </div>
+                                        <?php if ( $t->type === 'email' && ! empty( $t->subject ) ) : ?>
+                                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Subject: <?php echo esc_html( $t->subject ); ?></div>
+                                        <?php endif; ?>
                                     </div>
-                                    <?php if ( $t->type === 'email' && ! empty( $t->subject ) ) : ?>
-                                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Subject: <?php echo esc_html( $t->subject ); ?></div>
-                                    <?php endif; ?>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" onclick='editTemplate(<?php echo json_encode( $t, JSON_HEX_APOS | JSON_HEX_QUOT ); ?>)'>Edit</button>
+                                        <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost ofp-btn-danger" style="color:#ef4444;" onclick="deleteTemplateById(event, <?php echo (int) $t->id; ?>, '<?php echo esc_js( $t->name ); ?>')">Delete</button>
+                                    </div>
                                 </div>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" onclick='editTemplate(<?php echo json_encode( $t, JSON_HEX_APOS | JSON_HEX_QUOT ); ?>)'>Edit</button>
-                                    <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost ofp-btn-danger" style="color:#ef4444;" onclick="deleteTemplateById(event, <?php echo (int) $t->id; ?>, '<?php echo esc_js( $t->name ); ?>')">Delete</button>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
 
-            <!-- Right: Template Preview -->
-            <div style="flex: 1; min-width: 400px; display: flex; flex-direction: column;">
-                <h4 style="margin-top:0; margin-bottom: 12px;">Message Preview</h4>
-                <div style="flex-grow: 1; border: 1px solid var(--border-color); border-radius: 8px; background: #fff; min-height: 500px; overflow: hidden; display: flex; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                    <iframe id="client-template-preview" style="width:100%; height:100%; border:none; flex-grow: 1; background: #fff;"></iframe>
+            <!-- Right: Smartphone Mockup Preview Sidebar -->
+            <div class="ofp-pipeline-sidebar">
+                <div class="ofp-phone-mockup">
+                    <img class="ofp-phone-frame-overlay" src="<?php echo esc_url( OFP_URL . 'assets/images/Smartphone-Mockup.png' ); ?>" alt="Smartphone Mockup" loading="lazy">
+                    <div class="ofp-phone-screen">
+                        <div class="ofp-phone-header">
+                            <div class="ofp-phone-contact" id="ofp-tpl-phone-header">SMS Preview</div>
+                        </div>
+                        <div class="ofp-phone-body" id="ofpPhoneBody">
+                            <!-- SMS View -->
+                            <div id="ofp-tpl-sms-view" style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+                                <div class="ofp-chat-bubble active" id="ofp-tpl-sms-bubble" style="transform: none !important; word-break: break-word; white-space: pre-wrap;">Type in the message body to see a preview.</div>
+                                <div style="font-size: 10px; color: var(--text-muted, #94a3b8); margin-left: 6px;" id="ofp-tpl-sms-timestamp">Just now</div>
+                            </div>
+
+                            <!-- Email View -->
+                            <div id="ofp-tpl-email-view" style="display: none; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); width: 100%;">
+                                <div style="padding: 12px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700; margin-bottom: 2px;">Subject</div>
+                                    <div id="ofp-tpl-email-subject" style="font-size: 13px; font-weight: 600; color: #0f172a; word-break: break-word;">(No Subject)</div>
+                                </div>
+                                <div id="ofp-tpl-email-body" style="padding: 14px; font-size: 12.5px; line-height: 1.6; color: #334155; word-break: break-word; white-space: pre-wrap;">Type in the message body to see a preview.</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -888,6 +559,7 @@ $type_badges = [
         document.addEventListener('DOMContentLoaded', function() {
             var ajaxUrl = (window.ofpClientData && ofpClientData.ajaxurl) ? ofpClientData.ajaxurl : '<?php echo admin_url( "admin-ajax.php" ); ?>';
             var ajaxNonce = (window.ofpClientData && ofpClientData.nonce) ? ofpClientData.nonce : '<?php echo wp_create_nonce( "ofp_client_ajax" ); ?>';
+            var clientBizName = <?php echo json_encode( $client->business_name ?: ( $client->owner_name ?: 'My Business' ) ); ?>;
 
             // ── Message Templates CRUD ──────────────────────────────────────
             const form = document.getElementById('template-form');
@@ -900,7 +572,35 @@ $type_badges = [
             const btnDelete = document.getElementById('tpl-delete');
             const btnNew = document.getElementById('btn-new-tpl');
             const formTitle = document.getElementById('form-title');
-            const iframe = document.getElementById('client-template-preview');
+
+            const phoneHeader = document.getElementById('ofp-tpl-phone-header');
+            const smsView = document.getElementById('ofp-tpl-sms-view');
+            const smsBubble = document.getElementById('ofp-tpl-sms-bubble');
+            const emailView = document.getElementById('ofp-tpl-email-view');
+            const emailSubj = document.getElementById('ofp-tpl-email-subject');
+            const emailBody = document.getElementById('ofp-tpl-email-body');
+
+            function escapeHtml(str) {
+                var div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            function formatPreviewText(text) {
+                if (!text || !text.trim()) {
+                    return '<span style="color:var(--text-muted,#94a3b8);font-style:italic;">Type in the message body to see a preview.</span>';
+                }
+                var escaped = escapeHtml(text);
+                return escaped
+                    .replace(/\{\{name\}\}/gi, '<strong style="color:var(--accent-blue,#2563eb);">John Doe</strong>')
+                    .replace(/\{\{phone\}\}/gi, '<strong style="color:var(--accent-blue,#2563eb);">08012345678</strong>')
+                    .replace(/\{\{email\}\}/gi, '<strong style="color:var(--accent-blue,#2563eb);">john@example.com</strong>')
+                    .replace(/\{\{business_name\}\}/gi, '<strong style="color:var(--accent-blue,#2563eb);">' + escapeHtml(clientBizName) + '</strong>')
+                    .replace(/\{\{property\}\}/gi, '<strong style="color:var(--accent-blue,#2563eb);">3 Bedroom Apartment</strong>')
+                    .replace(/\{\{amount\}\}/gi, '<strong style="color:var(--accent-blue,#2563eb);">₦2,500,000</strong>')
+                    .replace(/\{\{due_date\}\}/gi, '<strong style="color:var(--accent-blue,#2563eb);">Oct 31, 2026</strong>')
+                    .replace(/\n/g, '<br>');
+            }
 
             window.toggleTemplateChannel = function() {
                 if (tplType.value === 'email') {
@@ -981,41 +681,30 @@ $type_badges = [
                 var type = tplType.value;
                 var body = tplBody.value;
                 var subject = tplSubject.value;
-                var previewHtml = '';
 
-                if (!body.trim()) {
-                    previewHtml = '<div style="padding:40px; text-align:center; color:#94a3b8; font-family:sans-serif;">Type in the message body to see a preview.</div>';
+                if (type === 'email') {
+                    if (phoneHeader) phoneHeader.textContent = 'Email Preview';
+                    if (smsView) smsView.style.display = 'none';
+                    if (emailView) emailView.style.display = 'block';
+                    if (emailSubj) {
+                        emailSubj.textContent = subject.trim() ? subject : '(No Subject)';
+                    }
+                    if (emailBody) {
+                        emailBody.innerHTML = formatPreviewText(body);
+                    }
                 } else {
-                    var displayBody = body.replace(/\{\{name\}\}/g, '<strong>John Doe</strong>')
-                                          .replace(/\{\{phone\}\}/g, '<strong>08012345678</strong>')
-                                          .replace(/\{\{email\}\}/g, '<strong>john@example.com</strong>')
-                                          .replace(/\n/g, '<br>');
-
-                    if (type === 'email') {
-                        previewHtml = '<div style="font-family: sans-serif; background: #f3f4f6; padding: 20px; min-height: 100vh;">'
-                            + '<div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">'
-                            + '<div style="padding: 16px 24px; border-bottom: 1px solid #e5e7eb; background: #fafafa;">'
-                            + '<div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Subject:</div>'
-                            + '<div style="font-size: 16px; font-weight: 600; color: #111827;">' + (subject || '(No Subject)') + '</div>'
-                            + '</div>'
-                            + '<div style="padding: 24px; color: #374151; line-height: 1.6; font-size: 15px;">' + displayBody + '</div>'
-                            + '</div></div>';
-                    } else {
-                        previewHtml = '<div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; height: 100vh; display: flex; align-items: center; justify-content: center; background: #f1f5f9;">'
-                            + '<div style="width: 300px; height: 500px; background: #fff; border-radius: 30px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); border: 8px solid #cbd5e1; position: relative; overflow: hidden;">'
-                            + '<div style="background: #f8fafc; padding: 40px 16px 16px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Message</div>'
-                            + '<div style="padding: 16px; background: #fff; height: 100%; box-sizing: border-box; overflow-y: auto;">'
-                            + '<div style="background: #e2e8f0; color: #0f172a; padding: 12px 16px; border-radius: 16px; border-bottom-left-radius: 4px; display: inline-block; max-width: 85%; font-size: 14px; line-height: 1.5;">'
-                            + displayBody + '</div>'
-                            + '<div style="font-size: 10px; color: #94a3b8; margin-top: 4px; margin-left: 4px;">Just now</div>'
-                            + '</div></div></div>';
+                    if (phoneHeader) phoneHeader.textContent = (type === 'voice') ? 'Voice Preview' : 'SMS Preview';
+                    if (emailView) emailView.style.display = 'none';
+                    if (smsView) smsView.style.display = 'flex';
+                    if (smsBubble) {
+                        smsBubble.innerHTML = formatPreviewText(body);
+                        if (type === 'voice') {
+                            smsBubble.classList.add('call-bubble');
+                        } else {
+                            smsBubble.classList.remove('call-bubble');
+                        }
                     }
                 }
-
-                var doc = iframe.contentDocument || iframe.contentWindow.document;
-                doc.open();
-                doc.writeln(previewHtml);
-                doc.close();
             }
 
             form.addEventListener('submit', function(e) {
@@ -1077,17 +766,6 @@ $type_badges = [
         $boilerplate   = OFP_Mailer::get_default_custom_html_boilerplate( $client );
         ?>
 
-        <div style="margin-bottom: 24px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
-                <div>
-                    <h2 style="margin: 0 0 6px; font-size: 20px; font-weight: 700; color: var(--text-main);">Email Brand & Layout Customizer</h2>
-                    <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Personalize the outer shell of all broadcast emails, lead notifications, and announcements sent from your business.</p>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" id="btn-send-test-top" onclick="sendTestEmail()">Send Test to <?php echo esc_html( $client->email ); ?></button>
-                </div>
-            </div>
-        </div>
 
         <div style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
             
@@ -1195,13 +873,19 @@ $type_badges = [
                             <textarea id="eb-custom-html" name="email_custom_html" rows="18" style="width: 100%; font-family: 'Fira Code', 'Courier New', monospace; font-size: 12px; line-height: 1.5; background: #0b1120; color: #38bdf8; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; tab-size: 2;"><?php echo esc_textarea( $custom_html ); ?></textarea>
                         </div>
 
-                        <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" onclick="resetToBoilerplate()" style="margin-bottom: 16px;">Reset to Standard Boilerplate</button>
+                        <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-secondary" onclick="resetToBoilerplate()" style="margin-bottom: 16px; background: var(--bg-card, #ffffff); border: 1px solid var(--border-color, #cbd5e1); color: var(--text-main, #0f172a); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: inline-flex; align-items: center; gap: 6px;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+                            Reset to Standard Boilerplate
+                        </button>
                     </div>
 
                     <!-- Action Buttons -->
-                    <div style="display: flex; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                    <div style="display: flex; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color); align-items: center;">
                         <button type="submit" class="ofp-btn ofp-btn-primary" id="btn-save-branding" style="padding: 10px 24px;">Save Email Branding</button>
-                        <button type="button" class="ofp-btn ofp-btn-ghost" id="btn-send-test-bottom" onclick="sendTestEmail()">Send Test Email</button>
+                        <button type="button" class="ofp-btn ofp-btn-send-test" id="btn-send-test-bottom" onclick="sendTestEmail()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            Send Test Email
+                        </button>
                     </div>
 
                     <div id="branding-status-message" style="margin-top: 16px; font-size: 13px; font-weight: 500; display: none;"></div>
@@ -1527,174 +1211,6 @@ $type_badges = [
 </main>
 </div><!-- .ofp-shell -->
 
-<?php if ( $tab === 'log' ) : ?>
-<script>
-(function() {
-    var form                = document.getElementById('comm-filter-form');
-    var feedContainer       = document.getElementById('comm-feed-container');
-    var paginationContainer = document.getElementById('comm-pagination-container');
-    var countBadge          = document.getElementById('comm-count-badge');
-    var clearBtn            = document.getElementById('comm-clear-btn');
-    var searchInput         = document.getElementById('comm-search-input');
-    var typeSelect          = document.getElementById('comm-type-select');
-    var statusSelect        = document.getElementById('comm-status-select');
-
-    if (!feedContainer) return;
-
-    var searchTimer = null;
-    var currentPage = <?php echo (int) $current_page; ?>;
-    var ajaxUrl     = (window.ofpClientData && window.ofpClientData.ajaxurl) ? window.ofpClientData.ajaxurl : '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>';
-    var nonce       = (window.ofpClientData && window.ofpClientData.nonce) ? window.ofpClientData.nonce : '<?php echo wp_create_nonce( 'ofp_client_ajax' ); ?>';
-
-    function fetchCommunications(page) {
-        if (page !== undefined && page !== null) {
-            currentPage = page;
-        }
-
-        var type   = typeSelect ? typeSelect.value : '';
-        var status = statusSelect ? statusSelect.value : '';
-        var s      = searchInput ? searchInput.value.trim() : '';
-
-        // Visual loading state
-        feedContainer.style.opacity = '0.4';
-        feedContainer.style.pointerEvents = 'none';
-
-        var formData = new FormData();
-        formData.append('action', 'ofp_fetch_communications');
-        formData.append('nonce', nonce);
-        formData.append('type', type);
-        formData.append('status', status);
-        formData.append('s', s);
-        formData.append('paged', currentPage);
-
-        fetch(ajaxUrl, {
-            method: 'POST',
-            body: formData
-        })
-        .then(function(res) { return res.json(); })
-        .then(function(res) {
-            feedContainer.style.opacity = '1';
-            feedContainer.style.pointerEvents = 'auto';
-
-            if (res && res.success && res.data) {
-                feedContainer.innerHTML = res.data.html;
-                if (paginationContainer) {
-                    paginationContainer.innerHTML = res.data.pagination;
-                }
-                if (countBadge) {
-                    countBadge.innerHTML = res.data.count_text;
-                }
-                if (clearBtn) {
-                    clearBtn.style.display = res.data.has_filter ? 'inline-flex' : 'none';
-                }
-
-                // Smooth URL update without browser reload
-                var url = new URL(window.location.href);
-                url.searchParams.set('tab', 'log');
-                if (type) url.searchParams.set('type', type); else url.searchParams.delete('type');
-                if (status) url.searchParams.set('status', status); else url.searchParams.delete('status');
-                if (s) url.searchParams.set('s', s); else url.searchParams.delete('s');
-                if (currentPage > 1) url.searchParams.set('paged', currentPage); else url.searchParams.delete('paged');
-                window.history.replaceState({}, '', url.toString());
-            }
-        })
-        .catch(function(err) {
-            feedContainer.style.opacity = '1';
-            feedContainer.style.pointerEvents = 'auto';
-            console.error('AJAX communications fetch error:', err);
-        });
-    }
-
-    if (typeSelect) {
-        typeSelect.addEventListener('change', function() {
-            fetchCommunications(1);
-        });
-    }
-
-    if (statusSelect) {
-        statusSelect.addEventListener('change', function() {
-            fetchCommunications(1);
-        });
-    }
-
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimer);
-            searchTimer = setTimeout(function() {
-                fetchCommunications(1);
-            }, 350);
-        });
-        searchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                clearTimeout(searchTimer);
-                fetchCommunications(1);
-            }
-        });
-    }
-
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            clearTimeout(searchTimer);
-            fetchCommunications(1);
-        });
-    }
-
-    if (clearBtn) {
-        clearBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (searchInput) searchInput.value = '';
-            if (typeSelect) typeSelect.value = '';
-            if (statusSelect) statusSelect.value = '';
-            fetchCommunications(1);
-        });
-    }
-
-    document.addEventListener('click', function(e) {
-        var btn = e.target.closest('.ofp-comm-page-btn');
-        if (btn) {
-            e.preventDefault();
-            var page = parseInt(btn.getAttribute('data-page'), 10);
-            if (page && page !== currentPage) {
-                fetchCommunications(page);
-                feedContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-    });
-
-    // Dynamically position custom dropdown options with fixed coordinates and max z-index so options never clip
-    document.addEventListener('click', function(e) {
-        var trigger = e.target.closest('.ofp-comm-filter-bar .ofp-custom-select-trigger');
-        if (trigger) {
-            var wrapper = trigger.closest('.ofp-custom-select-wrapper');
-            if (wrapper) {
-                setTimeout(function() {
-                    var options = wrapper.querySelector('.ofp-custom-select-options');
-                    if (options && wrapper.classList.contains('open')) {
-                        var rect = trigger.getBoundingClientRect();
-                        options.style.position = 'fixed';
-                        options.style.top = (rect.bottom + 4) + 'px';
-                        options.style.left = rect.left + 'px';
-                        options.style.minWidth = Math.max(rect.width, 160) + 'px';
-                        options.style.zIndex = '999999';
-                        options.style.display = 'block';
-                        options.style.opacity = '1';
-                        options.style.visibility = 'visible';
-                    }
-                }, 10);
-            }
-        }
-    });
-
-    window.addEventListener('scroll', function() {
-        document.querySelectorAll('.ofp-comm-filter-bar .ofp-custom-select-wrapper.open').forEach(function(el) {
-            el.classList.remove('open');
-        });
-    }, { passive: true });
-})();
-</script>
-<?php endif; ?>
 
 <?php wp_footer(); ?>
 </body>
