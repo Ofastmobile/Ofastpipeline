@@ -1,0 +1,122 @@
+/* OFast Pipeline — Leads / Prospects Portal Styles */
+
+.ofp-leads-filter-card {
+    padding: 20px 24px;
+    border-radius: 14px;
+    margin-bottom: 24px;
+    background: var(--bg-card, #1e2638);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.ofp-leads-search-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.ofp-leads-search-box {
+    flex: 1;
+    min-width: 260px;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.ofp-leads-search-icon {
+    position: absolute;
+    left: 14px;
+    width: 17px;
+    height: 17px;
+    color: var(--text-muted, #94a3b8);
+    pointer-events: none;
+}
+
+.ofp-leads-search-input {
+    width: 100%;
+    padding: 10px 14px 10px 42px;
+    border-radius: 10px;
+    background: var(--bg-body, #131722);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    color: var(--text-main, #f8fafc);
+    font-size: 13.5px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.ofp-leads-search-input:focus {
+    border-color: var(--brand-color, #3b82f6);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.ofp-leads-select {
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--bg-body, #131722);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    color: var(--text-main, #f8fafc);
+    font-size: 13.5px;
+    font-family: inherit;
+    min-width: 180px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.ofp-leads-select:focus {
+    border-color: var(--brand-color, #3b82f6);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.ofp-leads-filter-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.ofp-leads-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    background: var(--bg-body, #131722);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-muted, #94a3b8);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.ofp-leads-pill:hover {
+    border-color: var(--brand-color, #3b82f6);
+    color: var(--text-main, #f8fafc);
+}
+
+.ofp-leads-pill.active {
+    background: var(--brand-color, #3b82f6);
+    border-color: var(--brand-color, #3b82f6);
+    color: #ffffff !important;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.ofp-leads-pill-count {
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 9999px;
+    background: rgba(128, 128, 128, 0.16);
+    color: inherit;
+}
+
+.ofp-leads-pill.active .ofp-leads-pill-count {
+    background: rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+}

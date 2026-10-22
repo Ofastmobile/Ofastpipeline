@@ -100,6 +100,20 @@ $total_pages = ceil( $total / $per_page );
 
 $stats = OFP_Lead::get_stats( $client->id );
 
+// Per-status counts for filter pill badges
+$status_counts_raw = $wpdb->get_results( $wpdb->prepare(
+    "SELECT status, COUNT(*) as cnt FROM {$p}ofp_leads WHERE client_id = %d GROUP BY status",
+    (int) $client->id
+) );
+$status_counts = [];
+$total_all_leads = 0;
+if ( is_array( $status_counts_raw ) ) {
+    foreach ( $status_counts_raw as $scr ) {
+        $status_counts[ $scr->status ] = (int) $scr->cnt;
+        $total_all_leads += (int) $scr->cnt;
+    }
+}
+
 $status_badges = [
     'new'        => '<span class="ofp-badge ofp-badge-blue">New</span>',
     'contacted'  => '<span class="ofp-badge ofp-badge-yellow">Contacted</span>',
@@ -225,35 +239,58 @@ $status_badges = [
 
     </div>
 
-    <!-- Filter tabs -->
-    <div style="display:flex;gap:4px;margin-bottom:24px;padding-bottom:0;">
-        <?php
-        $filters = [ '' => 'All', 'new' => 'New', 'contacted' => 'Contacted', 'interested' => 'Interested', 'converted' => 'Converted', 'dead' => 'Dead' ];
-        foreach ( $filters as $val => $label ) :
-            $active = $filter_status === $val;
-        ?>
-            <a href="<?php echo esc_url( add_query_arg( array_merge( array_diff_key( $filter_args, [ 'status' => 1 ] ), $val !== '' ? [ 'status' => $val ] : [] ), home_url( '/leads' ) ) ); ?>"
-               style="padding:8px 14px;font-size:13px;font-weight:<?php echo $active ? '600' : '500'; ?>;text-decoration:none;border-bottom:2px solid <?php echo $active ? '#ef4444' : 'transparent'; ?>;margin-bottom:-2px;color:<?php echo $active ? '#ef4444' : 'var(--text-muted)'; ?>;transition:all 0.2s;">
-                <?php echo esc_html( $label ); ?>
-            </a>
-        <?php endforeach; ?>
+    <!-- ── SEARCH BAR & FILTER PILLS: Modernized Card with SVG search & count pills ── -->
+    <div class="ofp-leads-filter-card">
+        <form method="get" action="<?php echo esc_url( home_url( '/leads' ) ); ?>" class="ofp-leads-search-row">
+            <?php if ( $filter_status !== '' ) : ?>
+                <input type="hidden" name="status" value="<?php echo esc_attr( $filter_status ); ?>">
+            <?php endif; ?>
+
+            <div class="ofp-leads-search-box">
+                <svg class="ofp-leads-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+                <input class="ofp-leads-search-input" type="text" name="q" value="<?php echo esc_attr( $filter_q ); ?>" placeholder="Search prospects by name, phone or email...">
+            </div>
+
+            <select name="batch" class="ofp-leads-select">
+                <option value="">All Sources</option>
+                <?php foreach ( $batches as $b ) : ?>
+                    <option value="<?php echo esc_attr( $b ); ?>" <?php selected( $filter_batch, $b ); ?>><?php echo esc_html( preg_replace( '/^import: /', 'Import: ', $b ) ); ?></option>
+                <?php endforeach; ?>
+            </select>
+
+            <button type="submit" class="ofp-btn ofp-btn-primary" style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;">
+                <span>Filter</span>
+            </button>
+
+            <?php if ( ! empty( $filter_args ) && ( $filter_q !== '' || $filter_batch !== '' ) ) : ?>
+                <a href="<?php echo esc_url( add_query_arg( array_filter( [ 'status' => $filter_status ] ), home_url( '/leads' ) ) ); ?>" class="ofp-btn" style="padding:9px 14px;">Clear</a>
+            <?php endif; ?>
+        </form>
+
+        <div class="ofp-leads-filter-pills">
+            <?php
+            $filters = [
+                ''           => [ 'label' => 'All Prospects', 'count' => $total_all_leads ],
+                'new'        => [ 'label' => 'New',           'count' => $status_counts['new'] ?? 0 ],
+                'contacted'  => [ 'label' => 'Contacted',     'count' => $status_counts['contacted'] ?? 0 ],
+                'interested' => [ 'label' => 'Interested',    'count' => $status_counts['interested'] ?? 0 ],
+                'converted'  => [ 'label' => 'Converted',     'count' => $status_counts['converted'] ?? 0 ],
+                'dead'       => [ 'label' => 'Dead',          'count' => $status_counts['dead'] ?? 0 ],
+            ];
+            foreach ( $filters as $val => $f_info ) :
+                $active = $filter_status === $val;
+                $url = add_query_arg( array_merge( array_diff_key( $filter_args, [ 'status' => 1 ] ), $val !== '' ? [ 'status' => $val ] : [] ), home_url( '/leads' ) );
+            ?>
+                <a class="ofp-leads-pill <?php echo $active ? 'active' : ''; ?>" href="<?php echo esc_url( $url ); ?>">
+                    <span><?php echo esc_html( $f_info['label'] ); ?></span>
+                    <span class="ofp-leads-pill-count"><?php echo (int) $f_info['count']; ?></span>
+                </a>
+            <?php endforeach; ?>
+        </div>
     </div>
 
-    <!-- Search and import batch -->
-    <form method="get" action="<?php echo esc_url( home_url( '/leads' ) ); ?>" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:center;">
-        <?php if ( $filter_status !== '' ) : ?><input type="hidden" name="status" value="<?php echo esc_attr( $filter_status ); ?>"><?php endif; ?>
-        <input type="text" name="q" value="<?php echo esc_attr( $filter_q ); ?>" placeholder="Search name, phone or email" style="flex:1;min-width:200px;">
-        <select name="batch" style="min-width:180px;">
-            <option value="">All sources</option>
-            <?php foreach ( $batches as $b ) : ?>
-                <option value="<?php echo esc_attr( $b ); ?>" <?php selected( $filter_batch, $b ); ?>><?php echo esc_html( preg_replace( '/^import: /', 'Import: ', $b ) ); ?></option>
-            <?php endforeach; ?>
-        </select>
-        <button type="submit" class="ofp-btn">Filter</button>
-        <?php if ( ! empty( $filter_args ) && ( $filter_q !== '' || $filter_batch !== '' ) ) : ?>
-            <a href="<?php echo esc_url( add_query_arg( array_filter( [ 'status' => $filter_status ] ), home_url( '/leads' ) ) ); ?>" class="ofp-btn">Clear</a>
-        <?php endif; ?>
-    </form>
     <?php if ( $bulk_error ) : ?>
         <div style="padding:12px 16px;border-radius:8px;margin-bottom:14px;background:rgba(239,68,68,.12);border-left:4px solid #ef4444;"><?php echo esc_html( $bulk_error ); ?></div>
     <?php endif; ?>

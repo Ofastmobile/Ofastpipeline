@@ -83,69 +83,6 @@ $client_properties = $wpdb->get_results( $wpdb->prepare(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Property Inspections', $client ) ); ?></title>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
-    <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
-    <style>
-        .ofp-inspection-card {
-            background: var(--card-bg, #ffffff);
-            border: 1px solid var(--border-color, #e2e8f0);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-        .ofp-inspection-card:hover {
-            box-shadow: 0 6px 16px rgba(0,0,0,0.06);
-        }
-        .ofp-tour-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-        .ofp-tour-physical {
-            background: rgba(37, 99, 235, 0.1);
-            color: #2563eb;
-            border: 1px solid rgba(37, 99, 235, 0.2);
-        }
-        .ofp-tour-video {
-            background: rgba(16, 185, 129, 0.1);
-            color: #059669;
-            border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-        .ofp-notes-box {
-            background: var(--bg-subtle, #f8fafc);
-            border: 1px solid var(--border-color, #e2e8f0);
-            border-left: 3px solid #3b82f6;
-            border-radius: 10px;
-            padding: 12px 14px;
-            margin-top: 12px;
-            font-size: 13px;
-            line-height: 1.5;
-            color: var(--text-main, #1e293b);
-        }
-        .ofp-status-pill {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 9999px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-        .ofp-status-pending { background: #fef3c7; color: #b45309; }
-        .ofp-status-confirmed { background: #dbeafe; color: #1d4ed8; }
-        .ofp-status-completed { background: #d1fae5; color: #065f46; }
-        .ofp-status-cancelled { background: #fee2e2; color: #b91c1c; }
-        [data-theme="dark"] .ofp-status-pending { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-        [data-theme="dark"] .ofp-status-confirmed { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-        [data-theme="dark"] .ofp-status-completed { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-        [data-theme="dark"] .ofp-status-cancelled { background: rgba(239, 68, 68, 0.2); color: #f87171; }
-    </style>
 </head>
 <body class="ofp-portal-body">
     <?php 
@@ -387,65 +324,6 @@ $client_properties = $wpdb->get_results( $wpdb->prepare(
         </div>
     </div>
 
-    <script>
-    function handleStatusSubmit(e, inquiryId) {
-        // Modern async update with fallback to standard form submit
-        if (!window.fetch) return true;
-        e.preventDefault();
-
-        const form = e.target;
-        const select = document.getElementById('status-select-' + inquiryId);
-        const newStatus = select.value;
-        const pill = document.getElementById('status-pill-' + inquiryId);
-        const nonce = form.querySelector('[name="ofp_inspection_nonce"]').value;
-        const button = form.querySelector('button[type="submit"]');
-
-        const originalBtnText = button.textContent;
-        button.textContent = 'Saving...';
-        button.disabled = true;
-
-        const bodyData = new URLSearchParams();
-        bodyData.append('action', 'ofp_update_inspection_status');
-        bodyData.append('nonce', nonce);
-        bodyData.append('inquiry_id', inquiryId);
-        bodyData.append('status', newStatus);
-
-        fetch('<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-            body: bodyData.toString()
-        })
-        .then(res => res.json())
-        .then(data => {
-            button.textContent = originalBtnText;
-            button.disabled = false;
-            if (data.success) {
-                // Update pill style and text instantly
-                const statusLabels = {
-                    'pending': 'Pending Confirmation',
-                    'confirmed': 'Confirmed',
-                    'completed': 'Completed',
-                    'cancelled': 'Cancelled'
-                };
-                pill.className = 'ofp-status-pill ofp-status-' + newStatus;
-                pill.textContent = statusLabels[newStatus] || newStatus;
-                
-                // Show subtle feedback
-                button.textContent = '✓ Saved';
-                setTimeout(() => { button.textContent = originalBtnText; }, 2000);
-            } else {
-                alert(data.data ? data.data.message : 'Failed to update status.');
-            }
-        })
-        .catch(err => {
-            button.textContent = originalBtnText;
-            button.disabled = false;
-            // Fallback to normal form submit on error
-            form.submit();
-        });
-
-        return false;
-    }
-    </script>
+    <?php wp_footer(); ?>
 </body>
 </html>

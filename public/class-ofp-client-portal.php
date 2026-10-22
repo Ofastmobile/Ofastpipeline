@@ -201,6 +201,42 @@ class OFP_Client_Portal {
             );
         }
 
+        if ( 'activity-logs' === $route ) {
+            wp_enqueue_style(
+                'ofp-activity-logs',
+                OFP_URL . 'assets/css/activity-logs.css',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION
+            );
+        }
+
+        if ( 'reports' === $route ) {
+            wp_enqueue_style(
+                'ofp-reports',
+                OFP_URL . 'assets/css/reports.css',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION
+            );
+        }
+
+        if ( 'inspections' === $route ) {
+            wp_enqueue_style(
+                'ofp-inspections',
+                OFP_URL . 'assets/css/inspections.css',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION
+            );
+        }
+
+        if ( 'leads' === $route ) {
+            wp_enqueue_style(
+                'ofp-leads',
+                OFP_URL . 'assets/css/leads.css',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION
+            );
+        }
+
         $js_deps = [];
         if ( in_array( $route, [ 'dashboard', 'leads', 'reports' ], true ) ) {
             wp_enqueue_script(
@@ -239,6 +275,46 @@ class OFP_Client_Portal {
             wp_enqueue_script(
                 'ofp-import',
                 OFP_URL . 'assets/js/import.js',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION,
+                true
+            );
+        }
+
+        if ( 'activity-logs' === $route ) {
+            wp_enqueue_script(
+                'ofp-activity-logs',
+                OFP_URL . 'assets/js/activity-logs.js',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION,
+                true
+            );
+        }
+
+        if ( 'reports' === $route ) {
+            wp_enqueue_script(
+                'ofp-reports',
+                OFP_URL . 'assets/js/reports.js',
+                [ 'ofp-client-portal', 'ofp-chartjs' ],
+                OFP_VERSION,
+                true
+            );
+        }
+
+        if ( 'pipeline-settings' === $route ) {
+            wp_enqueue_script(
+                'ofp-pipeline-settings',
+                OFP_URL . 'assets/js/pipeline-settings.js',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION,
+                true
+            );
+        }
+
+        if ( 'inspections' === $route ) {
+            wp_enqueue_script(
+                'ofp-inspections',
+                OFP_URL . 'assets/js/inspections.js',
                 [ 'ofp-client-portal' ],
                 OFP_VERSION,
                 true

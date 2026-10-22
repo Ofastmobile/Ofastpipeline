@@ -13,30 +13,33 @@ $error   = '';
 
 global $wpdb;
 
-// Ensure database columns exist
-$has_logo = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'logo_url'");
-if (empty($has_logo)) {
-    $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN logo_url VARCHAR(255) DEFAULT NULL AFTER business_category");
-}
-$has_cover = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'cover_image_url'");
-if (empty($has_cover)) {
-    $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN cover_image_url VARCHAR(255) DEFAULT NULL AFTER logo_url");
-}
-$has_slug = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'profile_slug'");
-if (empty($has_slug)) {
-    $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN profile_slug VARCHAR(255) DEFAULT NULL");
-}
-$has_bio = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'bio'");
-if (empty($has_bio)) {
-    $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN bio TEXT DEFAULT NULL");
-}
-$has_pixel = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'meta_pixel_id'");
-if (empty($has_pixel)) {
-    $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN meta_pixel_id VARCHAR(50) DEFAULT NULL");
-}
-$has_extra = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'profile_extra'");
-if (empty($has_extra)) {
-    $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN profile_extra TEXT DEFAULT NULL");
+// Ensure database columns exist (cached to prevent 6 queries on every request)
+if ( false === get_transient( 'ofp_clients_account_schema_v1' ) ) {
+    $has_logo = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'logo_url'");
+    if (empty($has_logo)) {
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN logo_url VARCHAR(255) DEFAULT NULL AFTER business_category");
+    }
+    $has_cover = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'cover_image_url'");
+    if (empty($has_cover)) {
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN cover_image_url VARCHAR(255) DEFAULT NULL AFTER logo_url");
+    }
+    $has_slug = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'profile_slug'");
+    if (empty($has_slug)) {
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN profile_slug VARCHAR(255) DEFAULT NULL");
+    }
+    $has_bio = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'bio'");
+    if (empty($has_bio)) {
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN bio TEXT DEFAULT NULL");
+    }
+    $has_pixel = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'meta_pixel_id'");
+    if (empty($has_pixel)) {
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN meta_pixel_id VARCHAR(50) DEFAULT NULL");
+    }
+    $has_extra = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'profile_extra'");
+    if (empty($has_extra)) {
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN profile_extra TEXT DEFAULT NULL");
+    }
+    set_transient( 'ofp_clients_account_schema_v1', 1, MONTH_IN_SECONDS );
 }
 
 // Ensure verification audit columns exist
