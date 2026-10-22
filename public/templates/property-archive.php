@@ -199,6 +199,7 @@ $query = new WP_Query( [
                                 <span class="ofp-property-badge" style="position:absolute; top:12px; left:12px; background:white; color:#0f172a; padding:4px 10px; border-radius:100px; font-size:12px; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
                                     <?php echo esc_html( ucfirst( $listing_type ?: 'Listing' ) ); ?>
                                 </span>
+                                <?php if ( OFP_Watermark::is_enabled() ) echo OFP_Watermark::badge_html(); ?>
                             </div>
                             <div class="ofp-property-card-body" style="padding:16px;">
                                 <h3 style="margin:0 0 8px 0; font-size:16px; font-weight:600; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php the_title(); ?></h3>

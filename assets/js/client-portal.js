@@ -406,6 +406,8 @@
         });
     }
 
+    window.initOfpCustomSelects = initOfpCustomSelects;
+
     // ── AJAX Leads Filtering ─────────────────────────────────────────────────
     function initAjaxLeads() {
         var tabs = document.querySelectorAll('.ofp-ajax-tab');

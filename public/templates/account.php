@@ -73,9 +73,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
         $bio           = sanitize_textarea_field( $_POST['bio'] ?? '' );
         $pixel         = sanitize_text_field( $_POST['meta_pixel_id'] ?? '' );
         $owner_name    = sanitize_text_field( $_POST['owner_name'] ?? '' );
-        $phone         = sanitize_text_field( $_POST['phone'] ?? '' );
-        $support_email = sanitize_email( $_POST['support_email'] ?? '' );
-        $support_phone = sanitize_text_field( $_POST['support_phone'] ?? '' );
+        $phone          = sanitize_text_field( $_POST['phone'] ?? '' );
+        $support_email  = sanitize_email( $_POST['support_email'] ?? '' );
+        $support_phone  = sanitize_text_field( $_POST['support_phone'] ?? '' );
+        $watermark_text = sanitize_text_field( $_POST['watermark_text'] ?? '' );
 
         // Preserve social links
         $extra_data = [
@@ -121,6 +122,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
             if ( isset( $_POST['support_phone'] ) ) {
                 $update_fields['support_phone'] = $support_phone;
                 $client->support_phone = $support_phone;
+            }
+            // Save client's custom watermark text
+            if ( isset( $_POST['watermark_text'] ) ) {
+                $update_fields['watermark_text'] = $watermark_text;
+                $client->watermark_text = $watermark_text;
             }
 
             $wpdb->update(
@@ -963,11 +969,26 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                         <textarea name="bio" rows="4" placeholder="Tell visitors and clients about your real estate agency or company..."><?php echo esc_textarea( $client->bio ?? '' ); ?></textarea>
                     </div>
 
+                    <?php if ( OFP_Watermark::is_enabled() ) : ?>
+                    <div class="ofp-field-group full-width" style="margin-top:6px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                            <label style="margin:0;">Custom Watermark Name</label>
+                            <span style="background:rgba(14,165,233,0.12); color:#0ea5e9; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; letter-spacing:0.04em; text-transform:uppercase;">Optional</span>
+                        </div>
+                        <input type="text" name="watermark_text" value="<?php echo esc_attr( $client->watermark_text ?? '' ); ?>" placeholder="e.g. <?php echo esc_attr( $client->business_name ); ?>" maxlength="100">
+                        <span class="ofp-field-hint">
+                            This text will appear as a watermark on all your uploaded property photos.
+                            Leave blank to use the platform default (<code><?php echo esc_html( OFP_Watermark::get_watermark_text() ); ?></code>).
+                        </span>
+                    </div>
+                    <?php endif; ?>
+
                     <!-- Preserve social links in same submit -->
                     <input type="hidden" name="youtube_url" value="<?php echo esc_attr( $youtube_url ); ?>">
                     <input type="hidden" name="instagram_url" value="<?php echo esc_attr( $instagram_url ); ?>">
                     <input type="hidden" name="tiktok_url" value="<?php echo esc_attr( $tiktok_url ); ?>">
                     <input type="hidden" name="whatsapp_url" value="<?php echo esc_attr( $whatsapp_url ); ?>">
+                    <input type="hidden" name="watermark_text" value="<?php echo esc_attr( $client->watermark_text ?? '' ); ?>">
 
                     <div class="ofp-modal-footer">
                         <button type="button" class="ofp-modal-btn-cancel" onclick="closeEditModal()">Cancel</button>
@@ -1023,6 +1044,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                     <input type="hidden" name="support_email" value="<?php echo esc_attr( $client->support_email ?? '' ); ?>">
                     <input type="hidden" name="support_phone" value="<?php echo esc_attr( $client->support_phone ?? '' ); ?>">
                     <input type="hidden" name="bio" value="<?php echo esc_attr( $client->bio ?? '' ); ?>">
+                    <input type="hidden" name="watermark_text" value="<?php echo esc_attr( $client->watermark_text ?? '' ); ?>">
 
                     <div class="ofp-modal-footer">
                         <button type="button" class="ofp-modal-btn-cancel" onclick="closeEditModal()">Cancel</button>

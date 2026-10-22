@@ -861,7 +861,7 @@ if ( empty( $gallery_urls ) ) {
     <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 
         <!-- Property Hero: full-width cinematic image -->
-        <div class="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden mb-4 cursor-pointer shadow-2xl group transition-all h-[360px] sm:h-[480px] md:h-[560px] lg:h-[620px]"
+        <div class="ofp-hero-watermark-wrap relative w-full rounded-2xl sm:rounded-3xl overflow-hidden mb-4 cursor-pointer shadow-2xl group transition-all h-[360px] sm:h-[480px] md:h-[560px] lg:h-[620px]"
             @click="showGallery = true; currentImage = 0">
 
             <!-- Main image -->
@@ -1832,7 +1832,7 @@ if ( empty( $gallery_urls ) ) {
                     $s_loc   = get_post_meta( get_the_ID(), 'ofp_location_text', true );
             ?>
             <div class="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all group flex flex-col h-full relative">
-                <div class="relative h-48 overflow-hidden">
+                <div class="ofp-property-card-image relative h-48 overflow-hidden">
                     <a href="<?php the_permalink(); ?>">
                         <?php if ( has_post_thumbnail() ) : ?>
                             <?php the_post_thumbnail( 'large', [ 'class' => 'w-full h-full object-cover group-hover:scale-105 transition-transform duration-500' ] ); ?>
@@ -1844,6 +1844,15 @@ if ( empty( $gallery_urls ) ) {
                     <div class="absolute bottom-4 left-4 right-4 flex justify-between items-end">
                         <div class="text-white font-black text-xl drop-shadow-md">₦<?php echo number_format( $s_price ); ?></div>
                     </div>
+                    <?php if ( class_exists( 'OFP_Watermark' ) && OFP_Watermark::is_enabled() ) : ?>
+                        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-22deg);z-index:12;pointer-events:none;user-select:none;-webkit-user-select:none;white-space:nowrap;font-size:clamp(12px,2vw,18px);font-weight:900;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.18);text-shadow:0 2px 6px rgba(0,0,0,0.3);">
+                            <?php echo esc_html( OFP_Watermark::get_watermark_text() ); ?>
+                        </div>
+                        <div style="position:absolute;bottom:36px;right:10px;z-index:20;pointer-events:none;user-select:none;-webkit-user-select:none;display:flex;align-items:center;gap:4px;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);border-radius:5px;padding:2px 8px;color:rgba(255,255,255,0.9);font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;line-height:1;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.25);">
+                            <svg style="width:10px;height:10px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            <?php echo esc_html( OFP_Watermark::get_watermark_text() ); ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div class="p-4 flex-1 flex flex-col">
                     <a href="<?php the_permalink(); ?>" class="text-sm font-bold text-slate-900 dark:text-white leading-snug hover:text-blue-600 dark:hover:text-blue-400 mb-2 line-clamp-1">

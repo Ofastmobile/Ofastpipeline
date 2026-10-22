@@ -708,10 +708,12 @@ class OFP_Admin_Menu {
             update_option( 'ofp_company_account_name', sanitize_text_field( wp_unslash( $_POST['company_account_name'] ?? '' ) ) );
         }
 
-        // ── Listing Plans (Phase 14) ───────────────────────────────────────
-        if ( isset( $_POST['listing_price_free'] ) || isset( $_POST['listing_price_silver'] ) || isset( $_POST['listing_price_gold'] ) ) {
+        // ── Listing Plans & Pricing Cards Customizer ────────────────────────
+        if ( isset( $_POST['listing_price_free'] ) || isset( $_POST['listing_price_silver'] ) || isset( $_POST['listing_price_gold'] ) || isset( $_POST['pricing_card_name_free'] ) ) {
             $listing_prices = [];
             $listing_caps   = [];
+            $pricing_cards  = [];
+
             foreach ( OFP_Property_CPT::PLAN_KEYS as $plan ) {
                 if ( isset( $_POST[ "listing_price_{$plan}" ] ) ) {
                     $listing_prices[ $plan ] = (float) $_POST[ "listing_price_{$plan}" ];
@@ -719,9 +721,21 @@ class OFP_Admin_Menu {
                 if ( isset( $_POST[ "listing_cap_{$plan}" ] ) ) {
                     $listing_caps[ $plan ]   = (int) $_POST[ "listing_cap_{$plan}" ];
                 }
+
+                $raw_features = isset( $_POST[ "pricing_card_features_{$plan}" ] ) ? wp_unslash( $_POST[ "pricing_card_features_{$plan}" ] ) : '';
+                $feature_lines = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', (string) $raw_features ) ) ) );
+
+                $pricing_cards[ $plan ] = [
+                    'name'     => sanitize_text_field( wp_unslash( $_POST[ "pricing_card_name_{$plan}" ] ?? ucfirst( $plan ) ) ),
+                    'desc'     => sanitize_text_field( wp_unslash( $_POST[ "pricing_card_desc_{$plan}" ] ?? '' ) ),
+                    'features' => array_values( $feature_lines ),
+                ];
             }
             if ( ! empty( $listing_prices ) ) {
                 OFP_Property_CPT::save_plans( $listing_prices, $listing_caps );
+            }
+            if ( ! empty( $pricing_cards ) ) {
+                OFP_Property_CPT::save_pricing_cards( $pricing_cards );
             }
         }
 

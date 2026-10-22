@@ -40,9 +40,6 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
     <div class="ofp-pricing-grid">
         
         <?php
-        $prices = class_exists('OFP_Property_CPT') && method_exists('OFP_Property_CPT', 'get_plan_prices') ? OFP_Property_CPT::get_plan_prices() : ['free'=>0,'silver'=>50000,'gold'=>100000];
-        $caps   = class_exists('OFP_Property_CPT') && method_exists('OFP_Property_CPT', 'get_plan_caps') ? OFP_Property_CPT::get_plan_caps() : ['free'=>1,'silver'=>3,'gold'=>10];
-
         $current_plan = OFP_Subscription::client_plan( $client->id );
 
         // ── Calculate days until subscription expires ─────────────────────
@@ -55,49 +52,22 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
             }
         }
 
-        $plans = [
-            'free' => [
-                'name' => 'Free',
-                'price' => '₦' . number_format( $prices['free'] ?? 0 ),
-                'desc' => 'Essential tools for getting started.',
-                'features' => [
-                    'CRM & Automation (Basic)',
-                    'Leads & Buyers Management',
-                    ($caps['free'] ?? 1) . ' Property Listing',
-                    'Transactions & Customer portal',
-                    '0 Team members'
-                ]
-            ],
-            'silver' => [
-                'name' => 'Silver',
-                'price' => '₦' . number_format( $prices['silver'] ?? 50000 ),
-                'desc' => 'For growing teams and standard reporting.',
-                'features' => [
-                    'CRM & Automation (Standard)',
-                    'Leads & Buyers Management',
-                    ($caps['silver'] ?? 3) . ' Property Listings',
-                    'Transactions & Customer portal',
-                    'Editable email templates',
-                    '2 Team members',
-                    'Standard Reports'
-                ]
-            ],
-            'gold' => [
-                'name' => 'Gold',
-                'price' => '₦' . number_format( $prices['gold'] ?? 100000 ),
-                'desc' => 'Advanced features, ROI and unlimited potential.',
-                'features' => [
-                    'CRM & Automation (Advanced)',
-                    'Leads & Buyers Management',
-                    ($caps['gold'] ?? 10) . ' Property Listings',
-                    'Transactions & Customer portal',
-                    'Editable email templates',
-                    '3 Team members',
-                    'Installment payments & ROI/Investment',
-                    'Advanced Reports'
-                ]
-            ]
-        ];
+        $raw_plans = class_exists('OFP_Property_CPT') && method_exists('OFP_Property_CPT', 'get_pricing_cards')
+            ? OFP_Property_CPT::get_pricing_cards()
+            : [];
+
+        $plans = [];
+        foreach ( ['free', 'silver', 'gold'] as $plan_id ) {
+            $p = $raw_plans[ $plan_id ] ?? [];
+            $price_val = isset( $p['price'] ) ? (float) $p['price'] : 0.0;
+            $plans[ $plan_id ] = [
+                'name'      => $p['name'] ?? ucfirst( $plan_id ),
+                'price'     => '₦' . number_format( $price_val ),
+                'price_num' => $price_val,
+                'desc'      => $p['desc'] ?? '',
+                'features'  => (array) ( $p['features'] ?? [] ),
+            ];
+        }
 
         foreach ( $plans as $id => $p ) :
             $is_active = $is_solo ? ( $id === 'gold' ) : ( $id === $current_plan );
@@ -111,14 +81,31 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
                 <div class="ofp-pricing-price"><?php echo esc_html($p['price']); ?> <span>/ month</span></div>
                 <div class="ofp-pricing-desc"><?php echo esc_html($p['desc']); ?></div>
             </div>
+
             <ul class="ofp-pricing-features">
-                <?php foreach ( $p['features'] as $feat ) : ?>
-                <li>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    <?php echo esc_html($feat); ?>
+                <?php 
+                $features = (array) ( $p['features'] ?? [] );
+                $total_features = count( $features );
+                foreach ( $features as $idx => $feat ) : 
+                    $is_hidden = ( $idx >= 5 );
+                    $is_fifth  = ( $idx === 4 && $total_features > 5 );
+                ?>
+                <li class="<?php echo $is_hidden ? 'ofp-feature-hidden' : ( $is_fifth ? 'ofp-feature-toggle-row' : '' ); ?>">
+                    <span class="ofp-feature-text">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                        <span><?php echo esc_html($feat); ?></span>
+                    </span>
+                    <?php if ( $is_fifth ) : ?>
+                    <span class="ofp-faq-inline-arrow" title="Toggle extra features">
+                        <svg class="ofp-faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </span>
+                    <?php endif; ?>
                 </li>
                 <?php endforeach; ?>
             </ul>
+
             <div class="ofp-pricing-action">
                 <?php 
                 if ( $is_solo ) : ?>
@@ -156,6 +143,29 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
 </div> <!-- .ofp-content-area -->
 </main>
 </div> <!-- .ofp-shell -->
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var toggleRows = document.querySelectorAll('.ofp-feature-toggle-row');
+    var grid = document.querySelector('.ofp-pricing-grid');
+    if ( ! toggleRows.length || ! grid ) return;
+
+    toggleRows.forEach(function(row) {
+        row.addEventListener('click', function(e) {
+            e.preventDefault();
+            var willExpand = ! grid.classList.contains('is-expanded');
+            grid.classList.toggle('is-expanded', willExpand);
+
+            toggleRows.forEach(function(r) {
+                var arrow = r.querySelector('.ofp-faq-arrow');
+                if ( arrow ) {
+                    arrow.classList.toggle('is-rotated', willExpand);
+                }
+            });
+        });
+    });
+});
+</script>
 
 <?php wp_footer(); ?>
 </body>

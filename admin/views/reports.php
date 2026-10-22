@@ -96,16 +96,26 @@ include OFP_PATH . 'admin/views/partials/header.php';
                         <td><?php echo esc_html( $archive->created_at ); ?></td>
                         <td>
                             <?php if ( $archive->download_token && strtotime( $archive->token_expires ) > time() ) : ?>
-                                <a href="<?php echo esc_url(
-                                    add_query_arg( [ 'token' => $archive->download_token, 'file' => 'leads' ], home_url( '/reports' ) )
-                                ); ?>" class="button button-small" target="_blank">
-                                    Leads CSV
-                                </a>
-                                <a href="<?php echo esc_url(
-                                    add_query_arg( [ 'token' => $archive->download_token, 'file' => 'comms' ], home_url( '/reports' ) )
-                                ); ?>" class="button button-small" target="_blank">
-                                    Comms CSV
-                                </a>
+                                <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                                    <a href="<?php echo esc_url( add_query_arg( [ 'token' => $archive->download_token, 'file' => 'leads' ], home_url( '/reports' ) ) ); ?>" class="button button-small" target="_blank" title="Leads CSV">
+                                        Leads
+                                    </a>
+                                    <a href="<?php echo esc_url( add_query_arg( [ 'token' => $archive->download_token, 'file' => 'sales' ], home_url( '/reports' ) ) ); ?>" class="button button-small" target="_blank" title="Property Sales CSV">
+                                        Sales
+                                    </a>
+                                    <a href="<?php echo esc_url( add_query_arg( [ 'token' => $archive->download_token, 'file' => 'rent' ], home_url( '/reports' ) ) ); ?>" class="button button-small" target="_blank" title="Rent Roll CSV">
+                                        Rent
+                                    </a>
+                                    <a href="<?php echo esc_url( add_query_arg( [ 'token' => $archive->download_token, 'file' => 'inspections' ], home_url( '/reports' ) ) ); ?>" class="button button-small" target="_blank" title="Inspections CSV">
+                                        Inspections
+                                    </a>
+                                    <a href="<?php echo esc_url( add_query_arg( [ 'token' => $archive->download_token, 'file' => 'transactions' ], home_url( '/reports' ) ) ); ?>" class="button button-small" target="_blank" title="Transactions Ledger CSV">
+                                        Ledger
+                                    </a>
+                                    <a href="<?php echo esc_url( add_query_arg( [ 'token' => $archive->download_token, 'file' => 'comms' ], home_url( '/reports' ) ) ); ?>" class="button button-small" target="_blank" title="Communications CSV">
+                                        Comms
+                                    </a>
+                                </div>
                             <?php else : ?>
                                 <span class="ofp-muted">Expired</span>
                             <?php endif; ?>

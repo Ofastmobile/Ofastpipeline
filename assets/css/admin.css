@@ -1494,6 +1494,116 @@
     font-weight: 700 !important;
 }
 
+/* ── Pricing Tier Accordion & FAQ Arrow Toggle ── */
+.ofp-tier-accordion-wrap {
+    margin-top: 10px;
+    border-top: 1px dashed var(--ofp-slate-200);
+    padding-top: 12px;
+}
+
+.ofp-tier-accordion-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--ofp-slate-50);
+    border: 1px solid var(--ofp-slate-200);
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ofp-slate-700);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ofp-tier-accordion-toggle:hover {
+    background: #ffffff;
+    border-color: var(--ofp-primary);
+    color: var(--ofp-primary);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
+}
+
+.ofp-tier-accordion-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.ofp-tier-accordion-icon {
+    width: 15px;
+    height: 15px;
+    color: var(--ofp-primary);
+    flex-shrink: 0;
+}
+
+.ofp-tier-count-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 700;
+    background: var(--ofp-slate-200);
+    color: var(--ofp-slate-700);
+}
+
+.ofp-tier-accordion-toggle:hover .ofp-tier-count-pill {
+    background: var(--ofp-primary-light);
+    color: var(--ofp-primary);
+}
+
+.ofp-tier-accordion-wrap .ofp-faq-circle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid var(--ofp-slate-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    color: var(--ofp-slate-500);
+}
+
+.ofp-pricing-tier-grid.is-expanded .ofp-faq-circle,
+.ofp-tier-accordion-toggle[aria-expanded="true"] .ofp-faq-circle {
+    background: var(--ofp-primary);
+    border-color: var(--ofp-primary);
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.ofp-tier-accordion-wrap .ofp-faq-arrow {
+    width: 13px;
+    height: 13px;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ofp-pricing-tier-grid.is-expanded .ofp-faq-arrow,
+.ofp-tier-accordion-toggle[aria-expanded="true"] .ofp-faq-arrow,
+.ofp-faq-arrow.is-rotated {
+    transform: rotate(180deg);
+}
+
+.ofp-pricing-tier-grid:not(.is-expanded) .ofp-tier-accordion-body {
+    display: none;
+}
+
+.ofp-pricing-tier-grid.is-expanded .ofp-tier-accordion-body {
+    display: block;
+    animation: ofpAdminFadeIn 0.2s ease-in-out;
+}
+
+@keyframes ofpAdminFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Bank Account Visual Preview Card ─────────────────────────────────────── */
 .ofp-bank-layout {
     display: grid;

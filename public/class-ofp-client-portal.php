@@ -156,7 +156,7 @@ class OFP_Client_Portal {
             'ofp-client-portal',
             OFP_URL . 'assets/css/client-portal.css',
             [],
-            OFP_VERSION
+            file_exists( OFP_PATH . 'assets/css/client-portal.css' ) ? filemtime( OFP_PATH . 'assets/css/client-portal.css' ) : OFP_VERSION
         );
 
         if ( in_array( $route, [ 'account', 'profile' ], true ) ) {
@@ -362,18 +362,25 @@ class OFP_Client_Portal {
     }
 
     /**
-     * Returns real monthly lead volume + conversion counts for the
-     * Reports page "Monthly Performance" chart (last 12 months).
+     * Returns monthly analytics across all operational pillars (leads, sales, rent,
+     * inspections, communications & spend, financial transactions) for the Reports page.
      */
     public function ajax_reports_chart_data(): void {
         check_ajax_referer( 'ofp_client_ajax', 'nonce' );
         OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
-        if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) wp_send_json_error( 'Unauthorized' );
+        if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) {
+            wp_send_json_error( 'Unauthorized' );
+        }
 
-        wp_send_json_success( [
-            'monthly' => OFP_Lead::get_monthly_stats( $client->id, 12 ),
-        ] );
+        $metric = sanitize_key( $_POST['metric'] ?? 'leads' );
+        $year   = (int) ( $_POST['year'] ?? gmdate( 'Y' ) );
+        if ( $year < 2020 || $year > (int) gmdate( 'Y' ) + 1 ) {
+            $year = (int) gmdate( 'Y' );
+        }
+
+        $data = OFP_CSV::get_yearly_chart_data( (int) $client->id, $metric, $year );
+        wp_send_json_success( $data );
     }
 
     /**

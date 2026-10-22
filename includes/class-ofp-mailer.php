@@ -874,47 +874,88 @@ class OFP_Mailer {
      * @param  object $client        Full wp_ofp_clients row.
      * @param  string $period        Human-readable period e.g. "June 2026".
      * @param  string $download_url  Tokenised download URL.
+     * @param  array  $summary       Optional monthly summary metrics across pillars.
      * @return void
      */
     public static function send_monthly_report(
         object $client,
         string $period,
-        string $download_url
+        string $download_url,
+        array $summary = []
     ): void {
 
+        $leads_count    = (int) ( $summary['leads'] ?? 0 );
+        $conv_count     = (int) ( $summary['converted'] ?? 0 );
+        $sales_vol      = (float) ( $summary['sales_volume'] ?? 0 );
+        $sales_paid     = (float) ( $summary['sales_collected'] ?? 0 );
+        $rent_collected = (float) ( $summary['rent_collected'] ?? 0 );
+        $active_leases  = (int) ( $summary['active_leases'] ?? 0 );
+        $tours_count    = (int) ( $summary['inspections_total'] ?? 0 );
+        $comms_count    = (int) ( $summary['comms_count'] ?? 0 );
+        $total_inflow   = (float) ( $summary['total_inflow'] ?? ( $sales_paid + $rent_collected ) );
+
         $body = '
-            <h2>📊 Your Monthly Pipeline Report Is Ready</h2>
+            <h2>Your Monthly Real Estate Executive Report Is Ready</h2>
 
             <p>Hi ' . esc_html( $client->owner_name ) . ',</p>
 
-            <p>Your lead pipeline report for
-               <strong>' . esc_html( $period ) . '</strong> is ready.
-               It includes:</p>
+            <p>Your comprehensive pipeline report for <strong>' . esc_html( $period ) . '</strong> has been compiled. Here is your operational and financial snapshot:</p>
 
-            <ul style="padding-left:20px;line-height:2.2;color:#374151;">
-                <li>All leads captured this month</li>
-                <li>Full communications log (SMS, voice, email)</li>
-                <li>Lead status breakdown (new, contacted, converted)</li>
-            </ul>
+            <table style="width:100%; border-collapse:collapse; margin:20px 0; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden;">
+                <thead>
+                    <tr style="background:#111827; color:#ffffff; text-align:left;">
+                        <th style="padding:12px 16px; font-size:13px;">Operational Pillar</th>
+                        <th style="padding:12px 16px; font-size:13px; text-align:right;">Key Metrics</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:12px 16px; font-weight:600; color:#374151;">Leads &amp; Conversions</td>
+                        <td style="padding:12px 16px; text-align:right; color:#111827;"><strong>' . number_format( $leads_count ) . '</strong> Leads (' . number_format( $conv_count ) . ' Converted)</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:12px 16px; font-weight:600; color:#374151;">Property Sales Volume</td>
+                        <td style="padding:12px 16px; text-align:right; color:#111827;"><strong>₦' . number_format( $sales_vol, 2 ) . '</strong> Volume (₦' . number_format( $sales_paid, 2 ) . ' Collected)</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:12px 16px; font-weight:600; color:#374151;">Rent &amp; Tenancies</td>
+                        <td style="padding:12px 16px; text-align:right; color:#111827;"><strong>₦' . number_format( $rent_collected, 2 ) . '</strong> Collected (' . number_format( $active_leases ) . ' Active Leases)</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:12px 16px; font-weight:600; color:#374151;">Property Inspections</td>
+                        <td style="padding:12px 16px; text-align:right; color:#111827;"><strong>' . number_format( $tours_count ) . '</strong> Tours Booked</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:12px 16px; font-weight:600; color:#374151;">Automated Messaging</td>
+                        <td style="padding:12px 16px; text-align:right; color:#111827;"><strong>' . number_format( $comms_count ) . '</strong> SMS &amp; Voice Calls</td>
+                    </tr>
+                    <tr style="background:#ecfdf5; font-size:14px;">
+                        <td style="padding:14px 16px; font-weight:700; color:#065f46;">Total Gross Inflow</td>
+                        <td style="padding:14px 16px; text-align:right; font-weight:700; color:#059669;">₦' . number_format( $total_inflow, 2 ) . '</td>
+                    </tr>
+                </tbody>
+            </table>
 
-            <p>
+            <p style="margin-top:20px;">Your monthly package includes 6 dedicated CSV audit files (Leads, Sales Agreements, Rent Roll, Inspections, Financial Ledger, Communications Log).</p>
+
+            <p style="margin-top:20px;">
                 <a href="' . esc_url( $download_url ) . '"
-                   style="display:inline-block;background:#1a73e8;color:#fff;
-                          padding:12px 28px;border-radius:8px;text-decoration:none;
-                          font-weight:600;margin-top:8px;">
-                    Download Report
+                   style="display:inline-block;background:#1a73e8;color:#ffffff;
+                          padding:14px 32px;border-radius:8px;text-decoration:none;
+                          font-weight:600;font-size:14px;">
+                    Download Comprehensive Reports
                 </a>
             </p>
 
             <p style="margin-top:16px;color:#9ca3af;font-size:13px;">
-                ⏳ This download link expires in 72 hours.
+                This download link expires in 72 hours. You can also view interactive charts anytime in your client portal under Reports.
             </p>
         ';
 
         self::send(
             $client->email,
             $client->owner_name,
-            'Your OFast Pipeline Report for ' . $period . ' Is Ready',
+            'Your OFast Pipeline Monthly Report for ' . $period . ' Is Ready',
             $body
         );
     }

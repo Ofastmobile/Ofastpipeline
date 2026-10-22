@@ -41,13 +41,13 @@ class OFP_Property_CPT {
 
     const DEFAULT_PLAN_PRICES = [
         'free'   => 0.00,
-        'silver' => 15000.00,
-        'gold'   => 30000.00,
+        'silver' => 50000.00,
+        'gold'   => 100000.00,
     ];
 
     const DEFAULT_PLAN_CAPS = [
         'free'   => 1,
-        'silver' => 5,
+        'silver' => 3,
         'gold'   => 10,
     ];
 
@@ -2106,6 +2106,94 @@ class OFP_Property_CPT {
             update_option( "ofp_listing_cap_{$plan}", $cap );
         }
         return true;
+    }
+
+    /**
+     * Retrieve customizable pricing card data for all plans.
+     * Merges admin settings with defaults (Free, Silver, Gold matrix).
+     *
+     * @return array<string, array>
+     */
+    public static function get_pricing_cards(): array {
+        $saved  = get_option( 'ofp_pricing_cards_data', [] );
+        $prices = self::get_plan_prices();
+        $caps   = self::get_plan_caps();
+
+        $defaults = [
+            'free' => [
+                'name'     => 'Free',
+                'desc'     => 'Essential tools for getting started.',
+                'features' => [
+                    'Automation: Yes',
+                    'Branding: None',
+                    'Verification: Light',
+                    'Rent Monitoring: No',
+                    '1 Property Listing',
+                    'Leads & Buyers Management',
+                    'Transactions & Customer portal',
+                    '0 Team members',
+                ],
+            ],
+            'silver' => [
+                'name'     => 'Silver',
+                'desc'     => 'For growing teams and standard reporting.',
+                'features' => [
+                    'Automation: Yes',
+                    'Branding: Partially',
+                    'Verification: Full Verification',
+                    'Rent Monitoring: No',
+                    '3 Property Listings',
+                    'Leads & Buyers Management',
+                    'Transactions & Customer portal',
+                    'Editable email templates',
+                    '2 Team members',
+                    'Standard Reports',
+                ],
+            ],
+            'gold' => [
+                'name'     => 'Gold',
+                'desc'     => 'Advanced features, ROI and unlimited potential.',
+                'features' => [
+                    'Automation: Yes',
+                    'Branding: Full',
+                    'Verification: Full Verification',
+                    'Rent Monitoring: Yes',
+                    '10 Property Listings',
+                    'Leads & Buyers Management',
+                    'Transactions & Customer portal',
+                    'Editable email templates',
+                    '3 Team members',
+                    'Installment payments & ROI/Investment',
+                    'Advanced Reports',
+                ],
+            ],
+        ];
+
+        $cards = [];
+        foreach ( self::PLAN_KEYS as $plan ) {
+            $def  = $defaults[ $plan ] ?? [];
+            $data = ( is_array( $saved ) && isset( $saved[ $plan ] ) && is_array( $saved[ $plan ] ) ) ? $saved[ $plan ] : [];
+
+            $cards[ $plan ] = [
+                'name'     => ! empty( $data['name'] ) ? $data['name'] : ( $def['name'] ?? ucfirst( $plan ) ),
+                'desc'     => isset( $data['desc'] ) ? $data['desc'] : ( $def['desc'] ?? '' ),
+                'price'    => isset( $prices[ $plan ] ) ? $prices[ $plan ] : ( $def['price'] ?? 0 ),
+                'cap'      => isset( $caps[ $plan ] ) ? $caps[ $plan ] : ( $def['cap'] ?? 1 ),
+                'features' => isset( $data['features'] ) && is_array( $data['features'] ) ? $data['features'] : ( $def['features'] ?? [] ),
+            ];
+        }
+
+        return $cards;
+    }
+
+    /**
+     * Persist dynamic pricing cards data.
+     *
+     * @param array $cards_data
+     * @return bool
+     */
+    public static function save_pricing_cards( array $cards_data ): bool {
+        return (bool) update_option( 'ofp_pricing_cards_data', $cards_data );
     }
 
     /** Every allowed listing type value. */

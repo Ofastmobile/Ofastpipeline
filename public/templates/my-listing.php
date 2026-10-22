@@ -63,7 +63,7 @@ $status_badges = [
                 <div class="ofp-card" style="padding:0;overflow:hidden;">
 
                     <?php if ( $prop->featured_image ) : ?>
-                        <div style="height:180px;overflow:hidden;background:#f1f5f9;">
+                        <div class="ofp-property-card-image" style="position:relative;height:180px;overflow:hidden;background:#f1f5f9;">
                             <img src="<?php echo esc_url( $prop->featured_image ); ?>"
                                  alt="<?php echo esc_attr( $prop->title ); ?>"
                                  style="width:100%;height:100%;object-fit:cover;">

@@ -445,7 +445,7 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                         <!-- Exact Marketplace Property Card Structure -->
                         <div class="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-xl transition-all duration-300 group flex flex-col relative">
                             <!-- Card Image -->
-                            <div class="relative h-60 w-full overflow-hidden shrink-0">
+                            <div class="ofp-property-card-image relative h-60 w-full overflow-hidden shrink-0">
                                 <a href="<?php the_permalink(); ?>" class="block w-full h-full">
                                     <?php if ( has_post_thumbnail() ) : ?>
                                         <?php the_post_thumbnail( 'large', [ 'class' => 'w-full h-full object-cover group-hover:scale-105 transition-transform duration-500' ] ); ?>
@@ -494,6 +494,15 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                                         <?php echo esc_html( str_replace('-', ' ', $prop_type) ); ?>
                                     </div>
                                 </div>
+                                <?php if ( class_exists( 'OFP_Watermark' ) && OFP_Watermark::is_enabled() ) : ?>
+                                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-22deg);z-index:12;pointer-events:none;user-select:none;-webkit-user-select:none;white-space:nowrap;font-size:clamp(14px,2.5vw,22px);font-weight:900;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.18);text-shadow:0 2px 6px rgba(0,0,0,0.3);">
+                                        <?php echo esc_html( OFP_Watermark::get_watermark_text( (int) $client->id ) ); ?>
+                                    </div>
+                                    <div style="position:absolute;bottom:42px;right:12px;z-index:20;pointer-events:none;user-select:none;-webkit-user-select:none;display:flex;align-items:center;gap:5px;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:3px 10px;color:rgba(255,255,255,0.9);font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;line-height:1;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+                                        <svg style="width:12px;height:12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                        <?php echo esc_html( OFP_Watermark::get_watermark_text( (int) $client->id ) ); ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
 
                             <!-- Card Body -->

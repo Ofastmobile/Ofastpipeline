@@ -434,7 +434,23 @@ if ( $can_rent ) {
     <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
 </head>
 <body class="ofp-portal-body">
-<?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
+<?php
+if ( $can_rent ) {
+    $ofp_banner_btn = [
+        'label'   => 'New Lease Offer',
+        'url'     => '#',
+        'onclick' => "if(typeof ofpOpenModal==='function'){ofpOpenModal('ofp-modal-offer');}else{var m=document.getElementById('ofp-modal-offer');if(m)m.style.display='flex';}return false;",
+        'icon'    => 'plus',
+    ];
+} else {
+    $ofp_banner_btn = [
+        'label'   => 'Upgrade to Gold',
+        'url'     => home_url( '/pricing' ),
+        'icon'    => 'plus',
+    ];
+}
+include OFP_PATH . 'public/templates/partials/nav.php';
+?>
 
 <div class="ofp-container">
     <div style="padding-bottom: 60px;">
@@ -442,10 +458,6 @@ if ( $can_rent ) {
         <!-- ── Page Actions ── -->
         <?php if ( $can_rent ) : ?>
             <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:8px;">
-                <button type="button" onclick="ofpOpenModal('ofp-modal-offer')" class="ofp-btn ofp-btn-primary" style="padding:8px 14px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
-                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    New Lease Offer
-                </button>
                 <button type="button" onclick="ofpOpenModal('ofp-modal-rate')" class="ofp-btn" style="padding:8px 14px; font-size:13px; background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color); display:inline-flex; align-items:center; gap:6px;">
                     <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Add Rent Rate

@@ -196,7 +196,7 @@ $nav_items[] = [
 
 ?>
 
-<link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>" id="ofp-client-portal-css-bundle">
+<link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . ( file_exists( OFP_PATH . 'assets/css/client-portal.css' ) ? filemtime( OFP_PATH . 'assets/css/client-portal.css' ) : OFP_VERSION ) ); ?>" id="ofp-client-portal-css-bundle">
 <?php OFP_Brand::print_head( $client ); ?>
 <style id="ofp-svg-failsafe">
 svg { max-width: 100%; box-sizing: border-box; }
@@ -555,6 +555,20 @@ svg { max-width: 100%; box-sizing: border-box; }
                         ) {
                             $banner_btn_label = 'Add Purchase';
                             $banner_btn_url   = home_url( '/property-purchases' );
+                        } elseif (
+                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'tenants' ) !== false ||
+                            strpos( $current_url, '/tenants' ) !== false
+                        ) {
+                            if ( isset( $can_rent ) && ! $can_rent ) {
+                                $banner_btn_label = 'Upgrade to Gold';
+                                $banner_btn_url   = home_url( '/pricing' );
+                                $banner_btn_icon  = 'plus';
+                            } else {
+                                $banner_btn_label   = 'New Lease Offer';
+                                $banner_btn_url     = '#';
+                                $banner_btn_onclick = "if(typeof ofpOpenModal==='function'){ofpOpenModal('ofp-modal-offer');}else{var m=document.getElementById('ofp-modal-offer');if(m)m.style.display='flex';}return false;";
+                                $banner_btn_icon    = 'plus';
+                            }
                         }
                         ?>
                         <a href="<?php echo esc_url( $banner_btn_url ); ?>" 

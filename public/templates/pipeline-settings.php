@@ -257,11 +257,11 @@ $type_options = [
                                     </p>
                                     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                                         <input type="file" name="voice_audio" accept=".mp3,.wav,audio/mpeg,audio/wav" style="flex:1; font-size:13px; min-width:180px;" required form="ofp_audio_upload_form">
-                                        <button type="submit" class="ofp-btn ofp-btn-secondary" style="padding:6px 14px; min-width:auto; height:auto;" form="ofp_audio_upload_form">Upload Audio</button>
+                                        <button type="submit" class="ofp-btn ofp-btn-secondary" style="padding:6px 14px; min-width:auto; height:auto; width:auto;" form="ofp_audio_upload_form">Upload Audio</button>
                                     </div>
                                     <?php if ( ! empty( $config->voice_audio_url ) ) : ?>
                                         <div style="margin-top:8px;">
-                                            <button type="submit" class="ofp-btn ofp-btn-secondary" style="padding:4px 12px; min-width:auto; height:auto; font-size:12px; color:var(--accent-red);" form="ofp_audio_remove_form">
+                                            <button type="submit" class="ofp-btn ofp-btn-secondary" style="padding:4px 12px; min-width:auto; height:auto; width:auto; font-size:12px; color:var(--accent-red);" form="ofp_audio_remove_form">
                                                 Remove Audio (revert to text-to-speech)
                                             </button>
                                         </div>
@@ -341,9 +341,9 @@ $type_options = [
 
             </div>
 
-            <div class="ofp-form-actions" style="margin-left: 60px;">
-                <button type="submit" class="ofp-btn ofp-btn-primary">Save Pipeline Settings</button>
-                <a href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>" class="ofp-btn ofp-btn-secondary">Cancel</a>
+            <div class="ofp-form-actions" style="margin-left: 60px; margin-top: 24px; display: flex; align-items: center; gap: 12px;">
+                <button type="submit" class="ofp-btn ofp-btn-primary ofp-btn-save">Save</button>
+                <a href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>" class="ofp-btn ofp-btn-secondary ofp-btn-reduced">Cancel</a>
             </div>
 
                 </form>
@@ -362,7 +362,7 @@ $type_options = [
             </div>
             <div class="ofp-pipeline-sidebar">
                 <div class="ofp-phone-mockup">
-                    <div class="ofp-phone-notch"></div>
+                    <img class="ofp-phone-frame-overlay" src="<?php echo esc_url( OFP_URL . 'assets/images/Smartphone-Mockup.png' ); ?>" alt="Smartphone Mockup" loading="lazy">
                     <div class="ofp-phone-screen">
                         <div class="ofp-phone-header">
                             <div class="ofp-phone-contact">Message Preview</div>

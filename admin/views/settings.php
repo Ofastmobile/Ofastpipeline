@@ -85,6 +85,7 @@ $social_telegram    = get_option( 'ofp_social_telegram', '' );
 // Plans & Pricing
 $listing_prices     = OFP_Property_CPT::get_plan_prices();
 $listing_caps       = OFP_Property_CPT::get_plan_caps();
+$pricing_cards      = OFP_Property_CPT::get_pricing_cards();
 
 
 // Encryption Vault Status
@@ -103,6 +104,134 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <input type="hidden" name="ofp_in_portal" value="<?php echo ( isset( $tab ) && $tab === 'settings' ) ? '1' : '0'; ?>">
 
         <div class="ofp-settings-layout">
+
+            <!-- ── Left Sidebar Navigation (Color SVGs) ─────────────── -->
+            <aside class="ofp-settings-nav">
+                <!-- Group: Core -->
+                <div class="ofp-nav-group">
+                    <span class="ofp-nav-group-title">Core Platform</span>
+                    
+                    <button type="button" class="ofp-nav-item is-active" data-tab="tab-general">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-blue">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="2" x2="22" y1="12" y2="12"/>
+                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                                </svg>
+                            </span>
+                            <span>General & Routing</span>
+                        </span>
+                        <span class="ofp-nav-pill">Domain</span>
+                    </button>
+
+                    <button type="button" class="ofp-nav-item" data-tab="tab-pipeline">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-indigo">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                            </span>
+                            <span>Message Templates</span>
+                        </span>
+                        <span class="ofp-nav-pill">Auto</span>
+                    </button>
+                </div>
+
+                <!-- Group: Integrations -->
+                <div class="ofp-nav-group">
+                    <span class="ofp-nav-group-title">Integrations & Relays</span>
+                    
+                    <button type="button" class="ofp-nav-item" data-tab="tab-email">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-sky">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="20" height="16" x="2" y="4" rx="2"/>
+                                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                                </svg>
+                            </span>
+                            <span>Email (SMTP)</span>
+                        </span>
+                        <span class="ofp-nav-pill"><?php echo $smtp_mode === 'custom' ? 'SMTP' : 'WP'; ?></span>
+                    </button>
+
+                    <button type="button" class="ofp-nav-item" data-tab="tab-payments">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-emerald">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="20" height="14" x="2" y="5" rx="2"/>
+                                    <line x1="2" x2="22" y1="10" y2="10"/>
+                                </svg>
+                            </span>
+                            <span>Payment Gateway</span>
+                        </span>
+                        <span class="ofp-nav-pill">Paystack</span>
+                    </button>
+
+                    <button type="button" class="ofp-nav-item" data-tab="tab-sms">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-violet">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4.93 4.93a10 10 0 0 1 14.14 0"/>
+                                    <path d="M7.76 7.76a6 6 0 0 1 8.48 0"/>
+                                    <circle cx="12" cy="12" r="2"/>
+                                    <line x1="12" x2="12" y1="14" y2="22"/>
+                                </svg>
+                            </span>
+                            <span>SMS & Voice</span>
+                        </span>
+                        <span class="ofp-nav-pill">3 Relays</span>
+                    </button>
+                </div>
+
+                <!-- Group: Commerce & Security -->
+                <div class="ofp-nav-group">
+                    <span class="ofp-nav-group-title">Commerce & Access</span>
+                    
+                    <button type="button" class="ofp-nav-item" data-tab="tab-pricing">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-amber">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
+                                    <circle cx="7" cy="7" r="1.5"/>
+                                </svg>
+                            </span>
+                            <span>Plans & Pricing</span>
+                        </span>
+                        <span class="ofp-nav-pill">Cards</span>
+                    </button>
+
+                    <button type="button" class="ofp-nav-item" data-tab="tab-bank">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-teal">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="3" x2="21" y1="22" y2="22"/>
+                                    <line x1="6" x2="6" y1="18" y2="11"/>
+                                    <line x1="10" x2="10" y1="18" y2="11"/>
+                                    <line x1="14" x2="14" y1="18" y2="11"/>
+                                    <line x1="18" x2="18" y1="18" y2="11"/>
+                                    <polygon points="12 2 20 7 4 7"/>
+                                </svg>
+                            </span>
+                            <span>Company Bank</span>
+                        </span>
+                        <span class="ofp-nav-pill">Wire</span>
+                    </button>
+
+                    <button type="button" class="ofp-nav-item" data-tab="tab-security">
+                        <span class="ofp-nav-item-left">
+                            <span class="ofp-icon-box ofp-icon-sm icon-rose">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                    <rect width="8" height="6" x="8" y="10" rx="1"/>
+                                </svg>
+                            </span>
+                            <span>Security & Anti-Bot</span>
+                        </span>
+                        <span class="ofp-nav-pill">Turnstile</span>
+                    </button>
+                </div>
+            </aside>
 
             <!-- ── Settings Panels ──────────────────────────────────── -->
             <main class="ofp-settings-panels">
@@ -238,7 +367,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                            value="<?php echo esc_attr( $watermark_text ); ?>"
                                            placeholder="e.g. <?php echo esc_attr( OFP_Brand::name() ); ?>">
                                 </div>
-                                <p class="ofp-field-hint">Leave blank to automatically use your configured Platform App Name (<code><?php echo esc_html( OFP_Brand::name() ); ?></code>) or the client's White-Label Agency name.</p>
+                                <p class="ofp-field-hint">Leave blank to automatically use your configured Platform App Name (<code><?php echo esc_html( OFP_Brand::name() ); ?></code>) or the client's White-Label Agency name. Clients can also set their own custom watermark from their profile settings — their choice takes priority over this default.</p>
                             </div>
                         </div>
                     </div>
@@ -929,101 +1058,135 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 <!-- ════════ TAB 6: PLANS & PRICING ════════ -->
                 <section id="tab-pricing" class="ofp-tab-pane">
                     
-                    <!-- Property Marketplace Listing Plans -->
+                    <!-- Property Marketplace Listing Plans & Pricing Cards Customizer -->
                     <div class="ofp-card">
                         <div class="ofp-card-header">
                             <div class="ofp-card-header-main">
                                 <div class="ofp-icon-box ofp-icon-lg icon-amber">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                                        <polyline points="9 22 9 12 15 12 15 22"/>
+                                        <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
+                                        <circle cx="7" cy="7" r="1.5"/>
                                     </svg>
                                 </div>
                                 <div class="ofp-card-title-group">
-                                    <h3>Property Marketplace Listing Tiers</h3>
-                                    <p>Configure monthly pricing and maximum active property caps per tier (Free, Silver, Gold).</p>
+                                    <h3>Pricing Cards & Feature Matrix Customizer</h3>
+                                    <p>Fully customize the client-facing pricing cards: tier names, prices, property caps, comparison matrix, and checklist bullets.</p>
                                 </div>
                             </div>
-                            <span class="ofp-pill ofp-pill-ready">Live Across System</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <button type="button" id="ofp-admin-toggle-all-cards" class="ofp-btn ofp-btn-sm" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; font-size:12px; padding:4px 10px; border-radius:6px; cursor:pointer;">
+                                    Toggle All Features
+                                </button>
+                                <span class="ofp-pill ofp-pill-ready">Live Across Client Portal</span>
+                            </div>
                         </div>
                         <div class="ofp-card-body">
                             <div class="ofp-pricing-tier-grid">
                                 
-                                <!-- Free Tier -->
-                                <div class="ofp-tier-card">
-                                    <div class="ofp-tier-header">
-                                        <h4 class="ofp-tier-name">Free</h4>
-                                        <span class="ofp-tier-tag">Starter Tier</span>
-                                    </div>
-                                    <div class="ofp-tier-input-group">
-                                        <label>Monthly Price (NGN)</label>
-                                        <div class="ofp-currency-input-wrap">
-                                            <span class="ofp-currency-symbol">₦</span>
-                                            <input type="number" step="0.01" min="0"
-                                                   name="listing_price_free"
-                                                   value="<?php echo esc_attr( $listing_prices['free'] ?? 0 ); ?>">
-                                        </div>
-                                    </div>
-                                    <div class="ofp-tier-input-group">
-                                        <label>Active Property Cap</label>
-                                        <div class="ofp-input-box">
-                                            <input type="number" step="1" min="1"
-                                                   name="listing_cap_free"
-                                                   value="<?php echo esc_attr( $listing_caps['free'] ?? 1 ); ?>">
-                                        </div>
-                                    </div>
-                                </div>
+                                <?php
+                                $tier_tags = [
+                                    'free'   => 'Starter Tier',
+                                    'silver' => 'Growth',
+                                    'gold'   => 'Enterprise',
+                                ];
+                                $tier_colors = [
+                                    'free'   => 'var(--ofp-slate-800)',
+                                    'silver' => 'var(--ofp-primary)',
+                                    'gold'   => '#d97706',
+                                ];
 
-                                <!-- Silver Tier -->
-                                <div class="ofp-tier-card tier-popular">
-                                    <span class="ofp-tier-badge-top">Most Popular</span>
+                                foreach ( OFP_Property_CPT::PLAN_KEYS as $plan_key ) :
+                                    $p = $pricing_cards[ $plan_key ] ?? [];
+                                    $is_silver = ( $plan_key === 'silver' );
+                                ?>
+                                <div class="ofp-tier-card <?php echo $is_silver ? 'tier-popular' : ''; ?>">
+                                    <?php if ( $is_silver ) : ?>
+                                        <span class="ofp-tier-badge-top">Most Popular</span>
+                                    <?php endif; ?>
+                                    
                                     <div class="ofp-tier-header">
-                                        <h4 class="ofp-tier-name" style="color:var(--ofp-primary);">Silver</h4>
-                                        <span class="ofp-tier-tag" style="background:var(--ofp-primary-light);color:var(--ofp-primary);">Growth</span>
+                                        <h4 class="ofp-tier-name" style="color:<?php echo esc_attr( $tier_colors[ $plan_key ] ?? 'inherit' ); ?>;">
+                                            <?php echo esc_html( $p['name'] ?? ucfirst( $plan_key ) ); ?>
+                                        </h4>
+                                        <span class="ofp-tier-tag"><?php echo esc_html( $tier_tags[ $plan_key ] ?? 'Tier' ); ?></span>
                                     </div>
-                                    <div class="ofp-tier-input-group">
-                                        <label>Monthly Price (NGN)</label>
-                                        <div class="ofp-currency-input-wrap">
-                                            <span class="ofp-currency-symbol">₦</span>
-                                            <input type="number" step="0.01" min="0"
-                                                   name="listing_price_silver"
-                                                   value="<?php echo esc_attr( $listing_prices['silver'] ?? 5000 ); ?>">
-                                        </div>
-                                    </div>
-                                    <div class="ofp-tier-input-group">
-                                        <label>Active Property Cap</label>
-                                        <div class="ofp-input-box">
-                                            <input type="number" step="1" min="1"
-                                                   name="listing_cap_silver"
-                                                   value="<?php echo esc_attr( $listing_caps['silver'] ?? 10 ); ?>">
-                                        </div>
-                                    </div>
-                                </div>
 
-                                <!-- Gold Tier -->
-                                <div class="ofp-tier-card">
-                                    <div class="ofp-tier-header">
-                                        <h4 class="ofp-tier-name" style="color:#d97706;">Gold</h4>
-                                        <span class="ofp-tier-tag" style="background:#fef3c7;color:#b45309;">Enterprise</span>
+                                    <div class="ofp-tier-input-group">
+                                        <label>Card Display Name</label>
+                                        <div class="ofp-input-box">
+                                            <input type="text" name="pricing_card_name_<?php echo esc_attr( $plan_key ); ?>"
+                                                   value="<?php echo esc_attr( $p['name'] ?? ucfirst( $plan_key ) ); ?>"
+                                                   placeholder="<?php echo esc_attr( ucfirst( $plan_key ) ); ?>">
+                                        </div>
                                     </div>
+
+                                    <div class="ofp-tier-input-group">
+                                        <label>Card Tagline / Subtitle</label>
+                                        <div class="ofp-input-box">
+                                            <input type="text" name="pricing_card_desc_<?php echo esc_attr( $plan_key ); ?>"
+                                                   value="<?php echo esc_attr( $p['desc'] ?? '' ); ?>"
+                                                   placeholder="Short tier description">
+                                        </div>
+                                    </div>
+
                                     <div class="ofp-tier-input-group">
                                         <label>Monthly Price (NGN)</label>
                                         <div class="ofp-currency-input-wrap">
                                             <span class="ofp-currency-symbol">₦</span>
                                             <input type="number" step="0.01" min="0"
-                                                   name="listing_price_gold"
-                                                   value="<?php echo esc_attr( $listing_prices['gold'] ?? 15000 ); ?>">
+                                                   name="listing_price_<?php echo esc_attr( $plan_key ); ?>"
+                                                   value="<?php echo esc_attr( $p['price'] ?? 0 ); ?>">
                                         </div>
                                     </div>
+
                                     <div class="ofp-tier-input-group">
                                         <label>Active Property Cap</label>
                                         <div class="ofp-input-box">
                                             <input type="number" step="1" min="1"
-                                                   name="listing_cap_gold"
-                                                   value="<?php echo esc_attr( $listing_caps['gold'] ?? 50 ); ?>">
+                                                   name="listing_cap_<?php echo esc_attr( $plan_key ); ?>"
+                                                   value="<?php echo esc_attr( $p['cap'] ?? 1 ); ?>">
                                         </div>
                                     </div>
+
+                                    <!-- Custom Checklist Features Accordion -->
+                                    <div class="ofp-tier-accordion-wrap">
+                                        <?php 
+                                        $features_arr = isset( $p['features'] ) && is_array( $p['features'] ) ? $p['features'] : [];
+                                        $feat_count   = count( $features_arr );
+                                        ?>
+                                        <button type="button" class="ofp-tier-accordion-toggle" aria-expanded="false" data-extra="<?php echo max( 0, $feat_count - 5 ); ?>">
+                                            <span class="ofp-tier-accordion-left">
+                                                <svg class="ofp-tier-accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                                                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                                                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                                                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                                                </svg>
+                                                <span class="ofp-tier-accordion-label">Feature Bullets</span>
+                                                <span class="ofp-tier-count-pill"><?php echo (int) $feat_count; ?></span>
+                                            </span>
+                                            <span class="ofp-faq-circle">
+                                                <svg class="ofp-faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                                </svg>
+                                            </span>
+                                        </button>
+
+                                        <div class="ofp-tier-accordion-body">
+                                            <label style="font-size:12px; font-weight:600; color:var(--ofp-slate-700); margin:8px 0 4px; display:block;">Custom Feature Bullets (1 per line)</label>
+                                            <textarea name="pricing_card_features_<?php echo esc_attr( $plan_key ); ?>" rows="8" class="ofp-textarea"
+                                                      style="width:100%; font-size:13px; font-family:inherit; padding:10px; border-radius:8px; border:1px solid var(--ofp-slate-200); line-height:1.5;"
+                                                      placeholder="1 feature bullet per line"><?php 
+                                                echo esc_textarea( implode( "\n", $features_arr ) ); 
+                                            ?></textarea>
+                                            <p class="ofp-field-hint" style="margin-top:4px; font-size:11px;">Renders as checkmark bullet items on the client portal pricing card. Only the top 5 display by default until the FAQ toggle is clicked.</p>
+                                        </div>
+                                    </div>
+
                                 </div>
+                                <?php endforeach; ?>
 
                             </div>
                         </div>
@@ -1467,6 +1630,58 @@ include OFP_PATH . 'admin/views/partials/header.php';
             syncRadioCards('ofp_prembly_env');
         });
     });
+
+    // ── 8. Pricing Tier Cards Features Accordion & FAQ Arrow Toggle ──────────
+    var tierGrid = document.querySelector('.ofp-pricing-tier-grid');
+    var tierToggles = document.querySelectorAll('.ofp-tier-accordion-toggle');
+    var globalTierToggle = document.getElementById('ofp-admin-toggle-all-cards');
+
+    function setTierExpansion(expand) {
+        if ( ! tierGrid ) return;
+        tierGrid.classList.toggle('is-expanded', expand);
+        tierToggles.forEach(function(btn) {
+            btn.setAttribute('aria-expanded', expand ? 'true' : 'false');
+            var arrow = btn.querySelector('.ofp-faq-arrow');
+            if ( arrow ) {
+                arrow.classList.toggle('is-rotated', expand);
+            }
+        });
+        if ( globalTierToggle ) {
+            globalTierToggle.textContent = expand ? 'Collapse All Features' : 'Toggle All Features';
+        }
+    }
+
+    if ( tierGrid && tierToggles.length ) {
+        tierToggles.forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                var willExpand = ! tierGrid.classList.contains('is-expanded');
+                setTierExpansion(willExpand);
+            });
+        });
+
+        if ( globalTierToggle ) {
+            globalTierToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                var willExpand = ! tierGrid.classList.contains('is-expanded');
+                setTierExpansion(willExpand);
+            });
+        }
+
+        // Live update bullet count pill as user types in textarea
+        document.querySelectorAll('.ofp-tier-accordion-body textarea').forEach(function(ta) {
+            ta.addEventListener('input', function() {
+                var lines = this.value.split('\n').filter(function(l) { return l.trim().length > 0; });
+                var wrap = this.closest('.ofp-tier-accordion-wrap');
+                if ( wrap ) {
+                    var pill = wrap.querySelector('.ofp-tier-count-pill');
+                    if ( pill ) {
+                        pill.textContent = lines.length;
+                    }
+                }
+            });
+        });
+    }
 
 })();
 </script>

@@ -721,10 +721,6 @@ $type_badges = [
     ?>
     <?php if ( $tab === 'templates' ) : ?>
 
-        <div style="margin-bottom: 24px;">
-            <h2 style="margin: 0 0 6px; font-size: 20px; font-weight: 700; color: var(--text-main);">Reusable Message Templates</h2>
-            <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Create and manage reusable SMS and email templates to speed up broadcasts and lead messages.</p>
-        </div>
 
         <!-- Manage Message Templates (SMS/Email) -->
         <div style="display: flex; gap: 24px; flex-wrap: wrap;">
@@ -799,11 +795,38 @@ $type_badges = [
                 </div>
             </div>
 
-            <!-- Right: Template Preview -->
-            <div style="flex: 1; min-width: 400px; display: flex; flex-direction: column;">
-                <h4 style="margin-top:0; margin-bottom: 12px;">Message Preview</h4>
-                <div style="flex-grow: 1; border: 1px solid var(--border-color); border-radius: 8px; background: #fff; min-height: 500px; overflow: hidden; display: flex; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                    <iframe id="client-template-preview" style="width:100%; height:100%; border:none; flex-grow: 1; background: #fff;"></iframe>
+            <!-- Right: Template Preview (Smartphone Mockup) -->
+            <div class="ofp-template-preview-sidebar" style="width: 370px; flex-shrink: 0; position: sticky; top: 96px; align-self: flex-start;">
+                <span id="preview-mode-badge" style="display:none;"></span>
+
+                <div class="ofp-phone-mockup">
+                    <img class="ofp-phone-frame-overlay" src="<?php echo esc_url( OFP_URL . 'assets/images/Smartphone-Mockup.png' ); ?>" alt="Smartphone Mockup" loading="lazy">
+                    <div class="ofp-phone-screen">
+                        <div class="ofp-phone-header">
+                            <div class="ofp-phone-contact" id="ofp-tpl-contact-name">John Doe</div>
+                            <div id="ofp-tpl-contact-sub" style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">08012345678</div>
+                        </div>
+
+                        <!-- SMS View Inside Phone -->
+                        <div class="ofp-phone-body" id="ofp-tpl-sms-view" style="display: flex;">
+                            <div class="ofp-chat-bubble" id="ofp-tpl-chat-bubble">
+                                <span style="color:#94a3b8; font-style:italic;">Type in the message body to see a live preview.</span>
+                            </div>
+                            <div id="ofp-tpl-sms-time" style="font-size: 10px; color: #94a3b8; margin-top: -6px; margin-left: 4px;">Just now</div>
+                        </div>
+
+                        <!-- Email View Inside Phone -->
+                        <div id="ofp-tpl-email-view" style="display: none; flex: 1; flex-direction: column; background: #ffffff; overflow-y: auto;">
+                            <div style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+                                <div style="font-size: 10px; text-transform: uppercase; font-weight: 600; color: #64748b; letter-spacing: 0.05em;">Subject</div>
+                                <div id="ofp-tpl-email-subject" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 2px; word-break: break-word;">(No Subject)</div>
+                                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">To: <span style="color: #0f172a; font-weight: 500;">John Doe &lt;john@example.com&gt;</span></div>
+                            </div>
+                            <div id="ofp-tpl-email-body" style="padding: 14px; font-size: 13px; line-height: 1.6; color: #334155; flex: 1; word-break: break-word;">
+                                <span style="color:#94a3b8; font-style:italic;">Type in the message body to see a live preview.</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -824,7 +847,6 @@ $type_badges = [
             const btnDelete = document.getElementById('tpl-delete');
             const btnNew = document.getElementById('btn-new-tpl');
             const formTitle = document.getElementById('form-title');
-            const iframe = document.getElementById('client-template-preview');
 
             window.toggleTemplateChannel = function() {
                 if (tplType.value === 'email') {
@@ -903,43 +925,46 @@ $type_badges = [
 
             function updateMsgPreview() {
                 var type = tplType.value;
-                var body = tplBody.value;
-                var subject = tplSubject.value;
-                var previewHtml = '';
+                var body = tplBody.value || '';
+                var subject = tplSubject.value || '';
 
-                if (!body.trim()) {
-                    previewHtml = '<div style="padding:40px; text-align:center; color:#94a3b8; font-family:sans-serif;">Type in the message body to see a preview.</div>';
-                } else {
-                    var displayBody = body.replace(/\{\{name\}\}/g, '<strong>John Doe</strong>')
-                                          .replace(/\{\{phone\}\}/g, '<strong>08012345678</strong>')
-                                          .replace(/\{\{email\}\}/g, '<strong>john@example.com</strong>')
-                                          .replace(/\n/g, '<br>');
+                var smsView = document.getElementById('ofp-tpl-sms-view');
+                var emailView = document.getElementById('ofp-tpl-email-view');
+                var contactName = document.getElementById('ofp-tpl-contact-name');
+                var contactSub = document.getElementById('ofp-tpl-contact-sub');
+                var badge = document.getElementById('preview-mode-badge');
+                var chatBubble = document.getElementById('ofp-tpl-chat-bubble');
+                var emailSubject = document.getElementById('ofp-tpl-email-subject');
+                var emailBody = document.getElementById('ofp-tpl-email-body');
 
-                    if (type === 'email') {
-                        previewHtml = '<div style="font-family: sans-serif; background: #f3f4f6; padding: 20px; min-height: 100vh;">'
-                            + '<div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">'
-                            + '<div style="padding: 16px 24px; border-bottom: 1px solid #e5e7eb; background: #fafafa;">'
-                            + '<div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Subject:</div>'
-                            + '<div style="font-size: 16px; font-weight: 600; color: #111827;">' + (subject || '(No Subject)') + '</div>'
-                            + '</div>'
-                            + '<div style="padding: 24px; color: #374151; line-height: 1.6; font-size: 15px;">' + displayBody + '</div>'
-                            + '</div></div>';
-                    } else {
-                        previewHtml = '<div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; height: 100vh; display: flex; align-items: center; justify-content: center; background: #f1f5f9;">'
-                            + '<div style="width: 300px; height: 500px; background: #fff; border-radius: 30px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); border: 8px solid #cbd5e1; position: relative; overflow: hidden;">'
-                            + '<div style="background: #f8fafc; padding: 40px 16px 16px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Message</div>'
-                            + '<div style="padding: 16px; background: #fff; height: 100%; box-sizing: border-box; overflow-y: auto;">'
-                            + '<div style="background: #e2e8f0; color: #0f172a; padding: 12px 16px; border-radius: 16px; border-bottom-left-radius: 4px; display: inline-block; max-width: 85%; font-size: 14px; line-height: 1.5;">'
-                            + displayBody + '</div>'
-                            + '<div style="font-size: 10px; color: #94a3b8; margin-top: 4px; margin-left: 4px;">Just now</div>'
-                            + '</div></div></div>';
+                var displayBody = body.trim() ? body.replace(/\{\{name\}\}/gi, '<strong>John Doe</strong>')
+                                                    .replace(/\{\{phone\}\}/gi, '<strong>08012345678</strong>')
+                                                    .replace(/\{\{email\}\}/gi, '<strong>john@example.com</strong>')
+                                                    .replace(/\n/g, '<br>')
+                                              : '<span style="color:#94a3b8; font-style:italic;">Type in the message body to see a live preview.</span>';
+
+                if (type === 'email') {
+                    if (badge) {
+                        badge.textContent = 'Email Preview';
+                        badge.className = 'ofp-badge ofp-badge-purple';
                     }
+                    if (contactName) contactName.textContent = 'Mail Preview';
+                    if (contactSub) contactSub.textContent = 'john@example.com';
+                    if (smsView) smsView.style.display = 'none';
+                    if (emailView) emailView.style.display = 'flex';
+                    if (emailSubject) emailSubject.textContent = subject.trim() ? subject : '(No Subject)';
+                    if (emailBody) emailBody.innerHTML = displayBody;
+                } else {
+                    if (badge) {
+                        badge.textContent = 'SMS Preview';
+                        badge.className = 'ofp-badge ofp-badge-blue';
+                    }
+                    if (contactName) contactName.textContent = 'John Doe';
+                    if (contactSub) contactSub.textContent = '08012345678';
+                    if (emailView) emailView.style.display = 'none';
+                    if (smsView) smsView.style.display = 'flex';
+                    if (chatBubble) chatBubble.innerHTML = displayBody;
                 }
-
-                var doc = iframe.contentDocument || iframe.contentWindow.document;
-                doc.open();
-                doc.writeln(previewHtml);
-                doc.close();
             }
 
             form.addEventListener('submit', function(e) {
@@ -1001,16 +1026,8 @@ $type_badges = [
         $boilerplate   = OFP_Mailer::get_default_custom_html_boilerplate( $client );
         ?>
 
-        <div style="margin-bottom: 24px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
-                <div>
-                    <h2 style="margin: 0 0 6px; font-size: 20px; font-weight: 700; color: var(--text-main);">Email Brand & Layout Customizer</h2>
-                    <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Personalize the outer shell of all broadcast emails, lead notifications, and announcements sent from your business.</p>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" id="btn-send-test-top" onclick="sendTestEmail()">Send Test to <?php echo esc_html( $client->email ); ?></button>
-                </div>
-            </div>
+        <div style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
+            <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-send-test" id="btn-send-test-top" onclick="sendTestEmail()">Send Test to <?php echo esc_html( $client->email ); ?></button>
         </div>
 
         <div style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
@@ -1125,7 +1142,7 @@ $type_badges = [
                     <!-- Action Buttons -->
                     <div style="display: flex; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);">
                         <button type="submit" class="ofp-btn ofp-btn-primary" id="btn-save-branding" style="padding: 10px 24px;">Save Email Branding</button>
-                        <button type="button" class="ofp-btn ofp-btn-ghost" id="btn-send-test-bottom" onclick="sendTestEmail()">Send Test Email</button>
+                        <button type="button" class="ofp-btn ofp-btn-send-test" id="btn-send-test-bottom" onclick="sendTestEmail()">Send Test Email</button>
                     </div>
 
                     <div id="branding-status-message" style="margin-top: 16px; font-size: 13px; font-weight: 500; display: none;"></div>
