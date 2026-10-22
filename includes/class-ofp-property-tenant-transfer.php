@@ -285,7 +285,7 @@ class OFP_Property_Tenant_Transfer {
 	}
 
 	private static function sms_to( object $row, string $phone, string $message ): void {
-		if ( $phone === '' || empty( $row->client_id ) || empty( $row->sms_provider ) ) {
+		if ( $phone === '' || empty( $row->client_id ) || ! OFP_SMS::ready() ) {
 			return;
 		}
 		$client_id = (int) $row->client_id;
@@ -293,7 +293,7 @@ class OFP_Property_Tenant_Transfer {
 		if ( ! OFP_Credit::has_balance( $client_id, 'sms', $cost ) ) {
 			return;
 		}
-		$sms    = new OFP_SMS( $row->sms_provider, $client_id );
+		$sms    = OFP_SMS::for_client( (int) $client_id );
 		$result = $sms->send( $phone, $message );
 		if ( ! empty( $result['success'] ) ) {
 			OFP_Credit::deduct( $client_id, 'sms', $cost );

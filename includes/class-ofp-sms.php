@@ -16,13 +16,15 @@
  *  key lookup without reconsidering the entire billing and API quota model.
  *
  * PROVIDER SELECTION:
- *  Each client has an sms_provider field ('africastalking' or 'bulksms').
- *  This determines which platform's API we route through — but always using
- *  OFP's own master credentials for that platform, never the client's.
+ *  ONE provider is active for the whole platform. Admin chooses it in
+ *  Settings, SMS tab (option ofp_sms_provider). Clients do not choose.
+ *  Use OFP_SMS::for_client( $client_id ) everywhere. Voice calls are separate
+ *  and always use Africa's Talking.
  *
  * ADDING NEW PROVIDERS:
- *  Add a new private method send_via_<provider>() and add a case in send().
- *  Provider name in ofp_clients.sms_provider drives the routing.
+ *  Add an entry in OFP_SMS::providers() (label, key_option, send) and the
+ *  send_via_<name>() method. Or from another file, use the ofp_sms_providers
+ *  filter and give 'send' a callable( $phone, $message ): array.
  *
  * Uses wp_remote_post() exclusively — no Guzzle, no Composer dependency.
  *
@@ -53,6 +55,41 @@ class OFP_SMS {
     }
 
     /**
+     * Every SMS company the platform can use.
+     * label       Shown in Admin Settings.
+     * key_option  Option that holds the encrypted API key.
+     * send        Name of a send_via_ method, or a callable( $phone, $message ): array
+     *             returning success, provider_ref, error.
+     *
+     * @return array<string,array{label:string,key_option:string,send:mixed}>
+     */
+    public static function providers(): array {
+        $list = [
+            'africastalking' => [ 'label' => "Africa's Talking",   'key_option' => 'ofp_at_api_key',       'send' => 'send_via_at' ],
+            'bulksms'        => [ 'label' => 'BulkSMS Nigeria',    'key_option' => 'ofp_bsmsn_api_key',    'send' => 'send_via_bsmsn' ],
+            'smartsms'       => [ 'label' => 'SmartSMSSolutions',  'key_option' => 'ofp_smartsms_api_key', 'send' => 'send_via_smartsms' ],
+        ];
+        $list = apply_filters( 'ofp_sms_providers', $list );
+        return is_array( $list ) ? $list : [];
+    }
+
+    /** The one provider admin switched on for the whole platform. */
+    public static function platform_provider(): string {
+        $chosen = (string) get_option( 'ofp_sms_provider', 'africastalking' );
+        return isset( self::providers()[ $chosen ] ) ? $chosen : 'africastalking';
+    }
+
+    /** The way to get an SMS sender. Clients no longer pick a provider. */
+    public static function for_client( int $client_id ): self {
+        return new self( self::platform_provider(), $client_id );
+    }
+
+    /** True when the platform provider has an API key saved, so a send can work. */
+    public static function ready(): bool {
+        return ( new self( self::platform_provider(), 0 ) )->api_key !== '';
+    }
+
+    /**
      * Send an SMS to a single phone number.
      *
      * @param  string $phone    Recipient phone number.
@@ -65,17 +102,20 @@ class OFP_SMS {
      */
     public function send( string $phone, string $message, ?int $lead_id = null ): array {
 
-        $phone  = $this->normalise_phone( $phone );
-        $result = match ( $this->provider ) {
-            'africastalking' => $this->send_via_at( $phone, $message ),
-            'bulksms'        => $this->send_via_bsmsn( $phone, $message ),
-            'smartsms'       => $this->send_via_smartsms( $phone, $message ),
-            default          => [
+        $phone    = $this->normalise_phone( $phone );
+        $entry    = self::providers()[ $this->provider ] ?? null;
+        $sender   = $entry['send'] ?? null;
+        if ( is_string( $sender ) && method_exists( $this, $sender ) ) {
+            $result = $this->{$sender}( $phone, $message );
+        } elseif ( is_callable( $sender ) ) {
+            $result = (array) call_user_func( $sender, $phone, $message );
+        } else {
+            $result = [
                 'success'      => false,
                 'provider_ref' => '',
                 'error'        => "Unknown SMS provider: {$this->provider}",
-            ],
-        };
+            ];
+        }
 
         if ( class_exists( 'OFP_Logger' ) ) {
             OFP_Logger::log( ! empty( $result['success'] ) ? 'SMS sent' : 'SMS failed', $this->client_id ?: null, [
@@ -276,12 +316,11 @@ class OFP_SMS {
      * @return string            Decrypted API key, or empty string if not configured.
      */
     private function get_global_api_key( string $provider ): string {
-        return match ( $provider ) {
-            'africastalking' => OFP_Security::decrypt( get_option( 'ofp_at_api_key',    '' ) ),
-            'bulksms'        => OFP_Security::decrypt( get_option( 'ofp_bsmsn_api_key', '' ) ),
-            'smartsms'       => OFP_Security::decrypt( get_option( 'ofp_smartsms_api_key', '' ) ),
-            default          => '',
-        };
+        $entry = self::providers()[ $provider ] ?? null;
+        if ( ! $entry || empty( $entry['key_option'] ) ) {
+            return '';
+        }
+        return (string) OFP_Security::decrypt( get_option( $entry['key_option'], '' ) );
     }
 
     /**
@@ -315,17 +354,8 @@ class OFP_SMS {
      * @return bool True on success.
      */
     public static function send_manual( ?int $client_id, string $phone, string $message ): bool {
-        // Determine provider: use client's preference or fallback to smartsms
-        $provider = 'smartsms';
-        if ( $client_id ) {
-            global $wpdb;
-            $provider = $wpdb->get_var( $wpdb->prepare(
-                "SELECT sms_provider FROM {$wpdb->prefix}ofp_clients WHERE id = %d",
-                $client_id
-            ) ) ?: 'smartsms';
-        }
-
-        $sms    = new self( $provider, $client_id ?? 0 );
+        // One platform provider for everyone, chosen by admin.
+        $sms    = self::for_client( (int) ( $client_id ?? 0 ) );
         $result = $sms->send( $phone, $message );
 
         return $result['success'] ?? false;

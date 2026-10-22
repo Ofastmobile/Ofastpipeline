@@ -47,17 +47,39 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_leads_nonce'] )
 
 // Pagination and filter
 $filter_status = sanitize_text_field( $_GET['status'] ?? '' );
+$filter_q      = sanitize_text_field( wp_unslash( $_GET['q'] ?? '' ) );
+$filter_batch  = sanitize_text_field( wp_unslash( $_GET['batch'] ?? '' ) );
 $per_page      = 20;
 $current_page  = max( 1, (int) ( $_GET['paged'] ?? 1 ) );
 
 global $wpdb;
-$p     = $wpdb->prefix;
-$where = 'l.client_id = %d';
-$args  = [ $client->id ];
+$p = $wpdb->prefix;
+[ $where, $args ] = OFP_Contacts::lead_filter( (int) $client->id, $filter_status, $filter_q, $filter_batch );
+$batches          = OFP_Contacts::batches( (int) $client->id );
+$filter_args      = array_filter( [ 'status' => $filter_status, 'q' => $filter_q, 'batch' => $filter_batch ], static fn( $v ) => $v !== '' );
 
-if ( $filter_status ) {
-    $where .= ' AND l.status = %s';
-    $args[] = $filter_status;
+// "Message selected": remember the chosen leads for an hour, then open Send Broadcast with them.
+$bulk_error = '';
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_bulk_nonce'] ) ) {
+    if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ofp_bulk_nonce'] ) ), 'ofp_bulk_' . (int) $client->id ) ) {
+        $bulk_error = 'Security check failed. Please refresh and try again.';
+    } elseif ( ! OFP_Auth::has_permission( 'send_messages' ) ) {
+        $bulk_error = 'You do not have permission to send messages.';
+    } else {
+        if ( ! empty( $_POST['all_matching'] ) ) {
+            $picked = OFP_Contacts::lead_ids_matching( (int) $client->id, $filter_status, $filter_q, $filter_batch, OFP_Client_Portal::BROADCAST_MAX );
+        } else {
+            $picked = OFP_Contacts::own_lead_ids( (int) $client->id, (array) ( $_POST['lead_ids'] ?? [] ) );
+        }
+        if ( empty( $picked ) ) {
+            $bulk_error = 'Tick at least one lead first.';
+        } else {
+            $sel = wp_generate_password( 20, false, false );
+            set_transient( 'ofp_sel_' . (int) $client->id . '_' . $sel, array_slice( $picked, 0, OFP_Client_Portal::BROADCAST_MAX ), HOUR_IN_SECONDS );
+            wp_safe_redirect( add_query_arg( [ 'tab' => 'send', 'aud' => 'leads_selected', 'sel' => $sel ], home_url( '/message-templates' ) ) );
+            exit;
+        }
+    }
 }
 
 $total = (int) $wpdb->get_var(
@@ -210,18 +232,38 @@ $status_badges = [
         foreach ( $filters as $val => $label ) :
             $active = $filter_status === $val;
         ?>
-            <a href="<?php echo esc_url( add_query_arg( 'status', $val, home_url( '/leads' ) ) ); ?>"
-               class="ofp-ajax-tab" data-status="<?php echo esc_attr( $val ); ?>"
+            <a href="<?php echo esc_url( add_query_arg( array_merge( array_diff_key( $filter_args, [ 'status' => 1 ] ), $val !== '' ? [ 'status' => $val ] : [] ), home_url( '/leads' ) ) ); ?>"
                style="padding:8px 14px;font-size:13px;font-weight:<?php echo $active ? '600' : '500'; ?>;text-decoration:none;border-bottom:2px solid <?php echo $active ? '#ef4444' : 'transparent'; ?>;margin-bottom:-2px;color:<?php echo $active ? '#ef4444' : 'var(--text-muted)'; ?>;transition:all 0.2s;">
                 <?php echo esc_html( $label ); ?>
             </a>
         <?php endforeach; ?>
     </div>
 
+    <!-- Search and import batch -->
+    <form method="get" action="<?php echo esc_url( home_url( '/leads' ) ); ?>" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:center;">
+        <?php if ( $filter_status !== '' ) : ?><input type="hidden" name="status" value="<?php echo esc_attr( $filter_status ); ?>"><?php endif; ?>
+        <input type="text" name="q" value="<?php echo esc_attr( $filter_q ); ?>" placeholder="Search name, phone or email" style="flex:1;min-width:200px;">
+        <select name="batch" style="min-width:180px;">
+            <option value="">All sources</option>
+            <?php foreach ( $batches as $b ) : ?>
+                <option value="<?php echo esc_attr( $b ); ?>" <?php selected( $filter_batch, $b ); ?>><?php echo esc_html( preg_replace( '/^import: /', 'Import: ', $b ) ); ?></option>
+            <?php endforeach; ?>
+        </select>
+        <button type="submit" class="ofp-btn">Filter</button>
+        <?php if ( ! empty( $filter_args ) && ( $filter_q !== '' || $filter_batch !== '' ) ) : ?>
+            <a href="<?php echo esc_url( add_query_arg( array_filter( [ 'status' => $filter_status ] ), home_url( '/leads' ) ) ); ?>" class="ofp-btn">Clear</a>
+        <?php endif; ?>
+    </form>
+    <?php if ( $bulk_error ) : ?>
+        <div style="padding:12px 16px;border-radius:8px;margin-bottom:14px;background:rgba(239,68,68,.12);border-left:4px solid #ef4444;"><?php echo esc_html( $bulk_error ); ?></div>
+    <?php endif; ?>
+
     <div class="ofp-card" style="padding: 0; overflow: hidden;">
         <div style="padding: 24px; display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Recent Prospects</h3>
-            <a href="#" style="font-size: 13px; color: var(--accent-blue); text-decoration: none; font-weight: 500;">See all</a>
+            <a href="<?php echo esc_url( home_url( '/import' ) ); ?>" style="font-size: 13px; color: var(--accent-blue); text-decoration: none; font-weight: 500;">Import</a>
+            <span style="opacity:.4;">&nbsp;|&nbsp;</span>
+            <a href="<?php echo esc_url( home_url( '/customers' ) ); ?>" style="font-size: 13px; color: var(--accent-blue); text-decoration: none; font-weight: 500;">Customers</a>
         </div>
         
         <?php if ( empty( $leads ) ) : ?>
@@ -257,6 +299,7 @@ $status_badges = [
                 <table class="ofp-table">
                     <thead>
                         <tr>
+                            <th style="width:34px;"><input type="checkbox" id="ofp-sel-all" aria-label="Select all leads on this page"></th>
                             <th>Name</th>
                             <th>Phone</th>
                             <th>Email</th>
@@ -270,6 +313,7 @@ $status_badges = [
                     <tbody id="ofp-leads-tbody">
                         <?php foreach ( $leads as $lead ) : ?>
                             <tr>
+                                <td><input type="checkbox" class="ofp-sel" name="lead_ids[]" value="<?php echo (int) $lead->id; ?>" form="ofp-bulk-form" aria-label="Select <?php echo esc_attr( $lead->name ?: $lead->phone ); ?>"></td>
                                 <td><?php echo esc_html( $lead->name ?: '—' ); ?></td>
                                 <td><strong><?php echo esc_html( $lead->phone ); ?></strong></td>
                                 <td><?php echo esc_html( $lead->email ?: '—' ); ?></td>
@@ -307,10 +351,27 @@ $status_badges = [
                 </table>
             </div>
 
+            <form method="post" id="ofp-bulk-form" action="<?php echo esc_url( add_query_arg( $filter_args, home_url( '/leads' ) ) ); ?>" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 16px;border-top:1px solid var(--border-color,rgba(128,128,128,.2));">
+                <?php wp_nonce_field( 'ofp_bulk_' . (int) $client->id, 'ofp_bulk_nonce' ); ?>
+                <button type="submit" class="ofp-btn ofp-btn-primary" id="ofp-msg-selected" disabled>Message selected (<span id="ofp-sel-count">0</span>)</button>
+                <button type="submit" name="all_matching" value="1" class="ofp-btn">Message all <?php echo esc_html( number_format( $total ) ); ?> in this filter</button>
+                <span style="font-size:12px;opacity:.7;">Opens Send Broadcast with these people chosen. Up to <?php echo (int) OFP_Client_Portal::BROADCAST_MAX; ?> at a time.</span>
+            </form>
+            <script>
+            (function () {
+                var all = document.getElementById('ofp-sel-all'), btn = document.getElementById('ofp-msg-selected'), out = document.getElementById('ofp-sel-count');
+                function boxes() { return document.querySelectorAll('.ofp-sel'); }
+                function refresh() { var n = 0; boxes().forEach(function (b) { if (b.checked) n++; }); out.textContent = n; btn.disabled = n === 0; }
+                if (all) all.addEventListener('change', function () { boxes().forEach(function (b) { b.checked = all.checked; }); refresh(); });
+                document.addEventListener('change', function (e) { if (e.target && e.target.classList && e.target.classList.contains('ofp-sel')) refresh(); });
+                refresh();
+            })();
+            </script>
+
             <?php if ( $total_pages > 1 ) : ?>
                 <div class="ofp-pagination" style="padding:16px;">
                     <?php for ( $i = 1; $i <= $total_pages; $i++ ) : ?>
-                        <a href="<?php echo esc_url( add_query_arg( [ 'paged' => $i, 'status' => $filter_status ], home_url( '/leads' ) ) ); ?>"
+                        <a href="<?php echo esc_url( add_query_arg( array_merge( $filter_args, [ 'paged' => $i ] ), home_url( '/leads' ) ) ); ?>"
                            class="ofp-page-btn <?php echo $i === $current_page ? 'active' : ''; ?>">
                             <?php echo esc_html( $i ); ?>
                         </a>

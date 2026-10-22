@@ -156,13 +156,13 @@ class OFP_Property_Lease_Reminders {
         // SMS to tenant (credit-gated).
         $client_id = (int) $lease->client_id;
         if (
-            ! empty( $lease->sms_provider ) &&
+            OFP_SMS::ready() &&
             ! empty( $lease->tenant_phone ) &&
             $client_id &&
             class_exists( 'OFP_Credit' ) &&
             OFP_Credit::has_balance( $client_id, 'sms', self::SMS_COST )
         ) {
-            $sms = new OFP_SMS( $lease->sms_provider, $client_id );
+            $sms = OFP_SMS::for_client( (int) $client_id );
             $sent = $sms->send( $lease->tenant_phone, $message );
             if ( ! empty( $sent['success'] ) ) {
                 OFP_Credit::deduct( $client_id, 'sms', self::SMS_COST );

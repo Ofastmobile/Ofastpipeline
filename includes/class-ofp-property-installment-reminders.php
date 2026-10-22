@@ -69,8 +69,8 @@ class OFP_Property_Installment_Reminders {
                 OFP_Mailer::send( $row->buyer_email, $row->buyer_name ?: 'there', $subject, $email_body );
             }
 
-            if ( ! empty( $row->sms_provider ) && ! empty( $row->buyer_phone ) && ! empty( $row->client_id ) && class_exists( 'OFP_Credit' ) && OFP_Credit::has_balance( (int) $row->client_id, 'sms', self::SMS_COST ) ) {
-                $sms = new OFP_SMS( $row->sms_provider, (int) $row->client_id );
+            if ( OFP_SMS::ready() && ! empty( $row->buyer_phone ) && ! empty( $row->client_id ) && class_exists( 'OFP_Credit' ) && OFP_Credit::has_balance( (int) $row->client_id, 'sms', self::SMS_COST ) ) {
+                $sms = OFP_SMS::for_client( (int) $row->client_id );
                 $sent = $sms->send( $row->buyer_phone, $message );
                 if ( ! empty( $sent['success'] ) ) OFP_Credit::deduct( (int) $row->client_id, 'sms', self::SMS_COST );
             }

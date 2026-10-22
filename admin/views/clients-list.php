@@ -195,14 +195,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 </label>
                 <input type="hidden" name="ofp_wl_fields" value="1">
             </div>
-            <div class="ofp-field">
-                <label>SMS Provider</label>
-                <select name="sms_provider" class="ofp-select">
-                    <option value="africastalking" <?php selected( $client->sms_provider, 'africastalking' ); ?>>Africa's Talking</option>
-                    <option value="bulksms"        <?php selected( $client->sms_provider, 'bulksms' ); ?>>BulkSMS Nigeria</option>
-                    <option value="smartsms"       <?php selected( $client->sms_provider, 'smartsms' ); ?>>SmartSMSSolutions</option>
-                </select>
-            </div>
         </div>
 
         <div class="ofp-form-actions">
@@ -240,10 +232,10 @@ include OFP_PATH . 'admin/views/partials/header.php';
         ?>
         <div><strong>Plan:</strong> <?php echo esc_html( $detail_plan_label ); ?></div>
         <?php
-        $detail_sms_map = ['africastalking' => 'Africa\'s Talking', 'bulksms' => 'BulkSMS Nigeria', 'smartsms' => 'SmartSMSSolutions'];
-        $detail_sms_label = $detail_sms_map[$client->sms_provider] ?? ucfirst($client->sms_provider ?: '—');
+        $detail_sms_all   = OFP_SMS::providers();
+        $detail_sms_label = $detail_sms_all[ OFP_SMS::platform_provider() ]['label'] ?? '—';
         ?>
-        <div><strong>SMS Provider:</strong> <?php echo esc_html( $detail_sms_label ); ?></div>
+        <div><strong>SMS Provider (platform wide):</strong> <?php echo esc_html( $detail_sms_label ); ?></div>
         <div><strong>Subscription Expires:</strong> <?php echo esc_html( $client->subscription_expires ?: '—' ); ?></div>
         <div>
             <strong>KYC / KYB Status:</strong>

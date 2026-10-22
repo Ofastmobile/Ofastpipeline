@@ -17,6 +17,9 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Client_Portal {
 
+    /** Most people one broadcast can reach, so a request cannot run out of time half way. */
+    const BROADCAST_MAX = 500;
+
     private array $routes = [
         'login' => 'login.php',
         'signup' => 'signup.php',
@@ -24,6 +27,8 @@ class OFP_Client_Portal {
         'reset-password' => 'reset-password.php',
         'dashboard' => 'dashboard.php',
         'leads' => 'leads.php',
+        'customers' => 'customers.php',
+        'import' => 'import.php',
         'pipeline-settings' => 'pipeline-settings.php',
         'api-settings' => 'api-settings.php',
         'communications' => 'message-templates.php',
@@ -82,6 +87,7 @@ class OFP_Client_Portal {
         // Manual Messaging
         add_action( 'wp_ajax_ofp_send_manual_message', [ $this, 'ajax_send_manual_message' ] );
         add_action( 'wp_ajax_ofp_send_client_broadcast', [ $this, 'ajax_send_client_broadcast' ] );
+        add_action( 'wp_ajax_ofp_resolve_audience',      [ $this, 'ajax_resolve_audience' ] );
 
         // Email Branding & Layout Customizer
         add_action( 'wp_ajax_ofp_save_email_branding', [ $this, 'ajax_save_email_branding' ] );
@@ -156,7 +162,7 @@ class OFP_Client_Portal {
             'ofp-client-portal',
             OFP_URL . 'assets/css/client-portal.css',
             [],
-            file_exists( OFP_PATH . 'assets/css/client-portal.css' ) ? filemtime( OFP_PATH . 'assets/css/client-portal.css' ) : OFP_VERSION
+            OFP_VERSION
         );
 
         if ( in_array( $route, [ 'account', 'profile' ], true ) ) {
@@ -362,25 +368,18 @@ class OFP_Client_Portal {
     }
 
     /**
-     * Returns monthly analytics across all operational pillars (leads, sales, rent,
-     * inspections, communications & spend, financial transactions) for the Reports page.
+     * Returns real monthly lead volume + conversion counts for the
+     * Reports page "Monthly Performance" chart (last 12 months).
      */
     public function ajax_reports_chart_data(): void {
         check_ajax_referer( 'ofp_client_ajax', 'nonce' );
         OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
-        if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) {
-            wp_send_json_error( 'Unauthorized' );
-        }
+        if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) wp_send_json_error( 'Unauthorized' );
 
-        $metric = sanitize_key( $_POST['metric'] ?? 'leads' );
-        $year   = (int) ( $_POST['year'] ?? gmdate( 'Y' ) );
-        if ( $year < 2020 || $year > (int) gmdate( 'Y' ) + 1 ) {
-            $year = (int) gmdate( 'Y' );
-        }
-
-        $data = OFP_CSV::get_yearly_chart_data( (int) $client->id, $metric, $year );
-        wp_send_json_success( $data );
+        wp_send_json_success( [
+            'monthly' => OFP_Lead::get_monthly_stats( $client->id, 12 ),
+        ] );
     }
 
     /**
@@ -770,7 +769,7 @@ class OFP_Client_Portal {
                 wp_send_json_error( 'Insufficient credit balance to send SMS.' );
             }
             
-            $sms = new OFP_SMS( 'smartsms', $client->id );
+            $sms = OFP_SMS::for_client( (int) $client->id );
             $result = $sms->send( $lead->phone, $body );
             
             $success = $result['success'] ?? false;
@@ -827,6 +826,51 @@ class OFP_Client_Portal {
         }
     }
 
+    /** Fills the broadcast recipient box from a chosen audience (leads by status, buyers, tenants and so on). */
+    public function ajax_resolve_audience(): void {
+        check_ajax_referer( 'ofp_client_ajax', 'nonce' );
+        OFP_Auth::require_client_login();
+        $client = OFP_Auth::current_client();
+        if ( ! $client ) wp_send_json_error( 'Unauthorized' );
+        if ( ! OFP_Auth::has_permission( 'send_messages' ) ) {
+            wp_send_json_error( 'You do not have permission to send messages.' );
+        }
+
+        $channel  = sanitize_key( $_POST['channel'] ?? 'sms' );
+        $audience = sanitize_key( $_POST['audience'] ?? '' );
+        if ( ! in_array( $channel, [ 'sms', 'email' ], true ) || ! isset( OFP_Contacts::audience_types()[ $audience ] ) ) {
+            wp_send_json_error( 'Choose who to message.' );
+        }
+
+        $ids = [];
+        $sel = sanitize_text_field( wp_unslash( $_POST['sel'] ?? '' ) );
+        if ( $sel !== '' && preg_match( '/^[A-Za-z0-9]{20}$/', $sel ) ) {
+            $stored = get_transient( 'ofp_sel_' . (int) $client->id . '_' . $sel );
+            $ids    = is_array( $stored ) ? $stored : [];
+        }
+
+        $left_out = 0;
+        $list = OFP_Contacts::audience( (int) $client->id, $channel, $audience, [
+            'status' => sanitize_key( $_POST['status'] ?? 'new' ),
+            'batch'  => sanitize_text_field( wp_unslash( $_POST['batch'] ?? '' ) ),
+            'ids'    => $ids,
+        ], $left_out );
+
+        $cap    = self::BROADCAST_MAX;
+        $capped = count( $list ) > $cap;
+        $list   = array_slice( $list, 0, $cap );
+        $values = array_column( $list, 'sms' === $channel ? 'phone' : 'email' );
+
+        wp_send_json_success( [
+            'count'      => count( $list ),
+            'left_out'   => (int) $left_out,
+            'capped'     => $capped,
+            'cap'        => $cap,
+            'recipients' => implode( ', ', $values ),
+            'sample'     => array_slice( array_map( static fn( $p ) => $p['name'] !== '' ? $p['name'] : ( $p['phone'] ?: $p['email'] ), $list ), 0, 5 ),
+        ] );
+    }
+
     public function ajax_send_client_broadcast(): void {
         check_ajax_referer( 'ofp_client_ajax', 'nonce' );
         OFP_Auth::require_client_login();
@@ -850,9 +894,12 @@ class OFP_Client_Portal {
             wp_send_json_error( 'Email requires a subject.' );
         }
 
-        $raw_list = array_filter( array_map( 'trim', explode( ',', $recipients ) ) );
+        $raw_list = array_values( array_unique( array_filter( array_map( 'trim', explode( ',', $recipients ) ) ) ) );
         if ( empty( $raw_list ) ) {
             wp_send_json_error( 'Please enter at least one recipient.' );
+        }
+        if ( count( $raw_list ) > self::BROADCAST_MAX ) {
+            wp_send_json_error( sprintf( 'You can send to at most %d people at a time. Send the rest in a second broadcast.', self::BROADCAST_MAX ) );
         }
 
         $sent   = 0;
@@ -865,18 +912,18 @@ class OFP_Client_Portal {
                 wp_send_json_error( 'Insufficient SMS credit balance. Required: ₦' . number_format( $needed_cost, 2 ) );
             }
 
-            $sms = new OFP_SMS( 'smartsms', $client->id );
+            $sms = OFP_SMS::for_client( (int) $client->id );
             foreach ( $raw_list as $phone ) {
                 $clean_phone = preg_replace( '/[^0-9+]/', '', $phone );
                 if ( empty( $clean_phone ) ) {
                     $failed++;
                     continue;
                 }
+                // OFP_SMS records every message in the communications log itself.
                 $res = $sms->send( $clean_phone, $body );
                 if ( ! empty( $res['success'] ) ) {
                     $sent++;
                     OFP_Credit::deduct( $client->id, 'sms', $cost_per_sms );
-                    OFP_Communications_Log::log( $client->id, null, 'sms', $clean_phone, 'outbound', $body, $cost_per_sms );
                 } else {
                     $failed++;
                 }

@@ -223,7 +223,7 @@ class OFP_Queue {
                         $wpdb->update( $p . 'ofp_trigger_queue', [ 'status' => 'cancelled' ], [ 'id' => $trigger->id ] );
                         return;
                     }
-                    $sms    = new OFP_SMS( $trigger->sms_provider, $trigger->client_id );
+                    $sms    = OFP_SMS::for_client( (int) $trigger->client_id );
                     // OFP_SMS records the message in the communications log itself,
                     // and now carries the lead id, so we do not log it a second time here.
                     $result = $sms->send( $lead->phone, $message, (int) $lead->id );

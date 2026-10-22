@@ -223,7 +223,7 @@ class OFP_IVR {
                 $sms_msg   = 'Chat with ' . $client->business_name . ' on WhatsApp: ' . $wa_link;
 
                 if ( OFP_Credit::has_balance( $client_id, 'sms', OFP_Queue::SMS_COST ) ) {
-                    $sms = new OFP_SMS( $client->sms_provider, $client_id );
+                    $sms = OFP_SMS::for_client( (int) $client_id );
                     $sms->send( $lead->phone, $sms_msg );
                     OFP_Credit::deduct( $client_id, 'sms', OFP_Queue::SMS_COST );
                 }
