@@ -147,6 +147,67 @@ $total_matching_amount = array_reduce( $payments, static fn( $acc, $it ) => $acc
     0% { background: rgba(59, 130, 246, 0.10); }
     100% { background: rgba(59, 130, 246, 0.20); }
 }
+/* Mobile filter toggle bar */
+.ofp-filter-toggle-bar {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+    cursor: pointer;
+    user-select: none;
+    background: rgba(255, 255, 255, 0.02);
+}
+[data-theme="light"] .ofp-filter-toggle-bar,
+html.light .ofp-filter-toggle-bar {
+    background: #f8fafc;
+    border-bottom-color: #e2e8f0;
+}
+.ofp-filter-toggle-btn {
+    font-size: 12.5px;
+    font-weight: 600;
+    background: var(--brand-color, #5b35d5);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+}
+.ofp-filter-toggle-btn:hover {
+    filter: brightness(1.1);
+}
+/* Filter pills / tabs: always nowrap + horizontal scroll */
+.ofp-txn-filter-pills {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex-wrap: nowrap !important;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+}
+.ofp-txn-filter-pills::-webkit-scrollbar { display: none; }
+.ofp-txn-pill {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+}
+@media (max-width: 768px) {
+    .ofp-filter-toggle-bar  { display: flex; }
+    .ofp-filter-collapsible { display: none; }
+    .ofp-filter-collapsible.is-open { display: block; }
+    .ofp-txn-filter-card { padding: 0 !important; overflow: hidden; }
+    .ofp-txn-search-row  { flex-direction: column !important; padding: 14px 16px; gap: 10px; }
+    .ofp-txn-search-box, .ofp-select.ofp-txn-select { width: 100% !important; min-width: unset !important; }
+    .ofp-txn-filter-pills { padding: 10px 14px !important; }
+}
 </style>
 <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
 </head>
@@ -161,53 +222,69 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 
         <!-- Search & Filter Card -->
         <div class="ofp-txn-filter-card">
-            <form method="get" action="<?php echo esc_url( home_url( '/property-payments' ) ); ?>">
-                <div class="ofp-txn-search-row">
-                    <div class="ofp-txn-search-box">
-                        <svg class="ofp-txn-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                        </svg>
-                        <input type="text" 
-                               id="ofp-txn-search-input" 
-                               name="s" 
-                               class="ofp-input ofp-txn-search-input" 
-                               value="<?php echo esc_attr( $filter_s ); ?>" 
-                               placeholder="Search Transaction ID (TXN-...), Receipt #, Buyer, Phone, Property..." 
-                               autocomplete="off" />
-                    </div>
-
-                    <select name="status" class="ofp-select ofp-txn-select">
-                        <option value="">All Statuses</option>
-                        <option value="successful" <?php selected( in_array( $filter_status, [ 'successful', 'verified' ], true ) ); ?>>Verified / Successful</option>
-                        <option value="pending" <?php selected( in_array( $filter_status, [ 'pending', 'pending_verification' ], true ) ); ?>>Pending Verification</option>
-                        <option value="failed" <?php selected( in_array( $filter_status, [ 'failed', 'rejected' ], true ) ); ?>>Failed / Rejected</option>
-                        <option value="refunded" <?php selected( $filter_status, 'refunded' ); ?>>Refunded</option>
-                    </select>
-
-                    <select name="method" class="ofp-select ofp-txn-select">
-                        <option value="">All Methods</option>
-                        <option value="checkout" <?php selected( $filter_method, 'checkout' ); ?>>Online Checkout (Paystack)</option>
-                        <option value="manual" <?php selected( $filter_method, 'manual' ); ?>>Bank Transfer / Manual</option>
-                        <option value="bank_transfer" <?php selected( $filter_method, 'bank_transfer' ); ?>>Direct Transfer</option>
-                        <option value="pos" <?php selected( $filter_method, 'pos' ); ?>>POS</option>
-                        <option value="cash" <?php selected( $filter_method, 'cash' ); ?>>Cash</option>
-                    </select>
-
-                    <button type="submit" class="ofp-btn ofp-btn-primary" style="padding:9px 18px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
-                        <span>Filter</span>
-                    </button>
-
+            <!-- Mobile toggle bar (hidden on desktop) -->
+            <div class="ofp-filter-toggle-bar" id="ofp-filter-toggle-bar">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:13.5px; font-weight:700; color:var(--text-main,#f8fafc);">&#9881; Filter &amp; Search</span>
                     <?php if ( $has_filters ) : ?>
-                        <a href="<?php echo esc_url( home_url( '/property-payments' ) ); ?>" class="ofp-btn" style="padding:9px 14px; font-size:13px; text-decoration:none;">
-                            Clear
-                        </a>
+                        <span style="font-size:10.5px; padding:2px 7px; border-radius:9999px; background:var(--brand-color,#3b82f6); color:#fff; font-weight:600;">Active</span>
                     <?php endif; ?>
                 </div>
+                <button type="button" class="ofp-filter-toggle-btn" id="ofp-filter-toggle-btn" aria-expanded="<?php echo $has_filters ? 'true' : 'false'; ?>" aria-controls="ofp-filter-collapsible">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:13px;height:13px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h5.25m5.25-.75L17.25 9m0 0L21 12.75M17.25 9v12"/></svg>
+                    <span id="ofp-filter-toggle-text"><?php echo $has_filters ? 'Hide Filters' : 'Show Filters'; ?></span>
+                </button>
+            </div>
+            <form method="get" action="<?php echo esc_url( home_url( '/property-payments' ) ); ?>">
+                <!-- Collapsible filter & search section -->
+                <div class="ofp-filter-collapsible <?php echo $has_filters ? 'is-open' : ''; ?>" id="ofp-filter-collapsible">
+                    <div class="ofp-txn-search-row">
+                        <div class="ofp-txn-search-box">
+                            <svg class="ofp-txn-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                            </svg>
+                            <input type="text" 
+                                   id="ofp-txn-search-input" 
+                                   name="s" 
+                                   class="ofp-input ofp-txn-search-input" 
+                                   value="<?php echo esc_attr( $filter_s ); ?>" 
+                                   placeholder="Search Transaction ID (TXN-...), Receipt #, Buyer, Phone, Property..." 
+                                   autocomplete="off" />
+                        </div>
 
-                <!-- Status Filter Pills -->
+                        <select name="status" class="ofp-select ofp-txn-select">
+                            <option value="">All Statuses</option>
+                            <option value="successful" <?php selected( in_array( $filter_status, [ 'successful', 'verified' ], true ) ); ?>>Verified / Successful</option>
+                            <option value="pending" <?php selected( in_array( $filter_status, [ 'pending', 'pending_verification' ], true ) ); ?>>Pending Verification</option>
+                            <option value="failed" <?php selected( in_array( $filter_status, [ 'failed', 'rejected' ], true ) ); ?>>Failed / Rejected</option>
+                            <option value="refunded" <?php selected( $filter_status, 'refunded' ); ?>>Refunded</option>
+                        </select>
+
+                        <select name="method" class="ofp-select ofp-txn-select">
+                            <option value="">All Methods</option>
+                            <option value="checkout" <?php selected( $filter_method, 'checkout' ); ?>>Online Checkout (Paystack)</option>
+                            <option value="manual" <?php selected( $filter_method, 'manual' ); ?>>Bank Transfer / Manual</option>
+                            <option value="bank_transfer" <?php selected( $filter_method, 'bank_transfer' ); ?>>Direct Transfer</option>
+                            <option value="pos" <?php selected( $filter_method, 'pos' ); ?>>POS</option>
+                            <option value="cash" <?php selected( $filter_method, 'cash' ); ?>>Cash</option>
+                        </select>
+
+                        <button type="submit" class="ofp-btn ofp-btn-primary" style="padding:9px 18px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+                            <span>Filter</span>
+                        </button>
+
+                        <?php if ( $has_filters ) : ?>
+                            <a href="<?php echo esc_url( home_url( '/property-payments' ) ); ?>" class="ofp-btn" style="padding:9px 14px; font-size:13px; text-decoration:none;">
+                                Clear
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Status Filter Pills (Tabs with horizontal scroll on mobile) -->
                 <div class="ofp-txn-filter-pills">
-                    <span style="font-size:12px; font-weight:600; color:var(--text-muted); margin-right:4px;">Filter Status:</span>
+                    <span style="font-size:12px; font-weight:600; color:var(--text-muted); margin-right:4px; white-space:nowrap; flex-shrink:0;">Filter:</span>
                     <?php
                     $pills = [
                         ''           => [ 'label' => 'All',        'count' => $counts['all'] ],
@@ -228,7 +305,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                         </a>
                     <?php endforeach; ?>
 
-                    <span id="ofp-txn-live-count" style="display:none; margin-left:auto; font-size:12px; color:var(--brand-color); font-weight:600;"></span>
+                    <span id="ofp-txn-live-count" style="display:none; margin-left:auto; font-size:12px; color:var(--brand-color); font-weight:600; flex-shrink:0;"></span>
                 </div>
             </form>
         </div>
@@ -444,6 +521,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (topSearch) topSearch.value = this.value;
                     form.submit();
                 }
+            }
+        });
+    }
+
+    // Mobile Filter Toggle (Show/Hide Filters)
+    var filterToggleBtn = document.getElementById('ofp-filter-toggle-btn');
+    var filterToggleBar = document.getElementById('ofp-filter-toggle-bar');
+    var filterCollapsible = document.getElementById('ofp-filter-collapsible');
+    var filterToggleText = document.getElementById('ofp-filter-toggle-text');
+
+    function toggleFilterPanel() {
+        if (!filterCollapsible) return;
+        var isOpen = filterCollapsible.classList.toggle('is-open');
+        if (filterToggleBtn) {
+            filterToggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        }
+        if (filterToggleText) {
+            filterToggleText.textContent = isOpen ? 'Hide Filters' : 'Show Filters';
+        }
+    }
+
+    if (filterToggleBtn) {
+        filterToggleBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleFilterPanel();
+        });
+    }
+    if (filterToggleBar) {
+        filterToggleBar.addEventListener('click', function(e) {
+            if (e.target !== filterToggleBtn && !filterToggleBtn.contains(e.target)) {
+                toggleFilterPanel();
             }
         });
     }

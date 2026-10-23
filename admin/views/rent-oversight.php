@@ -198,13 +198,38 @@ $tenants = $wpdb->get_results( $wpdb->prepare(
 ) );
 
 // ── Payment data ─────────────────────────────────────────────────────────────
-$pay_where = [ '1=1' ];
-$pay_args  = [];
+$pay_search = sanitize_text_field( trim( $_GET['s'] ?? '' ) );
+$pay_where  = [ '1=1' ];
+$pay_args   = [];
 if ( $filter_client ) { $pay_where[] = 'l.client_id = %d'; $pay_args[] = $filter_client; }
+
+if ( $pay_search !== '' ) {
+    // TXN- formatted reference → match gateway_reference / payer_reference
+    if ( preg_match( '/^TXN-([A-Z0-9]+)$/i', $pay_search, $m ) ) {
+        $like = '%' . $wpdb->esc_like( $m[1] ) . '%';
+        $pay_where[] = '( p.gateway_reference LIKE %s OR p.payer_reference LIKE %s )';
+        array_push( $pay_args, $like, $like );
+    // Pure numeric → match payment ID
+    } elseif ( ctype_digit( $pay_search ) ) {
+        $pay_where[] = 'p.id = %d';
+        $pay_args[]  = (int) $pay_search;
+    // Everything else → broad search
+    } else {
+        $like = '%' . $wpdb->esc_like( $pay_search ) . '%';
+        $pay_where[] = '( p.gateway_reference LIKE %s OR p.payer_reference LIKE %s OR t.full_name LIKE %s OR pr.title LIKE %s OR c.business_name LIKE %s )';
+        array_push( $pay_args, $like, $like, $like, $like, $like );
+    }
+}
+
 $pay_where_sql = implode( ' AND ', $pay_where );
 
 $pay_total = (int) $wpdb->get_var( $wpdb->prepare(
-    "SELECT COUNT(*) FROM {$p}ofp_property_lease_payments p JOIN {$p}ofp_property_leases l ON l.id = p.lease_id WHERE {$pay_where_sql}",
+    "SELECT COUNT(*) FROM {$p}ofp_property_lease_payments p
+     JOIN {$p}ofp_property_leases l ON l.id = p.lease_id
+     JOIN {$p}ofp_property_tenants t ON t.id = l.tenant_id
+     LEFT JOIN {$p}ofp_properties pr ON pr.id = l.property_id
+     LEFT JOIN {$p}ofp_clients c ON c.id = l.client_id
+     WHERE {$pay_where_sql}",
     ...$pay_args
 ) );
 $payments = $wpdb->get_results( $wpdb->prepare(
@@ -423,11 +448,27 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <p>No rent transactions found.</p>
     <?php else : ?>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
-            <div style="font-size:13px; color:#64748b; font-weight:600;">Rent Transactions Ledger (<?php echo count( $payments ); ?>)</div>
-            <div class="ofp-table-search" style="min-width:280px; position:relative;">
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#64748b; pointer-events:none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input type="text" id="ofp-admin-rent-search" class="ofp-input ofp-txn-search-input" placeholder="Search rent transactions, tenant, ID..." onkeyup="ofpFilterAdminTable('ofp-admin-rent-search', 'ofp-admin-rent-table')" style="padding-left:32px;">
-            </div>
+            <div style="font-size:13px; color:#64748b; font-weight:600;">Rent Transactions Ledger (<?php echo $pay_total; ?>)</div>
+            <form method="get" style="display:flex; gap:8px; align-items:center;" action="">
+                <?php
+                // Preserve existing GET params (page, tab, subtab, client_id, etc.) as hidden inputs
+                foreach ( $_GET as $gk => $gv ) {
+                    if ( $gk === 's' ) continue;
+                    echo '<input type="hidden" name="' . esc_attr( $gk ) . '" value="' . esc_attr( $gv ) . '">';
+                }
+                ?>
+                <div class="ofp-table-search" style="min-width:280px; position:relative;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#64748b; pointer-events:none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" name="s" id="ofp-admin-rent-search" class="ofp-input ofp-txn-search-input"
+                        value="<?php echo esc_attr( $pay_search ); ?>"
+                        placeholder="Search Transaction ID (TXN-...), tenant, property..."
+                        style="padding-left:32px;">
+                </div>
+                <button type="submit" class="button">Search</button>
+                <?php if ( $pay_search !== '' ) : ?>
+                    <a href="<?php echo esc_url( remove_query_arg( 's' ) ); ?>" class="button">Clear</a>
+                <?php endif; ?>
+            </form>
         </div>
         <div style="overflow-x:auto;">
             <table class="widefat ofp-table" id="ofp-admin-rent-table" style="min-width:1100px;">

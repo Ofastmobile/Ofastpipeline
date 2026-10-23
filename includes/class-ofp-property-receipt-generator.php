@@ -300,7 +300,6 @@ class OFP_Property_Receipt_Generator {
             'payment_time'        => wp_date( 'g:i A', strtotime( $payment->created_at ) ),
             'payment_type'        => 'Rent Payment',
             'payment_status'      => ucfirst( str_replace( '_', ' ', $payment->status ) ),
-            'currency'            => 'NGN',
 
             // Payer
             'payer_name'          => $payment->payer_name ?: $payment->tenant_name,
@@ -551,7 +550,6 @@ class OFP_Property_Receipt_Generator {
             'payment_time'        => wp_date( 'g:i A', strtotime( $payment->created_at ) ),
             'payment_type'        => 'Property Payment',
             'payment_status'      => ucfirst( str_replace( '_', ' ', $payment->status ?? 'successful' ) ),
-            'currency'            => 'NGN',
 
             'payer_name'          => $payment->buyer_name ?? $payment->payer_name ?? '',
             'payer_email'         => $payment->buyer_email ?? '',

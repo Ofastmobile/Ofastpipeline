@@ -328,53 +328,70 @@ class OFP_Property_Payment_Records {
 
                 <!-- Search & Filter Card -->
                 <div class="ofp-txn-filter-card">
-                    <form method="get" action="<?php echo esc_url( home_url( '/property-payments' ) ); ?>">
-                        <div class="ofp-txn-search-row">
-                            <div class="ofp-txn-search-box">
-                                <svg class="ofp-txn-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                                </svg>
-                                <input type="text" 
-                                       id="ofp-client-txn-search" 
-                                       name="s" 
-                                       class="ofp-input ofp-txn-search-input" 
-                                       value="<?php echo esc_attr( $search ); ?>" 
-                                       placeholder="Search Transaction ID (TXN-...), Receipt #, Buyer, Phone, Property..." 
-                                       autocomplete="off" />
-                            </div>
-
-                            <select name="status" class="ofp-select ofp-txn-select">
-                                <option value="">All Statuses</option>
-                                <option value="successful" <?php selected( in_array( $status, [ 'successful', 'verified' ], true ) ); ?>>Verified / Successful</option>
-                                <option value="pending_verification" <?php selected( in_array( $status, [ 'pending', 'pending_verification' ], true ) ); ?>>Pending Verification</option>
-                                <option value="failed" <?php selected( in_array( $status, [ 'failed', 'rejected' ], true ) ); ?>>Failed / Rejected</option>
-                                <option value="refunded" <?php selected( $status, 'refunded' ); ?>>Refunded</option>
-                            </select>
-
-                            <select name="method" class="ofp-select ofp-txn-select">
-                                <option value="">All Methods</option>
-                                <option value="checkout" <?php selected( $method, 'checkout' ); ?>>Online Checkout (Paystack)</option>
-                                <option value="manual" <?php selected( $method, 'manual' ); ?>>Bank Transfer / Manual</option>
-                                <option value="bank_transfer" <?php selected( $method, 'bank_transfer' ); ?>>Direct Transfer</option>
-                                <option value="pos" <?php selected( $method, 'pos' ); ?>>POS</option>
-                                <option value="cash" <?php selected( $method, 'cash' ); ?>>Cash</option>
-                            </select>
-
-                            <button type="submit" class="ofp-btn ofp-btn-primary" style="padding:9px 18px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
-                                <span>Filter</span>
-                            </button>
-
+                    <!-- Mobile toggle bar (hidden on desktop) -->
+                    <div class="ofp-filter-toggle-bar" id="ofp-client-filter-toggle-bar">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:13.5px; font-weight:700; color:var(--text-main,#f8fafc);">&#9881; Filter &amp; Search</span>
                             <?php if ( $has_filters ) : ?>
-                                <a href="<?php echo esc_url( home_url( '/property-payments' ) ); ?>" class="ofp-btn" style="padding:9px 14px; font-size:13px; text-decoration:none;">
-                                    Clear
-                                </a>
+                                <span style="font-size:10.5px; padding:2px 7px; border-radius:9999px; background:var(--brand-color,#3b82f6); color:#fff; font-weight:600;">Active</span>
                             <?php endif; ?>
                         </div>
+                        <button type="button" class="ofp-filter-toggle-btn" id="ofp-client-filter-toggle-btn" aria-expanded="<?php echo $has_filters ? 'true' : 'false'; ?>" aria-controls="ofp-client-filter-collapsible">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:13px;height:13px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h5.25m5.25-.75L17.25 9m0 0L21 12.75M17.25 9v12"/></svg>
+                            <span id="ofp-client-filter-toggle-text"><?php echo $has_filters ? 'Hide Filters' : 'Show Filters'; ?></span>
+                        </button>
+                    </div>
 
-                        <!-- Status Filter Pills -->
+                    <form method="get" action="<?php echo esc_url( home_url( '/property-payments' ) ); ?>">
+                        <!-- Collapsible search and filter section -->
+                        <div class="ofp-filter-collapsible <?php echo $has_filters ? 'is-open' : ''; ?>" id="ofp-client-filter-collapsible">
+                            <div class="ofp-txn-search-row">
+                                <div class="ofp-txn-search-box">
+                                    <svg class="ofp-txn-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                    </svg>
+                                    <input type="text" 
+                                           id="ofp-client-txn-search" 
+                                           name="s" 
+                                           class="ofp-input ofp-txn-search-input" 
+                                           value="<?php echo esc_attr( $search ); ?>" 
+                                           placeholder="Search Transaction ID (TXN-...), Receipt #, Buyer, Phone, Property..." 
+                                           autocomplete="off" />
+                                </div>
+
+                                <select name="status" class="ofp-select ofp-txn-select">
+                                    <option value="">All Statuses</option>
+                                    <option value="successful" <?php selected( in_array( $status, [ 'successful', 'verified' ], true ) ); ?>>Verified / Successful</option>
+                                    <option value="pending_verification" <?php selected( in_array( $status, [ 'pending', 'pending_verification' ], true ) ); ?>>Pending Verification</option>
+                                    <option value="failed" <?php selected( in_array( $status, [ 'failed', 'rejected' ], true ) ); ?>>Failed / Rejected</option>
+                                    <option value="refunded" <?php selected( $status, 'refunded' ); ?>>Refunded</option>
+                                </select>
+
+                                <select name="method" class="ofp-select ofp-txn-select">
+                                    <option value="">All Methods</option>
+                                    <option value="checkout" <?php selected( $method, 'checkout' ); ?>>Online Checkout (Paystack)</option>
+                                    <option value="manual" <?php selected( $method, 'manual' ); ?>>Bank Transfer / Manual</option>
+                                    <option value="bank_transfer" <?php selected( $method, 'bank_transfer' ); ?>>Direct Transfer</option>
+                                    <option value="pos" <?php selected( $method, 'pos' ); ?>>POS</option>
+                                    <option value="cash" <?php selected( $method, 'cash' ); ?>>Cash</option>
+                                </select>
+
+                                <button type="submit" class="ofp-btn ofp-btn-primary" style="padding:9px 18px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+                                    <span>Filter</span>
+                                </button>
+
+                                <?php if ( $has_filters ) : ?>
+                                    <a href="<?php echo esc_url( home_url( '/property-payments' ) ); ?>" class="ofp-btn" style="padding:9px 14px; font-size:13px; text-decoration:none;">
+                                        Clear
+                                    </a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- Status Filter Pills (Tabs with horizontal scroll on mobile) -->
                         <div class="ofp-txn-filter-pills">
-                            <span style="font-size:12px; font-weight:600; color:var(--text-muted); margin-right:4px;">Filter Status:</span>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-muted); margin-right:4px; white-space:nowrap; flex-shrink:0;">Filter:</span>
                             <?php
                             $pills = [
                                 ''           => [ 'label' => 'All',        'count' => $counts['all'] ],
@@ -395,7 +412,7 @@ class OFP_Property_Payment_Records {
                                 </a>
                             <?php endforeach; ?>
 
-                            <span id="ofp-client-txn-live-count" style="display:none; margin-left:auto; font-size:12px; color:var(--brand-color); font-weight:600;"></span>
+                            <span id="ofp-client-txn-live-count" style="display:none; margin-left:auto; font-size:12px; color:var(--brand-color); font-weight:600; flex-shrink:0;"></span>
                         </div>
                     </form>
                 </div>
@@ -622,6 +639,37 @@ class OFP_Property_Payment_Records {
                             if (topSearch) topSearch.value = this.value;
                             form.submit();
                         }
+                    }
+                });
+            }
+
+            // Mobile Filter Toggle (Show/Hide Filters)
+            var filterToggleBtn = document.getElementById('ofp-client-filter-toggle-btn');
+            var filterToggleBar = document.getElementById('ofp-client-filter-toggle-bar');
+            var filterCollapsible = document.getElementById('ofp-client-filter-collapsible');
+            var filterToggleText = document.getElementById('ofp-client-filter-toggle-text');
+
+            function toggleFilterPanel() {
+                if (!filterCollapsible) return;
+                var isOpen = filterCollapsible.classList.toggle('is-open');
+                if (filterToggleBtn) {
+                    filterToggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                }
+                if (filterToggleText) {
+                    filterToggleText.textContent = isOpen ? 'Hide Filters' : 'Show Filters';
+                }
+            }
+
+            if (filterToggleBtn) {
+                filterToggleBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleFilterPanel();
+                });
+            }
+            if (filterToggleBar) {
+                filterToggleBar.addEventListener('click', function(e) {
+                    if (e.target !== filterToggleBtn && !filterToggleBtn.contains(e.target)) {
+                        toggleFilterPanel();
                     }
                 });
             }

@@ -8489,3 +8489,78 @@ html.light .ofp-txn-pill.active .ofp-txn-pill-count {
     background: rgba(255, 255, 255, 0.25);
     color: #ffffff;
 }
+
+/* Mobile Filter Toggle & Horizontal Scroll Tabs */
+.ofp-filter-toggle-bar {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+    cursor: pointer;
+    user-select: none;
+    background: rgba(255, 255, 255, 0.02);
+}
+[data-theme="light"] .ofp-filter-toggle-bar,
+html.light .ofp-filter-toggle-bar {
+    background: #f8fafc;
+    border-bottom-color: #e2e8f0;
+}
+.ofp-filter-toggle-btn {
+    font-size: 12.5px;
+    font-weight: 600;
+    background: var(--brand-color, #5b35d5);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+}
+.ofp-filter-toggle-btn:hover {
+    filter: brightness(1.1);
+}
+
+@media (max-width: 768px) {
+    .ofp-filter-toggle-bar {
+        display: flex;
+    }
+    .ofp-filter-collapsible {
+        display: none;
+    }
+    .ofp-filter-collapsible.is-open {
+        display: block;
+    }
+    .ofp-txn-filter-pills {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        padding: 10px 14px !important;
+    }
+    .ofp-txn-filter-pills::-webkit-scrollbar {
+        display: none !important;
+    }
+    .ofp-txn-pill {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+    }
+    .ofp-sales-tabs-nav {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+    }
+    .ofp-sales-tabs-nav::-webkit-scrollbar {
+        display: none !important;
+    }
+    .ofp-tab-btn {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+    }
+}

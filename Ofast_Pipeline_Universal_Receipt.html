@@ -22,19 +22,20 @@
     background:#eef0f5;
     color:var(--text);
     font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    line-height:1.5;
+    line-height:1.45;
+    font-size:13px;
   }
   .toolbar{
     max-width:900px;
-    margin:24px auto 0;
+    margin:16px auto 0;
     display:flex;
     justify-content:flex-end;
-    gap:10px;
+    gap:8px;
   }
   button{
     border:0;
-    border-radius:9px;
-    padding:11px 17px;
+    border-radius:8px;
+    padding:8px 14px;
     font-weight:700;
     cursor:pointer;
   }
@@ -42,113 +43,120 @@
   .print-btn:hover{background:var(--primary-dark)}
   .receipt{
     width:min(900px,calc(100% - 32px));
-    margin:14px auto 40px;
+    margin:10px auto 30px;
     background:#fff;
     border:1px solid var(--line);
-    box-shadow:0 15px 45px rgba(24,32,51,.08);
-    padding:42px;
+    box-shadow:0 10px 30px rgba(24,32,51,.07);
+    padding:28px;
   }
   .header{
     display:flex;
     justify-content:space-between;
-    gap:30px;
-    padding-bottom:26px;
+    gap:20px;
+    padding-bottom:16px;
     border-bottom:2px solid var(--text);
   }
-  .brand{display:flex;gap:13px;align-items:center}
+  .brand{display:flex;gap:10px;align-items:center}
   .logo{
-    width:48px;height:48px;border-radius:12px;
+    width:40px;height:40px;border-radius:10px;
     background:var(--primary);color:#fff;
-    display:grid;place-items:center;font-weight:900;font-size:20px;
+    display:grid;place-items:center;font-weight:900;font-size:17px;
   }
-  .brand-name{font-size:22px;font-weight:900;letter-spacing:-.5px}
-  .brand-sub{font-size:12px;color:var(--muted)}
+  .brand-name{font-size:19px;font-weight:900;letter-spacing:-.5px}
+  .brand-sub{font-size:11px;color:var(--muted)}
   .receipt-title{text-align:right}
-  .receipt-title h1{margin:0;font-size:29px;letter-spacing:-1px}
-  .receipt-title p{margin:4px 0 0;color:var(--muted);font-size:13px}
+  .receipt-title h1{margin:0;font-size:24px;letter-spacing:-1px}
+  .receipt-title p{margin:3px 0 0;color:var(--muted);font-size:12px}
   .meta{
     display:grid;
-    grid-template-columns:repeat(3,1fr);
+    grid-template-columns:repeat(5,1fr);
     gap:1px;
     background:var(--line);
     border:1px solid var(--line);
-    margin:25px 0;
+    margin:16px 0;
   }
-  .meta-item{background:#fff;padding:15px}
+  .meta-item{background:#fff;padding:10px 12px}
   .label{
     display:block;text-transform:uppercase;
-    letter-spacing:.07em;font-size:10px;
-    color:var(--muted);font-weight:800;margin-bottom:4px
+    letter-spacing:.07em;font-size:9.5px;
+    color:var(--muted);font-weight:800;margin-bottom:2px
   }
-  .value{font-size:13px;font-weight:750}
+  .value{font-size:12.5px;font-weight:750}
   .status{
-    display:inline-flex;padding:5px 10px;border-radius:99px;
-    background:#eaf8f0;color:var(--success);font-size:11px;font-weight:900;
+    display:inline-flex;padding:3px 8px;border-radius:99px;
+    background:#eaf8f0;color:var(--success);font-size:10.5px;font-weight:900;
   }
-  .section{margin-top:28px}
+  .section{margin-top:16px}
   .section-title{
-    font-size:13px;text-transform:uppercase;letter-spacing:.08em;
-    font-weight:900;margin:0 0 11px;
+    font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;
+    font-weight:900;margin:0 0 8px;
   }
-  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .prop-alloc-row{display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:start}
+  .alloc-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:7px 0;border-top:1px solid var(--line);font-size:12px;
+  }
+  .alloc-row:first-of-type{border-top:none;padding-top:10px}
   .card{
     border:1px solid var(--line);
-    border-radius:10px;
-    padding:17px;
+    border-radius:8px;
+    padding:12px;
   }
-  .person-name{font-size:16px;font-weight:850;margin-bottom:4px}
+  .person-name{font-size:14px;font-weight:850;margin-bottom:3px}
   .muted{color:var(--muted);font-size:12px}
   .property{
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:0;
     border:1px solid var(--line);
-    border-radius:10px;
+    border-radius:8px;
     overflow:hidden;
   }
-  .property div{padding:13px 15px;border-bottom:1px solid var(--line)}
+  .property div{padding:8px 11px;border-bottom:1px solid var(--line)}
   .property div:nth-child(odd){border-right:1px solid var(--line)}
   .property div:nth-last-child(-n+2){border-bottom:0}
   table{width:100%;border-collapse:collapse}
   th{
-    text-align:left;font-size:10px;text-transform:uppercase;
+    text-align:left;font-size:9.5px;text-transform:uppercase;
     letter-spacing:.07em;color:var(--muted);
-    background:var(--soft);padding:11px 12px;
+    background:var(--soft);padding:8px 10px;
   }
-  td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:13px}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);font-size:12.5px}
   td:last-child,th:last-child{text-align:right}
   .amount-box{
-    margin-top:18px;
+    margin-top:12px;
     margin-left:auto;
-    width:min(390px,100%);
+    width:min(360px,100%);
     border:1px solid var(--line);
-    border-radius:10px;
+    border-radius:8px;
     overflow:hidden;
   }
-  .amount-row{display:flex;justify-content:space-between;padding:10px 15px;font-size:13px}
+  .amount-row{display:flex;justify-content:space-between;padding:7px 12px;font-size:12.5px}
   .amount-row.total{
     background:var(--primary);color:#fff;
-    font-size:17px;font-weight:900;padding:15px;
+    font-size:15px;font-weight:900;padding:11px 12px;
   }
   .amount-row.balance{
     background:#fafafa;font-weight:800;
   }
   .payment-banner{
-    margin-top:24px;padding:16px 18px;
+    margin-top:14px;padding:10px 14px;
     border-left:4px solid var(--primary);
     background:var(--soft);
     border-radius:6px;
   }
-  .payment-banner strong{display:block;margin-bottom:3px}
-  .payment-banner span{font-size:12px;color:var(--muted)}
+  .payment-banner strong{display:block;margin-bottom:2px}
+  .payment-banner span{font-size:11.5px;color:var(--muted)}
   .footer{
-    margin-top:35px;padding-top:20px;border-top:1px solid var(--line);
-    display:flex;justify-content:space-between;gap:25px;
+    margin-top:20px;padding-top:14px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;gap:20px;
     font-size:11px;color:var(--muted);
   }
   .footer strong{color:var(--text)}
   .legal{
-    margin-top:20px;text-align:center;font-size:10px;color:#8b92a2;
+    margin-top:12px;text-align:center;font-size:10px;color:#8b92a2;
   }
   .hide-print{display:block}
   @media(max-width:650px){
@@ -162,13 +170,13 @@
     .property div:last-child{border-bottom:0}
   }
   @media print{
-    body{background:#fff}
+    body{background:#fff;font-size:12px}
     .hide-print{display:none!important}
     .receipt{
       width:100%;margin:0;box-shadow:none;border:0;
-      padding:25px 0;
+      padding:18px 0;
     }
-    @page{size:A4;margin:14mm}
+    @page{size:A4;margin:10mm}
   }
 </style>
 </head>
@@ -216,14 +224,10 @@
       <span class="label">Transaction Status</span>
       <span class="status">{{payment_status}}</span>
     </div>
-    <div class="meta-item">
-      <span class="label">Currency</span>
-      <span class="value">{{currency}}</span>
-    </div>
   </section>
 
-  <!-- Payer / recipient -->
-  <section class="section two-col">
+  <!-- Payer / recipient / payment method -->
+  <section class="section three-col">
     <div class="card">
       <div class="label">Paid By</div>
       <div class="person-name">{{payer_name}}</div>
@@ -238,20 +242,48 @@
       <div class="muted">{{recipient_email}}</div>
       <div class="muted">{{recipient_phone}}</div>
     </div>
+    <div class="card">
+      <div class="label">Payment Method</div>
+      <div class="person-name">{{payment_method}}</div>
+      <div class="muted">Provider: {{payment_provider}}</div>
+      <div class="muted">Reference: {{payment_reference}}</div>
+      <div class="muted">Channel: {{payment_channel}}</div>
+    </div>
   </section>
 
-  <!-- Property / transaction context -->
+  <!-- Property / transaction context + Payment Allocation -->
   <section class="section">
     <h2 class="section-title">Property / Transaction</h2>
-    <div class="property">
-      <div><span class="label">Property</span><strong>{{property_name}}</strong></div>
-      <div><span class="label">Property ID</span><strong>{{property_id}}</strong></div>
-      <div><span class="label">Property Type</span>{{property_type}}</div>
-      <div><span class="label">Transaction Type</span>{{transaction_type}}</div>
-      <div><span class="label">Location</span>{{property_location}}</div>
-      <div><span class="label">Unit / Plot / Room</span>{{unit_reference}}</div>
-      <div><span class="label">Owner / Landlord</span>{{owner_name}}</div>
-      <div><span class="label">Agent / Representative</span>{{agent_name}}</div>
+    <div class="prop-alloc-row">
+      <div class="property">
+        <div><span class="label">Property</span><strong>{{property_name}}</strong></div>
+        <div><span class="label">Property ID</span><strong>{{property_id}}</strong></div>
+        <div><span class="label">Property Type</span>{{property_type}}</div>
+        <div><span class="label">Transaction Type</span>{{transaction_type}}</div>
+        <div><span class="label">Location</span>{{property_location}}</div>
+        <div><span class="label">Unit / Plot / Room</span>{{unit_reference}}</div>
+        <div><span class="label">Owner / Landlord</span>{{owner_name}}</div>
+        <div><span class="label">Agent / Representative</span>{{agent_name}}</div>
+      </div>
+      <div class="card" style="height:100%">
+        <div class="label" style="border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:2px">Payment Allocation</div>
+        <div class="alloc-row">
+          <span class="muted">Plan</span>
+          <strong style="font-size:11.5px;text-align:right">{{plan_name}}</strong>
+        </div>
+        <div class="alloc-row">
+          <span class="muted">Installment</span>
+          <strong>{{installment_number}}</strong>
+        </div>
+        <div class="alloc-row">
+          <span class="muted">Due Date</span>
+          <strong>{{due_date}}</strong>
+        </div>
+        <div class="alloc-row">
+          <span class="muted">Next Payment</span>
+          <strong>{{next_payment_date}}</strong>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -267,27 +299,6 @@
         </tr>
       </thead>
       <tbody>
-        <!-- Examples of possible line items:
-             Property purchase
-             Installment payment
-             Investment contribution
-             Rent
-             Rent renewal
-             Security deposit
-             Caution deposit
-             Service charge
-             Agency fee
-             Legal/documentation fee
-             Inspection/tour fee
-             Booking/reservation fee
-             Application fee
-             Maintenance charge
-             Utility charge
-             Management fee
-             Late payment fee
-             Other platform-approved charge
-             Refund / credit
-        -->
         {{payment_line_items}}
       </tbody>
     </table>
@@ -311,24 +322,6 @@
       <div class="amount-row balance">
         <span>Outstanding Balance</span><span>{{outstanding_balance}}</span>
       </div>
-    </div>
-  </section>
-
-  <!-- Payment method -->
-  <section class="section two-col">
-    <div class="card">
-      <div class="label">Payment Method</div>
-      <div class="person-name">{{payment_method}}</div>
-      <div class="muted">Provider: {{payment_provider}}</div>
-      <div class="muted">Payment Reference: {{payment_reference}}</div>
-      <div class="muted">Channel: {{payment_channel}}</div>
-    </div>
-    <div class="card">
-      <div class="label">Payment Allocation</div>
-      <div class="muted">Plan: <strong>{{plan_name}}</strong></div>
-      <div class="muted">Installment No.: <strong>{{installment_number}}</strong></div>
-      <div class="muted">Due Date: <strong>{{due_date}}</strong></div>
-      <div class="muted">Next Payment: <strong>{{next_payment_date}}</strong></div>
     </div>
   </section>
 
