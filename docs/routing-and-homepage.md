@@ -13,10 +13,10 @@ Until that is set, links stay on the main WordPress URL.
 |---|---|
 | `yourdomain.com` | Marketing homepage (coded, fast, SEO) |
 | `app.yourdomain.com` | Client CRM portal (login, dashboard, my properties, funding) |
-| `property.yourdomain.com` | Public marketplace (browse, search, single listing) |
+| `marketplace.yourdomain.com` | Public marketplace (browse, search, single listing) — *`property.` also supported as alias* |
 | `client.yourdomain.com` | That client's own landing page (separate from the three above) |
 
-Reserved subdomain words (never give these to a client): `app`, `property`, `www`, `mail`, `ftp`, `admin`.
+Reserved subdomain words (never give these to a client): `app`, `marketplace`, `property`, `www`, `mail`, `ftp`, `admin`, `api`, `crm`, `portal`.
 
 DNS wildcard `*.yourdomain.com` must point at the WordPress install or none of the subdomains work.
 
@@ -121,7 +121,7 @@ The entire plugin architecture was designed specifically for your official domai
 |---|---|
 | `yourdomain.com` | Fast, SEO-optimized marketing homepage |
 | `app.yourdomain.com` | Client portal (Login, Dashboard, Profile, Properties, Funding, Leads) |
-| `property.yourdomain.com` | Public property marketplace & search |
+| `marketplace.yourdomain.com` | Public property marketplace & search (`property.` supported as alias) |
 | `{clientname}.yourdomain.com` | Branded white-label agency portal & listings |
 
 ---

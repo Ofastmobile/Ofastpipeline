@@ -2064,7 +2064,7 @@ class OFP_Property_CPT {
             return $post_link;
         }
 
-        return preg_replace( '#^https?://[^/]+#', 'https://property.' . $base_domain, $post_link );
+        return preg_replace( '#^https?://[^/]+#', 'https://marketplace.' . $base_domain, $post_link );
     }
 
     /**

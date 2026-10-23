@@ -156,18 +156,19 @@ class OFP_Contacts {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
+     * @param int $client_id 0 for all clients (admin view), or a specific client ID.
      * @return array<string,array> keyed by person key, newest activity first.
      *   Each: key, name, phone, email, tags[], purchases, total, paid, balance, leases,
-     *         last_at, purchase_ids[], tenant_ids[], lead_ids[]
+     *         last_at, purchase_ids[], tenant_ids[], lead_ids[], client_id, client_name, client_names[]
      */
-    public static function customers( int $client_id ): array {
+    public static function customers( int $client_id = 0 ): array {
         global $wpdb;
         $p = $wpdb->prefix;
 
         $people   = [];
         $by_email = [];
 
-        $touch = static function ( string $name, string $phone, string $email, string $when ) use ( &$people, &$by_email ): ?string {
+        $touch = static function ( string $name, string $phone, string $email, string $when, int $row_client_id = 0, string $client_name = '' ) use ( &$people, &$by_email ): ?string {
             $key = self::person_key( $phone, $email );
             $ek  = self::email_key( $email );
             if ( $key === '' ) {
@@ -182,6 +183,7 @@ class OFP_Contacts {
                     'key' => $key, 'name' => '', 'phone' => '', 'email' => '', 'tags' => [],
                     'purchases' => 0, 'total' => 0.0, 'paid' => 0.0, 'balance' => 0.0, 'leases' => 0,
                     'last_at' => '', 'purchase_ids' => [], 'tenant_ids' => [], 'lead_ids' => [],
+                    'client_id' => $row_client_id, 'client_name' => $client_name, 'client_names' => [],
                 ];
             }
             $person = &$people[ $key ];
@@ -189,19 +191,44 @@ class OFP_Contacts {
             if ( $person['phone'] === '' && $phone !== '' ) $person['phone'] = $phone;
             if ( $person['email'] === '' && $email !== '' ) $person['email'] = $email;
             if ( $when !== '' && $when > $person['last_at'] ) $person['last_at'] = $when;
+            if ( $row_client_id > 0 ) {
+                if ( empty( $person['client_id'] ) ) {
+                    $person['client_id'] = $row_client_id;
+                }
+                if ( $client_name !== '' ) {
+                    $person['client_names'][ $row_client_id ] = $client_name;
+                    if ( empty( $person['client_name'] ) ) {
+                        $person['client_name'] = $client_name;
+                    }
+                }
+            }
             if ( $ek !== '' ) $by_email[ $ek ] = $key;
             return $key;
         };
 
-        $buyers = (array) $wpdb->get_results( $wpdb->prepare(
-            "SELECT id, buyer_name, buyer_phone, buyer_email, total_price, amount_paid, balance, created_at
-             FROM {$p}ofp_property_purchases
-             WHERE client_id = %d AND status IN ('active','completed')
-             ORDER BY created_at DESC LIMIT %d",
-            $client_id, self::LIMIT
-        ) );
+        if ( $client_id > 0 ) {
+            $buyers = (array) $wpdb->get_results( $wpdb->prepare(
+                "SELECT pu.id, pu.buyer_name, pu.buyer_phone, pu.buyer_email, pu.total_price, pu.amount_paid, pu.balance, pu.created_at,
+                        pu.client_id, c.business_name AS client_name
+                 FROM {$p}ofp_property_purchases pu
+                 LEFT JOIN {$p}ofp_clients c ON c.id = pu.client_id
+                 WHERE pu.client_id = %d AND pu.status IN ('active','completed')
+                 ORDER BY pu.created_at DESC LIMIT %d",
+                $client_id, self::LIMIT
+            ) );
+        } else {
+            $buyers = (array) $wpdb->get_results( $wpdb->prepare(
+                "SELECT pu.id, pu.buyer_name, pu.buyer_phone, pu.buyer_email, pu.total_price, pu.amount_paid, pu.balance, pu.created_at,
+                        pu.client_id, c.business_name AS client_name
+                 FROM {$p}ofp_property_purchases pu
+                 LEFT JOIN {$p}ofp_clients c ON c.id = pu.client_id
+                 WHERE pu.status IN ('active','completed')
+                 ORDER BY pu.created_at DESC LIMIT %d",
+                self::LIMIT
+            ) );
+        }
         foreach ( $buyers as $b ) {
-            $key = $touch( (string) $b->buyer_name, (string) $b->buyer_phone, (string) $b->buyer_email, (string) $b->created_at );
+            $key = $touch( (string) $b->buyer_name, (string) $b->buyer_phone, (string) $b->buyer_email, (string) $b->created_at, (int) ( $b->client_id ?? 0 ), (string) ( $b->client_name ?? '' ) );
             if ( $key === null ) continue;
             $people[ $key ]['tags']['Buyer'] = true;
             $people[ $key ]['purchases']++;
@@ -211,29 +238,54 @@ class OFP_Contacts {
             $people[ $key ]['purchase_ids'][] = (int) $b->id;
         }
 
-        $tenants = (array) $wpdb->get_results( $wpdb->prepare(
-            "SELECT t.id, t.full_name, t.phone, t.email, t.created_at,
-                    (SELECT COUNT(*) FROM {$p}ofp_property_leases l WHERE l.tenant_id = t.id) AS lease_count
-             FROM {$p}ofp_property_tenants t
-             WHERE t.client_id = %d ORDER BY t.created_at DESC LIMIT %d",
-            $client_id, self::LIMIT
-        ) );
+        if ( $client_id > 0 ) {
+            $tenants = (array) $wpdb->get_results( $wpdb->prepare(
+                "SELECT t.id, t.full_name, t.phone, t.email, t.created_at, t.client_id, c.business_name AS client_name,
+                        (SELECT COUNT(*) FROM {$p}ofp_property_leases l WHERE l.tenant_id = t.id) AS lease_count
+                 FROM {$p}ofp_property_tenants t
+                 LEFT JOIN {$p}ofp_clients c ON c.id = t.client_id
+                 WHERE t.client_id = %d ORDER BY t.created_at DESC LIMIT %d",
+                $client_id, self::LIMIT
+            ) );
+        } else {
+            $tenants = (array) $wpdb->get_results( $wpdb->prepare(
+                "SELECT t.id, t.full_name, t.phone, t.email, t.created_at, t.client_id, c.business_name AS client_name,
+                        (SELECT COUNT(*) FROM {$p}ofp_property_leases l WHERE l.tenant_id = t.id) AS lease_count
+                 FROM {$p}ofp_property_tenants t
+                 LEFT JOIN {$p}ofp_clients c ON c.id = t.client_id
+                 ORDER BY t.created_at DESC LIMIT %d",
+                self::LIMIT
+            ) );
+        }
         foreach ( $tenants as $t ) {
-            $key = $touch( (string) $t->full_name, (string) $t->phone, (string) $t->email, (string) $t->created_at );
+            $key = $touch( (string) $t->full_name, (string) $t->phone, (string) $t->email, (string) $t->created_at, (int) ( $t->client_id ?? 0 ), (string) ( $t->client_name ?? '' ) );
             if ( $key === null ) continue;
             $people[ $key ]['tags']['Tenant'] = true;
             $people[ $key ]['leases']      += (int) $t->lease_count;
             $people[ $key ]['tenant_ids'][] = (int) $t->id;
         }
 
-        $leads = (array) $wpdb->get_results( $wpdb->prepare(
-            "SELECT id, name, phone, email, COALESCE(converted_at, created_at) AS at
-             FROM {$p}ofp_leads WHERE client_id = %d AND status = 'converted'
-             ORDER BY created_at DESC LIMIT %d",
-            $client_id, self::LIMIT
-        ) );
+        if ( $client_id > 0 ) {
+            $leads = (array) $wpdb->get_results( $wpdb->prepare(
+                "SELECT l.id, l.name, l.phone, l.email, COALESCE(l.converted_at, l.created_at) AS at, l.client_id, c.business_name AS client_name
+                 FROM {$p}ofp_leads l
+                 LEFT JOIN {$p}ofp_clients c ON c.id = l.client_id
+                 WHERE l.client_id = %d AND l.status = 'converted'
+                 ORDER BY l.created_at DESC LIMIT %d",
+                $client_id, self::LIMIT
+            ) );
+        } else {
+            $leads = (array) $wpdb->get_results( $wpdb->prepare(
+                "SELECT l.id, l.name, l.phone, l.email, COALESCE(l.converted_at, l.created_at) AS at, l.client_id, c.business_name AS client_name
+                 FROM {$p}ofp_leads l
+                 LEFT JOIN {$p}ofp_clients c ON c.id = l.client_id
+                 WHERE l.status = 'converted'
+                 ORDER BY l.created_at DESC LIMIT %d",
+                self::LIMIT
+            ) );
+        }
         foreach ( $leads as $l ) {
-            $key = $touch( (string) $l->name, (string) $l->phone, (string) $l->email, (string) $l->at );
+            $key = $touch( (string) $l->name, (string) $l->phone, (string) $l->email, (string) $l->at, (int) ( $l->client_id ?? 0 ), (string) ( $l->client_name ?? '' ) );
             if ( $key === null ) continue;
             $people[ $key ]['tags']['Converted lead'] = true;
             $people[ $key ]['lead_ids'][] = (int) $l->id;
@@ -244,6 +296,9 @@ class OFP_Contacts {
             // "Converted lead" is only worth showing when it is the only reason they are here.
             if ( count( $person['tags'] ) > 1 ) {
                 $person['tags'] = array_values( array_diff( $person['tags'], [ 'Converted lead' ] ) );
+            }
+            if ( ! empty( $person['client_names'] ) ) {
+                $person['client_name'] = implode( ', ', array_unique( $person['client_names'] ) );
             }
         }
         unset( $person );

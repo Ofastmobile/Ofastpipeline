@@ -291,6 +291,12 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-clients&client_id=' . $client->id . '&action=edit' ) ); ?>"
            class="button">✏️ Edit Details</a>
 
+        <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-customers&client_id=' . $client->id ) ); ?>"
+           class="button">👥 View Customers</a>
+
+        <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-leads&client_id=' . $client->id ) ); ?>"
+           class="button">📋 View Leads</a>
+
         <?php if ( $client->status !== 'trash' ) : ?>
             <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;"
                   onsubmit="return confirm('Open a new tab logged in as this client? The link expires in 15 minutes.');">

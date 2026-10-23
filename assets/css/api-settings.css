@@ -1,0 +1,554 @@
+/* OFast Pipeline — Integrations & API Settings Styles */
+
+.ofp-settings-shell {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 20px 80px 20px;
+}
+
+.ofp-settings-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+}
+
+.ofp-header-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-blue, #3b82f6);
+    margin-bottom: 6px;
+}
+
+.ofp-header-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-main, #f8fafc);
+    margin: 0 0 6px 0;
+    letter-spacing: -0.02em;
+}
+
+.ofp-header-desc {
+    font-size: 14px;
+    color: var(--text-muted, #94a3b8);
+    margin: 0;
+    max-width: 680px;
+    line-height: 1.5;
+}
+
+.ofp-settings-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 32px;
+    align-items: flex-start;
+}
+
+/* ── Left Sidebar Navigation ────────────────────────────────────────── */
+.ofp-settings-sidebar {
+    background: var(--bg-card, #1e2638);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    border-radius: 14px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.ofp-sidebar-group-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted, #94a3b8);
+    padding: 10px 12px 6px 12px;
+    opacity: 0.75;
+}
+
+.ofp-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted, #94a3b8);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+    position: relative;
+}
+
+.ofp-tab-btn:hover {
+    color: var(--text-main, #f8fafc);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="light"] .ofp-tab-btn:hover,
+html.light .ofp-tab-btn:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+.ofp-tab-btn.is-active {
+    color: var(--text-main, #ffffff) !important;
+    background: rgba(59, 130, 246, 0.12) !important;
+    border-color: rgba(59, 130, 246, 0.25) !important;
+}
+
+[data-theme="light"] .ofp-tab-btn.is-active,
+html.light .ofp-tab-btn.is-active {
+    color: #1e40af !important;
+    background: #eff6ff !important;
+    border-color: #bfdbfe !important;
+}
+
+.ofp-tab-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+}
+
+.ofp-tab-btn.is-active .ofp-tab-icon {
+    color: var(--accent-blue, #3b82f6);
+}
+
+.ofp-tab-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.ofp-tab-title {
+    font-size: 13.5px;
+    line-height: 1.25;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ofp-tab-sub {
+    font-size: 11.5px;
+    font-weight: 400;
+    opacity: 0.7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Right Content Panels ────────────────────────────────────────── */
+.ofp-tab-panel {
+    display: none;
+    animation: ofpSaaSFade 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ofp-tab-panel.is-active {
+    display: block;
+}
+
+@keyframes ofpSaaSFade {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ofp-saas-card {
+    background: var(--bg-card, #1e2638);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    border-radius: 14px;
+    padding: 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.ofp-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+}
+
+.ofp-panel-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ofp-panel-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ofp-panel-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main, #f8fafc);
+    margin: 0 0 3px 0;
+    letter-spacing: -0.01em;
+}
+
+.ofp-panel-desc {
+    font-size: 13.5px;
+    color: var(--text-muted, #94a3b8);
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* ── Input & Monospace Display Rows ──────────────────────────────── */
+.ofp-param-group {
+    margin-bottom: 22px;
+}
+
+.ofp-param-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #94a3b8);
+    margin-bottom: 8px;
+}
+
+.ofp-display-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #0f1422;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 9px;
+    padding: 10px 14px;
+    transition: border-color 0.15s ease;
+}
+
+[data-theme="light"] .ofp-display-box,
+html.light .ofp-display-box {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.ofp-display-box:hover {
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+.ofp-code-val {
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    color: var(--text-main, #f8fafc);
+    word-break: break-all;
+    user-select: all;
+}
+
+[data-theme="light"] .ofp-code-val,
+html.light .ofp-code-val {
+    color: #0f172a;
+}
+
+/* ── Action Buttons ──────────────────────────────────────────────── */
+.ofp-btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    text-decoration: none;
+    line-height: 1;
+}
+
+.ofp-btn-copy {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-main, #f8fafc);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+}
+
+.ofp-btn-copy:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+[data-theme="light"] .ofp-btn-copy,
+html.light .ofp-btn-copy {
+    background: #ffffff;
+    color: #334155;
+    border-color: #cbd5e1;
+}
+
+[data-theme="light"] .ofp-btn-copy:hover,
+html.light .ofp-btn-copy:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.ofp-btn-copy.copied {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #10b981 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+/* ── Badges & Status Indicators ──────────────────────────────────── */
+.ofp-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.ofp-pill-blue {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.ofp-pill-green {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.ofp-pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: ofpPulse 2s infinite;
+}
+
+@keyframes ofpPulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* ── Code Display Container ──────────────────────────────────────── */
+.ofp-code-card {
+    background: #0b0f19;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 14px;
+}
+
+[data-theme="light"] .ofp-code-card,
+html.light .ofp-code-card {
+    background: #0f172a;
+}
+
+.ofp-code-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.ofp-code-body {
+    padding: 14px 16px;
+    margin: 0;
+    color: #38bdf8;
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Monaco, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* ── Modern Callout Banner ───────────────────────────────────────── */
+.ofp-saas-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: rgba(59, 130, 246, 0.06);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    color: var(--text-main, #f8fafc);
+    font-size: 13px;
+    line-height: 1.5;
+    margin-top: 20px;
+}
+
+[data-theme="light"] .ofp-saas-notice,
+html.light .ofp-saas-notice {
+    background: #f0f7ff;
+    border-color: #bfdbfe;
+    color: #1e293b;
+}
+
+.ofp-notice-icon {
+    color: var(--accent-blue, #3b82f6);
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+/* ── Spec Tiles & Key Values ─────────────────────────────────────── */
+.ofp-spec-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    margin-top: 20px;
+}
+
+.ofp-spec-tile {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+
+[data-theme="light"] .ofp-spec-tile,
+html.light .ofp-spec-tile {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+.ofp-spec-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-main, #f8fafc);
+    margin-bottom: 6px;
+}
+
+[data-theme="light"] .ofp-spec-title,
+html.light .ofp-spec-title {
+    color: #0f172a;
+}
+
+.ofp-spec-desc {
+    font-size: 12px;
+    color: var(--text-muted, #94a3b8);
+    line-height: 1.45;
+    margin: 0;
+}
+
+/* ── Clean SaaS Table ────────────────────────────────────────────── */
+.ofp-saas-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 16px;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 12.5px;
+}
+
+.ofp-saas-table th {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted, #94a3b8);
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+}
+
+[data-theme="light"] .ofp-saas-table th,
+html.light .ofp-saas-table th {
+    background: #f8fafc;
+    color: #64748b;
+    border-color: #e2e8f0;
+}
+
+.ofp-saas-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+    color: var(--text-main, #f8fafc);
+}
+
+[data-theme="light"] .ofp-saas-table td,
+html.light .ofp-saas-table td {
+    color: #1e293b;
+    border-color: #f1f5f9;
+}
+
+.ofp-saas-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* ── Responsive Mobile Behavior ──────────────────────────────────── */
+@media (max-width: 880px) {
+    .ofp-settings-shell {
+        padding: 16px 14px 60px 14px;
+    }
+    .ofp-settings-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .ofp-settings-layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .ofp-settings-sidebar {
+        flex-direction: row;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 6px;
+        gap: 6px;
+    }
+    .ofp-sidebar-group-label {
+        display: none;
+    }
+    .ofp-tab-btn {
+        flex-shrink: 0;
+        width: auto;
+        padding: 9px 12px;
+    }
+    .ofp-tab-sub {
+        display: none;
+    }
+    .ofp-saas-card {
+        padding: 20px 16px;
+    }
+}

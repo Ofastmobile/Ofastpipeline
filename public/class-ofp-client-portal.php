@@ -31,6 +31,7 @@ class OFP_Client_Portal {
         'import' => 'import.php',
         'pipeline-settings' => 'pipeline-settings.php',
         'api-settings' => 'api-settings.php',
+        'api' => 'api-settings.php',
         'communications' => 'message-templates.php',
         'credits' => 'credits.php',
         'reports' => 'reports.php',
@@ -238,6 +239,15 @@ class OFP_Client_Portal {
             );
         }
 
+        if ( in_array( $route, [ 'api-settings', 'api' ], true ) ) {
+            wp_enqueue_style(
+                'ofp-api-settings',
+                OFP_URL . 'assets/css/api-settings.css',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION
+            );
+        }
+
         $js_deps = [];
         if ( in_array( $route, [ 'dashboard', 'leads', 'reports' ], true ) ) {
             wp_enqueue_script(
@@ -316,6 +326,16 @@ class OFP_Client_Portal {
             wp_enqueue_script(
                 'ofp-inspections',
                 OFP_URL . 'assets/js/inspections.js',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION,
+                true
+            );
+        }
+
+        if ( in_array( $route, [ 'api-settings', 'api' ], true ) ) {
+            wp_enqueue_script(
+                'ofp-api-settings',
+                OFP_URL . 'assets/js/api-settings.js',
                 [ 'ofp-client-portal' ],
                 OFP_VERSION,
                 true

@@ -38,6 +38,7 @@ $props_live        = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_propert
 
 $leads_month       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())" );
 $leads_today       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE DATE(created_at) = CURDATE()" );
+$total_customers   = count( OFP_Contacts::customers( 0 ) );
 
 $inquiries_total   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_property_inquiries" );
 $inquiries_month   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_property_inquiries WHERE MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())" );
@@ -75,6 +76,7 @@ $titles = [
     'overview'              => 'Dashboard Overview',
     'clients'               => 'Clients Management',
     'leads'                 => 'Leads & CRM Pipeline',
+    'customers'             => 'Customer Directory',
     'team'                  => 'Team Members',
     'communications'        => 'Communications & Templates',
     'triggers'              => 'Automated Trigger Queue',
@@ -170,6 +172,13 @@ $titles = [
                             <svg class="ofp-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                             <span>Leads & Pipeline</span>
                             <span class="ofp-nav-badge"><?php echo esc_html( $leads_today ); ?> today</span>
+                        </a>
+                    </li>
+                    <li class="ofp-nav-item <?php echo $tab === 'customers' ? 'active' : ''; ?>">
+                        <a href="<?php echo esc_url( home_url( '/admin-portal?tab=customers' ) ); ?>">
+                            <svg class="ofp-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                            <span>Customers</span>
+                            <span class="ofp-nav-badge"><?php echo esc_html( $total_customers ); ?></span>
                         </a>
                     </li>
                     <li class="ofp-nav-item <?php echo $tab === 'team' ? 'active' : ''; ?>">
@@ -669,6 +678,10 @@ $titles = [
             <?php elseif ( $tab === 'leads' ) : ?>
                 <!-- Embedded Leads Module -->
                 <?php include OFP_PATH . 'admin/views/leads-list.php'; ?>
+
+            <?php elseif ( $tab === 'customers' ) : ?>
+                <!-- Embedded Customers Module -->
+                <?php include OFP_PATH . 'admin/views/customers-list.php'; ?>
 
             <?php elseif ( $tab === 'team' ) : ?>
                 <!-- Embedded Team Module -->

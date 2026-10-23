@@ -19,6 +19,7 @@ $sms_today       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_communica
 $calls_today     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_communications_log WHERE type = 'voice' AND DATE(sent_at) = CURDATE()" );
 $pending_queue   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_trigger_queue WHERE status = 'pending'" );
 $failed_triggers = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_trigger_queue WHERE status = 'failed' AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)" );
+$total_customers = count( OFP_Contacts::customers( 0 ) );
 
 // ── Alerts ─────────────────────────────────────────────────────────────────
 $expiring_soon  = $wpdb->get_results( "SELECT business_name, subscription_expires FROM {$p}ofp_clients WHERE subscription_expires <= DATE_ADD(CURDATE(), INTERVAL 3 DAY) AND status = 'active'" . OFP_White_Label::not_solo_sql() . " ORDER BY subscription_expires ASC" );
@@ -45,6 +46,12 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <div class="ofp-stat-card">
         <span class="ofp-stat-number"><?php echo esc_html( $leads_month ); ?></span>
         <span class="ofp-stat-label">Leads This Month</span>
+    </div>
+    <div class="ofp-stat-card">
+        <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-customers' ) ); ?>" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; gap:6px;">
+            <span class="ofp-stat-number" style="color:#166534;"><?php echo esc_html( $total_customers ); ?></span>
+            <span class="ofp-stat-label">Total Customers</span>
+        </a>
     </div>
     <div class="ofp-stat-card">
         <span class="ofp-stat-number"><?php echo esc_html( $sms_today ); ?></span>

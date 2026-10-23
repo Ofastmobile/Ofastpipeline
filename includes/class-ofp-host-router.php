@@ -31,7 +31,7 @@ class OFP_Host_Router {
 	 * Words that can never be assigned to a client as their own
 	 * subdomain slug, since they're reserved for the system itself.
 	 */
-	const RESERVED_SUBDOMAINS = [ 'app', 'property', 'www', 'mail', 'ftp', 'admin', 'api', 'crm', 'portal' ];
+	const RESERVED_SUBDOMAINS = [ 'app', 'marketplace', 'property', 'www', 'mail', 'ftp', 'admin', 'api', 'crm', 'portal' ];
 
 	/**
 	 * Portal routes that resolve to the portal app host (or client's branded host).
@@ -39,7 +39,7 @@ class OFP_Host_Router {
 	 */
 	const APP_ROUTES = [
 		'login', 'signup', 'dashboard', 'credits', 'properties', 'tenants',
-		'leads', 'templates', 'team', 'api-settings', 'forgot-password',
+		'leads', 'templates', 'team', 'api-settings', 'api', 'forgot-password',
 		'reset-password', 'account', 'profile', 'notifications', 'notification-settings',
 		'funding', 'pricing', 'inspections', 'pipeline-settings', 'message-templates',
 		'property-sales', 'property-purchases', 'property-payments', 'reports', 'activity-logs',
@@ -63,6 +63,7 @@ class OFP_Host_Router {
 		$base = get_option( 'ofp_crm_base_domain' );
 		if ( $base ) {
 			$hosts[] = 'app.' . $base;
+			$hosts[] = 'marketplace.' . $base;
 			$hosts[] = 'property.' . $base;
 		}
 		$current = self::current_client_host();
@@ -317,9 +318,9 @@ class OFP_Host_Router {
 		$base_domain = get_option( 'ofp_crm_base_domain' );
 
 		if ( $base_domain ) {
-			if ( $host === 'app.' . $base_domain )      return 'app';
-			if ( $host === 'property.' . $base_domain ) return 'property';
-			if ( $host === $base_domain || $host === 'www.' . $base_domain ) return 'main';
+			if ( $host === 'app.' . $base_domain )                                                  return 'app';
+			if ( $host === 'marketplace.' . $base_domain || $host === 'property.' . $base_domain ) return 'property';
+			if ( $host === $base_domain || $host === 'www.' . $base_domain )                        return 'main';
 
 			// A subdomain or custom domain: check if an actual registered client exists
 			return self::resolve_host_client() ? 'client' : 'main';

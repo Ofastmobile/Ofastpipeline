@@ -13,7 +13,9 @@
  *  OFast Pipeline
  *  ├── Overview           (all admins)
  *  ├── Clients            (all admins)
+ *  ├── Team Members       (all admins)
  *  ├── Leads              (all admins)
+ *  ├── Customers          (all admins)
  *  ├── Trigger Queue      (all admins)
  *  ├── Communications     (all admins)
  *  ├── Billing            (all admins)
@@ -97,6 +99,7 @@ class OFP_Admin_Menu {
         add_submenu_page( 'ofp-overview', 'Clients',         'Clients',         'read', 'ofp-clients',         [ $this, 'render_clients' ] );
         add_submenu_page( 'ofp-overview', 'Team Members',    'Team Members',    'read', 'ofp-team',            [ $this, 'render_team' ] );
         add_submenu_page( 'ofp-overview', 'Leads',           'Leads',           'read', 'ofp-leads',           [ $this, 'render_leads' ] );
+        add_submenu_page( 'ofp-overview', 'Customers',       'Customers',       'read', 'ofp-customers',       [ $this, 'render_customers' ] );
         add_submenu_page( 'ofp-overview', 'Trigger Queue',   'Trigger Queue',   'read', 'ofp-triggers',        [ $this, 'render_triggers' ] );
         add_submenu_page( 'ofp-overview', 'Communications',  'Communications',  'read', 'ofp-communications',  [ $this, 'render_communications' ] );
         add_submenu_page( 'ofp-overview', 'Billing',         'Billing',         'read', 'ofp-billing',         [ $this, 'render_billing' ] );
@@ -182,6 +185,7 @@ class OFP_Admin_Menu {
     public function render_clients():        void { $this->load_view( 'clients-list' ); }
     public function render_team():           void { $this->load_view( 'team-list' ); }
     public function render_leads():          void { $this->load_view( 'leads-list' ); }
+    public function render_customers():      void { $this->load_view( 'customers-list' ); }
     public function render_triggers():       void { $this->load_view( 'triggers-list' ); }
     public function render_communications(): void { $this->load_view( 'communications' ); }
     public function render_billing():        void { $this->load_view( 'billing' ); }

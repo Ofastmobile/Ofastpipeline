@@ -33,6 +33,7 @@ class OFP_REST_API {
     public function __construct() {
         add_action( 'rest_api_init', [ $this, 'register_routes' ] );
         add_action( 'rest_api_init', [ $this, 'add_cors_headers' ] );
+        add_action( 'init',          [ $this, 'handle_stealth_routes' ], 1 );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -100,6 +101,13 @@ class OFP_REST_API {
         register_rest_route( 'ofp/v1', '/webhook/sms-dlr', [
             'methods'             => 'POST',
             'callback'            => [ $this, 'sms_dlr_webhook' ],
+            'permission_callback' => '__return_true',
+        ] );
+
+        // Public property feed for website embed widgets.
+        register_rest_route( 'ofp/v1', '/properties', [
+            'methods'             => 'GET',
+            'callback'            => [ $this, 'get_properties' ],
             'permission_callback' => '__return_true',
         ] );
     }
@@ -367,5 +375,205 @@ class OFP_REST_API {
                 'created_at'            => current_time( 'mysql' ),
             ]
         );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PUBLIC PROPERTY FEED (Website Embed Widget)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Public property feed for website embed widgets.
+     * Returns active properties for a given client with permalinks.
+     *
+     * @param  WP_REST_Request $request
+     * @return WP_REST_Response
+     */
+    public function get_properties( WP_REST_Request $request ): WP_REST_Response {
+        global $wpdb;
+
+        $client_id = (int) $request->get_param( 'client_id' );
+        if ( ! $client_id ) {
+            return new WP_REST_Response( [
+                'success'    => false,
+                'message'    => 'Missing required client_id parameter.',
+                'properties' => [],
+            ], 400 );
+        }
+
+        $limit = min( 24, max( 1, (int) ( $request->get_param( 'limit' ) ?: 6 ) ) );
+        $type  = sanitize_text_field( $request->get_param( 'type' ) ?: '' );
+
+        $p = $wpdb->prefix;
+        $client = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id, business_name, owner_name, custom_domain, is_white_label FROM {$p}ofp_clients WHERE id = %d LIMIT 1",
+            $client_id
+        ) );
+
+        if ( ! $client ) {
+            return new WP_REST_Response( [
+                'success'    => false,
+                'message'    => 'Client not found.',
+                'properties' => [],
+            ], 404 );
+        }
+
+        $where = [ 'client_id = %d', "status = 'live'" ];
+        $args  = [ $client_id ];
+
+        if ( in_array( $type, [ 'sale', 'rent', 'land' ], true ) ) {
+            $where[] = 'listing_type = %s';
+            $args[]  = $type;
+        }
+
+        $where_sql = implode( ' AND ', $where );
+        $args[]    = $limit;
+
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT id, wp_post_id, title, price, location_text, listing_type, created_at 
+             FROM {$p}ofp_properties 
+             WHERE {$where_sql} 
+             ORDER BY id DESC 
+             LIMIT %d",
+            ...$args
+        ) );
+
+        $properties = [];
+        foreach ( (array) $rows as $row ) {
+            $post_id   = (int) $row->wp_post_id;
+            $permalink = get_permalink( $post_id ) ?: '';
+
+            // If white label client has a custom domain configured, ensure permalink targets their domain
+            if ( ! empty( $client->is_white_label ) && ! empty( $client->custom_domain ) ) {
+                $custom_host = preg_replace( '#^https?://#', '', trim( $client->custom_domain ) );
+                $permalink   = preg_replace( '#^https?://[^/]+#', 'https://' . $custom_host, $permalink );
+            }
+
+            // Cover Image
+            $img_url = get_the_post_thumbnail_url( $post_id, 'medium_large' );
+            if ( ! $img_url ) {
+                $gallery = get_post_meta( $post_id, 'ofp_gallery', true );
+                if ( is_array( $gallery ) && ! empty( $gallery[0] ) ) {
+                    $img_url = wp_get_attachment_image_url( (int) $gallery[0], 'medium_large' ) ?: '';
+                }
+            }
+            if ( ! $img_url ) {
+                $img_url = defined( 'OFP_URL' ) ? OFP_URL . 'assets/images/placeholder-property.jpg' : '';
+            }
+
+            $bedrooms    = (int) get_post_meta( $post_id, 'ofp_bedrooms', true );
+            $bathrooms   = (int) get_post_meta( $post_id, 'ofp_bathrooms', true );
+            $currency    = get_post_meta( $post_id, 'ofp_currency', true ) ?: 'NGN';
+            $curr_symbol = ( $currency === 'USD' ) ? '$' : ( ( $currency === 'GBP' ) ? '£' : '₦' );
+
+            $properties[] = [
+                'id'              => (int) $row->id,
+                'title'           => $row->title,
+                'price'           => (float) $row->price,
+                'formatted_price' => $curr_symbol . number_format( (float) $row->price ),
+                'location'        => $row->location_text ?: '',
+                'listing_type'    => $row->listing_type ?: 'sale',
+                'bedrooms'        => $bedrooms,
+                'bathrooms'       => $bathrooms,
+                'image_url'       => $img_url,
+                'url'             => $permalink,
+            ];
+        }
+
+        return new WP_REST_Response( [
+            'success'     => true,
+            'client_name' => $client->business_name ?: $client->owner_name,
+            'count'       => count( $properties ),
+            'properties'  => $properties,
+        ], 200 );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // STEALTH SAAS ALIASES & REWRITES
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Handles clean, stealth SaaS routes:
+     *  - /widget.js          -> Serves embed script without plugin path
+     *  - /api/v1/inquire     -> Stealth lead capture endpoint
+     *  - /api/v1/properties  -> Stealth property feed endpoint
+     *
+     * Supports automatic client identification from custom domains / subdomains.
+     */
+    public function handle_stealth_routes(): void {
+        $uri  = $_SERVER['REQUEST_URI'] ?? '';
+        $path = trim( (string) parse_url( $uri, PHP_URL_PATH ), '/' );
+
+        // 1. /widget.js
+        if ( $path === 'widget.js' ) {
+            header( 'Content-Type: application/javascript; charset=utf-8' );
+            header( 'Access-Control-Allow-Origin: *' );
+            header( 'Cache-Control: public, max-age=3600' );
+            $file = OFP_PATH . 'assets/js/ofp-embed.js';
+            if ( file_exists( $file ) ) {
+                readfile( $file );
+            }
+            exit;
+        }
+
+        // 2. /api/v1/inquire
+        if ( $path === 'api/v1/inquire' ) {
+            header( 'Access-Control-Allow-Origin: *' );
+            header( 'Access-Control-Allow-Methods: POST, OPTIONS' );
+            header( 'Access-Control-Allow-Headers: Content-Type, X-Requested-With, Authorization' );
+
+            if ( ( $_SERVER['REQUEST_METHOD'] ?? '' ) === 'OPTIONS' ) {
+                status_header( 204 );
+                exit;
+            }
+
+            // Parse body
+            $raw_input   = file_get_contents( 'php://input' );
+            $json_body   = json_decode( $raw_input, true );
+            $body_params = is_array( $json_body ) ? array_merge( $_POST, $json_body ) : $_POST;
+
+            // Auto-resolve client_id from host if on custom domain or client subdomain
+            if ( empty( $body_params['client_id'] ) && class_exists( 'OFP_Host_Router' ) ) {
+                $host_client = OFP_Host_Router::current_client_record();
+                if ( $host_client && ! empty( $host_client->id ) ) {
+                    $body_params['client_id'] = (int) $host_client->id;
+                }
+            }
+
+            $req = new WP_REST_Request( 'POST', '/ofp/v1/capture-lead' );
+            $req->set_body_params( $body_params );
+            $res = $this->capture_lead( $req );
+
+            wp_send_json( $res->get_data(), $res->get_status() );
+            exit;
+        }
+
+        // 3. /api/v1/properties
+        if ( $path === 'api/v1/properties' ) {
+            header( 'Access-Control-Allow-Origin: *' );
+            header( 'Access-Control-Allow-Methods: GET, OPTIONS' );
+            header( 'Access-Control-Allow-Headers: Content-Type, X-Requested-With' );
+
+            if ( ( $_SERVER['REQUEST_METHOD'] ?? '' ) === 'OPTIONS' ) {
+                status_header( 204 );
+                exit;
+            }
+
+            $query_params = $_GET;
+
+            // Auto-resolve client_id from host if on custom domain or client subdomain
+            if ( empty( $query_params['client_id'] ) && class_exists( 'OFP_Host_Router' ) ) {
+                $host_client = OFP_Host_Router::current_client_record();
+                if ( $host_client && ! empty( $host_client->id ) ) {
+                    $query_params['client_id'] = (int) $host_client->id;
+                }
+            }
+
+            $req = new WP_REST_Request( 'GET', '/ofp/v1/properties' );
+            $req->set_query_params( $query_params );
+            $res = $this->get_properties( $req );
+
+            wp_send_json( $res->get_data(), $res->get_status() );
+            exit;
+        }
     }
 }
