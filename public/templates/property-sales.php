@@ -276,9 +276,22 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             <?php if ( $active_tab === 'sales' ) : ?>
             <!-- 1. Active Deals & Sales Portfolio Table (Front & Center) -->
             <div class="ofp-card" id="my-sales" style="padding:24px;">
-                <div style="margin-bottom:20px;">
-                    <h3 style="margin:0 0 4px;font-size:18px;font-weight:700;color:var(--text-main);">Active Deals &amp; Sales Portfolio</h3>
-                    <p style="margin:0;font-size:13px;color:var(--text-muted);">Real-time tracking of buyer purchases, verification status, and installment schedules.</p>
+                <div class="ofp-table-toolbar" style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <h3 style="margin:0 0 4px;font-size:18px;font-weight:700;color:var(--text-main);">Active Deals &amp; Sales Portfolio</h3>
+                        <p style="margin:0;font-size:13px;color:var(--text-muted);">Real-time tracking of buyer purchases, verification status, and installment schedules.</p>
+                    </div>
+                    <?php if ( ! empty( $existing_offers ) || ! empty( $my_purchases ) ) : ?>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div class="ofp-table-search" style="min-width:280px;">
+                            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            <input type="text" id="ofp-sales-search-input" class="ofp-input ofp-txn-search-input" placeholder="Search deals, buyers, properties..." onkeyup="ofpFilterSalesTable(this.value)">
+                        </div>
+                        <span id="ofp-sales-count-badge" class="ofp-btn ofp-btn-outline" style="font-size:12px; font-weight:600; padding:6px 14px; border-radius:8px; pointer-events:none;">
+                            <?php echo count( $my_purchases ); ?> Deals
+                        </span>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <?php if ( empty( $existing_offers ) && empty( $my_purchases ) ) : ?>
@@ -300,7 +313,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                     </div>
                 <?php else : ?>
                     <div class="ofp-table-responsive">
-                        <table class="ofp-table" style="width: 100%; white-space: nowrap;">
+                        <table class="ofp-table" id="ofp-sales-portfolio-table" style="width: 100%; white-space: nowrap;">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -570,6 +583,28 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 </div> <!-- .ofp-content-area -->
 </main>
 </div> <!-- .ofp-shell -->
+<script>
+function ofpFilterSalesTable(query) {
+    var val = (query || '').toLowerCase().trim();
+    var rows = document.querySelectorAll('#ofp-sales-portfolio-table tbody tr');
+    var badge = document.getElementById('ofp-sales-count-badge');
+    var visible = 0;
+
+    rows.forEach(function(row) {
+        var text = row.textContent.toLowerCase();
+        if (!val || text.indexOf(val) !== -1) {
+            row.style.display = '';
+            visible++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    if (badge) {
+        badge.textContent = val ? (visible + ' matching') : (rows.length + ' Deals');
+    }
+}
+</script>
 <?php wp_footer(); ?>
 </body>
 </html>

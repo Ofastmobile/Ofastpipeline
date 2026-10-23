@@ -103,7 +103,7 @@ register_deactivation_hook( OFP_PLUGIN_FILE, [ 'OFP_Deactivator', 'deactivate' ]
 add_filter( 'cron_schedules', function ( array $schedules ): array {
     $schedules['ofp_five_minutes'] = [
         'interval' => 300,
-        'display'  => __( 'Every 5 Minutes (OFast Pipeline)', 'ofast-pipeline' ),
+        'display'  => sprintf( __( 'Every 5 Minutes (%s)', 'ofast-pipeline' ), class_exists( 'OFP_Brand' ) ? OFP_Brand::name() : 'App' ),
     ];
     return $schedules;
 } );

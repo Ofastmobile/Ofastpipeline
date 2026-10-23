@@ -26,7 +26,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <p>
         <strong>How admin access works:</strong> Each person listed here must ALSO have a
         WordPress user account (at wp-admin → Users) using the <strong>exact same email address</strong>.
-        The email match is what grants them access to the OFast Pipeline menu after WordPress login.
+        The email match is what grants them access to the <?php echo esc_html( OFP_Brand::name() ); ?> menu after WordPress login.
     </p>
 </div>
 
@@ -110,7 +110,7 @@ foreach ( $admins as $a ) {
                                 <input type="hidden" name="admin_id" value="<?php echo esc_attr( $admin->id ); ?>">
                                 <button type="submit"
                                         class="button ofp-btn-danger button-small"
-                                        onclick="return confirm('Remove <?php echo esc_js( $admin->name ); ?> as an OFast Pipeline admin? Their WordPress account will not be deleted.')">
+                                        onclick="return confirm('Remove <?php echo esc_js( $admin->name ); ?> as an <?php echo esc_js( OFP_Brand::name() ); ?> admin? Their WordPress account will not be deleted.')">
                                     Remove
                                 </button>
                             </form>

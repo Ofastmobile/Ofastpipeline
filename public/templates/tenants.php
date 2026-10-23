@@ -333,9 +333,6 @@ $stat_rent_collected = 0.0;
 $stat_balance_due   = 0.0;
 
 if ( $can_rent ) {
-    if ( class_exists( 'OFP_Communications_Log' ) ) {
-        OFP_Communications_Log::ensure_schema();
-    }
     // 1. Rental properties
     $rental_properties = $wpdb->get_results( $wpdb->prepare(
         "SELECT id, title, price, price_period, listing_type
@@ -909,7 +906,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                                         <th>Property</th>
                                         <th>Amount</th>
                                         <th>Method</th>
-                                        <th>Reference</th>
+                                        <th>Transaction ID</th>
                                         <th>Status</th>
                                         <th style="text-align:right;">Receipt</th>
                                     </tr>
@@ -933,7 +930,13 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                                                 </span>
                                             </td>
                                             <td>
-                                                <code style="font-size:11px; background:var(--bg-body); padding:2px 6px; border-radius:4px;"><?php echo esc_html( $p_row->payer_reference ?: $p_row->gateway_reference ?: '—' ); ?></code>
+                                                <?php 
+                                                    $raw_ref     = (string) ( $p_row->payer_reference ?: ( $p_row->gateway_reference ?: '' ) );
+                                                    $display_ref = class_exists( 'OFP_Property_Receipt_Generator' ) 
+                                                        ? OFP_Property_Receipt_Generator::format_display_reference( $raw_ref, '—' ) 
+                                                        : ( $raw_ref ?: '—' );
+                                                ?>
+                                                <code style="font-size:11px; background:var(--bg-body); padding:2px 6px; border-radius:4px; font-weight:600;" title="<?php echo esc_attr( $raw_ref ); ?>"><?php echo esc_html( $display_ref ); ?></code>
                                             </td>
                                             <td>
                                                 <?php if ( $p_row->status === 'successful' ) : ?>

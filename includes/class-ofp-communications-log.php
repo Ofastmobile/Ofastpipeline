@@ -16,8 +16,7 @@ class OFP_Communications_Log {
      * Ensure the database table schema accommodates non-lead communications.
      */
     public static function ensure_schema(): void {
-        static $checked = false;
-        if ( $checked ) {
+        if ( get_option( 'ofp_schema_comms_log_v2' ) ) {
             return;
         }
 
@@ -39,7 +38,7 @@ class OFP_Communications_Log {
         }
         $wpdb->query( "ALTER TABLE {$table} MODIFY COLUMN lead_id BIGINT UNSIGNED DEFAULT NULL" );
 
-        $checked = true;
+        update_option( 'ofp_schema_comms_log_v2', 1, false );
     }
 
     /**
@@ -167,6 +166,11 @@ class OFP_Communications_Log {
     }
 
     public static function sync_historical_activity( int $client_id ): void {
+        if ( get_transient( 'ofp_comms_synced_' . $client_id ) ) {
+            return;
+        }
+        set_transient( 'ofp_comms_synced_' . $client_id, 1, 12 * HOUR_IN_SECONDS );
+
         self::ensure_schema();
         self::merge_duplicate_queue_rows();
         global $wpdb;

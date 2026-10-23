@@ -44,12 +44,7 @@ if ( $client->status !== 'active' ) {
 $agent_name = $client->business_name ?: $client->owner_name;
 $is_client_verified = ! empty( $client->is_verified );
 $agent_role = $is_client_verified ? 'Verified Agent' : 'Agent';
-$custom_app_name = trim( (string) get_option( 'ofp_app_name', '' ) );
-if ( ! empty( $custom_app_name ) && ! in_array( strtolower( preg_replace( '/[^a-z0-9]/', '', $custom_app_name ) ), [ 'ofastpipeline' ], true ) ) {
-    $app_name = $custom_app_name;
-} else {
-    $app_name = 'app name';
-}
+$app_name = OFP_Brand::name();
 $agent_logo = ! empty( $client->logo_url ) ? $client->logo_url : OFP_URL . 'assets/images/default-avatar.png';
 $agent_bio  = ! empty( $client->bio ) ? $client->bio : 'We provide premium real estate services, helping you discover dream homes, luxury apartments, and commercial investments with complete peace of mind and professional guidance.';
 

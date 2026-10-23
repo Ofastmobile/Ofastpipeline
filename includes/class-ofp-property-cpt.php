@@ -298,7 +298,7 @@ class OFP_Property_CPT {
                 'id'             => '0',
                 'bank_name'      => $company_bank_name ?: 'Platform Company Bank',
                 'account_number' => $company_bank_num ?: '—',
-                'account_name'   => $company_bank_user ?: 'OFast Pipeline Primary',
+                'account_name'   => $company_bank_user ?: ( OFP_Brand::name() . ' Primary' ),
                 'is_default'     => 1,
             ]
         ];
@@ -2270,16 +2270,39 @@ class OFP_Property_CPT {
      * @return array
      */
     public static function get_status_context( int $post_id ): array {
+        static $status_cache = [];
+        if ( isset( $status_cache[ $post_id ] ) ) {
+            return $status_cache[ $post_id ];
+        }
+
         $db_status    = get_post_meta( $post_id, 'ofp_status', true ) ?: 'live';
         $listing_type = get_post_meta( $post_id, 'ofp_listing_type', true ) ?: 'sale';
         $post_status  = get_post_status( $post_id );
+        $is_rental    = in_array( $listing_type, [ 'rent', 'shortlet', 'commercial' ], true );
 
-        // Check if property is actively occupied via leases table
-        global $wpdb;
-        $has_active_lease = class_exists( 'OFP_Property_Rent' ) && OFP_Property_Rent::wp_property_is_occupied( $post_id );
-        $prop_id          = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}ofp_properties WHERE wp_post_id = %d LIMIT 1", $post_id ) );
-        $has_purchase     = $prop_id ? self::property_has_active_purchase( $prop_id ) : false;
-        $is_rental        = in_array( $listing_type, [ 'rent', 'shortlet', 'commercial' ], true );
+        // Short-circuit queries if status is already explicit
+        $has_active_lease = false;
+        $has_purchase     = false;
+
+        if ( $db_status === 'occupied' || ( $db_status === 'taken' && $is_rental ) ) {
+            $has_active_lease = true;
+        } elseif ( $db_status === 'taken' ) {
+            $has_purchase     = true;
+        } elseif ( $db_status !== 'under_offer' && $db_status !== 'pending_upload' && $db_status !== 'expired' && $post_status === 'publish' ) {
+            global $wpdb;
+            $p = $wpdb->prefix;
+            $prop_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$p}ofp_properties WHERE wp_post_id = %d LIMIT 1", $post_id ) );
+            if ( $prop_id > 0 ) {
+                if ( $is_rental ) {
+                    $has_active_lease = (bool) $wpdb->get_var( $wpdb->prepare(
+                        "SELECT id FROM {$p}ofp_property_leases WHERE property_id = %d AND status = 'active' LIMIT 1",
+                        $prop_id
+                    ) );
+                } else {
+                    $has_purchase = self::property_has_active_purchase( $prop_id );
+                }
+            }
+        }
 
         if ( $has_active_lease || ( $db_status === 'taken' && $is_rental ) || $db_status === 'occupied' ) {
             $status_key  = 'occupied';
@@ -2325,7 +2348,7 @@ class OFP_Property_CPT {
             $tw_text     = 'text-emerald-600 dark:text-emerald-400';
         }
 
-        return [
+        $res = [
             'key'          => $status_key,
             'label'        => $badge_label,
             'full_label'   => $full_label,
@@ -2337,6 +2360,8 @@ class OFP_Property_CPT {
             'tw_badge'     => $tw_badge,
             'tw_text'      => $tw_text,
         ];
+        $status_cache[ $post_id ] = $res;
+        return $res;
     }
 
     /**

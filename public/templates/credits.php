@@ -141,7 +141,15 @@ $transactions = $wpdb->get_results(
 
     <!-- Payment History -->
     <div class="ofp-card" style="margin-bottom: 32px;">
-        <h3>Payment History</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+            <h3 style="margin:0; font-size:16px; font-weight:700;">Payment History</h3>
+            <?php if ( ! empty( $subscriptions ) ) : ?>
+                <div class="ofp-table-search" style="min-width:260px; position:relative;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-muted); pointer-events:none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input type="text" id="ofp-sub-pay-search" class="ofp-input ofp-txn-search-input" placeholder="Search payment ref, plan, status..." onkeyup="ofpFilterTable('ofp-sub-pay-search', 'ofp-subscriptions-table')">
+                </div>
+            <?php endif; ?>
+        </div>
         <?php if ( empty( $subscriptions ) ) : ?>
             <div class="ofp-empty" style="padding:32px;">
                 <h3>No payments yet</h3>
@@ -149,7 +157,7 @@ $transactions = $wpdb->get_results(
             </div>
         <?php else : ?>
             <div class="ofp-table-wrap ofp-table-responsive">
-                <table class="ofp-table">
+                <table class="ofp-table" id="ofp-subscriptions-table">
                     <thead>
                         <tr><th>Type</th><th>Plan</th><th>Amount</th><th>Status</th><th>Period</th><th>Payment Ref</th><th>Date</th></tr>
                     </thead>
@@ -197,9 +205,15 @@ $transactions = $wpdb->get_results(
     <!-- Credit Transactions -->
     <?php if ( ! empty( $transactions ) ) : ?>
         <div class="ofp-card">
-            <h3>Credit Transaction Log</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+                <h3 style="margin:0; font-size:16px; font-weight:700;">Credit Transaction Log</h3>
+                <div class="ofp-table-search" style="min-width:260px;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input type="text" id="ofp-credit-tx-search" class="ofp-input ofp-txn-search-input" placeholder="Search credit transactions..." onkeyup="ofpFilterTable('ofp-credit-tx-search', 'ofp-credit-tx-table')">
+                </div>
+            </div>
             <div class="ofp-table-wrap ofp-table-responsive">
-                <table class="ofp-table">
+                <table class="ofp-table" id="ofp-credit-tx-table">
                     <thead>
                         <tr><th>Channel</th><th>Type</th><th>Amount</th><th>Balance After</th><th>Date</th></tr>
                     </thead>
@@ -225,6 +239,17 @@ $transactions = $wpdb->get_results(
             </div>
         </div>
     <?php endif; ?>
+
+<script>
+function ofpFilterTable(inputId, tableId) {
+    var val = (document.getElementById(inputId) ? document.getElementById(inputId).value : '').toLowerCase().trim();
+    var rows = document.querySelectorAll('#' + tableId + ' tbody tr');
+    rows.forEach(function(r) {
+        var txt = r.textContent.toLowerCase();
+        r.style.display = (!val || txt.indexOf(val) !== -1) ? '' : 'none';
+    });
+}
+</script>
 
 </div>
 </main>

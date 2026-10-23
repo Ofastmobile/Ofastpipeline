@@ -99,6 +99,15 @@ $nav_items[] = [
 ];
 
 $nav_items[] = [
+    'label'  => 'Investment',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>',
+    'url'    => home_url( '/investment' ),
+    'slug'   => 'investment',
+    'badge'  => 'Coming Soon',
+    'locked' => false,
+];
+
+$nav_items[] = [
     'label'  => 'My Leads',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>',
     'url'    => home_url( '/leads' ),
@@ -859,37 +868,91 @@ svg { max-width: 100%; box-sizing: border-box; }
                 var html = '';
 
                 // If user is searching a keyword, add primary dynamic actions
+                var liveActions = [];
                 if (queryLower) {
-                    html += '<div class="ofp-search-result-group-title">Live Search Actions</div>';
-                    
-                    var propSearchUrl = '<?php echo esc_js( home_url( '/properties' ) ); ?>?s=' + encodeURIComponent(query);
-                    html += '<a href="' + propSearchUrl + '" class="ofp-search-item' + (selectedIndex === 0 ? ' selected' : '') + '" data-url="' + propSearchUrl + '">';
-                    html += '  <div class="ofp-search-item-icon" style="background:rgba(16,185,129,0.12); color:#10b981;">';
-                    html += '    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>';
-                    html += '  </div>';
-                    html += '  <div class="ofp-search-item-info">';
-                    html += '    <div class="ofp-search-item-title">Search properties for &ldquo;<strong>' + query + '</strong>&rdquo;</div>';
-                    html += '    <div class="ofp-search-item-desc">Filter all listings, locations, and units</div>';
-                    html += '  </div>';
-                    html += '  <span class="ofp-search-item-badge" style="background:#10b981; color:#ffffff; border-color:#10b981;">Press ↵</span>';
-                    html += '</a>';
+                    var cleanQuery = query.trim();
+                    var isTxnPattern = /^(txn|pur|rnt|ofp|rcp)[\-_]/i.test(cleanQuery) ||
+                                       /^(txn|pur|rnt)[0-9a-z]/i.test(cleanQuery) ||
+                                       /^ofp_[a-z0-9_]+/i.test(cleanQuery) ||
+                                       /^#?pur-?\d+/i.test(cleanQuery) ||
+                                       /^#?rnt-?\d+/i.test(cleanQuery);
+
+                    var txnSearchUrl = '<?php echo esc_js( home_url( '/property-payments' ) ); ?>?s=' + encodeURIComponent(cleanQuery);
+                    var propSearchUrl = '<?php echo esc_js( home_url( '/properties' ) ); ?>?s=' + encodeURIComponent(cleanQuery);
+
+                    if (isTxnPattern) {
+                        liveActions.push({
+                            url: txnSearchUrl,
+                            icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>',
+                            iconStyle: 'background:rgba(59,130,246,0.14); color:#3b82f6;',
+                            title: 'Open Transaction &ldquo;<strong>' + cleanQuery + '</strong>&rdquo;',
+                            desc: 'Jump directly to matching transaction record &amp; receipt',
+                            badge: 'Open ↵',
+                            badgeStyle: 'background:#3b82f6; color:#ffffff; border-color:#3b82f6;'
+                        });
+                        liveActions.push({
+                            url: propSearchUrl,
+                            icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>',
+                            iconStyle: 'background:rgba(16,185,129,0.12); color:#10b981;',
+                            title: 'Search properties for &ldquo;<strong>' + cleanQuery + '</strong>&rdquo;',
+                            desc: 'Filter all listings, locations, and units',
+                            badge: 'Properties',
+                            badgeStyle: ''
+                        });
+                    } else {
+                        liveActions.push({
+                            url: propSearchUrl,
+                            icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>',
+                            iconStyle: 'background:rgba(16,185,129,0.12); color:#10b981;',
+                            title: 'Search properties for &ldquo;<strong>' + cleanQuery + '</strong>&rdquo;',
+                            desc: 'Filter all listings, locations, and units',
+                            badge: 'Press ↵',
+                            badgeStyle: 'background:#10b981; color:#ffffff; border-color:#10b981;'
+                        });
+                        liveActions.push({
+                            url: txnSearchUrl,
+                            icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>',
+                            iconStyle: 'background:rgba(59,130,246,0.12); color:#3b82f6;',
+                            title: 'Search transactions for &ldquo;<strong>' + cleanQuery + '</strong>&rdquo;',
+                            desc: 'Search customer payments, references, and receipts',
+                            badge: 'Transactions',
+                            badgeStyle: ''
+                        });
+                    }
 
                     // Contextual page search if applicable
                     var path = window.location.pathname;
                     if (path.indexOf('/leads') !== -1) {
-                        var leadUrl = '<?php echo esc_js( home_url( '/leads' ) ); ?>?s=' + encodeURIComponent(query);
-                        html += '<a href="' + leadUrl + '" class="ofp-search-item" data-url="' + leadUrl + '">';
-                        html += '  <div class="ofp-search-item-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07" /></svg></div>';
-                        html += '  <div class="ofp-search-item-info"><div class="ofp-search-item-title">Search leads for &ldquo;<strong>' + query + '</strong>&rdquo;</div></div>';
-                        html += '  <span class="ofp-search-item-badge">Leads</span>';
-                        html += '</a>';
+                        var leadUrl = '<?php echo esc_js( home_url( '/leads' ) ); ?>?s=' + encodeURIComponent(cleanQuery);
+                        liveActions.push({
+                            url: leadUrl,
+                            icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07" /></svg>',
+                            iconStyle: 'background:rgba(245,158,11,0.12); color:#f59e0b;',
+                            title: 'Search leads for &ldquo;<strong>' + cleanQuery + '</strong>&rdquo;',
+                            desc: 'Filter leads &amp; prospects in CRM',
+                            badge: 'Leads',
+                            badgeStyle: ''
+                        });
                     }
+
+                    html += '<div class="ofp-search-result-group-title">Live Search Actions</div>';
+                    liveActions.forEach(function(act, actIdx) {
+                        var isActSel = actIdx === selectedIndex;
+                        html += '<a href="' + act.url + '" class="ofp-search-item' + (isActSel ? ' selected' : '') + '" data-url="' + act.url + '">';
+                        html += '  <div class="ofp-search-item-icon" style="' + act.iconStyle + '">' + act.icon + '</div>';
+                        html += '  <div class="ofp-search-item-info">';
+                        html += '    <div class="ofp-search-item-title">' + act.title + '</div>';
+                        html += '    <div class="ofp-search-item-desc">' + act.desc + '</div>';
+                        html += '  </div>';
+                        html += '  <span class="ofp-search-item-badge"' + (act.badgeStyle ? ' style="' + act.badgeStyle + '"' : '') + '>' + act.badge + '</span>';
+                        html += '</a>';
+                    });
                 }
 
                 if (filtered.length > 0) {
                     html += '<div class="ofp-search-result-group-title">' + (queryLower ? 'Navigation & Shortcuts' : 'Suggested Shortcuts') + '</div>';
                     
-                    var offset = queryLower ? 1 : 0;
+                    var offset = queryLower ? liveActions.length : 0;
                     filtered.forEach(function(item, idx) {
                         var isSel = (idx + offset) === selectedIndex;
                         html += '<a href="' + item.url + '" class="ofp-search-item' + (isSel ? ' selected' : '') + '" data-url="' + item.url + '">';

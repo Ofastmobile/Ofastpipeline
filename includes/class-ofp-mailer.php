@@ -533,7 +533,7 @@ class OFP_Mailer {
         $login_url = home_url( '/login' );
 
         $body = '
-            <h2>Welcome to OFast Pipeline, ' . esc_html( $client->owner_name ) . '!</h2>
+            <h2>Welcome to ' . esc_html( OFP_Brand::name() ) . ', ' . esc_html( $client->owner_name ) . '!</h2>
             <p>Your client account has been created and is ready to use.
                Here are your login details — please keep them safe.</p>
 
@@ -572,7 +572,7 @@ class OFP_Mailer {
         self::send(
             $client->email,
             $client->owner_name,
-            'Welcome to OFast Pipeline — Your Account Is Ready',
+            'Welcome to ' . OFP_Brand::name() . ' — Your Account Is Ready',
             $body
         );
     }
@@ -598,7 +598,7 @@ class OFP_Mailer {
 
             <p>Hi ' . esc_html( $client->owner_name ) . ',</p>
 
-            <p>Your OFast Pipeline subscription for
+            <p>Your ' . esc_html( OFP_Brand::name() ) . ' subscription for
                <strong>' . esc_html( $client->business_name ) . '</strong>
                expires on <strong>' . esc_html( $client->subscription_expires ) . '</strong>.</p>
 
@@ -635,7 +635,7 @@ class OFP_Mailer {
         self::send(
             $client->email,
             $client->owner_name,
-            $prefix . ( $days_left <= 0 ? 'Your OFast Pipeline subscription expires today' : "Your OFast Pipeline subscription expires in {$day_str}" ),
+            $prefix . ( $days_left <= 0 ? 'Your ' . OFP_Brand::name() . ' subscription expires today' : "Your " . OFP_Brand::name() . " subscription expires in {$day_str}" ),
             $body
         );
     }
@@ -754,7 +754,7 @@ class OFP_Mailer {
         self::send(
             $client->email,
             $client->owner_name,
-            'Payment Confirmed — OFast Pipeline ' . $label . ' Renewed',
+            'Payment Confirmed — ' . OFP_Brand::name() . ' ' . $label . ' Renewed',
             $body
         );
     }
@@ -812,7 +812,7 @@ class OFP_Mailer {
         self::send(
             $client->email,
             $client->owner_name,
-            'Action Required: Low ' . $label . ' Credit — OFast Pipeline',
+            'Action Required: Low ' . $label . ' Credit — ' . OFP_Brand::name(),
             $body
         );
     }
@@ -829,7 +829,7 @@ class OFP_Mailer {
     public static function send_approval_notification( object $client ): void {
 
         $body = '
-            <h2>🎉 Your OFast Pipeline Account Is Approved!</h2>
+            <h2>🎉 Your ' . esc_html( OFP_Brand::name() ) . ' Account Is Approved!</h2>
 
             <p>Hi ' . esc_html( $client->owner_name ) . ',</p>
 
@@ -860,7 +860,7 @@ class OFP_Mailer {
         self::send(
             $client->email,
             $client->owner_name,
-            'Your OFast Pipeline Account Is Approved — Welcome Aboard!',
+            'Your ' . OFP_Brand::name() . ' Account Is Approved — Welcome Aboard!',
             $body
         );
     }
@@ -955,7 +955,7 @@ class OFP_Mailer {
         self::send(
             $client->email,
             $client->owner_name,
-            'Your OFast Pipeline Monthly Report for ' . $period . ' Is Ready',
+            'Your ' . OFP_Brand::name() . ' Monthly Report for ' . $period . ' Is Ready',
             $body
         );
     }
@@ -973,11 +973,11 @@ class OFP_Mailer {
     public static function send_password_reset( object $client, string $reset_url ): void {
 
         $body = '
-            <h2>Reset Your OFast Pipeline Password</h2>
+            <h2>Reset Your ' . esc_html( OFP_Brand::name() ) . ' Password</h2>
 
             <p>Hi ' . esc_html( $client->owner_name ) . ',</p>
 
-            <p>We received a request to reset the password for your OFast Pipeline account.
+            <p>We received a request to reset the password for your ' . esc_html( OFP_Brand::name() ) . ' account.
                Click the button below to set a new password.</p>
 
             <p>
@@ -999,7 +999,7 @@ class OFP_Mailer {
         self::send(
             $client->email,
             $client->owner_name,
-            'Reset Your OFast Pipeline Password',
+            'Reset Your ' . OFP_Brand::name() . ' Password',
             $body
         );
     }

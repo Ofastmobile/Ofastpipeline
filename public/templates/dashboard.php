@@ -19,6 +19,10 @@ $voice_remaining = $credits->voice_remaining ?? 0;
 $client_properties = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_client_properties( (int) $client->id ) : [];
 $total_units_count = count( $client_properties );
 
+if ( ! empty( $client_properties ) ) {
+    update_meta_cache( 'post', wp_list_pluck( $client_properties, 'ID' ) );
+}
+
 $portfolio_value = 0;
 $rentable_count = 0;
 foreach ( $client_properties as $prop_post ) {
@@ -33,16 +37,17 @@ foreach ( $client_properties as $prop_post ) {
 global $wpdb;
 $pfx = $wpdb->prefix;
 
-// Leases & Occupancy
-$active_leases_cnt = (int) $wpdb->get_var( $wpdb->prepare(
-    "SELECT COUNT(*) FROM {$pfx}ofp_property_leases WHERE client_id = %d AND status = 'active'",
-    $client->id
+// Leases & Occupancy - Aggregated in a single query
+$lease_stats = $wpdb->get_row( $wpdb->prepare(
+    "SELECT 
+        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_cnt,
+        COALESCE(SUM(amount_paid), 0) AS total_rent
+     FROM {$pfx}ofp_property_leases 
+     WHERE client_id = %d",
+    (int) $client->id
 ) );
-
-$monthly_rent_collected = (float) $wpdb->get_var( $wpdb->prepare(
-    "SELECT COALESCE(SUM(amount_paid), 0) FROM {$pfx}ofp_property_leases WHERE client_id = %d",
-    $client->id
-) );
+$active_leases_cnt      = (int) ( $lease_stats->active_cnt ?? 0 );
+$monthly_rent_collected = (float) ( $lease_stats->total_rent ?? 0.0 );
 
 $sales_revenue_collected = (float) $wpdb->get_var( $wpdb->prepare(
     "SELECT COALESCE(SUM(amount_paid), 0) FROM {$pfx}ofp_property_purchases WHERE client_id = %d",

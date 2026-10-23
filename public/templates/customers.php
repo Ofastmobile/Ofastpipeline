@@ -380,7 +380,13 @@ if ( $detail ) {
                                 <div>
                                     <span style="font-weight:700;color:var(--text-main);"><?php echo esc_html( $money( $py->amount ) ); ?></span>
                                     <span class="ofp-cu-sub">&nbsp;on <?php echo esc_html( wp_date( 'M j, Y', strtotime( $py->created_at ) ) ); ?></span>
-                                    <span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,.05);font-size:11px;color:var(--text-muted);"><?php echo esc_html( ucwords( str_replace( '_', ' ', (string) $py->payment_method ) ) ); ?><?php echo $py->payer_reference ? ' &middot; Ref: ' . esc_html( $py->payer_reference ) : ''; ?><?php echo $imported ? ' &middot; Imported' : ''; ?></span>
+                                    <?php 
+                                        $raw_ref     = (string) ( $py->gateway_reference ?: ( $py->payer_reference ?: '' ) );
+                                        $display_ref = class_exists( 'OFP_Property_Receipt_Generator' ) 
+                                            ? OFP_Property_Receipt_Generator::format_display_reference( $raw_ref, '' ) 
+                                            : $raw_ref;
+                                    ?>
+                                    <span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,.05);font-size:11px;color:var(--text-muted);"><?php echo esc_html( ucwords( str_replace( '_', ' ', (string) $py->payment_method ) ) ); ?><?php echo $display_ref ? ' &middot; Ref: ' . esc_html( $display_ref ) : ''; ?><?php echo $imported ? ' &middot; Imported' : ''; ?></span>
                                 </div>
                                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                                     <?php if ( $has_file && class_exists( 'OFP_Property_Receipt_Viewer' ) ) : ?>

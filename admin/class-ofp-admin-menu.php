@@ -105,6 +105,7 @@ class OFP_Admin_Menu {
         add_submenu_page( 'ofp-overview', 'Send Notification', 'Send Notification', 'manage_options', 'ofp-send-notification', [ $this, 'render_send_notification' ] ); // Phase 17b
         add_submenu_page( 'ofp-overview', 'Activity Logs',   'Activity Logs',   'read', 'ofp-activity-logs',   [ $this, 'render_activity_logs' ] ); // Phase 21
         add_submenu_page( 'ofp-overview', 'Rent Oversight',  'Rent Oversight',  'read', 'ofp-rent-oversight',  [ $this, 'render_rent_oversight' ] );
+        add_submenu_page( 'ofp-overview', 'Investment',      'Investment',      'read', 'ofp-investment',      [ $this, 'render_investment' ] );
 
         // ── Super admin only ──────────────────────────────────────────────────
         if ( $is_super ) {
@@ -187,6 +188,7 @@ class OFP_Admin_Menu {
     public function render_reports():        void { $this->load_view( 'reports' ); }
     public function render_activity_logs():  void { $this->load_view( 'activity-logs' ); }
     public function render_rent_oversight(): void { $this->load_view( 'rent-oversight' ); }
+    public function render_investment():     void { $this->load_view( 'investment' ); }
 
     public function render_settings(): void {
         if ( ! OFP_Auth::is_super_admin() ) {

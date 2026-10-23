@@ -34,11 +34,80 @@ class OFP_Property_Payment_Records {
         );
     }
 
-    private static function get_rows( int $client_id = 0 ): array {
+    public static function get_rows( int $client_id = 0, string $search = '', string $status = '', string $method = '' ): array {
         global $wpdb;
         $p = $wpdb->prefix;
 
-        $sql = "SELECT py.*, pu.property_id, pu.client_id, pu.buyer_name, pu.buyer_phone,
+        $where  = [];
+        $params = [];
+
+        if ( $client_id > 0 ) {
+            $where[]  = 'pu.client_id = %d';
+            $params[] = $client_id;
+        }
+
+        $search = trim( $search );
+        if ( '' !== $search ) {
+            $s_clean = preg_replace( '/^#/', '', $search );
+
+            // Receipt format PUR-000001
+            if ( preg_match( '/^PUR-?0*(\d+)$/i', $s_clean, $m_pur ) ) {
+                $target_id = (int) $m_pur[1];
+                $where[]   = '( py.id = %d OR py.purchase_id = %d )';
+                $params[]  = $target_id;
+                $params[]  = $target_id;
+            }
+            // Formatted TXN-XXXXXX
+            elseif ( preg_match( '/^TXN-?([A-Z0-9_\-]+)$/i', $s_clean, $m_txn ) ) {
+                $like_core = '%' . $wpdb->esc_like( $m_txn[1] ) . '%';
+                $where[]   = '( py.gateway_reference LIKE %s OR py.payer_reference LIKE %s )';
+                $params[]  = $like_core;
+                $params[]  = $like_core;
+            }
+            // Digits (ID, phone, reference)
+            elseif ( ctype_digit( $s_clean ) ) {
+                $num_id   = (int) $s_clean;
+                $like_num = '%' . $wpdb->esc_like( $s_clean ) . '%';
+                $where[]  = '( py.id = %d OR py.purchase_id = %d OR pu.buyer_phone LIKE %s OR py.gateway_reference LIKE %s OR py.payer_reference LIKE %s )';
+                $params[] = $num_id;
+                $params[] = $num_id;
+                $params[] = $like_num;
+                $params[] = $like_num;
+                $params[] = $like_num;
+            }
+            // General text
+            else {
+                $like_s   = '%' . $wpdb->esc_like( $search ) . '%';
+                $where[]  = '( pu.buyer_name LIKE %s OR pu.buyer_phone LIKE %s OR pu.buyer_email LIKE %s OR pr.title LIKE %s OR py.gateway_reference LIKE %s OR py.payer_reference LIKE %s OR c.business_name LIKE %s )';
+                $params[] = $like_s;
+                $params[] = $like_s;
+                $params[] = $like_s;
+                $params[] = $like_s;
+                $params[] = $like_s;
+                $params[] = $like_s;
+                $params[] = $like_s;
+            }
+        }
+
+        if ( '' !== $status && 'all' !== $status ) {
+            if ( in_array( $status, [ 'successful', 'verified' ], true ) ) {
+                $where[] = "py.status IN ('successful', 'verified')";
+            } elseif ( in_array( $status, [ 'pending', 'pending_verification' ], true ) ) {
+                $where[] = "py.status IN ('pending', 'pending_verification')";
+            } elseif ( in_array( $status, [ 'failed', 'rejected' ], true ) ) {
+                $where[] = "py.status IN ('failed', 'rejected')";
+            } else {
+                $where[]  = 'py.status = %s';
+                $params[] = $status;
+            }
+        }
+
+        if ( '' !== $method && 'all' !== $method ) {
+            $where[]  = 'py.payment_method = %s';
+            $params[] = $method;
+        }
+
+        $sql = "SELECT py.*, pu.property_id, pu.client_id, pu.buyer_name, pu.buyer_phone, pu.buyer_email,
                        pu.total_price, pu.amount_paid AS purchase_paid, pu.balance AS purchase_balance,
                        pr.title AS property_title, c.business_name
                 FROM {$p}ofp_property_payments py
@@ -46,25 +115,53 @@ class OFP_Property_Payment_Records {
                 LEFT JOIN {$p}ofp_properties pr ON pr.id = pu.property_id
                 LEFT JOIN {$p}ofp_clients c ON c.id = pu.client_id";
 
-        if ( $client_id > 0 ) {
-            $sql .= $wpdb->prepare( ' WHERE pu.client_id = %d', $client_id );
+        if ( ! empty( $where ) ) {
+            $sql .= ' WHERE ' . implode( ' AND ', $where );
         }
 
         $sql .= ' ORDER BY py.created_at DESC, py.id DESC LIMIT 250';
+
+        if ( ! empty( $params ) ) {
+            return $wpdb->get_results( $wpdb->prepare( $sql, ...$params ) ) ?: [];
+        }
+
         return $wpdb->get_results( $sql ) ?: [];
     }
 
     public static function render_admin(): void {
-        $rows = self::get_rows();
+        $search = sanitize_text_field( wp_unslash( $_GET['s'] ?? $_GET['q'] ?? '' ) );
+        $status = sanitize_text_field( wp_unslash( $_GET['status'] ?? '' ) );
+        $method = sanitize_text_field( wp_unslash( $_GET['method'] ?? '' ) );
+        $rows   = self::get_rows( 0, $search, $status, $method );
         ?>
         <div class="wrap">
             <h1>Property Transactions</h1>
             <p>Every property transaction and payment record. Pending manual payments can be verified or rejected here.</p>
+
+            <form method="get" style="display:flex; gap:10px; align-items:center; flex-wrap:nowrap; margin:16px 0 20px;">
+                <?php if ( is_admin() ) : ?>
+                    <input type="hidden" name="post_type" value="ofp_property">
+                    <input type="hidden" name="page" value="ofp-property-payments">
+                <?php else : ?>
+                    <input type="hidden" name="tab" value="property-payments">
+                <?php endif; ?>
+                <input type="text" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="Search by Transaction ID, Receipt #, Buyer, Phone, Property..." class="ofp-input ofp-txn-search-input" style="flex:1; max-width:480px; min-width:240px;" id="ofp-admin-txn-search">
+                <select name="status" class="ofp-select ofp-txn-select" style="min-width:180px; flex-shrink:0;">
+                    <option value="">All Statuses</option>
+                    <option value="successful" <?php selected( in_array( $status, [ 'successful', 'verified' ], true ) ); ?>>Verified / Successful</option>
+                    <option value="pending_verification" <?php selected( in_array( $status, [ 'pending', 'pending_verification' ], true ) ); ?>>Pending Verification</option>
+                    <option value="failed" <?php selected( in_array( $status, [ 'failed', 'rejected' ], true ) ); ?>>Failed / Rejected</option>
+                </select>
+                <button type="submit" class="button button-primary ofp-btn ofp-btn-primary" style="height:38px; display:inline-flex; align-items:center; flex-shrink:0; white-space:nowrap;">Filter</button>
+                <?php if ( '' !== $search || '' !== $status || '' !== $method ) : ?>
+                    <a href="<?php echo esc_url( remove_query_arg( [ 's', 'q', 'status', 'method' ] ) ); ?>" class="button" style="flex-shrink:0; white-space:nowrap;">Clear</a>
+                <?php endif; ?>
+            </form>
             <div style="overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;">
-                <table class="widefat striped" style="min-width:1500px;">
+                <table class="widefat striped" id="ofp-admin-transactions-table" style="min-width:1500px;">
                     <thead><tr>
                         <th>ID</th><th>Buyer</th><th>Property</th><th>Owner</th><th>Purchase</th>
-                        <th>Amount</th><th>Method</th><th>Gateway</th><th>Reference</th><th>Status</th>
+                        <th>Amount</th><th>Method</th><th>Gateway</th><th>Transaction ID</th><th>Status</th>
                         <th>Paid</th><th>Balance</th><th>Receipt</th><th>Action</th><th>Created</th>
                     </tr></thead>
                     <tbody>
@@ -93,7 +190,13 @@ class OFP_Property_Payment_Records {
                             <td><strong>NGN <?php echo esc_html( number_format( (float) $row->amount, 2 ) ); ?></strong></td>
                             <td><?php echo esc_html( ucfirst( str_replace( '_', ' ', $row->payment_method ) ) ); ?></td>
                             <td><?php echo esc_html( $row->gateway ?: '—' ); ?></td>
-                            <td><code><?php echo esc_html( $row->gateway_reference ?: ( $row->payer_reference ?: '—' ) ); ?></code></td>
+                            <?php 
+                                $raw_ref     = (string) ( $row->gateway_reference ?: ( $row->payer_reference ?: '' ) );
+                                $display_ref = class_exists( 'OFP_Property_Receipt_Generator' ) 
+                                    ? OFP_Property_Receipt_Generator::format_display_reference( $raw_ref, '—' ) 
+                                    : ( $raw_ref ?: '—' );
+                            ?>
+                            <td><code title="<?php echo esc_attr( $raw_ref ); ?>"><?php echo esc_html( $display_ref ); ?></code></td>
                             <td>
                                 <span style="font-size:11.5px; font-weight:600; padding:3px 8px; border-radius:12px; <?php echo esc_attr( $admin_st_style ); ?>">
                                     <?php echo esc_html( $admin_st_label ); ?>
@@ -130,6 +233,21 @@ class OFP_Property_Payment_Records {
                 </table>
             </div>
             <?php self::render_payment_modals(); ?>
+            <script>
+            (function() {
+                var searchInput = document.getElementById('ofp-admin-txn-search');
+                var table = document.getElementById('ofp-admin-transactions-table');
+                if (!searchInput || !table) return;
+                searchInput.addEventListener('input', function() {
+                    var val = this.value.trim().toLowerCase();
+                    var rows = table.querySelectorAll('tbody tr');
+                    rows.forEach(function(r) {
+                        var text = r.textContent.toLowerCase();
+                        r.style.display = (!val || text.indexOf(val) !== -1) ? '' : 'none';
+                    });
+                });
+            })();
+            </script>
         </div>
         <?php
     }
@@ -148,13 +266,59 @@ class OFP_Property_Payment_Records {
             exit;
         }
 
-        $rows = self::get_rows( (int) $client->id );
+        global $wpdb;
+        $p = $wpdb->prefix;
+        $client_id = (int) $client->id;
+
+        $search = sanitize_text_field( wp_unslash( $_GET['s'] ?? $_GET['q'] ?? '' ) );
+        $status = sanitize_text_field( wp_unslash( $_GET['status'] ?? '' ) );
+        $method = sanitize_text_field( wp_unslash( $_GET['method'] ?? '' ) );
+
+        $rows = self::get_rows( $client_id, $search, $status, $method );
+
+        // Aggregate counts for status pills
+        $counts_raw = $wpdb->get_results( $wpdb->prepare(
+            "SELECT py.status, COUNT(*) as cnt
+             FROM {$p}ofp_property_payments py
+             INNER JOIN {$p}ofp_property_purchases pu ON pu.id = py.purchase_id
+             WHERE pu.client_id = %d
+             GROUP BY py.status",
+            $client_id
+        ) );
+        $counts = [ 'all' => 0, 'successful' => 0, 'pending' => 0, 'failed' => 0 ];
+        foreach ( (array) $counts_raw as $cr ) {
+            $st  = strtolower( (string) $cr->status );
+            $cnt = (int) $cr->cnt;
+            $counts['all'] += $cnt;
+            if ( in_array( $st, [ 'successful', 'verified' ], true ) ) {
+                $counts['successful'] += $cnt;
+            } elseif ( in_array( $st, [ 'pending', 'pending_verification' ], true ) ) {
+                $counts['pending'] += $cnt;
+            } elseif ( in_array( $st, [ 'failed', 'rejected' ], true ) ) {
+                $counts['failed'] += $cnt;
+            }
+        }
+        $has_filters = ( '' !== $search || ( '' !== $status && 'all' !== $status ) || ( '' !== $method && 'all' !== $method ) );
+        $total_amount = array_reduce( $rows, static fn( $acc, $it ) => $acc + (float) $it->amount, 0.0 );
         ?>
         <!doctype html><html lang="en"><head>
             <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
             <title>Transactions — <?php echo esc_html( OFP_Brand::name() ); ?></title>
             <?php wp_head(); ?>
             <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css' ); ?>">
+            <style>
+            /* Exact Match Row Highlighting */
+            .ofp-row-matched {
+                background: rgba(59, 130, 246, 0.12) !important;
+                position: relative;
+                box-shadow: inset 3px 0 0 var(--accent-blue, #3b82f6);
+                animation: ofpPulseRow2 2s ease-in-out infinite alternate;
+            }
+            @keyframes ofpPulseRow2 {
+                0% { background: rgba(59, 130, 246, 0.10); }
+                100% { background: rgba(59, 130, 246, 0.20); }
+            }
+            </style>
             <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
         </head><body class="ofp-portal-body">
         <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
@@ -162,18 +326,134 @@ class OFP_Property_Payment_Records {
             <div style="padding-bottom: 60px;">
                 <?php $ofp_sales_tab = 'payments'; include OFP_PATH . 'public/templates/partials/sales-tabs.php'; ?>
 
+                <!-- Search & Filter Card -->
+                <div class="ofp-txn-filter-card">
+                    <form method="get" action="<?php echo esc_url( home_url( '/property-payments' ) ); ?>">
+                        <div class="ofp-txn-search-row">
+                            <div class="ofp-txn-search-box">
+                                <svg class="ofp-txn-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                </svg>
+                                <input type="text" 
+                                       id="ofp-client-txn-search" 
+                                       name="s" 
+                                       class="ofp-input ofp-txn-search-input" 
+                                       value="<?php echo esc_attr( $search ); ?>" 
+                                       placeholder="Search Transaction ID (TXN-...), Receipt #, Buyer, Phone, Property..." 
+                                       autocomplete="off" />
+                            </div>
+
+                            <select name="status" class="ofp-select ofp-txn-select">
+                                <option value="">All Statuses</option>
+                                <option value="successful" <?php selected( in_array( $status, [ 'successful', 'verified' ], true ) ); ?>>Verified / Successful</option>
+                                <option value="pending_verification" <?php selected( in_array( $status, [ 'pending', 'pending_verification' ], true ) ); ?>>Pending Verification</option>
+                                <option value="failed" <?php selected( in_array( $status, [ 'failed', 'rejected' ], true ) ); ?>>Failed / Rejected</option>
+                                <option value="refunded" <?php selected( $status, 'refunded' ); ?>>Refunded</option>
+                            </select>
+
+                            <select name="method" class="ofp-select ofp-txn-select">
+                                <option value="">All Methods</option>
+                                <option value="checkout" <?php selected( $method, 'checkout' ); ?>>Online Checkout (Paystack)</option>
+                                <option value="manual" <?php selected( $method, 'manual' ); ?>>Bank Transfer / Manual</option>
+                                <option value="bank_transfer" <?php selected( $method, 'bank_transfer' ); ?>>Direct Transfer</option>
+                                <option value="pos" <?php selected( $method, 'pos' ); ?>>POS</option>
+                                <option value="cash" <?php selected( $method, 'cash' ); ?>>Cash</option>
+                            </select>
+
+                            <button type="submit" class="ofp-btn ofp-btn-primary" style="padding:9px 18px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+                                <span>Filter</span>
+                            </button>
+
+                            <?php if ( $has_filters ) : ?>
+                                <a href="<?php echo esc_url( home_url( '/property-payments' ) ); ?>" class="ofp-btn" style="padding:9px 14px; font-size:13px; text-decoration:none;">
+                                    Clear
+                                </a>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Status Filter Pills -->
+                        <div class="ofp-txn-filter-pills">
+                            <span style="font-size:12px; font-weight:600; color:var(--text-muted); margin-right:4px;">Filter Status:</span>
+                            <?php
+                            $pills = [
+                                ''           => [ 'label' => 'All',        'count' => $counts['all'] ],
+                                'successful' => [ 'label' => 'Verified',   'count' => $counts['successful'] ],
+                                'pending'    => [ 'label' => 'Pending',    'count' => $counts['pending'] ],
+                                'failed'     => [ 'label' => 'Failed',     'count' => $counts['failed'] ],
+                            ];
+                            foreach ( $pills as $pval => $pinfo ) :
+                                $is_active = ( $status === $pval || ( '' === $pval && '' === $status ) );
+                                $p_url = add_query_arg( array_merge(
+                                    array_diff_key( array_filter( [ 's' => $search, 'method' => $method ] ), [ 'status' => 1 ] ),
+                                    $pval !== '' ? [ 'status' => $pval ] : []
+                                ), home_url( '/property-payments' ) );
+                            ?>
+                                <a href="<?php echo esc_url( $p_url ); ?>" class="ofp-txn-pill <?php echo $is_active ? 'active' : ''; ?>">
+                                    <span><?php echo esc_html( $pinfo['label'] ); ?></span>
+                                    <span class="ofp-txn-pill-count"><?php echo esc_html( $pinfo['count'] ); ?></span>
+                                </a>
+                            <?php endforeach; ?>
+
+                            <span id="ofp-client-txn-live-count" style="display:none; margin-left:auto; font-size:12px; color:var(--brand-color); font-weight:600;"></span>
+                        </div>
+                    </form>
+                </div>
+
+                <?php if ( '' !== $search ) : ?>
+                    <?php if ( ! empty( $rows ) ) : ?>
+                        <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); border-radius:10px; padding:12px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px; height:18px; color:var(--accent-blue);"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <span style="font-size:13.5px; color:var(--text-main);">
+                                    Found <strong><?php echo count( $rows ); ?></strong> transaction(s) matching &ldquo;<strong><?php echo esc_html( $search ); ?></strong>&rdquo; 
+                                    (Total: <strong style="color:var(--accent-green);">₦<?php echo esc_html( number_format( $total_amount, 2 ) ); ?></strong>)
+                                </span>
+                            </div>
+                            <a href="<?php echo esc_url( home_url( '/property-payments' ) ); ?>" class="ofp-btn ofp-btn-sm" style="padding:4px 10px; font-size:12px; text-decoration:none;">Show All Transactions</a>
+                        </div>
+                    <?php else : ?>
+                        <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:10px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <span style="font-size:13.5px; color:#ef4444;">
+                                No transactions found matching &ldquo;<strong><?php echo esc_html( $search ); ?></strong>&rdquo;. Please check the reference or receipt number.
+                            </span>
+                            <a href="<?php echo esc_url( home_url( '/property-payments' ) ); ?>" class="ofp-btn ofp-btn-sm" style="padding:4px 10px; font-size:12px; text-decoration:none;">Reset Search</a>
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+
                 <div class="ofp-card">
+                    <!-- Table Header & Direct Search Bar -->
+                    <div class="ofp-table-toolbar" style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h3 style="margin:0 0 4px; font-size:16px; font-weight:700; color:var(--text-main);">Transactions Ledger</h3>
+                            <p style="margin:0; font-size:12.5px; color:var(--text-muted);">Real-time financial transactions, checkout verifications, and payment receipts.</p>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <div class="ofp-table-search" style="min-width:300px;">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                <input type="text" 
+                                       id="ofp-table-live-search" 
+                                       class="ofp-input ofp-txn-search-input" 
+                                       placeholder="Search transaction table (ID, buyer, ref...)" 
+                                       value="<?php echo esc_attr( $search ); ?>">
+                            </div>
+                            <span id="ofp-live-match-badge" class="ofp-btn ofp-btn-outline" style="font-size:12px; font-weight:600; padding:6px 14px; border-radius:8px; pointer-events:none;">
+                                <?php echo count( $rows ); ?> Records
+                            </span>
+                        </div>
+                    </div>
                     <div style="overflow-x:auto;">
                         <table class="ofp-table" style="width:100%;">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>Receipt / ID</th>
                                     <th>Buyer</th>
                                     <th>Property</th>
                                     <th>Purchase</th>
                                     <th>Amount</th>
                                     <th>Method</th>
-                                    <th>Reference</th>
+                                    <th>Transaction ID</th>
                                     <th>Status</th>
                                     <th>Receipt</th>
                                     <th>Paid</th>
@@ -184,10 +464,38 @@ class OFP_Property_Payment_Records {
                             </thead>
                             <tbody>
                             <?php if ( empty( $rows ) ) : ?>
-                                <tr><td colspan="13" style="text-align:center; color:#64748b;">No property transactions recorded yet.</td></tr>
-                            <?php else : foreach ( $rows as $row ) : ?>
-                                <tr>
-                                    <td style="color:var(--text-muted);">#<?php echo esc_html( $row->id ); ?></td>
+                                <tr><td colspan="13" style="text-align:center; color:#64748b; padding:32px;">No property transactions recorded yet.</td></tr>
+                            <?php else : foreach ( $rows as $row ) : 
+                                $raw_ref     = (string) ( $row->gateway_reference ?: ( $row->payer_reference ?: '' ) );
+                                $display_ref = class_exists( 'OFP_Property_Receipt_Generator' ) 
+                                    ? OFP_Property_Receipt_Generator::format_display_reference( $raw_ref, '—' ) 
+                                    : ( $raw_ref ?: '—' );
+                                $receipt_no  = 'PUR-' . str_pad( (string) $row->id, 6, '0', STR_PAD_LEFT );
+
+                                $is_matched = false;
+                                if ( '' !== $search ) {
+                                    $s_clean = strtoupper( trim( preg_replace( '/^#/', '', $search ) ) );
+                                    if ( (int) $row->id === (int) $s_clean ||
+                                         $s_clean === strtoupper( $receipt_no ) ||
+                                         $s_clean === strtoupper( $display_ref ) ||
+                                         ( $raw_ref !== '' && stripos( $raw_ref, $s_clean ) !== false ) ||
+                                         count( $rows ) === 1 ) {
+                                        $is_matched = true;
+                                    }
+                                }
+
+                                $search_blob = strtolower( $receipt_no . ' ' . $row->id . ' ' . $display_ref . ' ' . $raw_ref . ' ' . $row->buyer_name . ' ' . $row->buyer_phone . ' ' . $row->property_title . ' ' . $row->payment_method . ' ' . $row->status );
+                            ?>
+                                <tr class="ofp-txn-row <?php echo $is_matched ? 'ofp-row-matched' : ''; ?>" data-search="<?php echo esc_attr( $search_blob ); ?>">
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:6px;">
+                                            <strong style="color:var(--text-main); font-size:12.5px;"><?php echo esc_html( $receipt_no ); ?></strong>
+                                            <?php if ( $is_matched ) : ?>
+                                                <span style="font-size:10px; font-weight:700; background:var(--accent-blue); color:#fff; padding:1px 5px; border-radius:4px; letter-spacing:0.3px;">MATCH</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div style="font-size:11px; color:var(--text-muted);">#<?php echo esc_html( $row->id ); ?></div>
+                                    </td>
                                     <td>
                                         <div style="font-weight: 500; color: var(--text-main);"><?php echo esc_html( $row->buyer_name ); ?></div>
                                         <div style="font-size: 12px; color: var(--text-muted);"><?php echo esc_html( $row->buyer_phone ); ?></div>
@@ -197,8 +505,8 @@ class OFP_Property_Payment_Records {
                                     <td><strong style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $row->amount, 2 ) ); ?></strong></td>
                                     <td style="color:var(--text-main);"><?php echo esc_html( ucfirst( str_replace( '_', ' ', $row->payment_method ) ) ); ?></td>
                                     <td>
-                                        <code style="font-size:12px; color:var(--text-main); background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px;">
-                                            <?php echo esc_html( $row->payer_reference ?: ( $row->gateway_reference ?: '—' ) ); ?>
+                                        <code style="font-size:12px; color:var(--text-main); background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px; font-weight:600;" title="<?php echo esc_attr( $raw_ref ); ?>">
+                                            <?php echo esc_html( $display_ref ); ?>
                                         </code>
                                     </td>
                                     <td>
@@ -252,6 +560,73 @@ class OFP_Property_Payment_Records {
                 </div>
             </div>
         </div>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var topSearch = document.getElementById('ofp-client-txn-search');
+            var tableSearch = document.getElementById('ofp-table-live-search');
+            var rows = document.querySelectorAll('.ofp-table tbody tr.ofp-txn-row');
+            var liveCounter = document.getElementById('ofp-client-txn-live-count');
+            var matchBadge = document.getElementById('ofp-live-match-badge');
+
+            var matchedRow = document.querySelector('.ofp-row-matched');
+            if (matchedRow) {
+                setTimeout(function() {
+                    matchedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 250);
+            }
+
+            function doFilter(query, sourceInput) {
+                var val = (query || '').trim().toLowerCase();
+                var visible = 0;
+
+                if (sourceInput === topSearch && tableSearch && tableSearch.value !== query) {
+                    tableSearch.value = query;
+                } else if (sourceInput === tableSearch && topSearch && topSearch.value !== query) {
+                    topSearch.value = query;
+                }
+
+                rows.forEach(function(row) {
+                    var searchData = (row.getAttribute('data-search') || row.textContent).toLowerCase();
+                    if (!val || searchData.indexOf(val) !== -1) {
+                        row.style.display = '';
+                        visible++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                if (liveCounter) {
+                    if (val) {
+                        liveCounter.textContent = 'Showing ' + visible + ' of ' + rows.length;
+                        liveCounter.style.display = 'inline-block';
+                    } else {
+                        liveCounter.style.display = 'none';
+                    }
+                }
+
+                if (matchBadge) {
+                    matchBadge.textContent = val ? (visible + ' matching') : (rows.length + ' Records');
+                }
+            }
+
+            if (topSearch) {
+                topSearch.addEventListener('input', function() { doFilter(this.value, topSearch); });
+            }
+            if (tableSearch) {
+                tableSearch.addEventListener('input', function() { doFilter(this.value, tableSearch); });
+                tableSearch.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        var form = document.querySelector('.ofp-txn-filter-card form');
+                        if (form) {
+                            if (topSearch) topSearch.value = this.value;
+                            form.submit();
+                        }
+                    }
+                });
+            }
+        });
+        </script>
         <?php self::render_payment_modals(); ?>
         <?php wp_footer(); ?></body></html>
         <?php

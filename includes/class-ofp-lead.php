@@ -214,21 +214,46 @@ class OFP_Lead {
      * @return array
      */
     public static function get_stats( int $client_id ): array {
+        static $stats_cache = [];
+        if ( isset( $stats_cache[ $client_id ] ) ) {
+            return $stats_cache[ $client_id ];
+        }
+
         global $wpdb;
         $p = $wpdb->prefix;
 
-        return [
-            'total'             => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d", $client_id ) ),
-            'today'             => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND DATE(created_at) = CURDATE()", $client_id ) ),
-            'yesterday'         => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND DATE(created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)", $client_id ) ),
-            'this_month'        => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())", $client_id ) ),
-            'last_month'        => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND MONTH(created_at) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND YEAR(created_at) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))", $client_id ) ),
-            'converted'         => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status = 'converted'", $client_id ) ),
-            'converted_month'   => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status = 'converted' AND MONTH(converted_at) = MONTH(NOW()) AND YEAR(converted_at) = YEAR(NOW())", $client_id ) ),
-            'converted_last'    => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status = 'converted' AND MONTH(converted_at) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND YEAR(converted_at) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))", $client_id ) ),
-            'interested'        => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status = 'interested'", $client_id ) ),
-            'interested_last'   => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status = 'interested' AND MONTH(created_at) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND YEAR(created_at) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))", $client_id ) ),
+        $row = $wpdb->get_row( $wpdb->prepare(
+            "SELECT
+                COUNT(*) AS total,
+                SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) AS today,
+                SUM(CASE WHEN DATE(created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY) THEN 1 ELSE 0 END) AS yesterday,
+                SUM(CASE WHEN MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW()) THEN 1 ELSE 0 END) AS this_month,
+                SUM(CASE WHEN MONTH(created_at) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND YEAR(created_at) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH)) THEN 1 ELSE 0 END) AS last_month,
+                SUM(CASE WHEN status = 'converted' THEN 1 ELSE 0 END) AS converted,
+                SUM(CASE WHEN status = 'converted' AND MONTH(converted_at) = MONTH(NOW()) AND YEAR(converted_at) = YEAR(NOW()) THEN 1 ELSE 0 END) AS converted_month,
+                SUM(CASE WHEN status = 'converted' AND MONTH(converted_at) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND YEAR(converted_at) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH)) THEN 1 ELSE 0 END) AS converted_last,
+                SUM(CASE WHEN status = 'interested' THEN 1 ELSE 0 END) AS interested,
+                SUM(CASE WHEN status = 'interested' AND MONTH(created_at) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND YEAR(created_at) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH)) THEN 1 ELSE 0 END) AS interested_last
+             FROM {$p}ofp_leads
+             WHERE client_id = %d",
+            $client_id
+        ) );
+
+        $res = [
+            'total'           => (int) ( $row->total ?? 0 ),
+            'today'           => (int) ( $row->today ?? 0 ),
+            'yesterday'       => (int) ( $row->yesterday ?? 0 ),
+            'this_month'      => (int) ( $row->this_month ?? 0 ),
+            'last_month'      => (int) ( $row->last_month ?? 0 ),
+            'converted'       => (int) ( $row->converted ?? 0 ),
+            'converted_month' => (int) ( $row->converted_month ?? 0 ),
+            'converted_last'  => (int) ( $row->converted_last ?? 0 ),
+            'interested'      => (int) ( $row->interested ?? 0 ),
+            'interested_last' => (int) ( $row->interested_last ?? 0 ),
         ];
+
+        $stats_cache[ $client_id ] = $res;
+        return $res;
     }
 
     /**

@@ -26,6 +26,10 @@ class OFP_Property_Admin_Rules {
     }
 
     public static function ensure_schema(): void {
+        if ( get_option( 'ofp_schema_property_admin_rules_v1' ) ) {
+            return;
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'ofp_properties';
 
@@ -45,6 +49,8 @@ class OFP_Property_Admin_Rules {
             );
             update_option( 'ofp_property_owner_model_migrated', '1', false );
         }
+
+        update_option( 'ofp_schema_property_admin_rules_v1', 1, false );
     }
 
     public static function admin_owner_ui(): void {

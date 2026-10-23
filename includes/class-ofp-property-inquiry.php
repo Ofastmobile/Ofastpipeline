@@ -31,6 +31,10 @@ class OFP_Property_Inquiry {
      * Ensure required columns exist on ofp_property_inquiries.
      */
     public static function ensure_schema(): void {
+        if ( get_option( 'ofp_schema_inquiries_v2' ) ) {
+            return;
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'ofp_property_inquiries';
 
@@ -52,6 +56,8 @@ class OFP_Property_Inquiry {
         if ( ! in_array( 'updated_at', $columns, true ) ) {
             $wpdb->query( "ALTER TABLE {$table} ADD COLUMN updated_at DATETIME DEFAULT NULL AFTER created_at" );
         }
+
+        update_option( 'ofp_schema_inquiries_v2', 1, false );
     }
 
     /**

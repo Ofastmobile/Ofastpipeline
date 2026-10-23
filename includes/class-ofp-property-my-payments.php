@@ -511,7 +511,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 
 	<?php foreach ( $purchases as $pu ) :
 		$insts = (array) $wpdb->get_results( $wpdb->prepare( "SELECT installment_no, due_date, amount_due, amount_paid, status FROM {$p}ofp_property_installments WHERE purchase_id = %d ORDER BY installment_no ASC", (int) $pu->id ) );
-		$pays  = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, amount, status, payment_method, payer_reference, created_at FROM {$p}ofp_property_payments WHERE purchase_id = %d ORDER BY created_at DESC LIMIT 100", (int) $pu->id ) );
+		$pays  = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, amount, status, payment_method, gateway_reference, payer_reference, created_at FROM {$p}ofp_property_payments WHERE purchase_id = %d ORDER BY created_at DESC LIMIT 100", (int) $pu->id ) );
 		$pct   = (float) $pu->total_price > 0 ? min( 100, round( (float) $pu->amount_paid / (float) $pu->total_price * 100 ) ) : 0;
 		?>
 		<div class="card">
@@ -538,9 +538,15 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 
 			<h3>Payments</h3>
 			<?php if ( ! $pays ) : ?><p class="m">No payments yet.</p><?php else : ?>
-			<div class="scroll"><table><tr><th>Date</th><th>Amount</th><th>Reference</th><th>Status</th><th>Receipt</th></tr>
-			<?php foreach ( $pays as $py ) : $cls = $py->status === 'successful' ? 'g' : ( $py->status === 'pending_verification' ? 'y' : 'r' ); ?>
-				<tr><td><?php echo esc_html( wp_date( 'M j, Y', strtotime( $py->created_at ) ) ); ?></td><td><?php echo esc_html( $money( $py->amount ) ); ?></td><td><?php echo esc_html( $py->payer_reference ?: '—' ); ?></td><td><span class="tag <?php echo esc_attr( $cls ); ?>"><?php echo esc_html( self::status_label( (string) $py->status ) ); ?></span></td>
+			<div class="scroll"><table><tr><th>Date</th><th>Amount</th><th>Transaction ID</th><th>Status</th><th>Receipt</th></tr>
+			<?php foreach ( $pays as $py ) : 
+				$cls         = $py->status === 'successful' ? 'g' : ( $py->status === 'pending_verification' ? 'y' : 'r' ); 
+				$raw_ref     = (string) ( $py->gateway_reference ?: ( $py->payer_reference ?: '' ) );
+				$display_ref = class_exists( 'OFP_Property_Receipt_Generator' ) 
+					? OFP_Property_Receipt_Generator::format_display_reference( $raw_ref, '—' ) 
+					: ( $raw_ref ?: '—' );
+			?>
+				<tr><td><?php echo esc_html( wp_date( 'M j, Y', strtotime( $py->created_at ) ) ); ?></td><td><?php echo esc_html( $money( $py->amount ) ); ?></td><td><code title="<?php echo esc_attr( $raw_ref ); ?>"><?php echo esc_html( $display_ref ); ?></code></td><td><span class="tag <?php echo esc_attr( $cls ); ?>"><?php echo esc_html( self::status_label( (string) $py->status ) ); ?></span></td>
 				<td><?php if ( $py->status === 'successful' ) : ?><a class="btn sm" target="_blank" rel="noopener" href="<?php echo esc_url( self::receipt_url( 'purchase', (int) $py->id ) ); ?>">Receipt</a><?php else : ?>—<?php endif; ?></td></tr>
 			<?php endforeach; ?></table></div>
 			<?php endif; ?>
@@ -548,7 +554,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 	<?php endforeach; ?>
 
 	<?php foreach ( $leases as $ls ) :
-		$pays = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, amount, status, payment_method, payer_reference, created_at FROM {$p}ofp_property_lease_payments WHERE lease_id = %d ORDER BY created_at DESC LIMIT 100", (int) $ls->id ) );
+		$pays = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, amount, status, payment_method, gateway_reference, payer_reference, created_at FROM {$p}ofp_property_lease_payments WHERE lease_id = %d ORDER BY created_at DESC LIMIT 100", (int) $ls->id ) );
 		?>
 		<div class="card">
 			<h2><?php echo esc_html( $ls->property_title ?: 'Rental' ); ?></h2>
@@ -563,9 +569,15 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 			<?php endif; ?>
 			<h3>Payments</h3>
 			<?php if ( ! $pays ) : ?><p class="m">No payments yet.</p><?php else : ?>
-			<div class="scroll"><table><tr><th>Date</th><th>Amount</th><th>Reference</th><th>Status</th><th>Receipt</th></tr>
-			<?php foreach ( $pays as $py ) : $cls = $py->status === 'successful' ? 'g' : ( $py->status === 'pending_verification' ? 'y' : 'r' ); ?>
-				<tr><td><?php echo esc_html( wp_date( 'M j, Y', strtotime( $py->created_at ) ) ); ?></td><td><?php echo esc_html( $money( $py->amount ) ); ?></td><td><?php echo esc_html( $py->payer_reference ?: '—' ); ?></td><td><span class="tag <?php echo esc_attr( $cls ); ?>"><?php echo esc_html( self::status_label( (string) $py->status ) ); ?></span></td>
+			<div class="scroll"><table><tr><th>Date</th><th>Amount</th><th>Transaction ID</th><th>Status</th><th>Receipt</th></tr>
+			<?php foreach ( $pays as $py ) : 
+				$cls         = $py->status === 'successful' ? 'g' : ( $py->status === 'pending_verification' ? 'y' : 'r' ); 
+				$raw_ref     = (string) ( $py->gateway_reference ?: ( $py->payer_reference ?: '' ) );
+				$display_ref = class_exists( 'OFP_Property_Receipt_Generator' ) 
+					? OFP_Property_Receipt_Generator::format_display_reference( $raw_ref, '—' ) 
+					: ( $raw_ref ?: '—' );
+			?>
+				<tr><td><?php echo esc_html( wp_date( 'M j, Y', strtotime( $py->created_at ) ) ); ?></td><td><?php echo esc_html( $money( $py->amount ) ); ?></td><td><code title="<?php echo esc_attr( $raw_ref ); ?>"><?php echo esc_html( $display_ref ); ?></code></td><td><span class="tag <?php echo esc_attr( $cls ); ?>"><?php echo esc_html( self::status_label( (string) $py->status ) ); ?></span></td>
 				<td><?php if ( $py->status === 'successful' ) : ?><a class="btn sm" target="_blank" rel="noopener" href="<?php echo esc_url( self::receipt_url( 'rent', (int) $py->id ) ); ?>">Receipt</a><?php else : ?>—<?php endif; ?></td></tr>
 			<?php endforeach; ?></table></div>
 			<?php endif; ?>

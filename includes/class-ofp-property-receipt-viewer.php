@@ -112,15 +112,18 @@ class OFP_Property_Receipt_Viewer {
             $full_path = $receipt_raw !== '' ? ( $base_dir . '/' . $receipt_raw ) : '';
         }
 
-        if ( 'rent' === $payment->receipt_category && ( empty( $payment->receipt_path ) || ! file_exists( $full_path ) ) ) {
-            if ( class_exists( 'OFP_Property_Receipt_Generator' ) ) {
+        if ( ( empty( $payment->receipt_path ) || ! file_exists( $full_path ) ) && class_exists( 'OFP_Property_Receipt_Generator' ) ) {
+            $generated = null;
+            if ( 'rent' === $payment->receipt_category ) {
                 $generated = OFP_Property_Receipt_Generator::get_or_create_lease_receipt( $payment_id );
-                if ( $generated ) {
-                    $payment->receipt_path = $generated['path'];
-                    $payment->receipt_mime = $generated['mime'];
-                    $payment->receipt_size = $generated['size'];
-                    $full_path             = $base_dir . '/' . $payment->receipt_path;
-                }
+            } elseif ( 'purchase' === $payment->receipt_category ) {
+                $generated = OFP_Property_Receipt_Generator::get_or_create_purchase_receipt( $payment_id );
+            }
+            if ( $generated ) {
+                $payment->receipt_path = $generated['path'];
+                $payment->receipt_mime = $generated['mime'];
+                $payment->receipt_size = $generated['size'];
+                $full_path             = $base_dir . '/' . $payment->receipt_path;
             }
         }
 

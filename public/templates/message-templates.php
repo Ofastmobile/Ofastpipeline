@@ -17,18 +17,18 @@ if ( ! OFP_Auth::has_permission( 'send_messages' ) ) {
 global $wpdb;
 $p = $wpdb->prefix;
 
-$has_ebc = $wpdb->get_results( "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'email_brand_color'" );
-if ( empty( $has_ebc ) ) {
-    $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_brand_color VARCHAR(20) DEFAULT '#0f172a' AFTER logo_url" );
-    $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_header_text VARCHAR(150) DEFAULT NULL AFTER email_brand_color" );
-    $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_header_tagline VARCHAR(255) DEFAULT NULL AFTER email_header_text" );
-    $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_footer_text TEXT DEFAULT NULL AFTER email_header_tagline" );
-    $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_template_mode VARCHAR(20) DEFAULT 'visual' AFTER email_footer_text" );
-    $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_custom_html MEDIUMTEXT DEFAULT NULL AFTER email_template_mode" );
+if ( false === get_option( 'ofp_schema_client_email_brand_v1' ) ) {
+    $has_ebc = $wpdb->get_results( "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'email_brand_color'" );
+    if ( empty( $has_ebc ) ) {
+        $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_brand_color VARCHAR(20) DEFAULT '#0f172a' AFTER logo_url" );
+        $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_header_text VARCHAR(150) DEFAULT NULL AFTER email_brand_color" );
+        $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_header_tagline VARCHAR(255) DEFAULT NULL AFTER email_header_text" );
+        $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_footer_text TEXT DEFAULT NULL AFTER email_header_tagline" );
+        $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_template_mode VARCHAR(20) DEFAULT 'visual' AFTER email_footer_text" );
+        $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN email_custom_html MEDIUMTEXT DEFAULT NULL AFTER email_template_mode" );
+    }
+    update_option( 'ofp_schema_client_email_brand_v1', 1, false );
 }
-
-// Refresh client row from DB so all columns are present
-$client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p}ofp_clients WHERE id = %d LIMIT 1", $client->id ) );
 
 // ── Send Broadcast: leads picked on the Leads page ─────────────────────────
 $aud_pre   = sanitize_key( $_GET['aud'] ?? '' );
@@ -82,11 +82,21 @@ $total       = $comm_data['total'];
 $total_pages = $comm_data['total_pages'];
 $has_filters = ! empty( $filter_type ) || ! empty( $filter_status ) || ! empty( $search );
 
-// Summary stats (scoped to client across all communications)
-$sms_count   = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_communications_log WHERE client_id = %d AND type = 'sms'", (int) $client->id ) );
-$voice_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_communications_log WHERE client_id = %d AND type = 'voice'", (int) $client->id ) );
-$email_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}ofp_communications_log WHERE client_id = %d AND type = 'email'", (int) $client->id ) );
-$total_cost  = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(cost) FROM {$p}ofp_communications_log WHERE client_id = %d AND status NOT IN ('failed', 'error', 'pending')", (int) $client->id ) );
+// Summary stats (scoped to client across all communications) - aggregated in 1 query
+$comm_stats = $wpdb->get_row( $wpdb->prepare(
+    "SELECT 
+        SUM(CASE WHEN type = 'sms' THEN 1 ELSE 0 END) AS sms_count,
+        SUM(CASE WHEN type = 'voice' THEN 1 ELSE 0 END) AS voice_count,
+        SUM(CASE WHEN type = 'email' THEN 1 ELSE 0 END) AS email_count,
+        SUM(CASE WHEN status NOT IN ('failed', 'error', 'pending') THEN cost ELSE 0 END) AS total_cost
+     FROM {$p}ofp_communications_log 
+     WHERE client_id = %d",
+    (int) $client->id
+) );
+$sms_count   = (int) ( $comm_stats->sms_count ?? 0 );
+$voice_count = (int) ( $comm_stats->voice_count ?? 0 );
+$email_count = (int) ( $comm_stats->email_count ?? 0 );
+$total_cost  = (float) ( $comm_stats->total_cost ?? 0.0 );
 
 // ── Data for Templates Tab ──────────────────────────────────────────────
 $templates = $wpdb->get_results(

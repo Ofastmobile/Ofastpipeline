@@ -75,11 +75,14 @@ This prevents WordPress from executing cron tasks during regular visitor page lo
 2. Navigate to **Workers & Pages** in the left sidebar.
 3. Click **Create Application** → **Create Worker**.
 4. Give it a name (e.g. `ofast-cron-worker`) and click **Deploy**.
-5. Click **Edit Code**, replace the default code with the script below, and click **Deploy**:
+5. Click **Edit Code**, replace the default code with one of the options below, and click **Deploy**:
+
+#### Option A: Single Website Setup
+Use this if you are only running one WordPress site:
 
 ```javascript
 /**
- * Cloudflare Worker Cron Trigger for OFast Pipeline
+ * Cloudflare Worker Cron Trigger (Single Site)
  * Pings WordPress wp-cron.php on a fixed background schedule.
  */
 export default {
@@ -99,6 +102,43 @@ export default {
     } catch (err) {
       console.error(`Cron trigger failed: ${err.message}`);
     }
+  },
+};
+```
+
+#### Option B: Multi-Website Setup (Recommended if you have multiple sites)
+You can use a **single Cloudflare Worker** to trigger cron tasks across all your websites in parallel without waiting for slow servers:
+
+```javascript
+/**
+ * Cloudflare Worker Cron Trigger (Multi-Site Parallel)
+ * Pings all your WordPress sites concurrently in the background.
+ */
+export default {
+  async scheduled(event, env, ctx) {
+    const sites = [
+      "https://site1.com/wp-cron.php?doing_wp_cron",
+      "https://site2.com/wp-cron.php?doing_wp_cron",
+      "https://site3.com/wp-cron.php?doing_wp_cron",
+      // Add as many WordPress sites as you want
+    ];
+
+    const pingSite = async (url) => {
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "User-Agent": "Cloudflare-Cron-OFast-Pipeline/1.0",
+          },
+        });
+        console.log(`[OK] ${url} - Status: ${response.status}`);
+      } catch (err) {
+        console.error(`[FAIL] ${url} - Error: ${err.message}`);
+      }
+    };
+
+    // Trigger all sites in parallel in the background without blocking the worker
+    ctx.waitUntil(Promise.allSettled(sites.map(pingSite)));
   },
 };
 ```

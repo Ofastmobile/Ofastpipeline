@@ -70,7 +70,7 @@ class OFP_Admin_Portal {
         // Security Check 2: Must be an Administrator
         if ( ! current_user_can( 'manage_options' ) && ! ( class_exists( 'OFP_Auth' ) && OFP_Auth::is_admin_user() ) ) {
             wp_die(
-                '<h1>Access Denied</h1><p>You do not have administrative privileges to access the OFast Pipeline Admin Portal.</p>',
+                '<h1>Access Denied</h1><p>You do not have administrative privileges to access the ' . esc_html( OFP_Brand::name() ) . ' Admin Portal.</p>',
                 'Access Denied',
                 [ 'response' => 403 ]
             );

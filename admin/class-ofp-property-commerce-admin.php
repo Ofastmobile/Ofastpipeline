@@ -174,7 +174,7 @@ class OFP_Property_Commerce_Admin {
         ?>
         <div class="wrap">
             <h1>Listing Billing</h1>
-            <p>Property listing subscriptions only. CRM billing remains under <strong>OFast Pipeline → Billing</strong>.</p>
+            <p>Property listing subscriptions only. CRM billing remains under <strong><?php echo esc_html( OFP_Brand::name() ); ?> → Billing</strong>.</p>
 
             <div style="display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:16px;margin:20px 0;">
                 <div class="postbox" style="padding:16px;"><strong style="font-size:22px;">₦<?php echo esc_html( number_format( $total_revenue, 0 ) ); ?></strong><br><span>Total Listing Revenue</span></div>
@@ -641,19 +641,24 @@ class OFP_Property_Commerce_Admin {
                                 <th>#</th>
                                 <th>Amount</th>
                                 <th>Method</th>
-                                <th>Reference</th>
+                                <th>Transaction ID</th>
                                 <th>Status</th>
                                 <th>Date</th>
                                 <th>Receipt</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ( $recorded_payments as $idx => $pmt ) : ?>
+                            <?php foreach ( $recorded_payments as $idx => $pmt ) : 
+                                $raw_ref     = (string) ( $pmt->gateway_reference ?: ( $pmt->payer_reference ?: '' ) );
+                                $display_ref = class_exists( 'OFP_Property_Receipt_Generator' ) 
+                                    ? OFP_Property_Receipt_Generator::format_display_reference( $raw_ref, '—' ) 
+                                    : ( $raw_ref ?: '—' );
+                            ?>
                                 <tr>
                                     <td><?php echo (int) ( count( $recorded_payments ) - $idx ); ?></td>
                                     <td><strong>NGN <?php echo esc_html( number_format( (float) $pmt->amount, 2 ) ); ?></strong></td>
                                     <td><?php echo esc_html( ucfirst( str_replace( '_', ' ', $pmt->payment_method ) ) ); ?></td>
-                                    <td><code><?php echo esc_html( $pmt->gateway_reference ?: ( $pmt->payer_reference ?: '—' ) ); ?></code></td>
+                                    <td><code title="<?php echo esc_attr( $raw_ref ); ?>"><?php echo esc_html( $display_ref ); ?></code></td>
                                     <td>
                                         <?php if ( in_array( $pmt->status, [ 'successful', 'verified' ], true ) ) : ?>
                                             <span style="color:#16a34a;font-weight:600;background:#dcfce7;padding:3px 8px;border-radius:12px;font-size:11.5px;"><?php echo esc_html( ucfirst( $pmt->status ) ); ?></span>

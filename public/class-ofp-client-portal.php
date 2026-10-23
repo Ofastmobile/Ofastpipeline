@@ -55,6 +55,7 @@ class OFP_Client_Portal {
         'activity-logs' => 'activity-logs.php',
         'agents' => 'agents.php',
         'our-agents' => 'agents.php',
+        'investment' => 'investment.php',
     ];
 
     private array $public_routes = [ 'login', 'signup', 'forgot-password', 'reset-password', 'team-invite', 'agents', 'our-agents' ];
@@ -514,11 +515,6 @@ class OFP_Client_Portal {
         $client = OFP_Auth::current_client();
         if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) {
             wp_send_json_error( 'Unauthorized' );
-        }
-
-        if ( class_exists( 'OFP_Communications_Log' ) ) {
-            OFP_Communications_Log::ensure_schema();
-            OFP_Communications_Log::sync_historical_activity( (int) $client->id );
         }
 
         $type   = sanitize_text_field( $_POST['type'] ?? '' );

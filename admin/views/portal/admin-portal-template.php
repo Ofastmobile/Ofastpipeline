@@ -97,6 +97,7 @@ $titles = [
     'settings'              => 'Platform Settings',
     'manage-admins'         => 'Admin Access & Permissions',
     'activity-logs'         => 'System Activity Audit Log',
+    'investment'            => 'Real Estate Investment Engine',
 ];
 ?>
 <!DOCTYPE html>
@@ -104,7 +105,7 @@ $titles = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo esc_html( $titles[ $tab ] ?? 'Admin Portal' ); ?> — OFast Pipeline</title>
+    <title><?php echo esc_html( $titles[ $tab ] ?? 'Admin Portal' ); ?> — <?php echo esc_html( OFP_Brand::name() ); ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -220,6 +221,13 @@ $titles = [
                         <a href="<?php echo esc_url( home_url( '/admin-portal?tab=reports' ) ); ?>">
                             <svg class="ofp-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                             <span>Reports & Analytics</span>
+                        </a>
+                    </li>
+                    <li class="ofp-nav-item <?php echo $tab === 'investment' ? 'active' : ''; ?>">
+                        <a href="<?php echo esc_url( home_url( '/admin-portal?tab=investment' ) ); ?>">
+                            <svg class="ofp-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                            <span>Investment</span>
+                            <span class="ofp-nav-badge warning">Coming Soon</span>
                         </a>
                     </li>
                 </ul>
@@ -713,6 +721,10 @@ $titles = [
             <?php elseif ( $tab === 'activity-logs' ) : ?>
                 <!-- Embedded Activity Logs Module -->
                 <?php include OFP_PATH . 'admin/views/activity-logs.php'; ?>
+
+            <?php elseif ( $tab === 'investment' ) : ?>
+                <!-- Embedded Investment Module (Coming Soon) -->
+                <?php include OFP_PATH . 'admin/views/investment.php'; ?>
 
             <?php elseif ( $tab === 'property-purchases' ) : ?>
                 <!-- Embedded Property Sales & Purchases Table -->
@@ -1815,7 +1827,7 @@ $titles = [
                         <h3 class="ofp-card-title"><?php echo esc_html( $titles[ $tab ] ?? ucfirst( $tab ) ); ?></h3>
                     </div>
                     <div style="padding: 24px; text-align: center; color: var(--ofp-text-muted);">
-                        <p style="font-size: 15px;">Module active and loaded in OFast Pipeline engine.</p>
+                        <p style="font-size: 15px;">Module active and loaded in <?php echo esc_html( OFP_Brand::name() ); ?> engine.</p>
                     </div>
                 </div>
             <?php endif; ?>

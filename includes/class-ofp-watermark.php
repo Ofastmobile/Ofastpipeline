@@ -35,16 +35,18 @@ class OFP_Watermark {
      * Ensure the watermark_text column exists in the clients table.
      */
     public static function ensure_schema(): void {
-        global $wpdb;
-        static $done = false;
-        if ( $done ) return;
-        $done = true;
+        if ( get_option( 'ofp_schema_watermark_v1' ) ) {
+            return;
+        }
 
+        global $wpdb;
         $table = $wpdb->prefix . 'ofp_clients';
         $col   = $wpdb->get_results( "SHOW COLUMNS FROM `{$table}` LIKE 'watermark_text'" );
         if ( empty( $col ) ) {
             $wpdb->query( "ALTER TABLE `{$table}` ADD COLUMN `watermark_text` VARCHAR(100) DEFAULT NULL AFTER `bio`" );
         }
+
+        update_option( 'ofp_schema_watermark_v1', 1, false );
     }
 
     /**
@@ -91,7 +93,7 @@ class OFP_Watermark {
         }
 
         // 4. Site name
-        return get_bloginfo( 'name' ) ?: 'OFast Pipeline';
+        return get_bloginfo( 'name' ) ?: OFP_Brand::name();
     }
 
     /**

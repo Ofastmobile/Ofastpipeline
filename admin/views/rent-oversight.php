@@ -422,10 +422,17 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <?php if ( empty( $payments ) ) : ?>
         <p>No rent transactions found.</p>
     <?php else : ?>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+            <div style="font-size:13px; color:#64748b; font-weight:600;">Rent Transactions Ledger (<?php echo count( $payments ); ?>)</div>
+            <div class="ofp-table-search" style="min-width:280px; position:relative;">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#64748b; pointer-events:none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" id="ofp-admin-rent-search" class="ofp-input ofp-txn-search-input" placeholder="Search rent transactions, tenant, ID..." onkeyup="ofpFilterAdminTable('ofp-admin-rent-search', 'ofp-admin-rent-table')" style="padding-left:32px;">
+            </div>
+        </div>
         <div style="overflow-x:auto;">
-            <table class="widefat ofp-table" style="min-width:1100px;">
+            <table class="widefat ofp-table" id="ofp-admin-rent-table" style="min-width:1100px;">
                 <thead>
-                    <tr><th>Client</th><th>Tenant</th><th>Property</th><th>Method</th><th>Amount</th><th>Status</th><th>Reference</th><th>Receipt</th><th>Date</th></tr>
+                    <tr><th>Client</th><th>Tenant</th><th>Property</th><th>Method</th><th>Amount</th><th>Status</th><th>Transaction ID</th><th>Receipt</th><th>Date</th></tr>
                 </thead>
                 <tbody>
                 <?php foreach ( $payments as $pay ) : ?>
@@ -436,6 +443,10 @@ include OFP_PATH . 'admin/views/partials/header.php';
                         'failed','rejected','cancelled' => 'ofp-badge-red',
                         default                => 'ofp-badge-yellow',
                     };
+                    $raw_ref     = (string) ( $pay->gateway_reference ?: ( $pay->payer_reference ?: '' ) );
+                    $display_ref = class_exists( 'OFP_Property_Receipt_Generator' ) 
+                        ? OFP_Property_Receipt_Generator::format_display_reference( $raw_ref, '—' ) 
+                        : ( $raw_ref ?: '—' );
                     ?>
                     <tr>
                         <td><strong><?php echo esc_html( $pay->business_name ?: '—' ); ?></strong></td>
@@ -444,7 +455,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                         <td><?php echo esc_html( ucfirst( str_replace( '_', ' ', $pay->payment_method ) ) ); ?></td>
                         <td><strong>₦<?php echo esc_html( number_format( (float) $pay->amount, 2 ) ); ?></strong></td>
                         <td><span class="ofp-badge <?php echo esc_attr( $pay_badge ); ?>"><?php echo esc_html( ucwords( str_replace( '_', ' ', $pay->status ) ) ); ?></span></td>
-                        <td><small><?php echo esc_html( $pay->gateway_reference ?: $pay->payer_reference ?: '—' ); ?></small></td>
+                        <td><small title="<?php echo esc_attr( $raw_ref ); ?>"><?php echo esc_html( $display_ref ); ?></small></td>
                         <td><?php echo ! empty( $pay->receipt_path ) ? '<span class="ofp-badge ofp-badge-green">Yes</span>' : '—'; ?></td>
                         <td><small><?php echo esc_html( $pay->created_at ); ?></small></td>
                     </tr>
@@ -595,6 +606,15 @@ function ofpOpenAdminLeaseModal(data) {
 function ofpCloseAdminModal(id) {
     var modal = document.getElementById(id);
     if (modal) modal.style.display = 'none';
+}
+
+function ofpFilterAdminTable(inputId, tableId) {
+    var val = (document.getElementById(inputId) ? document.getElementById(inputId).value : '').toLowerCase().trim();
+    var rows = document.querySelectorAll('#' + tableId + ' tbody tr');
+    rows.forEach(function(r) {
+        var txt = r.textContent.toLowerCase();
+        r.style.display = (!val || txt.indexOf(val) !== -1) ? '' : 'none';
+    });
 }
 
 window.addEventListener('keydown', function(e) {

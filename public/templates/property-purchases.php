@@ -491,30 +491,43 @@ include OFP_PATH . 'public/templates/partials/nav.php';
         </div>
 
         <div class="ofp-card" style="margin-top:20px;">
-            <h3 style="margin:0 0 16px; font-size:16px;">Payment History &amp; Receipts</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+                <h3 style="margin:0; font-size:16px; font-weight:700;">Payment History &amp; Receipts</h3>
+                <?php if ( ! empty( $recorded_payments ) ) : ?>
+                    <div class="ofp-table-search" style="min-width:260px;">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <input type="text" id="ofp-purchase-pay-search" class="ofp-input ofp-txn-search-input" placeholder="Search payment, Transaction ID..." onkeyup="ofpFilterTable('ofp-purchase-pay-search', 'ofp-purchase-payments-table')">
+                    </div>
+                <?php endif; ?>
+            </div>
             <?php if ( empty( $recorded_payments ) ) : ?>
                 <p class="ofp-hint">No payments logged yet for this purchase.</p>
             <?php else : ?>
                 <div class="ofp-table-responsive">
-                    <table class="ofp-table" style="width:100%;">
+                    <table class="ofp-table" id="ofp-purchase-payments-table" style="width:100%;">
                         <thead>
                             <tr>
                                 <th>#</th>
                                 <th>Amount</th>
                                 <th>Method</th>
-                                <th>Reference</th>
+                                <th>Transaction ID</th>
                                 <th>Status</th>
                                 <th>Date</th>
                                 <th>Receipt</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ( $recorded_payments as $idx => $pmt ) : ?>
+                            <?php foreach ( $recorded_payments as $idx => $pmt ) : 
+                                $raw_ref     = (string) ( $pmt->gateway_reference ?: ( $pmt->payer_reference ?: '' ) );
+                                $display_ref = class_exists( 'OFP_Property_Receipt_Generator' ) 
+                                    ? OFP_Property_Receipt_Generator::format_display_reference( $raw_ref, '—' ) 
+                                    : ( $raw_ref ?: '—' );
+                            ?>
                                 <tr>
                                     <td style="color:var(--text-muted);"><?php echo (int) ( count( $recorded_payments ) - $idx ); ?></td>
                                     <td style="color:var(--text-main); font-weight:600;">₦<?php echo esc_html( number_format( (float) $pmt->amount, 2 ) ); ?></td>
                                     <td style="color:var(--text-main);"><?php echo esc_html( ucfirst( str_replace( '_', ' ', $pmt->payment_method ) ) ); ?></td>
-                                    <td style="color:var(--text-muted); font-size:13px;"><?php echo esc_html( $pmt->gateway_reference ?: ( $pmt->payer_reference ?: '—' ) ); ?></td>
+                                    <td style="color:var(--text-muted); font-size:13px;"><code style="font-size:12px; background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px; font-weight:600;" title="<?php echo esc_attr( $raw_ref ); ?>"><?php echo esc_html( $display_ref ); ?></code></td>
                                     <td>
                                         <?php
                                             $pmt_styles = [
@@ -844,6 +857,15 @@ function ofpClosePaymentModal(id) {
         var iframe = document.getElementById('ofp-proof-iframe');
         if (iframe) iframe.src = 'about:blank';
     }
+}
+
+function ofpFilterTable(inputId, tableId) {
+    var val = (document.getElementById(inputId) ? document.getElementById(inputId).value : '').toLowerCase().trim();
+    var rows = document.querySelectorAll('#' + tableId + ' tbody tr');
+    rows.forEach(function(r) {
+        var txt = r.textContent.toLowerCase();
+        r.style.display = (!val || txt.indexOf(val) !== -1) ? '' : 'none';
+    });
 }
 </script>
 
