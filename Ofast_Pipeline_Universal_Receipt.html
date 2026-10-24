@@ -126,12 +126,35 @@
   td{padding:9px 10px;border-bottom:1px solid var(--line);font-size:12.5px}
   td:last-child,th:last-child{text-align:right}
   .amount-box{
+    position:relative;
     margin-top:12px;
     margin-left:auto;
     width:min(360px,100%);
     border:1px solid var(--line);
     border-radius:8px;
     overflow:hidden;
+    background:#fff;
+  }
+  .receipt-stamp-overlay{
+    position:absolute;
+    right:10px;
+    bottom:4px;
+    width:130px;
+    height:130px;
+    pointer-events:none;
+    z-index:10;
+    transform:rotate(-16deg);
+    opacity:0.88;
+    mix-blend-mode:multiply;
+    transition:transform 0.2s ease, opacity 0.2s ease;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  .receipt-stamp-overlay img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    display:block;
   }
   .amount-row{display:flex;justify-content:space-between;padding:7px 12px;font-size:12.5px}
   .amount-row.total{
@@ -168,6 +191,7 @@
     .property div:nth-child(odd){border-right:0}
     .property div:nth-last-child(-n+2){border-bottom:1px solid var(--line)}
     .property div:last-child{border-bottom:0}
+    .amount-box{width:100%}
   }
   @media print{
     body{background:#fff;font-size:12px}
@@ -175,6 +199,12 @@
     .receipt{
       width:100%;margin:0;box-shadow:none;border:0;
       padding:18px 0;
+    }
+    .receipt-stamp-overlay{
+      transform:rotate(-16deg);
+      -webkit-print-color-adjust:exact!important;
+      print-color-adjust:exact!important;
+      opacity:0.92!important;
     }
     @page{size:A4;margin:10mm}
   }
@@ -304,25 +334,28 @@
     </table>
 
     <div class="amount-box">
-      <div class="amount-row">
-        <span>Subtotal</span><strong>{{subtotal}}</strong>
+      <div class="receipt-stamp-overlay" title="Verified Transaction">
+        <img src="{{stamp_image_url}}" alt="Official Stamp">
       </div>
-      <div class="amount-row">
-        <span>Discount / Credit</span><strong>{{discount}}</strong>
+        <div class="amount-row">
+          <span>Subtotal</span><strong>{{subtotal}}</strong>
+        </div>
+        <div class="amount-row">
+          <span>Discount / Credit</span><strong>{{discount}}</strong>
+        </div>
+        <div class="amount-row">
+          <span>Fees / Charges</span><strong>{{fees}}</strong>
+        </div>
+        <div class="amount-row">
+          <span>Tax</span><strong>{{tax}}</strong>
+        </div>
+        <div class="amount-row total">
+          <span>Amount Paid</span><span>{{amount_paid}}</span>
+        </div>
+        <div class="amount-row balance">
+          <span>Outstanding Balance</span><span>{{outstanding_balance}}</span>
+        </div>
       </div>
-      <div class="amount-row">
-        <span>Fees / Charges</span><strong>{{fees}}</strong>
-      </div>
-      <div class="amount-row">
-        <span>Tax</span><strong>{{tax}}</strong>
-      </div>
-      <div class="amount-row total">
-        <span>Amount Paid</span><span>{{amount_paid}}</span>
-      </div>
-      <div class="amount-row balance">
-        <span>Outstanding Balance</span><span>{{outstanding_balance}}</span>
-      </div>
-    </div>
   </section>
 
   <!-- Investment-specific block -->

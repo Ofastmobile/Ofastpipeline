@@ -512,18 +512,26 @@ class OFP_Client_Portal {
     }
 
     /**
-     * Returns real monthly lead volume + conversion counts for the
-     * Reports page "Monthly Performance" chart (last 12 months).
+    /**
+     * Returns yearly chart data and dynamic KPIs for the Reports page
+     * supporting all 6 metrics (leads, sales, rent, inspections, comms_spend, transactions) and selected year.
      */
     public function ajax_reports_chart_data(): void {
         check_ajax_referer( 'ofp_client_ajax', 'nonce' );
         OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
-        if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) wp_send_json_error( 'Unauthorized' );
+        if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) {
+            wp_send_json_error( 'Unauthorized' );
+        }
 
-        wp_send_json_success( [
-            'monthly' => OFP_Lead::get_monthly_stats( $client->id, 12 ),
-        ] );
+        $metric = sanitize_key( $_POST['metric'] ?? 'leads' );
+        $year   = (int) ( $_POST['year'] ?? gmdate( 'Y' ) );
+        if ( $year < 2000 || $year > 2100 ) {
+            $year = (int) gmdate( 'Y' );
+        }
+
+        $data = OFP_CSV::get_yearly_chart_data( (int) $client->id, $metric, $year );
+        wp_send_json_success( $data );
     }
 
     /**

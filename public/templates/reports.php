@@ -271,6 +271,10 @@ $initial_kpis = $initial_data['kpis'] ?? [];
 </main>
 </div><!-- .ofp-shell -->
 
+<script>
+    window.ofpReportsInitialData = <?php echo wp_json_encode( $initial_data ); ?>;
+</script>
+
 <?php wp_footer(); ?>
 </body>
 </html>

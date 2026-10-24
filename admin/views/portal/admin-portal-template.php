@@ -129,8 +129,8 @@ $titles = [
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 </div>
                 <div class="ofp-sb-brand-info">
-                    <span class="ofp-sb-brand-title">NaijaHub</span>
-                    <span class="ofp-sb-brand-badge">v2.2.3</span>
+                    <span class="ofp-sb-brand-title"><?php echo esc_html( OFP_Brand::name() ); ?></span>
+                    <span class="ofp-sb-brand-badge">v<?php echo esc_html( OFP_VERSION ); ?></span>
                 </div>
             </a>
             <button type="button" class="ofp-sb-collapse-btn" id="ofp-sb-collapse" title="Collapse sidebar">

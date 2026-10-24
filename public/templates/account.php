@@ -13,8 +13,8 @@ $error   = '';
 
 global $wpdb;
 
-// Ensure database columns exist (cached to prevent 6 queries on every request)
-if ( false === get_transient( 'ofp_clients_account_schema_v1' ) ) {
+// Ensure database columns exist (cached to prevent queries on every request)
+if ( false === get_transient( 'ofp_clients_account_schema_v2' ) ) {
     $has_logo = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'logo_url'");
     if (empty($has_logo)) {
         $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN logo_url VARCHAR(255) DEFAULT NULL AFTER business_category");
@@ -22,6 +22,10 @@ if ( false === get_transient( 'ofp_clients_account_schema_v1' ) ) {
     $has_cover = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'cover_image_url'");
     if (empty($has_cover)) {
         $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN cover_image_url VARCHAR(255) DEFAULT NULL AFTER logo_url");
+    }
+    $has_stamp = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'stamp_url'");
+    if (empty($has_stamp)) {
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN stamp_url VARCHAR(255) DEFAULT NULL AFTER cover_image_url");
     }
     $has_slug = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'profile_slug'");
     if (empty($has_slug)) {
@@ -39,7 +43,7 @@ if ( false === get_transient( 'ofp_clients_account_schema_v1' ) ) {
     if (empty($has_extra)) {
         $wpdb->query("ALTER TABLE {$wpdb->prefix}ofp_clients ADD COLUMN profile_extra TEXT DEFAULT NULL");
     }
-    set_transient( 'ofp_clients_account_schema_v1', 1, MONTH_IN_SECONDS );
+    set_transient( 'ofp_clients_account_schema_v2', 1, MONTH_IN_SECONDS );
 }
 
 // Ensure verification audit columns exist
@@ -303,6 +307,52 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
         
         wp_safe_redirect( add_query_arg( 'success', 'cover_reset', home_url( '/account' ) ) );
         exit;
+    } elseif ( isset( $_POST['upload_stamp'] ) && isset( $_FILES['stamp_image'] ) ) {
+        $file = $_FILES['stamp_image'];
+        
+        if ( $file['error'] !== UPLOAD_ERR_OK ) {
+            $error = 'There was an error uploading the stamp image. Please try again.';
+        } elseif ( $file['size'] > 2 * 1024 * 1024 ) {
+            $error = 'Stamp image is too large. Maximum size is 2MB.';
+        } else {
+            $allowed_types = [ 'image/png', 'image/jpeg', 'image/webp' ];
+            $file_type = wp_check_filetype( $file['name'] );
+            
+            if ( ! in_array( $file_type['type'], $allowed_types ) ) {
+                $error = 'Invalid file type. Only PNG, JPG, and WebP are allowed (transparent PNG recommended).';
+            } else {
+                if ( ! function_exists( 'wp_handle_upload' ) ) {
+                    require_once ABSPATH . 'wp-admin/includes/file.php';
+                }
+                
+                $upload_overrides = [ 'test_form' => false ];
+                $movefile = wp_handle_upload( $file, $upload_overrides );
+                
+                if ( $movefile && ! isset( $movefile['error'] ) ) {
+                    global $wpdb;
+                    $wpdb->update(
+                        $wpdb->prefix . 'ofp_clients',
+                        [ 'stamp_url' => $movefile['url'] ],
+                        [ 'id' => $client->id ]
+                    );
+                    
+                    wp_safe_redirect( add_query_arg( 'success', 'stamp', home_url( '/account' ) ) );
+                    exit;
+                } else {
+                    $error = $movefile['error'] ?? 'Failed to save uploaded stamp image.';
+                }
+            }
+        }
+    } elseif ( isset( $_POST['remove_stamp'] ) ) {
+        global $wpdb;
+        $wpdb->update(
+            $wpdb->prefix . 'ofp_clients',
+            [ 'stamp_url' => null ],
+            [ 'id' => $client->id ]
+        );
+        
+        wp_safe_redirect( add_query_arg( 'success', 'stamp_reset', home_url( '/account' ) ) );
+        exit;
     } elseif ( isset( $_POST['upload_logo'] ) && isset( $_FILES['logo'] ) ) {
         $file = $_FILES['logo'];
         
@@ -350,6 +400,10 @@ if ( isset( $_GET['success'] ) ) {
         $success = 'Cover image updated successfully! It is now live on your public /agent profile.';
     } elseif ( $_GET['success'] === 'cover_reset' ) {
         $success = 'Cover image reset to default platform banner.';
+    } elseif ( $_GET['success'] === 'stamp' ) {
+        $success = 'Official verification stamp updated successfully! It is now applied to all your transaction receipts.';
+    } elseif ( $_GET['success'] === 'stamp_reset' ) {
+        $success = 'Official verification stamp reset to platform default verified seal.';
     } elseif ( $_GET['success'] === 'bank_updated' ) {
         $success = 'Bank account details updated successfully.';
     }
@@ -379,6 +433,11 @@ $avatar_url = ! empty( $client->logo_url ) ? $client->logo_url : OFP_URL . 'asse
 $default_cover    = OFP_URL . 'assets/images/dashboard-hero-banner.webp';
 $cover_url        = ! empty( $client->cover_image_url ) ? $client->cover_image_url : $default_cover;
 $has_custom_cover = ! empty( $client->cover_image_url );
+
+// Stamp / seal image URL (used on receipts & vouchers)
+$default_stamp    = OFP_URL . 'assets/images/receipt-verified-stamp.png';
+$stamp_url        = ! empty( $client->stamp_url ) ? $client->stamp_url : $default_stamp;
+$has_custom_stamp = ! empty( $client->stamp_url );
 
 // Tier badge text
 $plan_badge = 'Premium User';
@@ -697,6 +756,47 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                             <span style="font-size:12px; color:#ffffff; margin-top:4px; display:inline-block;"><?php echo esc_html( $client->support_email ?: ($client->email ?: 'Not specified') ); ?></span>
                         </div>
                     </div>
+
+                    <!-- Official Receipt Stamp in Branding card -->
+                    <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--prof-border); display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:42px; height:42px; border-radius:8px; border:1px solid var(--prof-border); background:rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+                                <img src="<?php echo esc_url( $stamp_url ); ?>" alt="Stamp" style="max-width:100%; max-height:100%; object-fit:contain; transform:rotate(-10deg);">
+                            </div>
+                            <div>
+                                <span style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--prof-text-sub); font-weight:600;">Receipt Verification Stamp</span>
+                                <span style="font-size:12px; color:<?php echo $has_custom_stamp ? '#10b981' : '#94a3b8'; ?>; font-weight:600;">
+                                    <?php echo $has_custom_stamp ? '✓ Custom Stamp Active' : 'Default Platform Seal (Fallback)'; ?>
+                                </span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="openEditModal('tab-profile')" style="background:none; border:none; color:var(--prof-teal); font-size:12px; cursor:pointer; font-weight:600; text-decoration:underline;">
+                            Change
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ── Help Shape the Platform (Feedback & Bug Report) ──────────── -->
+                <div style="margin-top:16px;">
+                    <h4 style="font-size:13.5px; font-weight:600; color:#ffffff; margin:0 0 10px; display:flex; align-items:center; gap:8px;">
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span>
+                        Platform Feedback & Suggestions
+                    </h4>
+                    <div style="background:var(--prof-card-inner, #131722); border:1px solid var(--prof-border); border-radius:12px; padding:16px 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:38px; height:38px; border-radius:10px; background:rgba(16, 185, 129, 0.12); color:#10b981; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                            </div>
+                            <div>
+                                <h4 style="margin:0 0 3px 0; font-size:13.5px; font-weight:700; color:#ffffff;">Help Shape the Platform</h4>
+                                <p style="margin:0; font-size:11.5px; color:var(--prof-text-sub, #94a3b8); line-height:1.4;">Got a feature idea or ran into an unexpected glitch? Share your thoughts with optional YouTube video walkthroughs.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="ofp-open-feedback-trigger" data-type="feature_request" style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; background:#10b981; color:#ffffff; border:none; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:background 0.15s ease;">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                            <span>Feedback & Bug Report</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -813,27 +913,6 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
         </div> <!-- /.ofp-branding-bank-content-grid -->
     </div> <!-- /.ofp-branding-card -->
 
-    <!-- ── Feedback & Support Card ─────────────────────────────────────── -->
-    <div class="ofp-profile-card" style="margin-top: 24px; background: var(--prof-card-bg, #1a1e2d); border: 1px solid var(--prof-border, #2d3748); border-radius: 16px; padding: 24px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-            <div style="display: flex; align-items: center; gap: 14px;">
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); color: #10b981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                </div>
-                <div>
-                    <h3 style="margin: 0 0 4px 0; font-size: 16px; font-weight: 700; color: #ffffff;">Help Shape the Platform</h3>
-                    <p style="margin: 0; font-size: 13px; color: var(--prof-text-sub, #94a3b8);">Got a feature idea or ran into an unexpected glitch? Share your thoughts with optional YouTube video walkthroughs.</p>
-                </div>
-            </div>
-            <div>
-                <button type="button" class="ofp-open-feedback-trigger" data-type="feature_request" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 10px; background: #10b981; color: #ffffff; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s ease;">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
-                    <span>Feedback & Bug Report</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
 </div> <!-- /.ofp-profile-page-wrap -->
 
 <!-- ── Hidden form for Instant Logo/Avatar upload ────────────────────────── -->
@@ -854,9 +933,20 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
     <input type="hidden" name="remove_cover" value="1">
 </form>
 
+<!-- ── Hidden form for Instant Stamp upload ───────────────────────────────── -->
+<form method="POST" action="" enctype="multipart/form-data" id="ofp-stamp-form" style="display:none;">
+    <?php wp_nonce_field( 'ofp_account_' . $client->id, 'ofp_account_nonce' ); ?>
+    <input type="hidden" name="upload_stamp" value="1">
+    <input type="file" name="stamp_image" id="ofp-stamp-input" accept="image/png,image/jpeg,image/webp">
+</form>
+<form method="POST" action="" id="ofp-reset-stamp-form" style="display:none;">
+    <?php wp_nonce_field( 'ofp_account_' . $client->id, 'ofp_account_nonce' ); ?>
+    <input type="hidden" name="remove_stamp" value="1">
+</form>
+
 <!-- ── Interactive Edit Profile Modal Drawer ─────────────────────────────── -->
 <div class="ofp-modal-backdrop" id="ofp-edit-modal-backdrop" aria-hidden="true">
-    <div class="ofp-modal-window" role="dialog" aria-modal="true" aria-labelledby="ofp-modal-title">
+    <div class="ofp-modal-window" style="max-width: 620px;" role="dialog" aria-modal="true" aria-labelledby="ofp-modal-title">
         
         <div class="ofp-modal-header">
             <h3 class="ofp-modal-title" id="ofp-modal-title">Edit Profile & Account Settings</h3>
@@ -983,6 +1073,49 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                                     <?php endif; ?>
                                 </div>
                                 <span style="font-size:11.5px; color:var(--prof-text-sub);">Supports JPG, PNG or WebP up to 3MB</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Official Verification Stamp / Seal (Receipts & Invoices) -->
+                    <div class="ofp-field-group full-width" style="margin-bottom:20px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                            <label style="margin:0; font-weight:600; font-size:13.5px; color:var(--prof-text-title);">Official Receipt Verification Stamp / Seal</label>
+                            <span style="font-size:12px; color:var(--prof-teal); display:inline-flex; align-items:center; gap:4px; font-weight:500;">
+                                Appears on all payment receipts
+                            </span>
+                        </div>
+                        <span class="ofp-field-hint" style="margin-bottom:12px; display:block;">
+                            Upload your agency's official stamp or verification seal (transparent PNG recommended). If left empty, the platform default verified seal will be used automatically.
+                        </span>
+
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--prof-border); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:14px;">
+                            <!-- Stamp Preview Box -->
+                            <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+                                <div style="width:110px; height:110px; border-radius:12px; border:1px dashed var(--prof-border); background:rgba(255,255,255,0.02); display:flex; align-items:center; justify-content:center; padding:8px; overflow:hidden; flex-shrink:0;">
+                                    <img src="<?php echo esc_url( $stamp_url ); ?>" alt="Receipt Stamp" style="max-width:100%; max-height:100%; object-fit:contain; transform:rotate(-8deg);">
+                                </div>
+                                <div style="flex:1; min-width:220px;">
+                                    <div style="margin-bottom:8px;">
+                                        <span style="background:<?php echo $has_custom_stamp ? 'rgba(16,185,129,0.15)' : 'rgba(59,130,246,0.15)'; ?>; color:<?php echo $has_custom_stamp ? '#10b981' : '#60a5fa'; ?>; font-size:11px; font-weight:600; padding:3px 10px; border-radius:12px; border:1px solid <?php echo $has_custom_stamp ? 'rgba(16,185,129,0.3)' : 'rgba(59,130,246,0.3)'; ?>;">
+                                            <?php echo $has_custom_stamp ? '✓ Custom Stamp Active' : 'Platform Default Seal Active (Fallback)'; ?>
+                                        </span>
+                                    </div>
+                                    <p style="margin:0 0 10px; font-size:12.5px; color:var(--prof-text-sub); line-height:1.5;">
+                                        <?php echo $has_custom_stamp ? 'Your custom seal is stamped directly onto all client payment receipts and vouchers.' : 'You have not uploaded a custom stamp yet. The platform verified seal will be used as a fallback.'; ?>
+                                    </p>
+                                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                        <button type="button" class="ofp-btn ofp-btn-sm" onclick="document.getElementById('ofp-stamp-input').click();" style="background:var(--prof-teal); color:#fff; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            <span><?php echo $has_custom_stamp ? 'Change Stamp Image' : 'Upload Custom Stamp'; ?></span>
+                                        </button>
+                                        <?php if ( $has_custom_stamp ) : ?>
+                                            <button type="button" class="ofp-btn ofp-btn-sm" onclick="if(confirm('Reset back to platform default verified seal?')){ document.getElementById('ofp-reset-stamp-form').submit(); }" style="background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:6px 12px; font-size:11.5px; font-weight:600; cursor:pointer;">
+                                                Reset to Default
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1364,6 +1497,22 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                 return;
             }
             coverForm.submit();
+        });
+    }
+
+    // Stamp upload auto-submit
+    const stampInput = document.getElementById('ofp-stamp-input');
+    const stampForm  = document.getElementById('ofp-stamp-form');
+    if (stampInput && stampForm) {
+        stampInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                alert('File is too large! Please select an image under 2MB.');
+                e.target.value = '';
+                return;
+            }
+            stampForm.submit();
         });
     }
 

@@ -46,7 +46,6 @@ require_once OFP_PATH . 'includes/class-ofp-host-router.php';
 require_once OFP_PATH . 'includes/class-ofp-notification.php';
 require_once OFP_PATH . 'includes/class-ofp-logger.php';
 require_once OFP_PATH . 'includes/class-ofp-communications-log.php';
-require_once OFP_PATH . 'includes/class-ofp-pipeline-audio.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce-migration.php';
 require_once OFP_PATH . 'includes/class-ofp-property-admin-rules.php';

@@ -55,6 +55,34 @@ $sales_revenue_collected = (float) $wpdb->get_var( $wpdb->prepare(
 ) );
 $total_income_collected = $sales_revenue_collected + $monthly_rent_collected;
 
+// Operational Expenses from Communications & Gateway Log
+$monthly_expenses = (float) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COALESCE(SUM(cost), 0) FROM {$pfx}ofp_communications_log WHERE client_id = %d",
+    (int) $client->id
+) );
+$net_revenue = max( 0.0, $total_income_collected - $monthly_expenses );
+
+// Outstanding / Pending Receivables (Active Lease Balances + Unpaid Installments)
+$pending_lease_due = (float) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COALESCE(SUM(balance), 0) FROM {$pfx}ofp_property_leases WHERE client_id = %d AND status = 'active'",
+    (int) $client->id
+) );
+$pending_sales_due = (float) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COALESCE(SUM(GREATEST(0, total_price - amount_paid)), 0) FROM {$pfx}ofp_property_purchases WHERE client_id = %d AND status IN ('active', 'pending', 'installment')",
+    (int) $client->id
+) );
+$total_pending_receivables = $pending_lease_due + $pending_sales_due;
+
+// Collection / Recovery Rate
+$total_billed    = $total_income_collected + $total_pending_receivables;
+$collection_rate = $total_billed > 0 ? round( ( $total_income_collected / $total_billed ) * 100 ) : ( $total_income_collected > 0 ? 100 : 0 );
+if ( $collection_rate > 100 ) $collection_rate = 100;
+
+$income_pct  = $total_billed > 0 ? min( 100, max( 0, round( ( $total_income_collected / $total_billed ) * 100 ) ) ) : ( $total_income_collected > 0 ? 100 : 0 );
+$pending_pct = $total_billed > 0 ? min( 100, max( 0, round( ( $total_pending_receivables / $total_billed ) * 100 ) ) ) : 0;
+$expense_pct = $total_income_collected > 0 ? min( 100, max( 0, round( ( $monthly_expenses / $total_income_collected ) * 100 ) ) ) : ( $monthly_expenses > 0 ? 100 : 0 );
+$net_pct     = $total_income_collected > 0 ? min( 100, max( 0, round( ( $net_revenue / $total_income_collected ) * 100 ) ) ) : 0;
+
 $occupancy_percentage = $total_units_count > 0 ? round( ( $active_leases_cnt / $total_units_count ) * 100 ) : 0;
 if ( $occupancy_percentage > 100 ) $occupancy_percentage = 100;
 
@@ -64,6 +92,147 @@ $display_units          = $total_units_count . ' Units';
 $display_occupancy      = $occupancy_percentage . '%';
 $display_occupied_units = $active_leases_cnt . ' Units currently occupied';
 $display_rent           = $monthly_rent_collected > 0 ? '₦' . number_format( $monthly_rent_collected ) : '₦0';
+
+// ── Real Net Cash Flow Trajectory Datasets (Inflow minus Outflow) ─────
+$cf_current_year = (int) current_time( 'Y' );
+
+// 1. Monthly Sales Inflow
+$cf_monthly_sales = array_fill( 1, 12, 0.0 );
+$cf_sales_rows = $wpdb->get_results( $wpdb->prepare(
+    "SELECT MONTH(created_at) AS m, COALESCE(SUM(amount_paid), 0) AS val
+     FROM {$pfx}ofp_property_purchases
+     WHERE client_id = %d AND YEAR(created_at) = %d
+     GROUP BY m",
+    (int) $client->id, $cf_current_year
+) );
+foreach ( (array) $cf_sales_rows as $sr ) {
+    $m = (int) $sr->m;
+    if ( isset( $cf_monthly_sales[ $m ] ) ) {
+        $cf_monthly_sales[ $m ] = (float) $sr->val;
+    }
+}
+$cf_pay_rows = $wpdb->get_results( $wpdb->prepare(
+    "SELECT MONTH(py.created_at) AS m, COALESCE(SUM(py.amount), 0) AS val
+     FROM {$pfx}ofp_property_payments py
+     INNER JOIN {$pfx}ofp_property_purchases pu ON pu.id = py.purchase_id
+     WHERE pu.client_id = %d AND py.status IN ('successful', 'verified', 'paid')
+       AND YEAR(py.created_at) = %d
+     GROUP BY m",
+    (int) $client->id, $cf_current_year
+) );
+if ( ! empty( $cf_pay_rows ) ) {
+    foreach ( $cf_pay_rows as $pr ) {
+        $m = (int) $pr->m;
+        if ( isset( $cf_monthly_sales[ $m ] ) ) {
+            $cf_monthly_sales[ $m ] = (float) $pr->val;
+        }
+    }
+}
+
+// 2. Monthly Rent Inflow
+$cf_monthly_rent = array_fill( 1, 12, 0.0 );
+$cf_rent_rows = $wpdb->get_results( $wpdb->prepare(
+    "SELECT MONTH(py.created_at) AS m, COALESCE(SUM(py.amount), 0) AS val
+     FROM {$pfx}ofp_property_lease_payments py
+     INNER JOIN {$pfx}ofp_property_leases l ON l.id = py.lease_id
+     WHERE l.client_id = %d AND py.status IN ('successful', 'verified', 'paid', 'approved')
+       AND YEAR(py.created_at) = %d
+     GROUP BY m",
+    (int) $client->id, $cf_current_year
+) );
+foreach ( (array) $cf_rent_rows as $rr ) {
+    $m = (int) $rr->m;
+    if ( isset( $cf_monthly_rent[ $m ] ) ) {
+        $cf_monthly_rent[ $m ] = (float) $rr->val;
+    }
+}
+
+// 3. Monthly Operational / Credit Outflow
+$cf_monthly_outflow = array_fill( 1, 12, 0.0 );
+$cf_outflow_rows = $wpdb->get_results( $wpdb->prepare(
+    "SELECT MONTH(sent_at) AS m, COALESCE(SUM(cost), 0) AS val
+     FROM {$pfx}ofp_communications_log
+     WHERE client_id = %d AND YEAR(sent_at) = %d
+     GROUP BY m",
+    (int) $client->id, $cf_current_year
+) );
+foreach ( (array) $cf_outflow_rows as $or ) {
+    $m = (int) $or->m;
+    if ( isset( $cf_monthly_outflow[ $m ] ) ) {
+        $cf_monthly_outflow[ $m ] = (float) $or->val;
+    }
+}
+
+// 4. Full Year Net Cash Flow (Jan - Dec)
+$cf_year_labels = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
+$cf_year_data   = [];
+for ( $m = 1; $m <= 12; $m++ ) {
+    $inflow  = $cf_monthly_sales[ $m ] + $cf_monthly_rent[ $m ];
+    $outflow = $cf_monthly_outflow[ $m ];
+    $cf_year_data[] = round( $inflow - $outflow, 2 );
+}
+
+// 5. Last 6 Months Net Cash Flow
+$cf_six_labels = [];
+$cf_six_data   = [];
+for ( $i = 5; $i >= 0; $i-- ) {
+    $time_i = strtotime( "-{$i} months", current_time( 'timestamp' ) );
+    $m_num  = (int) date( 'n', $time_i );
+    $cf_six_labels[] = date( 'M', $time_i );
+    $cf_six_data[]   = isset( $cf_year_data[ $m_num - 1 ] ) ? $cf_year_data[ $m_num - 1 ] : 0.0;
+}
+
+// 6. Last 30 Days Net Cash Flow
+$cf_thirty_labels = [];
+$cf_thirty_data   = [];
+$thirty_days_ago  = date( 'Y-m-d H:i:s', strtotime( '-30 days', current_time( 'timestamp' ) ) );
+
+$d_sales_rows = $wpdb->get_results( $wpdb->prepare(
+    "SELECT DATE(created_at) AS dt, COALESCE(SUM(amount_paid), 0) AS val
+     FROM {$pfx}ofp_property_purchases
+     WHERE client_id = %d AND created_at >= %s
+     GROUP BY dt",
+    (int) $client->id, $thirty_days_ago
+) );
+$d_sales_map = [];
+foreach ( (array) $d_sales_rows as $ds ) {
+    $d_sales_map[ $ds->dt ] = (float) $ds->val;
+}
+
+$d_rent_rows = $wpdb->get_results( $wpdb->prepare(
+    "SELECT DATE(py.created_at) AS dt, COALESCE(SUM(py.amount), 0) AS val
+     FROM {$pfx}ofp_property_lease_payments py
+     INNER JOIN {$pfx}ofp_property_leases l ON l.id = py.lease_id
+     WHERE l.client_id = %d AND py.created_at >= %s
+     GROUP BY dt",
+    (int) $client->id, $thirty_days_ago
+) );
+$d_rent_map = [];
+foreach ( (array) $d_rent_rows as $dr ) {
+    $d_rent_map[ $dr->dt ] = (float) $dr->val;
+}
+
+$d_cost_rows = $wpdb->get_results( $wpdb->prepare(
+    "SELECT DATE(sent_at) AS dt, COALESCE(SUM(cost), 0) AS val
+     FROM {$pfx}ofp_communications_log
+     WHERE client_id = %d AND sent_at >= %s
+     GROUP BY dt",
+    (int) $client->id, $thirty_days_ago
+) );
+$d_cost_map = [];
+foreach ( (array) $d_cost_rows as $dc ) {
+    $d_cost_map[ $dc->dt ] = (float) $dc->val;
+}
+
+for ( $d = 27; $d >= 0; $d -= 3 ) {
+    $dt_ts  = strtotime( "-{$d} days", current_time( 'timestamp' ) );
+    $dt_str = date( 'Y-m-d', $dt_ts );
+    $lbl    = date( 'M j', $dt_ts );
+    $inflow = ( $d_sales_map[ $dt_str ] ?? 0.0 ) + ( $d_rent_map[ $dt_str ] ?? 0.0 );
+    $outflow = $d_cost_map[ $dt_str ] ?? 0.0;
+    $cf_thirty_labels[] = $lbl;
+    $cf_thirty_data[]   = round( $inflow - $outflow, 2 );
+}
 
 // ── Property Locations & Portfolio Dataset for Interactive Map ──
 $properties_by_loc = [];
@@ -191,13 +360,10 @@ $recent_buyers_raw = $wpdb->get_results( $wpdb->prepare(
     (int) $client->id
 ) );
 
-$avatar_gradients = [
-    'linear-gradient(135deg, var(--btn-primary, #3b82f6), #1d4ed8)',
-    'linear-gradient(135deg, #10b981, #047857)',
-    'linear-gradient(135deg, #f59e0b, #b45309)',
-    'linear-gradient(135deg, #0ea5e9, #0284c7)',
-    'linear-gradient(135deg, #ec4899, #be185d)',
-];
+// Uniform avatar style for consistent fintech presentation
+$avatar_bg    = 'rgba(59, 130, 246, 0.12)';
+$avatar_color = 'var(--btn-primary, #3b82f6)';
+$avatar_bdr   = 'rgba(59, 130, 246, 0.25)';
 
 $recent_buyers_display = [];
 if ( ! empty( $recent_buyers_raw ) ) {
@@ -225,7 +391,7 @@ if ( ! empty( $recent_buyers_raw ) ) {
             $badge_style = 'background:rgba(245, 158, 11, 0.14); color:#d97706; border:1px solid rgba(245, 158, 11, 0.25);';
             $badge_label = 'Pending';
         } elseif ( in_array( $b_status, [ 'active', 'installment' ], true ) ) {
-            $badge_style = 'background:var(--brand-color-alpha-15, rgba(59, 130, 246, 0.12)); color:var(--brand-color, var(--btn-primary, #3b82f6)); border:1px solid var(--brand-color-alpha-25, rgba(59, 130, 246, 0.25));';
+            $badge_style = 'background:rgba(0, 188, 181, 0.12); color:#00bcb5; border:1px solid rgba(0, 188, 181, 0.25);';
             $badge_label = 'Installment';
         }
 
@@ -237,7 +403,9 @@ if ( ! empty( $recent_buyers_raw ) ) {
             'phone'          => $b_row->buyer_phone ?: '—',
             'email'          => $b_row->buyer_email ?: '',
             'initials'       => $inits,
-            'avatar_bg'      => $avatar_gradients[ $idx % count( $avatar_gradients ) ],
+            'avatar_bg'      => $avatar_bg,
+            'avatar_color'   => $avatar_color,
+            'avatar_border'  => $avatar_bdr,
             'amount_paid'    => $paid_val > 0 ? '₦' . number_format( $paid_val ) : 'Offer Active',
             'property_title' => $b_row->property_title ?: 'Portfolio Property',
             'status_label'   => $badge_label,
@@ -307,8 +475,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             <div class="ofp-kpi-title">Portfolio Value</div>
             <div class="ofp-kpi-value"><?php echo esc_html( $display_portfolio ); ?></div>
             <div class="ofp-kpi-badge badge-hero">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width:12px;height:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" /></svg>
-                <span>+12% driven by 2 new units added</span>
+                <span>+12% Portfolio growth</span>
             </div>
         </div>
 
@@ -348,7 +515,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 <div>
                     <div class="ofp-zentra-card-title">Cash Flow Trajectory</div>
                     <div style="font-size:20px; font-weight:700; color:var(--text-main); margin-top:4px;">
-                        ₦<?php echo number_format( $total_income_collected ); ?> <span style="font-size:12px; font-weight:600; color:<?php echo $total_income_collected > 0 ? '#10b981' : 'var(--text-muted)'; ?>; background:<?php echo $total_income_collected > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)'; ?>; padding:2px 8px; border-radius:9999px;"><?php echo $total_income_collected > 0 ? '+100% Flow' : '0% Flow'; ?></span>
+                        ₦<?php echo number_format( $net_revenue ); ?> <span style="font-size:12px; font-weight:600; color:<?php echo $net_revenue > 0 ? '#10b981' : 'var(--text-muted)'; ?>; background:<?php echo $net_revenue > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)'; ?>; padding:2px 8px; border-radius:9999px;"><?php echo $net_revenue > 0 ? 'Net Flow' : '0.00 Flow'; ?></span>
                     </div>
                 </div>
                 <div class="ofp-chart-header-controls">
@@ -367,41 +534,59 @@ include OFP_PATH . 'public/templates/partials/nav.php';
         <!-- Current Month Performance Breakdown -->
         <div class="ofp-zentra-card">
             <div class="ofp-zentra-card-header">
-                <div class="ofp-zentra-card-title"><?php echo date('F'); ?></div>
-                <span class="ofp-kpi-badge badge-green" style="font-size:11px;"><?php echo $total_income_collected > 0 ? 'Active Performance' : 'Awaiting Deals'; ?></span>
+                <div class="ofp-zentra-card-title"><?php echo date('F'); ?> Performance</div>
             </div>
             
             <div class="ofp-breakdown-list">
-                <!-- Income -->
+                <!-- 1. Income (Total Collected) with Sub-Split (Sales vs Rent) -->
                 <div class="ofp-breakdown-item">
                     <div class="ofp-breakdown-meta">
-                        <span class="ofp-breakdown-label">Income</span>
+                        <span class="ofp-breakdown-label">Gross Income Collected</span>
                         <span class="ofp-breakdown-amount">₦<?php echo number_format( $total_income_collected ); ?></span>
                     </div>
                     <div class="ofp-breakdown-track">
-                        <div class="ofp-breakdown-fill income" style="width: <?php echo $total_income_collected > 0 ? '100%' : '0%'; ?>;"></div>
+                        <div class="ofp-breakdown-fill income" style="width: <?php echo esc_attr( $income_pct ); ?>%;"></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-top:2px;">
+                        <span>Sales: <strong style="color:var(--text-main);">₦<?php echo number_format( $sales_revenue_collected ); ?></strong></span>
+                        <span>Rent: <strong style="color:var(--text-main);">₦<?php echo number_format( $monthly_rent_collected ); ?></strong></span>
                     </div>
                 </div>
 
-                <!-- Expense -->
+                <!-- 2. Credit Expenses (Comms & Gateway Spend) -->
                 <div class="ofp-breakdown-item">
                     <div class="ofp-breakdown-meta">
-                        <span class="ofp-breakdown-label">Expense</span>
-                        <span class="ofp-breakdown-amount">₦0</span>
+                        <span class="ofp-breakdown-label">Credit Expenses</span>
+                        <span class="ofp-breakdown-amount">₦<?php echo number_format( $monthly_expenses, 2 ); ?></span>
                     </div>
                     <div class="ofp-breakdown-track">
-                        <div class="ofp-breakdown-fill expense" style="width: 0%;"></div>
+                        <div class="ofp-breakdown-fill expense" style="width: <?php echo esc_attr( $expense_pct ); ?>%;"></div>
                     </div>
                 </div>
 
-                <!-- Net -->
+                <!-- 3. Net Inflow -->
                 <div class="ofp-breakdown-item">
                     <div class="ofp-breakdown-meta">
-                        <span class="ofp-breakdown-label">Net</span>
-                        <span class="ofp-breakdown-amount">₦<?php echo number_format( $total_income_collected ); ?></span>
+                        <span class="ofp-breakdown-label">Net Inflow</span>
+                        <span class="ofp-breakdown-amount">₦<?php echo number_format( $net_revenue ); ?></span>
                     </div>
                     <div class="ofp-breakdown-track">
-                        <div class="ofp-breakdown-fill net" style="width: <?php echo $total_income_collected > 0 ? '100%' : '0%'; ?>;"></div>
+                        <div class="ofp-breakdown-fill net" style="width: <?php echo esc_attr( $net_pct ); ?>%;"></div>
+                    </div>
+                </div>
+
+                <!-- 4. Pending Dues -->
+                <div class="ofp-breakdown-item">
+                    <div class="ofp-breakdown-meta">
+                        <span class="ofp-breakdown-label">Pending Dues</span>
+                        <span class="ofp-breakdown-amount">₦<?php echo number_format( $total_pending_receivables ); ?></span>
+                    </div>
+                    <div class="ofp-breakdown-track">
+                        <div class="ofp-breakdown-fill pending" style="width: <?php echo esc_attr( $pending_pct ); ?>%;"></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-top:2px;">
+                        <span>Installments: <strong style="color:var(--text-main);">₦<?php echo number_format( $pending_sales_due ); ?></strong></span>
+                        <span>Lease Balances: <strong style="color:var(--text-main);">₦<?php echo number_format( $pending_lease_due ); ?></strong></span>
                     </div>
                 </div>
             </div>
@@ -471,7 +656,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                                 <tr>
                                     <td>
                                         <div class="ofp-user-cell">
-                                            <div class="ofp-user-thumb" style="display:flex; align-items:center; justify-content:center; background:<?php echo esc_attr( $b_item['avatar_bg'] ); ?>; color:#fff; font-weight:700; font-size:12px; border-radius:8px; width:36px; height:36px; flex-shrink:0;">
+                                            <div class="ofp-user-thumb" style="display:flex; align-items:center; justify-content:center; background:<?php echo esc_attr( $b_item['avatar_bg'] ); ?>; color:<?php echo esc_attr( $b_item['avatar_color'] ); ?>; border:1px solid <?php echo esc_attr( $b_item['avatar_border'] ); ?>; font-weight:700; font-size:12px; border-radius:8px; width:36px; height:36px; flex-shrink:0;">
                                                 <span><?php echo esc_html( $b_item['initials'] ); ?></span>
                                             </div>
                                             <div class="ofp-user-meta">
@@ -522,18 +707,14 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             grad.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
             grad.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
 
-            var allMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            var yearData  = [6.8, 7.9, 9.4, 8.8, 10.5, 11.2, 11.0, 13.8, 11.6, 12.4, 12.1, 14.2];
+            var allMonths  = <?php echo json_encode( $cf_year_labels ); ?>;
+            var yearData   = <?php echo json_encode( $cf_year_data ); ?>;
 
-            var sixMonths = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            var sixData   = [11.0, 13.8, 11.6, 12.4, 12.1, 14.2];
+            var sixMonths  = <?php echo json_encode( $cf_six_labels ); ?>;
+            var sixData    = <?php echo json_encode( $cf_six_data ); ?>;
 
-            var thirtyDays = [];
-            var thirtyData = [];
-            for (var d = 1; d <= 30; d += 3) {
-                thirtyDays.push('Day ' + d);
-                thirtyData.push(Number((10.5 + Math.sin(d / 3) * 2.4 + (d * 0.1)).toFixed(1)));
-            }
+            var thirtyDays = <?php echo json_encode( $cf_thirty_labels ); ?>;
+            var thirtyData = <?php echo json_encode( $cf_thirty_data ); ?>;
 
             var chartInstance = new Chart(canvas, {
                 type: 'line',
@@ -541,18 +722,18 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                     labels: allMonths,
                     datasets: [
                         {
-                            label: 'Trajectory',
+                            label: 'Net Cash Flow',
                             data: yearData,
                             borderColor: '#10b981',
-                            borderWidth: 3,
+                            borderWidth: 2.5,
                             backgroundColor: grad,
                             fill: true,
-                            tension: 0.42,
-                            pointRadius: 4,
-                            pointHoverRadius: 7,
+                            tension: 0.35,
+                            pointRadius: 3.5,
+                            pointHoverRadius: 6,
                             pointBackgroundColor: '#10b981',
                             pointBorderColor: '#ffffff',
-                            pointBorderWidth: 2.5
+                            pointBorderWidth: 2
                         }
                     ]
                 },
@@ -573,7 +754,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                             cornerRadius: 8,
                             callbacks: {
                                 label: function(item) {
-                                    return ' Flow: ₦' + (item.raw * 1000000).toLocaleString();
+                                    return ' Net Flow: ₦' + Number(item.raw).toLocaleString();
                                 }
                             }
                         }
@@ -588,17 +769,22 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                         },
                         y: {
                             grid: {
-                                color: 'rgba(226, 232, 240, 0.5)',
+                                color: 'rgba(226, 232, 240, 0.15)',
                                 borderDash: [3, 3]
                             },
                             ticks: {
                                 callback: function(val) {
-                                    return '₦' + val + 'M';
+                                    if (Math.abs(val) >= 1000000) {
+                                        return '₦' + (val / 1000000).toFixed(1) + 'M';
+                                    } else if (Math.abs(val) >= 1000) {
+                                        return '₦' + (val / 1000).toFixed(0) + 'k';
+                                    }
+                                    return '₦' + val;
                                 },
                                 font: { size: 10.5, family: "'Inter', -apple-system, sans-serif" },
                                 color: '#94a3b8'
                             },
-                            beginAtZero: false
+                            beginAtZero: true
                         }
                     }
                 }

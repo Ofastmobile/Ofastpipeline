@@ -5038,9 +5038,9 @@ html.light .ofp-kpi-card-hero {
 
 .ofp-breakdown-track {
     width: 100%;
-    height: 8px;
+    height: 6px;
     border-radius: 9999px;
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(148, 163, 184, 0.16);
     overflow: hidden;
 }
 
@@ -5055,16 +5055,27 @@ html.dark .ofp-breakdown-track {
     transition: width 0.5s ease;
 }
 
+/* Uniform, cohesive financial tracks: emerald for inflows/installments, muted rose for expenses */
 .ofp-breakdown-fill.income {
-    background: linear-gradient(90deg, #8b5cf6 0%, #6366f1 100%);
+    background: #10b981;
 }
 
 .ofp-breakdown-fill.expense {
-    background: linear-gradient(90deg, #c084fc 0%, #a855f7 100%);
+    background: #f43f5e;
+    opacity: 0.85;
 }
 
 .ofp-breakdown-fill.net {
-    background: linear-gradient(90deg, #93c5fd 0%, #60a5fa 100%);
+    background: #10b981;
+}
+
+.ofp-breakdown-fill.pending {
+    background: #10b981;
+    opacity: 0.6;
+}
+
+.ofp-breakdown-fill.rate {
+    background: #10b981;
 }
 
 /* 3. Bottom Row: Location + Recent Properties */

@@ -234,6 +234,20 @@ class OFP_Property_Receipt_Generator {
             }
         }
 
+        // ── Official Verification Stamp: Client custom stamp or platform fallback ──
+        $default_stamp_path = OFP_PATH . 'assets/images/receipt-verified-stamp.png';
+        if ( file_exists( $default_stamp_path ) ) {
+            $default_stamp = 'data:image/png;base64,' . base64_encode( file_get_contents( $default_stamp_path ) );
+        } else {
+            $default_stamp = OFP_URL . 'assets/images/receipt-verified-stamp.png';
+        }
+
+        $stamp_image_url = ( $brand_client && ! empty( $brand_client->stamp_url ) )
+            ? esc_url( $brand_client->stamp_url )
+            : $default_stamp;
+
+        $html = str_replace( '{{stamp_image_url}}', $stamp_image_url, $html );
+
         // ── Hide sections not relevant to this transaction type ──
         foreach ( self::$section_visibility as $section_id => $allowed_types ) {
             if ( ! in_array( $type, $allowed_types, true ) ) {

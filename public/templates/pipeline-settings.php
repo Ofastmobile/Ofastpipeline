@@ -196,20 +196,26 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
             <?php endif; ?>
             <p class="ofp-hint" style="margin-bottom: 16px;">You can use {{name}}, {{business_name}}, {{property}} and {{phone}} in any message below.</p>
 
-            <div class="ofp-card" style="margin-bottom: 20px;">
-                <div class="ofp-card-header">
-                    <h3>New lead alert to you</h3>
-                    <label class="ofp-toggle">
-                        <input type="checkbox" name="alert_sms_enabled" value="1"
-                            <?php checked( $config?->alert_sms_enabled ?? 1, 1 ); ?>>
-                        <span class="ofp-toggle-slider"></span>
-                    </label>
-                </div>
-                <p class="ofp-hint" style="margin-bottom:0;">The moment a lead comes in, you get a bell alert and an email, based on your notification settings. This switch also sends an SMS to your own phone number. That SMS uses one SMS credit.</p>
-            </div>
-
             <div class="ofp-pipeline-timeline" id="ofpPipelineTimeline" data-business-name="<?php echo esc_attr( $client->business_name ?? 'My Business' ); ?>">
                 <div class="ofp-timeline-progress" id="ofpTimelineProgress"></div>
+
+                <!-- ── 0. New Lead Alert to You ──────────────────────────────── -->
+                <div class="ofp-timeline-step">
+                    <div class="ofp-timeline-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></div>
+                    <div class="ofp-timeline-content">
+                        <div class="ofp-card">
+                            <div class="ofp-card-header">
+                                <h3>New lead alert to you</h3>
+                                <label class="ofp-toggle">
+                                    <input type="checkbox" name="alert_sms_enabled" value="1"
+                                        <?php checked( $config?->alert_sms_enabled ?? 1, 1 ); ?>>
+                                    <span class="ofp-toggle-slider"></span>
+                                </label>
+                            </div>
+                            <p class="ofp-hint" style="margin-bottom:0;">The moment a lead comes in, you get a bell alert and an email, based on your notification settings. This switch also sends an SMS to your own phone number. That SMS uses one SMS credit.</p>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- ── Instant SMS ──────────────────────────────────────────── -->
                 <div class="ofp-timeline-step">
