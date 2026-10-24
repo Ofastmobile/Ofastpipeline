@@ -37,9 +37,68 @@ $ofp_tabs = [
         $is_active = ( $key === $ofp_sales_tab );
     ?>
         <a href="<?php echo esc_url( $tab['url'] ); ?>"
+           data-tab="<?php echo esc_attr( $key ); ?>"
            class="ofp-tab-btn <?php echo $is_active ? 'active' : ''; ?>">
             <span><?php echo esc_html( $tab['label'] ); ?></span>
         </a>
     <?php endforeach; ?>
 </div>
+
+<script>
+(function() {
+    if (window._ofpSalesTabsBound) return;
+    window._ofpSalesTabsBound = true;
+
+    document.addEventListener('click', function(e) {
+        var tabLink = e.target.closest('.ofp-sales-tabs-nav .ofp-tab-btn');
+        if (!tabLink) return;
+        var tabKey = tabLink.getAttribute('data-tab');
+
+        if (typeof window.switchSalesTab === 'function' && (tabKey === 'sales' || tabKey === 'offer')) {
+            // Handled locally by property-sales.php pane switcher
+            return;
+        }
+
+        var url = tabLink.getAttribute('href');
+        if (!url || url.indexOf('#') === 0) return;
+
+        var container = document.querySelector('.ofp-container') || document.querySelector('.ofp-content-area');
+        if (!container) return;
+
+        e.preventDefault();
+        container.style.opacity = '0.5';
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(res) { return res.text(); })
+            .then(function(html) {
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
+                var newContainer = doc.querySelector('.ofp-container') || doc.querySelector('.ofp-content-area');
+                if (newContainer) {
+                    container.innerHTML = newContainer.innerHTML;
+                    container.style.opacity = '1';
+                    if (doc.title) document.title = doc.title;
+                    window.history.pushState({ url: url }, '', url);
+
+                    // Re-run inline scripts inside container
+                    var scripts = container.querySelectorAll('script');
+                    scripts.forEach(function(oldScript) {
+                        var newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(function(attr) {
+                            newScript.setAttribute(attr.name, attr.value);
+                        });
+                        newScript.textContent = oldScript.textContent;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+                } else {
+                    window.location.href = url;
+                }
+            })
+            .catch(function() {
+                container.style.opacity = '1';
+                window.location.href = url;
+            });
+    });
+})();
+</script>
 

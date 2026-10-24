@@ -396,7 +396,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 
                         $search_blob = strtolower( $receipt_no . ' ' . $payment->id . ' ' . $display_ref . ' ' . $raw_ref . ' ' . $payment->buyer_name . ' ' . $payment->buyer_phone . ' ' . $payment->property_title . ' ' . $payment->payment_method . ' ' . $payment->status );
                     ?>
-                        <tr class="ofp-txn-row <?php echo $is_matched ? 'ofp-row-matched' : ''; ?>" data-search="<?php echo esc_attr( $search_blob ); ?>">
+                        <tr class="ofp-txn-row <?php echo $is_matched ? 'ofp-row-matched' : ''; ?>" data-search="<?php echo esc_attr( $search_blob ); ?>" data-status="<?php echo esc_attr( strtolower( (string) $payment->status ) ); ?>" data-method="<?php echo esc_attr( strtolower( (string) $payment->payment_method ) ); ?>">
                             <td>
                                 <div style="display:flex; align-items:center; gap:6px;">
                                     <strong style="color:var(--text-main); font-size:12.5px;"><?php echo esc_html( $receipt_no ); ?></strong>
@@ -473,20 +473,49 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 250);
     }
 
-    function doFilter(query, sourceInput) {
-        var val = (query || '').trim().toLowerCase();
+    var statusSelect = document.querySelector('select[name="status"]');
+    var methodSelect = document.querySelector('select[name="method"]');
+    var filterForm = document.querySelector('.ofp-txn-filter-card form');
+
+    function doFilter(query, sourceInput, updateUrl) {
+        var val = (query !== undefined && query !== null ? query : (topSearch ? topSearch.value : '')).trim().toLowerCase();
+        var selectedStatus = statusSelect ? statusSelect.value.trim().toLowerCase() : '';
+        var selectedMethod = methodSelect ? methodSelect.value.trim().toLowerCase() : '';
         var visible = 0;
 
         // Keep both inputs in sync
-        if (sourceInput === topSearch && tableSearch && tableSearch.value !== query) {
-            tableSearch.value = query;
-        } else if (sourceInput === tableSearch && topSearch && topSearch.value !== query) {
-            topSearch.value = query;
+        if (sourceInput === topSearch && tableSearch && tableSearch.value !== val) {
+            tableSearch.value = val;
+        } else if (sourceInput === tableSearch && topSearch && topSearch.value !== val) {
+            topSearch.value = val;
         }
 
         rows.forEach(function(row) {
             var searchData = (row.getAttribute('data-search') || row.textContent).toLowerCase();
-            if (!val || searchData.indexOf(val) !== -1) {
+            var rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
+            var rowMethod = (row.getAttribute('data-method') || '').toLowerCase();
+
+            var matchesSearch = !val || searchData.indexOf(val) !== -1;
+            
+            var matchesStatus = true;
+            if (selectedStatus) {
+                if (selectedStatus === 'successful') {
+                    matchesStatus = (rowStatus === 'successful' || rowStatus === 'verified');
+                } else if (selectedStatus === 'pending') {
+                    matchesStatus = (rowStatus === 'pending' || rowStatus === 'pending_verification');
+                } else if (selectedStatus === 'failed') {
+                    matchesStatus = (rowStatus === 'failed' || rowStatus === 'rejected');
+                } else {
+                    matchesStatus = (rowStatus === selectedStatus);
+                }
+            }
+
+            var matchesMethod = true;
+            if (selectedMethod) {
+                matchesMethod = (rowMethod === selectedMethod);
+            }
+
+            if (matchesSearch && matchesStatus && matchesMethod) {
                 row.style.display = '';
                 visible++;
             } else {
@@ -495,7 +524,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         if (liveCounter) {
-            if (val) {
+            if (val || selectedStatus || selectedMethod) {
                 liveCounter.textContent = 'Showing ' + visible + ' of ' + rows.length;
                 liveCounter.style.display = 'inline-block';
             } else {
@@ -504,24 +533,48 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (matchBadge) {
-            matchBadge.textContent = val ? (visible + ' matching') : (rows.length + ' Records');
+            matchBadge.textContent = (val || selectedStatus || selectedMethod) ? (visible + ' matching') : (rows.length + ' Records');
+        }
+
+        if (updateUrl) {
+            var params = new URLSearchParams(window.location.search);
+            if (val) params.set('s', val); else params.delete('s');
+            if (selectedStatus) params.set('status', selectedStatus); else params.delete('status');
+            if (selectedMethod) params.set('method', selectedMethod); else params.delete('method');
+            var newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+            window.history.pushState({}, '', newUrl);
         }
     }
 
     if (topSearch) {
-        topSearch.addEventListener('input', function() { doFilter(this.value, topSearch); });
+        topSearch.addEventListener('input', function() { doFilter(this.value, topSearch, true); });
     }
     if (tableSearch) {
-        tableSearch.addEventListener('input', function() { doFilter(this.value, tableSearch); });
+        tableSearch.addEventListener('input', function() { doFilter(this.value, tableSearch, true); });
         tableSearch.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                var form = document.querySelector('.ofp-txn-filter-card form');
-                if (form) {
-                    if (topSearch) topSearch.value = this.value;
-                    form.submit();
-                }
+                doFilter(this.value, tableSearch, true);
             }
+        });
+    }
+
+    if (statusSelect) {
+        statusSelect.addEventListener('change', function() {
+            doFilter(topSearch ? topSearch.value : '', null, true);
+        });
+    }
+
+    if (methodSelect) {
+        methodSelect.addEventListener('change', function() {
+            doFilter(topSearch ? topSearch.value : '', null, true);
+        });
+    }
+
+    if (filterForm) {
+        filterForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            doFilter(topSearch ? topSearch.value : '', null, true);
         });
     }
 

@@ -434,7 +434,7 @@ if ( $detail ) {
     <?php endif; ?>
 
     <!-- ── SEARCH BAR & FILTER PILLS: Modernized with SVG icon and clean pill counters ── -->
-    <div class="ofp-card" style="padding:22px;border-radius:14px;">
+    <div class="ofp-card" id="ofp-customers-card" style="padding:22px;border-radius:14px;transition:opacity 0.2s ease;">
         <form method="get" action="<?php echo esc_url( $page_url ); ?>" class="ofp-cu-bar">
             <?php if ( $tag !== '' ) : ?><input type="hidden" name="tag" value="<?php echo esc_attr( $tag ); ?>"><?php endif; ?>
             <div class="ofp-cu-search-box">
@@ -450,12 +450,12 @@ if ( $detail ) {
         </form>
 
         <div class="ofp-cu-filters">
-            <a class="ofp-cu-pill <?php echo $tag === '' ? 'active' : ''; ?>" href="<?php echo esc_url( add_query_arg( array_filter( [ 'q' => $q ] ), $page_url ) ); ?>">
+            <a class="ofp-cu-pill <?php echo $tag === '' ? 'active' : ''; ?>" href="<?php echo esc_url( add_query_arg( array_filter( [ 'q' => $q ] ), $page_url ) ); ?>" data-tag="">
                 <span>All Customers</span>
                 <span class="ofp-cu-pill-count"><?php echo (int) count( $all ); ?></span>
             </a>
             <?php foreach ( $tags as $t ) : ?>
-                <a class="ofp-cu-pill <?php echo $tag === $t ? 'active' : ''; ?>" href="<?php echo esc_url( add_query_arg( array_filter( [ 'q' => $q, 'tag' => $t ] ), $page_url ) ); ?>">
+                <a class="ofp-cu-pill <?php echo $tag === $t ? 'active' : ''; ?>" href="<?php echo esc_url( add_query_arg( array_filter( [ 'q' => $q, 'tag' => $t ] ), $page_url ) ); ?>" data-tag="<?php echo esc_attr( $t ); ?>">
                     <span><?php echo esc_html( $t ); ?></span>
                     <span class="ofp-cu-pill-count"><?php echo (int) $counts[ $t ]; ?></span>
                 </a>
@@ -487,8 +487,11 @@ if ( $detail ) {
                 <table class="ofp-cu-table">
                     <thead><tr><th>Customer</th><th>Contact</th><th>Type</th><th>Bought</th><th>Paid</th><th>Balance</th><th>Last activity</th></tr></thead>
                     <tbody>
-                    <?php foreach ( $slice as $key => $c ) : ?>
-                        <tr>
+                    <?php foreach ( $slice as $key => $c ) : 
+                        $c_search = strtolower( ( $c['name'] ?: '' ) . ' ' . ( $c['phone'] ?: '' ) . ' ' . ( $c['email'] ?: '' ) );
+                        $c_tags = implode( ',', (array) ( $c['tags'] ?? [] ) );
+                    ?>
+                        <tr class="ofp-customer-row" data-tags="<?php echo esc_attr( $c_tags ); ?>" data-search="<?php echo esc_attr( $c_search ); ?>">
                             <td><a href="<?php echo esc_url( add_query_arg( array_merge( $base_args, [ 'c' => $key ] ), $page_url ) ); ?>"><strong><?php echo esc_html( $c['name'] ?: 'Unnamed' ); ?></strong></a></td>
                             <td><?php echo esc_html( $c['phone'] ); ?><?php echo $c['email'] ? '<div class="ofp-cu-sub">' . esc_html( $c['email'] ) . '</div>' : ''; ?></td>
                             <td><?php foreach ( $c['tags'] as $t ) : ?><span class="ofp-cu-tag"><?php echo esc_html( $t ); ?></span><?php endforeach; ?></td>
@@ -504,9 +507,9 @@ if ( $detail ) {
             <div class="ofp-cu-pager">
                 <span><?php echo esc_html( number_format( $total ) ); ?> customers, page <?php echo (int) $page; ?> of <?php echo (int) $pages; ?></span>
                 <span>
-                    <?php if ( $page > 1 ) : ?><a href="<?php echo esc_url( add_query_arg( array_merge( $base_args, [ 'pg' => $page - 1 ] ), $page_url ) ); ?>">Previous</a><?php endif; ?>
+                    <?php if ( $page > 1 ) : ?><a class="ofp-cu-page-link" href="<?php echo esc_url( add_query_arg( array_merge( $base_args, [ 'pg' => $page - 1 ] ), $page_url ) ); ?>">Previous</a><?php endif; ?>
                     <?php if ( $page > 1 && $page < $pages ) echo ' &nbsp;|&nbsp; '; ?>
-                    <?php if ( $page < $pages ) : ?><a href="<?php echo esc_url( add_query_arg( array_merge( $base_args, [ 'pg' => $page + 1 ] ), $page_url ) ); ?>">Next</a><?php endif; ?>
+                    <?php if ( $page < $pages ) : ?><a class="ofp-cu-page-link" href="<?php echo esc_url( add_query_arg( array_merge( $base_args, [ 'pg' => $page + 1 ] ), $page_url ) ); ?>">Next</a><?php endif; ?>
                 </span>
             </div>
         <?php endif; ?>
@@ -515,6 +518,94 @@ if ( $detail ) {
 </div><!-- .ofp-content-area -->
 </main>
 </div><!-- .ofp-shell -->
+
+<script>
+(function() {
+    var card = document.getElementById('ofp-customers-card');
+    var searchInput = document.querySelector('.ofp-cu-search-input');
+
+    function doClientFilter(query) {
+        var val = (query || '').trim().toLowerCase();
+        var rows = document.querySelectorAll('.ofp-customer-row');
+        rows.forEach(function(r) {
+            var blob = r.getAttribute('data-search') || '';
+            if (!val || blob.indexOf(val) !== -1) {
+                r.style.display = '';
+            } else {
+                r.style.display = 'none';
+            }
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            doClientFilter(this.value);
+        });
+    }
+
+    function loadCustomersAjax(url, push) {
+        if (!card) return;
+        card.style.opacity = '0.5';
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(res) { return res.text(); })
+            .then(function(html) {
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
+                var newCard = doc.getElementById('ofp-customers-card');
+                if (newCard) {
+                    card.innerHTML = newCard.innerHTML;
+                    card.style.opacity = '1';
+
+                    // Re-bind search input reference
+                    var newSearch = card.querySelector('.ofp-cu-search-input');
+                    if (newSearch) {
+                        newSearch.addEventListener('input', function() {
+                            doClientFilter(this.value);
+                        });
+                    }
+                }
+
+                if (push) {
+                    window.history.pushState({ url: url }, '', url);
+                }
+            })
+            .catch(function(err) {
+                console.error('AJAX customer tab load error:', err);
+                card.style.opacity = '1';
+                window.location.href = url;
+            });
+    }
+
+    document.addEventListener('click', function(e) {
+        var pill = e.target.closest('.ofp-cu-pill');
+        if (pill) {
+            e.preventDefault();
+            var url = pill.getAttribute('href');
+            document.querySelectorAll('.ofp-cu-pill').forEach(function(p) { p.classList.remove('active'); });
+            pill.classList.add('active');
+            loadCustomersAjax(url, true);
+            return;
+        }
+
+        var pagerLink = e.target.closest('.ofp-cu-page-link');
+        if (pagerLink) {
+            e.preventDefault();
+            var pageUrl = pagerLink.getAttribute('href');
+            loadCustomersAjax(pageUrl, true);
+            return;
+        }
+    });
+
+    window.addEventListener('popstate', function(e) {
+        if (e.state && e.state.url) {
+            loadCustomersAjax(e.state.url, false);
+        } else {
+            loadCustomersAjax(window.location.href, false);
+        }
+    });
+})();
+</script>
 
 <?php wp_footer(); ?>
 </body>

@@ -429,6 +429,7 @@ $prop_tabs = [
                     $is_active = ( $key === $active_tab );
                 ?>
                     <a href="<?php echo esc_url( $tab['url'] ); ?>"
+                       data-tab="<?php echo esc_attr( $key ); ?>"
                        class="ofp-segmented-tab <?php echo $is_active ? 'active' : ''; ?>">
                         <?php echo $tab['icon']; ?>
                         <span><?php echo esc_html( $tab['label'] ); ?></span>
@@ -446,7 +447,7 @@ $prop_tabs = [
                 <div class="ofp-alert ofp-alert-success" style="margin-bottom:20px;"><?php echo esc_html( $success ); ?></div>
             <?php endif; ?>
 
-            <?php if ( $active_tab === 'table' ) : ?>
+            <div id="ofp-prop-pane-table" class="ofp-prop-pane" style="<?php echo $active_tab === 'table' ? '' : 'display:none;'; ?>">
                 <!-- ═══════════════════════════════════════════════════════════════ -->
                 <!-- TAB 1: ALL PROPERTIES TABLE (MATCHING THE MONITOR IMAGE)      -->
                 <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -504,7 +505,7 @@ $prop_tabs = [
                             <span style="background:var(--bg-body); border:1px solid var(--border-color); font-size:12.5px; font-weight:600; padding:6px 12px; border-radius:8px; color:var(--text-muted);">
                                 Total Properties: <strong style="color:var(--text-main);"><?php echo count( $my_properties ); ?></strong>
                             </span>
-                            <a href="<?php echo esc_url( add_query_arg( 'tab', 'form', home_url( '/properties' ) ) ); ?>" class="ofp-btn-header-add">
+                            <a href="<?php echo esc_url( add_query_arg( 'tab', 'form', home_url( '/properties' ) ) ); ?>" data-tab="form" class="ofp-btn-header-add">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                 <span>Add Property</span>
                             </a>
@@ -518,7 +519,7 @@ $prop_tabs = [
                             </div>
                             <h4 style="margin:0 0 8px; font-size:16px; font-weight:700; color:var(--text-main);">No Properties Listed Yet</h4>
                             <p style="margin:0 auto 20px; max-width:440px; font-size:13.5px; color:var(--text-muted); line-height:1.5;">You haven't added any listings to your portfolio. Create your first property with photos, pricing, and specs.</p>
-                            <a href="<?php echo esc_url( add_query_arg( 'tab', 'form', home_url( '/properties' ) ) ); ?>" class="ofp-btn ofp-btn-primary" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:9px 18px; text-decoration:none;">
+                            <a href="<?php echo esc_url( add_query_arg( 'tab', 'form', home_url( '/properties' ) ) ); ?>" data-tab="form" class="ofp-btn ofp-btn-primary" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:9px 18px; text-decoration:none;">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                 <span>Add Your First Property</span>
                             </a>
@@ -689,15 +690,16 @@ $prop_tabs = [
                         </div>
                     <?php endif; ?>
                 </div>
+            </div><!-- #ofp-prop-pane-table -->
 
-            <?php elseif ( $active_tab === 'form' ) : ?>
+            <div id="ofp-prop-pane-form" class="ofp-prop-pane" style="<?php echo $active_tab === 'form' ? '' : 'display:none;'; ?>">
                 <!-- ═══════════════════════════════════════════════════════════════ -->
                 <!-- TAB 2: REDESIGNED PROPERTY FORM BUILDER                       -->
                 <!-- ═══════════════════════════════════════════════════════════════ -->
 
                 <?php if ( $editing_post ) : ?>
                     <div style="margin: 0 0 16px; text-align: left;">
-                        <a href="<?php echo esc_url( home_url( '/properties' ) ); ?>" class="ofp-back-link-left">
+                        <a href="<?php echo esc_url( home_url( '/properties' ) ); ?>" data-tab="table" class="ofp-back-link-left">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
                             <span>Back to Properties</span>
                         </a>
@@ -1454,7 +1456,7 @@ $prop_tabs = [
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:17px;height:17px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                                 <span><?php echo $editing_post ? 'Save Changes' : 'Publish Property'; ?></span>
                             </button>
-                            <a href="<?php echo esc_url( add_query_arg( 'tab', 'table', home_url( '/properties' ) ) ); ?>" class="ofp-btn-form-cancel">
+                            <a href="<?php echo esc_url( add_query_arg( 'tab', 'table', home_url( '/properties' ) ) ); ?>" data-tab="table" class="ofp-btn-form-cancel">
                                 Cancel
                             </a>
                             <?php if ( $editing_post ) : ?>
@@ -1475,7 +1477,59 @@ $prop_tabs = [
                     <?php endif; ?>
                 <?php endif; ?>
 
-            <?php endif; ?>
+            </div><!-- #ofp-prop-pane-form -->
+
+            <script>
+            (function() {
+                function switchPropTab(targetTab, updateHistory) {
+                    if (!targetTab) return;
+                    var targetPane = document.getElementById('ofp-prop-pane-' + targetTab);
+                    if (!targetPane) return;
+
+                    // Toggle tabs active state
+                    document.querySelectorAll('.ofp-segmented-tab[data-tab]').forEach(function(t) {
+                        t.classList.toggle('active', t.getAttribute('data-tab') === targetTab);
+                    });
+
+                    // Toggle pane visibility
+                    document.querySelectorAll('.ofp-prop-pane').forEach(function(p) {
+                        p.style.display = (p.id === 'ofp-prop-pane-' + targetTab) ? '' : 'none';
+                    });
+
+                    // Update URL via pushState
+                    if (updateHistory !== false && window.history && window.history.pushState) {
+                        var url = new URL(window.location.href);
+                        if (targetTab === 'table') {
+                            url.searchParams.delete('tab');
+                            url.searchParams.delete('edit');
+                        } else {
+                            url.searchParams.set('tab', targetTab);
+                        }
+                        window.history.pushState({ propTab: targetTab }, '', url.toString());
+                    }
+                }
+
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.querySelectorAll('[data-tab="table"], [data-tab="form"]').forEach(function(el) {
+                        el.addEventListener('click', function(e) {
+                            var tab = this.getAttribute('data-tab');
+                            if (tab && document.getElementById('ofp-prop-pane-' + tab)) {
+                                e.preventDefault();
+                                switchPropTab(tab, true);
+                            }
+                        });
+                    });
+
+                    window.addEventListener('popstate', function() {
+                        var params = new URLSearchParams(window.location.search);
+                        var tab = params.get('tab') || 'table';
+                        if (document.getElementById('ofp-prop-pane-' + tab)) {
+                            switchPropTab(tab, false);
+                        }
+                    });
+                });
+            })();
+            </script>
         </div>
     </div>
 </div> <!-- .ofp-content-area -->

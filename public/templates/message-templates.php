@@ -128,11 +128,11 @@ $type_badges = [
 
     <!-- Tabs -->
     <div class="ofp-tabs" style="margin-bottom: 24px; border-bottom: 1px solid var(--border-color);">
-        <a href="<?php echo esc_url( home_url( '/message-templates?tab=log' ) ); ?>" class="ofp-tab <?php echo $tab === 'log' ? 'active' : ''; ?>">Communications Log</a>
+        <a href="<?php echo esc_url( home_url( '/message-templates?tab=log' ) ); ?>" data-tab="log" class="ofp-tab <?php echo $tab === 'log' ? 'active' : ''; ?>">Communications Log</a>
         <?php if ( OFP_Subscription::allows_email_templates( (int) $client->id ) ) : ?>
-        <a href="<?php echo esc_url( home_url( '/message-templates?tab=send' ) ); ?>" class="ofp-tab <?php echo $tab === 'send' ? 'active' : ''; ?>">Send Broadcast</a>
-        <a href="<?php echo esc_url( home_url( '/message-templates?tab=templates' ) ); ?>" class="ofp-tab <?php echo $tab === 'templates' ? 'active' : ''; ?>">Message Templates</a>
-        <a href="<?php echo esc_url( home_url( '/message-templates?tab=branding' ) ); ?>" class="ofp-tab <?php echo $tab === 'branding' ? 'active' : ''; ?>">Email Brand & Layout</a>
+        <a href="<?php echo esc_url( home_url( '/message-templates?tab=send' ) ); ?>" data-tab="send" class="ofp-tab <?php echo $tab === 'send' ? 'active' : ''; ?>">Send Broadcast</a>
+        <a href="<?php echo esc_url( home_url( '/message-templates?tab=templates' ) ); ?>" data-tab="templates" class="ofp-tab <?php echo $tab === 'templates' ? 'active' : ''; ?>">Message Templates</a>
+        <a href="<?php echo esc_url( home_url( '/message-templates?tab=branding' ) ); ?>" data-tab="branding" class="ofp-tab <?php echo $tab === 'branding' ? 'active' : ''; ?>">Email Brand & Layout</a>
         <?php endif; ?>
     </div>
 
@@ -141,7 +141,7 @@ $type_badges = [
     // TAB 1: COMMUNICATIONS LOG
     // =====================================================================
     ?>
-    <?php if ( $tab === 'log' ) : ?>
+    <div id="ofp-tab-pane-log" class="ofp-tab-pane" style="<?php echo $tab === 'log' ? '' : 'display:none;'; ?>">
 
         <!-- Summary Stat Cards: 4 on desktop, 2 on mobile -->
         <div class="ofp-comm-stat-grid">
@@ -244,221 +244,454 @@ $type_badges = [
                 ] ); ?>
             </div>
         </div>
-
-    <?php endif; ?>
+    </div><!-- #ofp-tab-pane-log -->
 
     <?php
     // =====================================================================
     // TAB 2: SEND BROADCAST
     // =====================================================================
+    if ( OFP_Subscription::allows_email_templates( (int) $client->id ) ) :
     ?>
-    <?php if ( $tab === 'send' ) : ?>
+    <div id="ofp-tab-pane-send" class="ofp-tab-pane" style="<?php echo $tab === 'send' ? '' : 'display:none;'; ?>">
 
-        <div class="ofp-card" style="padding: 32px;">
-            <h3 style="margin-top: 0;">Send Broadcast Message</h3>
-            <p class="ofp-subtitle" style="margin-bottom: 24px;">Send a manual SMS or Email broadcast to specific recipients.</p>
+    <div class="ofp-broadcast-layout">
+        <!-- Left: Broadcast Composer Form -->
+        <div class="ofp-broadcast-form-col">
+            <div class="ofp-card" style="padding: 24px;">
+                <h3 style="margin: 0 0 4px; font-size: 16px; font-weight: 700; line-height: 1.3;">Send Broadcast Message</h3>
+                <p class="ofp-subtitle" style="margin: 0 0 16px; font-size: 12.5px; color: var(--text-muted); line-height: 1.4;">Send a manual SMS or Email broadcast to specific recipients.</p>
 
-            <form id="send-broadcast-form">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-                    <div class="ofp-field">
-                        <label>Channel <span class="required">*</span></label>
-                        <select name="channel" id="send-channel" required>
-                            <option value="email">Email</option>
-                            <option value="sms">SMS</option>
-                        </select>
+                <form id="send-broadcast-form">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div class="ofp-field">
+                            <label>Channel <span class="required">*</span></label>
+                            <select name="channel" id="send-channel" required>
+                                <option value="email">Email</option>
+                                <option value="sms">SMS</option>
+                            </select>
+                        </div>
+
+                        <div class="ofp-field">
+                            <label>Template (Optional)</label>
+                            <select name="template_id" id="send-template">
+                                <option value="">-- No Template --</option>
+                                <?php foreach ( $templates as $t ) : ?>
+                                    <option value="<?php echo esc_attr( $t->id ); ?>"
+                                            data-type="<?php echo esc_attr( $t->type ); ?>"
+                                            data-subject="<?php echo esc_attr( $t->subject ); ?>"
+                                            data-body="<?php echo esc_attr( $t->body ); ?>">
+                                        <?php echo esc_html( $t->name ); ?> (<?php echo strtoupper( $t->type ); ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="ofp-field">
-                        <label>Template (Optional)</label>
-                        <select name="template_id" id="send-template">
-                            <option value="">-- No Template --</option>
-                            <?php foreach ( $templates as $t ) : ?>
-                                <option value="<?php echo esc_attr( $t->id ); ?>"
-                                        data-type="<?php echo esc_attr( $t->type ); ?>"
-                                        data-subject="<?php echo esc_attr( $t->subject ); ?>"
-                                        data-body="<?php echo esc_attr( $t->body ); ?>">
-                                    <?php echo esc_html( $t->name ); ?> (<?php echo strtoupper( $t->type ); ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div class="ofp-field" style="margin-top: 16px;">
+                        <label for="send-audience">Who do you want to message?</label>
+                        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+                            <select id="send-audience" style="min-width:240px;">
+                                <option value="">I will type or paste them myself</option>
+                                <?php if ( ! empty( $sel_ids ) ) : ?>
+                                    <option value="leads_selected" <?php selected( $aud_pre, 'leads_selected' ); ?>>Leads I selected (<?php echo (int) count( $sel_ids ); ?>)</option>
+                                <?php endif; ?>
+                                <?php foreach ( [ 'leads_all', 'leads_status', 'leads_batch', 'buyers', 'tenants', 'customers' ] as $aud_key ) : ?>
+                                    <option value="<?php echo esc_attr( $aud_key ); ?>" <?php selected( $aud_pre, $aud_key ); ?>><?php echo esc_html( OFP_Contacts::audience_types()[ $aud_key ] ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <select id="send-aud-status" style="display:none;">
+                                <?php foreach ( [ 'new' => 'New', 'contacted' => 'Contacted', 'interested' => 'Interested', 'converted' => 'Converted', 'dead' => 'Dead' ] as $v => $l ) : ?>
+                                    <option value="<?php echo esc_attr( $v ); ?>"><?php echo esc_html( $l ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <select id="send-aud-batch" style="display:none;">
+                                <?php if ( empty( $aud_batches ) ) : ?><option value="">No imports yet</option><?php endif; ?>
+                                <?php foreach ( $aud_batches as $b ) : ?>
+                                    <option value="<?php echo esc_attr( $b ); ?>"><?php echo esc_html( preg_replace( '/^import: /', '', $b ) ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <p class="ofp-hint" id="send-aud-info" style="margin-top:6px;"></p>
                     </div>
-                </div>
 
-                <div class="ofp-field" style="margin-top: 16px;">
-                    <label for="send-audience">Who do you want to message?</label>
-                    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
-                        <select id="send-audience" style="min-width:240px;">
-                            <option value="">I will type or paste them myself</option>
-                            <?php if ( ! empty( $sel_ids ) ) : ?>
-                                <option value="leads_selected" <?php selected( $aud_pre, 'leads_selected' ); ?>>Leads I selected (<?php echo (int) count( $sel_ids ); ?>)</option>
-                            <?php endif; ?>
-                            <?php foreach ( [ 'leads_all', 'leads_status', 'leads_batch', 'buyers', 'tenants', 'customers' ] as $aud_key ) : ?>
-                                <option value="<?php echo esc_attr( $aud_key ); ?>" <?php selected( $aud_pre, $aud_key ); ?>><?php echo esc_html( OFP_Contacts::audience_types()[ $aud_key ] ); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <select id="send-aud-status" style="display:none;">
-                            <?php foreach ( [ 'new' => 'New', 'contacted' => 'Contacted', 'interested' => 'Interested', 'converted' => 'Converted', 'dead' => 'Dead' ] as $v => $l ) : ?>
-                                <option value="<?php echo esc_attr( $v ); ?>"><?php echo esc_html( $l ); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <select id="send-aud-batch" style="display:none;">
-                            <?php if ( empty( $aud_batches ) ) : ?><option value="">No imports yet</option><?php endif; ?>
-                            <?php foreach ( $aud_batches as $b ) : ?>
-                                <option value="<?php echo esc_attr( $b ); ?>"><?php echo esc_html( preg_replace( '/^import: /', '', $b ) ); ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div class="ofp-field" style="margin-top: 16px;">
+                        <label id="recipients-label">Recipients <span class="required">*</span></label>
+                        <p class="ofp-hint" id="recipients-hint" style="margin-top: 4px; margin-bottom: 8px;">Enter email addresses separated by commas.</p>
+                        <textarea name="recipients" id="send-recipients" rows="3" required placeholder="example@email.com, another@email.com"></textarea>
                     </div>
-                    <p class="ofp-hint" id="send-aud-info" style="margin-top:6px;"></p>
-                </div>
 
-                <div class="ofp-field" style="margin-top: 16px;">
-                    <label id="recipients-label">Recipients <span class="required">*</span></label>
-                    <p class="ofp-hint" id="recipients-hint" style="margin-top: 4px; margin-bottom: 8px;">Enter email addresses separated by commas.</p>
-                    <textarea name="recipients" id="send-recipients" rows="3" required placeholder="example@email.com, another@email.com"></textarea>
-                </div>
+                    <div class="ofp-field" id="send-subject-wrap" style="margin-top: 16px;">
+                        <label>Subject <span class="required">*</span></label>
+                        <input type="text" name="subject" id="send-subject" placeholder="Email subject line">
+                    </div>
 
-                <div class="ofp-field" id="send-subject-wrap" style="margin-top: 16px;">
-                    <label>Subject <span class="required">*</span></label>
-                    <input type="text" name="subject" id="send-subject" placeholder="Email subject line">
-                </div>
+                    <div class="ofp-field" style="margin-top: 16px;">
+                        <label>Message Body <span class="required">*</span></label>
+                        <textarea name="body" id="send-body" rows="8" required placeholder="Write your message..."></textarea>
+                        <p class="ofp-hint" style="margin-top:6px;">Merge tags available: <code>{{name}}</code>, <code>{{business_name}}</code>, <code>{{property}}</code>, <code>{{phone}}</code>, <code>{{amount}}</code>, <code>{{due_date}}</code>.</p>
+                    </div>
 
-                <div class="ofp-field" style="margin-top: 16px;">
-                    <label>Message Body <span class="required">*</span></label>
-                    <textarea name="body" id="send-body" rows="8" required placeholder="Write your message..."></textarea>
-                </div>
-
-                <div style="margin-top: 24px;">
-                    <button type="submit" class="ofp-btn ofp-btn-primary" id="send-btn">Send Message</button>
-                </div>
-            </form>
+                    <div style="margin-top: 24px;">
+                        <button type="submit" class="ofp-btn ofp-btn-primary" id="send-btn">Send Message</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var aud = document.getElementById('send-audience'), audStatus = document.getElementById('send-aud-status'),
-                audBatch = document.getElementById('send-aud-batch'), audInfo = document.getElementById('send-aud-info'),
-                recBox = document.getElementById('send-recipients'), chan = document.getElementById('send-channel'),
-                sel = <?php echo wp_json_encode( $sel_token ); ?>,
-                url = (window.ofpClientData && ofpClientData.ajaxurl) ? ofpClientData.ajaxurl : <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>,
-                nonce = (window.ofpClientData && ofpClientData.nonce) ? ofpClientData.nonce : <?php echo wp_json_encode( wp_create_nonce( 'ofp_client_ajax' ) ); ?>,
-                seq = 0;
-            function resolveAudience() {
-                audStatus.style.display = aud.value === 'leads_status' ? '' : 'none';
-                audBatch.style.display  = aud.value === 'leads_batch' ? '' : 'none';
-                if (!aud.value) { audInfo.textContent = ''; return; }
-                var mine = ++seq, fd = new FormData();
-                fd.append('action', 'ofp_resolve_audience'); fd.append('nonce', nonce);
-                fd.append('channel', chan.value); fd.append('audience', aud.value);
-                fd.append('status', audStatus.value); fd.append('batch', audBatch.value); fd.append('sel', sel);
-                audInfo.textContent = 'Finding people...';
-                fetch(url, { method: 'POST', body: fd }).then(function (r) { return r.json(); }).then(function (res) {
-                    if (mine !== seq) return;
-                    if (!res.success) { audInfo.textContent = res.data || 'Could not load that list.'; return; }
-                    var d = res.data, what = chan.value === 'sms' ? 'phone numbers' : 'email addresses';
-                    recBox.value = d.recipients;
-                    var msg = d.count + ' ' + what + ' added. You can still edit the box below.';
-                    if (d.left_out > 0) msg += ' ' + d.left_out + ' left out (no ' + (chan.value === 'sms' ? 'phone number' : 'email') + ' or repeated).';
-                    if (d.capped) msg += ' Only the first ' + d.cap + ' were added. Send the rest in a second broadcast.';
-                    if (d.sample && d.sample.length) msg += ' For example: ' + d.sample.join(', ') + '.';
-                    audInfo.textContent = msg;
-                }).catch(function () { if (mine === seq) audInfo.textContent = 'Could not load that list. Please try again.'; });
+        <!-- Right: Dispatch Inspector Deck -->
+        <div class="ofp-broadcast-inspector-col">
+            <div class="ofp-card ofp-inspector-card" style="padding: 24px;">
+                <!-- Header with Pulse & Persona Switcher -->
+                <div class="ofp-inspector-header">
+                    <div class="ofp-inspector-title-row">
+                        <div class="ofp-inspector-title">
+                            <span class="ofp-pulse-indicator"></span>
+                            <span>Dispatch Simulator</span>
+                        </div>
+                        <span class="ofp-badge ofp-inspector-channel-badge" id="insp-channel-badge">Email</span>
+                    </div>
+
+                    <!-- Persona Switcher -->
+                    <div class="ofp-persona-bar">
+                        <span class="ofp-persona-label">Simulate Recipient:</span>
+                        <div class="ofp-persona-pills">
+                            <button type="button" class="ofp-persona-pill active" data-persona="lead">Lead</button>
+                            <button type="button" class="ofp-persona-pill" data-persona="buyer">Buyer</button>
+                            <button type="button" class="ofp-persona-pill" data-persona="tenant">Tenant</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notification Glass Banner -->
+                <div class="ofp-notification-preview" id="insp-notification-preview">
+                    <div class="ofp-notification-glass">
+                        <div class="ofp-notification-top">
+                            <div class="ofp-notification-sender">
+                                <div class="ofp-notification-avatar">
+                                    <?php if ( ! empty( $client->logo_url ) ) : ?>
+                                        <img src="<?php echo esc_url( $client->logo_url ); ?>" alt="Logo">
+                                    <?php else : ?>
+                                        <span><?php echo esc_html( strtoupper( mb_substr( $client->business_name ?? 'OFP', 0, 2 ) ) ); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="ofp-notification-app-name"><?php echo esc_html( $client->business_name ?? 'My Business' ); ?></div>
+                            </div>
+                            <div class="ofp-notification-time">just now</div>
+                        </div>
+                        <div class="ofp-notification-title" id="insp-notif-title">Subject Line</div>
+                        <div class="ofp-notification-body" id="insp-notif-body">Your message preview will appear here...</div>
+                    </div>
+                </div>
+
+                <!-- Rendered Payload Card -->
+                <div class="ofp-rendered-msg-card">
+                    <div class="ofp-rendered-header">
+                        <span>Personalized Payload</span>
+                        <span class="ofp-var-counter" id="insp-var-count">0 variables</span>
+                    </div>
+                    <div class="ofp-rendered-content" id="insp-rendered-content">Type your message to see how personalized variables are resolved for each recipient.</div>
+                </div>
+
+                <!-- Telemetry HUD -->
+                <div class="ofp-inspector-telemetry">
+                    <div class="ofp-telemetry-item">
+                        <span class="ofp-telemetry-lbl">Audience Reach</span>
+                        <span class="ofp-telemetry-val" id="insp-rec-count">0</span>
+                    </div>
+                    <div class="ofp-telemetry-item">
+                        <span class="ofp-telemetry-lbl">Size / Payload</span>
+                        <span class="ofp-telemetry-val" id="insp-char-count">0 chars</span>
+                    </div>
+                    <div class="ofp-telemetry-item">
+                        <span class="ofp-telemetry-lbl">Estimated Cost</span>
+                        <span class="ofp-telemetry-val" id="insp-cost-val" style="color:#10b981;">Free</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Audience auto-resolution
+        var aud = document.getElementById('send-audience'), audStatus = document.getElementById('send-aud-status'),
+            audBatch = document.getElementById('send-aud-batch'), audInfo = document.getElementById('send-aud-info'),
+            recBox = document.getElementById('send-recipients'), chan = document.getElementById('send-channel'),
+            sel = <?php echo wp_json_encode( $sel_token ); ?>,
+            url = (window.ofpClientData && ofpClientData.ajaxurl) ? ofpClientData.ajaxurl : <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>,
+            nonce = (window.ofpClientData && ofpClientData.nonce) ? ofpClientData.nonce : <?php echo wp_json_encode( wp_create_nonce( 'ofp_client_ajax' ) ); ?>,
+            seq = 0;
+
+        function resolveAudience() {
+            audStatus.style.display = aud.value === 'leads_status' ? '' : 'none';
+            audBatch.style.display  = aud.value === 'leads_batch' ? '' : 'none';
+            if (!aud.value) { audInfo.textContent = ''; return; }
+            var mine = ++seq, fd = new FormData();
+            fd.append('action', 'ofp_resolve_audience'); fd.append('nonce', nonce);
+            fd.append('channel', chan.value); fd.append('audience', aud.value);
+            fd.append('status', audStatus.value); fd.append('batch', audBatch.value); fd.append('sel', sel);
+            audInfo.textContent = 'Finding people...';
+            fetch(url, { method: 'POST', body: fd }).then(function (r) { return r.json(); }).then(function (res) {
+                if (mine !== seq) return;
+                if (!res.success) { audInfo.textContent = res.data || 'Could not load that list.'; return; }
+                var d = res.data, what = chan.value === 'sms' ? 'phone numbers' : 'email addresses';
+                recBox.value = d.recipients;
+                var msg = d.count + ' ' + what + ' added. You can still edit the box below.';
+                if (d.left_out > 0) msg += ' ' + d.left_out + ' left out (no ' + (chan.value === 'sms' ? 'phone number' : 'email') + ' or repeated).';
+                if (d.capped) msg += ' Only the first ' + d.cap + ' were added. Send the rest in a second broadcast.';
+                if (d.sample && d.sample.length) msg += ' For example: ' + d.sample.join(', ') + '.';
+                audInfo.textContent = msg;
+                updateInspector();
+            }).catch(function () { if (mine === seq) audInfo.textContent = 'Could not load that list. Please try again.'; });
+        }
+        [aud, audStatus, audBatch].forEach(function (el) { el.addEventListener('change', resolveAudience); });
+        chan.addEventListener('change', function () { if (aud.value) resolveAudience(); });
+        if (aud.value) resolveAudience();
+
+        // ── Dispatch Inspector Simulation Engine ────────────────────────
+        const channelSelect = document.getElementById('send-channel');
+        const templateSelect = document.getElementById('send-template');
+        const subjectWrap = document.getElementById('send-subject-wrap');
+        const subjectInput = document.getElementById('send-subject');
+        const recipientsLabel = document.getElementById('recipients-label');
+        const recipientsHint = document.getElementById('recipients-hint');
+        const recipientsInput = document.getElementById('send-recipients');
+        const bodyInput = document.getElementById('send-body');
+
+        const inspBadge = document.getElementById('insp-channel-badge');
+        const notifTitle = document.getElementById('insp-notif-title');
+        const notifBody = document.getElementById('insp-notif-body');
+        const renderedContent = document.getElementById('insp-rendered-content');
+        const varCounter = document.getElementById('insp-var-count');
+        const recCount = document.getElementById('insp-rec-count');
+        const charCount = document.getElementById('insp-char-count');
+        const costVal = document.getElementById('insp-cost-val');
+
+        const clientBusiness = <?php echo wp_json_encode( $client->business_name ?? 'My Business' ); ?>;
+
+        const personas = {
+            lead: {
+                name: 'John Okafor',
+                business_name: clientBusiness,
+                property: 'Ocean Crest Penthouse',
+                phone: '08023456789',
+                email: 'john.okafor@example.com',
+                amount: '₦45,000,000',
+                due_date: '31st Oct'
+            },
+            buyer: {
+                name: 'Sarah Adebayo',
+                business_name: clientBusiness,
+                property: 'Greenlake Residence',
+                phone: '08134567890',
+                email: 'sarah.adebayo@example.com',
+                amount: '₦12,500,000',
+                due_date: '15th Nov'
+            },
+            tenant: {
+                name: 'Ahmed Bello',
+                business_name: clientBusiness,
+                property: 'Admiralty Flat 4B',
+                phone: '09087654321',
+                email: 'ahmed.bello@example.com',
+                amount: '₦3,200,000',
+                due_date: '1st Dec'
             }
-            [aud, audStatus, audBatch].forEach(function (el) { el.addEventListener('change', resolveAudience); });
-            chan.addEventListener('change', function () { if (aud.value) resolveAudience(); });
-            if (aud.value) resolveAudience();
+        };
+
+        let currentPersona = 'lead';
+
+        // Persona button handlers
+        document.querySelectorAll('.ofp-persona-pill').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.ofp-persona-pill').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentPersona = this.getAttribute('data-persona') || 'lead';
+                updateInspector();
+            });
         });
-        </script>
 
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const channelSelect = document.getElementById('send-channel');
-            const templateSelect = document.getElementById('send-template');
-            const subjectWrap = document.getElementById('send-subject-wrap');
-            const subjectInput = document.getElementById('send-subject');
-            const recipientsLabel = document.getElementById('recipients-label');
-            const recipientsHint = document.getElementById('recipients-hint');
-            const recipientsInput = document.getElementById('send-recipients');
-            const bodyInput = document.getElementById('send-body');
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
-            function toggleChannel() {
-                const channel = channelSelect.value;
-                if (channel === 'email') {
-                    subjectWrap.style.display = 'block';
-                    subjectInput.setAttribute('required', 'required');
-                    recipientsLabel.innerHTML = 'Recipients <span class="required">*</span>';
-                    recipientsHint.textContent = 'Enter email addresses separated by commas.';
-                    recipientsInput.placeholder = 'example@email.com, another@email.com';
-                } else {
-                    subjectWrap.style.display = 'none';
-                    subjectInput.removeAttribute('required');
-                    recipientsLabel.innerHTML = 'Phone Numbers <span class="required">*</span>';
-                    recipientsHint.textContent = 'Enter phone numbers separated by commas.';
-                    recipientsInput.placeholder = '08012345678, 09087654321';
-                }
+        function renderWithChips(rawText, pData) {
+            let varCount = 0;
+            let replaced = escapeHtml(rawText);
 
-                // Filter templates by channel
-                Array.from(templateSelect.options).forEach(opt => {
-                    if (opt.value === "") return;
-                    opt.style.display = (opt.dataset.type === channel) ? 'block' : 'none';
+            const tags = ['name', 'business_name', 'property', 'phone', 'amount', 'due_date'];
+            tags.forEach(t => {
+                const re = new RegExp('\\{\\{' + t + '\\}\\}|\\{' + t + '\\}', 'gi');
+                const val = pData[t] || '—';
+                replaced = replaced.replace(re, function(match) {
+                    varCount++;
+                    return '<span class="ofp-tag-chip" title="' + match + '">' + escapeHtml(val) + '</span>';
                 });
-                templateSelect.value = "";
+            });
+
+            return { html: replaced, count: varCount };
+        }
+
+        function resolvePlain(rawText, pData) {
+            let replaced = rawText;
+            const tags = ['name', 'business_name', 'property', 'phone', 'amount', 'due_date'];
+            tags.forEach(t => {
+                const re = new RegExp('\\{\\{' + t + '\\}\\}|\\{' + t + '\\}', 'gi');
+                replaced = replaced.replace(re, pData[t] || '—');
+            });
+            return replaced;
+        }
+
+        function updateInspector() {
+            const isEmail = channelSelect.value === 'email';
+            const pData = personas[currentPersona] || personas.lead;
+
+            inspBadge.textContent = isEmail ? 'Email' : 'SMS';
+            inspBadge.style.background = isEmail ? 'rgba(59, 130, 246, 0.12)' : 'rgba(16, 185, 129, 0.12)';
+            inspBadge.style.color = isEmail ? 'var(--btn-primary, #3b82f6)' : '#10b981';
+            inspBadge.style.borderColor = isEmail ? 'rgba(59, 130, 246, 0.25)' : 'rgba(16, 185, 129, 0.25)';
+
+            // 1. Notification Card
+            const rawSub = subjectInput.value.trim();
+            const rawBody = bodyInput.value.trim();
+
+            if (isEmail) {
+                notifTitle.textContent = rawSub ? resolvePlain(rawSub, pData) : 'Exclusive Update from ' + clientBusiness;
+                notifBody.textContent = rawBody ? resolvePlain(rawBody, pData) : 'Type your email body to see live preview...';
+            } else {
+                notifTitle.textContent = clientBusiness;
+                notifBody.textContent = rawBody ? resolvePlain(rawBody, pData) : 'Type your SMS message to see live preview...';
             }
 
-            channelSelect.addEventListener('change', toggleChannel);
-            toggleChannel();
+            // 2. Rendered Payload Card (with chips)
+            if (!rawBody) {
+                renderedContent.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">Type your message in the composer to view personalized payload with live variable resolution.</span>';
+                varCounter.textContent = '0 variables';
+            } else {
+                const res = renderWithChips(rawBody, pData);
+                renderedContent.innerHTML = res.html;
+                varCounter.textContent = res.count + ' variable' + (res.count === 1 ? '' : 's');
+            }
 
-            templateSelect.addEventListener('change', function() {
-                const selected = this.options[this.selectedIndex];
-                if (!selected.value) {
-                    subjectInput.value = '';
-                    bodyInput.value = '';
-                    return;
+            // 3. Telemetry HUD
+            // Recipients count
+            const recRaw = recipientsInput.value.trim();
+            const totalRecipients = recRaw ? recRaw.split(',').filter(x => x.trim().length > 0).length : 0;
+            recCount.textContent = totalRecipients;
+
+            // Character & Segment sizing
+            const bodyLen = rawBody.length;
+            if (isEmail) {
+                charCount.innerHTML = bodyLen + ' chars <small style="color:var(--text-muted);font-weight:400;">(HTML)</small>';
+                costVal.textContent = 'Free (Plan)';
+                costVal.style.color = '#10b981';
+            } else {
+                let segments = 1;
+                if (bodyLen > 160) {
+                    segments = Math.ceil(bodyLen / 153);
                 }
+                charCount.innerHTML = bodyLen + ' chars <small style="color:var(--text-muted);font-weight:400;">(' + segments + ' seg)</small>';
+                
+                const neededCredits = totalRecipients * segments;
+                const estCostNaira = (neededCredits * 6.99).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                costVal.textContent = neededCredits + ' Credits (₦' + estCostNaira + ')';
+                costVal.style.color = neededCredits > 0 ? '#10b981' : 'var(--text-muted)';
+            }
+        }
 
-                if (channelSelect.value === 'email') {
-                    subjectInput.value = selected.dataset.subject || '';
-                }
-                bodyInput.value = selected.dataset.body || '';
+        function toggleChannel() {
+            const channel = channelSelect.value;
+            if (channel === 'email') {
+                subjectWrap.style.display = 'block';
+                subjectInput.setAttribute('required', 'required');
+                recipientsLabel.innerHTML = 'Recipients <span class="required">*</span>';
+                recipientsHint.textContent = 'Enter email addresses separated by commas.';
+                recipientsInput.placeholder = 'example@email.com, another@email.com';
+            } else {
+                subjectWrap.style.display = 'none';
+                subjectInput.removeAttribute('required');
+                recipientsLabel.innerHTML = 'Phone Numbers <span class="required">*</span>';
+                recipientsHint.textContent = 'Enter phone numbers separated by commas.';
+                recipientsInput.placeholder = '08012345678, 09087654321';
+            }
+
+            // Filter templates by channel
+            Array.from(templateSelect.options).forEach(opt => {
+                if (opt.value === '') return;
+                opt.style.display = (opt.dataset.type === channel) ? 'block' : 'none';
             });
+            templateSelect.value = '';
+            updateInspector();
+        }
 
-            document.getElementById('send-broadcast-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                const btn = document.getElementById('send-btn');
-                btn.disabled = true;
-                btn.textContent = 'Sending...';
+        channelSelect.addEventListener('change', toggleChannel);
+        toggleChannel();
 
-                const formData = new FormData(this);
-                formData.append('action', 'ofp_send_client_broadcast');
-                formData.append('nonce', ofpClientData.nonce);
+        templateSelect.addEventListener('change', function() {
+            const selected = this.options[this.selectedIndex];
+            if (!selected.value) {
+                subjectInput.value = '';
+                bodyInput.value = '';
+                updateInspector();
+                return;
+            }
 
-                fetch(ofpClientData.ajaxurl, { method: 'POST', body: formData })
-                    .then(r => r.json())
-                    .then(res => {
-                        if (res.success) {
-                            alert(res.data || 'Messages sent successfully!');
-                            this.reset();
-                            toggleChannel();
-                        } else {
-                            alert(res.data || 'Failed to send messages.');
-                        }
-                    })
-                    .catch(() => alert('Network error. Please try again.'))
-                    .finally(() => {
-                        btn.disabled = false;
-                        btn.textContent = 'Send Message';
-                    });
-            });
+            if (channelSelect.value === 'email') {
+                subjectInput.value = selected.dataset.subject || '';
+            }
+            bodyInput.value = selected.dataset.body || '';
+            updateInspector();
         });
-        </script>
 
-    <?php endif; ?>
+        // Real-time typing listeners
+        [subjectInput, bodyInput, recipientsInput].forEach(el => {
+            if (el) el.addEventListener('input', updateInspector);
+        });
+
+        // Broadcast submission
+        document.getElementById('send-broadcast-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('send-btn');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            const formData = new FormData(this);
+            formData.append('action', 'ofp_send_client_broadcast');
+            formData.append('nonce', ofpClientData.nonce);
+
+            fetch(ofpClientData.ajaxurl, { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        alert(res.data || 'Messages sent successfully!');
+                        this.reset();
+                        toggleChannel();
+                        updateInspector();
+                    } else {
+                        alert(res.data || 'Failed to send messages.');
+                    }
+                })
+                .catch(() => alert('Network error. Please try again.'))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'Send Message';
+                });
+        });
+
+        window.updateInspector = updateInspector;
+        updateInspector();
+    });
+    </script>
+    </div><!-- #ofp-tab-pane-send -->
 
     <?php
     // =====================================================================
     // TAB 3: MESSAGE TEMPLATES (SMS & Email)
     // =====================================================================
     ?>
-    <?php if ( $tab === 'templates' ) : ?>
+    <div id="ofp-tab-pane-templates" class="ofp-tab-pane" style="<?php echo $tab === 'templates' ? '' : 'display:none;'; ?>">
 
 
         <!-- Manage Message Templates (SMS/Email) -->
@@ -749,18 +982,19 @@ $type_badges = [
             tplSubject.addEventListener('input', updateMsgPreview);
             tplBody.addEventListener('input', updateMsgPreview);
 
+            window.updateMsgPreview = updateMsgPreview;
+            window.toggleTemplateChannel = toggleTemplateChannel;
             toggleTemplateChannel();
         });
         </script>
-
-    <?php endif; ?>
+    </div><!-- #ofp-tab-pane-templates -->
 
     <?php
     // =====================================================================
     // TAB 4: EMAIL BRAND & LAYOUT (SaaS White-Label Customizer)
     // =====================================================================
     ?>
-    <?php if ( $tab === 'branding' ) : ?>
+    <div id="ofp-tab-pane-branding" class="ofp-tab-pane" style="<?php echo $tab === 'branding' ? '' : 'display:none;'; ?>">
         <?php
         $brand_color   = ! empty( $client->email_brand_color ) ? $client->email_brand_color : '#0f172a';
         $header_text   = $client->business_name ?: $client->owner_name;
@@ -1211,11 +1445,83 @@ $type_badges = [
             };
 
             // Initialize mode and live preview
+            window.toggleBrandingMode = toggleBrandingMode;
+            window.updateLivePreview = updateLivePreview;
             toggleBrandingMode();
         });
         </script>
+    </div><!-- #ofp-tab-pane-branding -->
+    <?php endif; // OFP_Subscription::allows_email_templates ?>
 
-    <?php endif; ?>
+    <!-- AJAX Tab Switching Script -->
+    <script>
+    (function() {
+        function switchCommTab(targetTab, updateHistory) {
+            if (!targetTab) return;
+            var targetPane = document.getElementById('ofp-tab-pane-' + targetTab);
+            if (!targetPane) return;
+
+            // Update tab button active states
+            var tabs = document.querySelectorAll('.ofp-tabs .ofp-tab');
+            tabs.forEach(function(t) {
+                if (t.getAttribute('data-tab') === targetTab) {
+                    t.classList.add('active');
+                } else {
+                    t.classList.remove('active');
+                }
+            });
+
+            // Toggle tab pane visibility
+            var panes = document.querySelectorAll('.ofp-tab-pane');
+            panes.forEach(function(p) {
+                if (p.id === 'ofp-tab-pane-' + targetTab) {
+                    p.style.display = '';
+                    p.classList.add('active');
+                } else {
+                    p.style.display = 'none';
+                    p.classList.remove('active');
+                }
+            });
+
+            // Sync URL via history.pushState without page reload
+            if (updateHistory !== false && window.history && window.history.pushState) {
+                var url = new URL(window.location.href);
+                url.searchParams.set('tab', targetTab);
+                window.history.pushState({ tab: targetTab }, '', url.toString());
+            }
+
+            // Trigger refreshes for active pane
+            if (targetTab === 'send' && typeof window.updateInspector === 'function') {
+                window.updateInspector();
+            } else if (targetTab === 'templates' && typeof window.updateMsgPreview === 'function') {
+                window.updateMsgPreview();
+            } else if (targetTab === 'branding' && typeof window.toggleBrandingMode === 'function') {
+                window.toggleBrandingMode();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var tabLinks = document.querySelectorAll('.ofp-tabs .ofp-tab');
+            tabLinks.forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    var targetTab = this.getAttribute('data-tab');
+                    if (targetTab && document.getElementById('ofp-tab-pane-' + targetTab)) {
+                        e.preventDefault();
+                        switchCommTab(targetTab, true);
+                    }
+                });
+            });
+
+            window.addEventListener('popstate', function() {
+                var params = new URLSearchParams(window.location.search);
+                var currentTab = params.get('tab') || 'log';
+                if (document.getElementById('ofp-tab-pane-' + currentTab)) {
+                    switchCommTab(currentTab, false);
+                }
+            });
+        });
+    })();
+    </script>
 
 </div>
 </main>

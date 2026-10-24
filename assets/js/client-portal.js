@@ -434,6 +434,171 @@
         });
     }
 
+    // ── Global OFP Namespace: Top Progress Bar & Modern Toasts ───────────────
+    var progressEl = null;
+    var progressTimer = null;
+    var progressVal = 0;
+
+    function getProgressBar() {
+        if (!progressEl) {
+            progressEl = document.getElementById('ofp-top-progress');
+            if (!progressEl) {
+                progressEl = document.createElement('div');
+                progressEl.id = 'ofp-top-progress';
+                document.body.appendChild(progressEl);
+            }
+        }
+        return progressEl;
+    }
+
+    var ProgressEngine = {
+        start: function () {
+            var bar = getProgressBar();
+            clearInterval(progressTimer);
+            progressVal = 20;
+            bar.classList.add('is-active');
+            bar.style.width = progressVal + '%';
+
+            progressTimer = setInterval(function () {
+                if (progressVal < 85) {
+                    progressVal += Math.random() * 8 + 3;
+                    if (progressVal > 85) progressVal = 85;
+                    bar.style.width = progressVal + '%';
+                }
+            }, 250);
+        },
+        set: function (pct) {
+            var bar = getProgressBar();
+            bar.classList.add('is-active');
+            bar.style.width = Math.min(100, Math.max(0, pct)) + '%';
+        },
+        done: function () {
+            var bar = getProgressBar();
+            clearInterval(progressTimer);
+            progressVal = 100;
+            bar.style.width = '100%';
+            setTimeout(function () {
+                bar.classList.remove('is-active');
+                setTimeout(function () {
+                    bar.style.width = '0%';
+                }, 250);
+            }, 200);
+        }
+    };
+
+    var ToastEngine = {
+        container: null,
+        getContainer: function () {
+            if (!this.container) {
+                this.container = document.querySelector('.ofp-toast-container');
+                if (!this.container) {
+                    this.container = document.createElement('div');
+                    this.container.className = 'ofp-toast-container';
+                    document.body.appendChild(this.container);
+                }
+            }
+            return this.container;
+        },
+        show: function (titleOrMsg, type, duration, detailMsg) {
+            type = type || 'success';
+            duration = duration !== undefined ? duration : 3500;
+
+            var title = detailMsg ? titleOrMsg : (type === 'success' ? 'Saved' : (type === 'error' ? 'Notice' : 'Information'));
+            var message = detailMsg ? detailMsg : titleOrMsg;
+
+            var container = this.getContainer();
+            var toast = document.createElement('div');
+            toast.className = 'ofp-toast ofp-toast-' + type;
+
+            var iconSvg = '';
+            if (type === 'success') {
+                iconSvg = '<svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>';
+            } else if (type === 'error') {
+                iconSvg = '<svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>';
+            } else if (type === 'warning') {
+                iconSvg = '<svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>';
+            } else {
+                iconSvg = '<svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>';
+            }
+
+            toast.innerHTML = 
+                '<div class="ofp-toast-icon">' + iconSvg + '</div>' +
+                '<div class="ofp-toast-content">' +
+                    '<div class="ofp-toast-title">' + title + '</div>' +
+                    '<div class="ofp-toast-msg">' + message + '</div>' +
+                '</div>' +
+                '<button type="button" class="ofp-toast-close" aria-label="Close">' +
+                    '<svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>' +
+                '</button>' +
+                '<div class="ofp-toast-bar"></div>';
+
+            container.appendChild(toast);
+
+            var bar = toast.querySelector('.ofp-toast-bar');
+            if (bar && duration > 0) {
+                bar.style.transition = 'width ' + duration + 'ms linear';
+                requestAnimationFrame(function () {
+                    bar.style.width = '0%';
+                });
+            }
+
+            var dismissTimeout = null;
+            function dismiss() {
+                clearTimeout(dismissTimeout);
+                toast.classList.add('ofp-toast-hiding');
+                setTimeout(function () {
+                    if (toast.parentNode) toast.parentNode.removeChild(toast);
+                }, 300);
+            }
+
+            if (duration > 0) {
+                dismissTimeout = setTimeout(dismiss, duration);
+            }
+
+            var closeBtn = toast.querySelector('.ofp-toast-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', dismiss);
+            }
+
+            // Pause dismiss on hover
+            toast.addEventListener('mouseenter', function () {
+                clearTimeout(dismissTimeout);
+                if (bar) bar.style.transition = 'none';
+            });
+            toast.addEventListener('mouseleave', function () {
+                if (duration > 0) {
+                    dismissTimeout = setTimeout(dismiss, 1500);
+                }
+            });
+
+            return toast;
+        }
+    };
+
+    // Expose global OFP API
+    window.OFP = window.OFP || {};
+    window.OFP.progress = ProgressEngine;
+    window.OFP.toast = function (titleOrMsg, type, duration, detailMsg) {
+        return ToastEngine.show(titleOrMsg, type, duration, detailMsg);
+    };
+
+    // Global fetch interceptor to drive top preloader automatically
+    var origFetch = window.fetch;
+    if (origFetch) {
+        var activeRequests = 0;
+        window.fetch = function () {
+            activeRequests++;
+            ProgressEngine.start();
+            return origFetch.apply(this, arguments).finally(function () {
+                activeRequests--;
+                if (activeRequests <= 0) {
+                    activeRequests = 0;
+                    ProgressEngine.done();
+                }
+            });
+        };
+    }
+
     // ── Init all ─────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         initSidebarToggle();
@@ -447,6 +612,19 @@
         initUserDropdown();
         initOfpCustomSelects();
         initAjaxLeads();
+
+        // Convert any existing page flash alert to modern toast if present
+        var legacySuccess = document.querySelector('.ofp-alert-success');
+        if (legacySuccess && legacySuccess.textContent.trim()) {
+            window.OFP.toast(legacySuccess.textContent.trim(), 'success');
+            legacySuccess.style.display = 'none';
+        }
+        var legacyError = document.querySelector('.ofp-alert-error, .ofp-alert-danger');
+        if (legacyError && legacyError.textContent.trim()) {
+            window.OFP.toast(legacyError.textContent.trim(), 'error');
+            legacyError.style.display = 'none';
+        }
     });
 
 }());
+

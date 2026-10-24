@@ -50,7 +50,7 @@ if ( ! empty( $filter_prop_id ) ) {
     $query_filters['property_id'] = $filter_prop_id;
 }
 
-$inquiries = OFP_Property_Inquiry::get_client_inquiries( $client->id, $query_filters );
+$inquiries = OFP_Property_Inquiry::get_client_inquiries( $client->id, [] );
 
 // Calculate metrics across all inquiries for this client
 global $wpdb;
@@ -124,53 +124,65 @@ $client_properties = $wpdb->get_results( $wpdb->prepare(
                 </div>
             </div>
 
-            <!-- Filter & Search Toolbar -->
-            <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 16px 20px; margin-bottom: 24px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px;">
-                <!-- Status Tabs -->
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <a href="<?php echo esc_url( remove_query_arg( 'status' ) ); ?>" 
-                       class="ofp-btn ofp-btn-sm <?php echo empty( $filter_status ) ? 'ofp-btn-primary' : 'ofp-btn-ghost'; ?>">
-                        All (<?php echo $total_count; ?>)
-                    </a>
+            <!-- Filter & Search Toolbar (Redesigned with AJAX Tab Switching) -->
+            <div class="ofp-card" style="padding: 18px 20px; margin-bottom: 24px; border-radius: 14px;">
+                <!-- Top Row: Search Box, Dropdowns, Counter -->
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px;">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; flex: 1; min-width: 280px;">
+                        <!-- Real-time Search Box -->
+                        <div class="ofp-comm-search-box" style="flex: 1; min-width: 220px; max-width: 360px;">
+                            <input type="text" id="ofp-inspection-search-input" 
+                                   placeholder="Search prospect, phone, property..." 
+                                   class="ofp-input ofp-comm-search-input"
+                                   style="height: 38px; font-size: 13px;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                        </div>
+
+                        <!-- Tour Type Dropdown -->
+                        <select id="ofp-inspection-tour-select" class="ofp-select" style="font-size: 12.5px; height: 38px; padding: 0 12px; min-width: 140px;">
+                            <option value="">All Tour Types</option>
+                            <option value="physical" <?php selected( $filter_tour_type, 'physical' ); ?>>Physical Showing</option>
+                            <option value="whatsapp_video" <?php selected( $filter_tour_type, 'whatsapp_video' ); ?>>WhatsApp Video</option>
+                        </select>
+
+                        <!-- Property Dropdown -->
+                        <?php if ( ! empty( $client_properties ) ) : ?>
+                            <select id="ofp-inspection-prop-select" class="ofp-select" style="font-size: 12.5px; height: 38px; padding: 0 12px; max-width: 200px;">
+                                <option value="">All Listings</option>
+                                <?php foreach ( $client_properties as $cp ) : ?>
+                                    <option value="<?php echo (int) $cp->wp_post_id; ?>" <?php selected( $filter_prop_id, (int) $cp->wp_post_id ); ?>>
+                                        <?php echo esc_html( wp_trim_words( $cp->title, 5 ) ); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        <?php endif; ?>
+
+                        <button type="button" id="ofp-inspection-clear-btn" class="ofp-btn ofp-btn-sm ofp-btn-ghost" style="height: 38px; display: none;">Clear</button>
+                    </div>
+
+                    <!-- Records Counter Badge -->
+                    <div id="ofp-inspection-counter" style="font-size: 12.5px; color: var(--text-muted); font-weight: 500;">
+                        Showing <strong style="color: var(--text-main);" id="ofp-inspection-visible-count"><?php echo count( $inquiries ); ?></strong> of <strong style="color: var(--text-main);"><?php echo $total_count; ?></strong> requests
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Sleek Segmented Pill Tabs -->
+                <div class="ofp-segmented-nav ofp-inspection-tabs" style="display: flex; gap: 6px; flex-wrap: wrap; margin: 0; padding-top: 14px; border-top: 1px solid var(--border-color);">
+                    <button type="button" data-status="" class="ofp-inspection-tab ofp-segmented-tab <?php echo empty( $filter_status ) ? 'active' : ''; ?>">
+                        <span>All Requests</span>
+                        <span class="ofp-tab-badge" id="tab-cnt-all"><?php echo $total_count; ?></span>
+                    </button>
                     <?php foreach ( OFP_Property_Inquiry::STATUSES as $k => $label ) : 
                         $cnt = isset( $counts_raw[ $k ] ) ? (int) $counts_raw[ $k ]->cnt : 0;
                     ?>
-                        <a href="<?php echo esc_url( add_query_arg( 'status', $k ) ); ?>" 
-                           class="ofp-btn ofp-btn-sm <?php echo $filter_status === $k ? 'ofp-btn-primary' : 'ofp-btn-ghost'; ?>">
-                            <?php echo esc_html( $label ); ?> (<?php echo $cnt; ?>)
-                        </a>
+                        <button type="button" data-status="<?php echo esc_attr( $k ); ?>" class="ofp-inspection-tab ofp-segmented-tab <?php echo $filter_status === $k ? 'active' : ''; ?>">
+                            <span><?php echo esc_html( $label ); ?></span>
+                            <span class="ofp-tab-badge" id="tab-cnt-<?php echo esc_attr( $k ); ?>"><?php echo $cnt; ?></span>
+                        </button>
                     <?php endforeach; ?>
                 </div>
-
-                <!-- Secondary Filters: Tour Type & Property -->
-                <form method="GET" action="" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0;">
-                    <?php if ( $filter_status ) : ?>
-                        <input type="hidden" name="status" value="<?php echo esc_attr( $filter_status ); ?>">
-                    <?php endif; ?>
-
-                    <select name="tour_type" onchange="this.form.submit()" class="ofp-select" style="font-size: 12px; padding: 6px 12px;">
-                        <option value="">All Tour Types</option>
-                        <option value="physical" <?php selected( $filter_tour_type, 'physical' ); ?>>Physical Tour</option>
-                        <option value="whatsapp_video" <?php selected( $filter_tour_type, 'whatsapp_video' ); ?>>WhatsApp Video</option>
-                    </select>
-
-                    <?php if ( ! empty( $client_properties ) ) : ?>
-                        <select name="property_id" onchange="this.form.submit()" class="ofp-select" style="font-size: 12px; padding: 6px 12px; max-width: 220px;">
-                            <option value="">All Listings</option>
-                            <?php foreach ( $client_properties as $cp ) : ?>
-                                <option value="<?php echo (int) $cp->wp_post_id; ?>" <?php selected( $filter_prop_id, (int) $cp->wp_post_id ); ?>>
-                                    <?php echo esc_html( wp_trim_words( $cp->title, 5 ) ); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    <?php endif; ?>
-
-                    <?php if ( $filter_status || $filter_tour_type || $filter_prop_id ) : ?>
-                        <a href="<?php echo esc_url( home_url( '/inspections' ) ); ?>" class="ofp-btn ofp-btn-sm ofp-btn-ghost" style="color: var(--text-muted); font-size: 12px;">
-                            Clear
-                        </a>
-                    <?php endif; ?>
-                </form>
             </div>
 
             <!-- Inquiries List -->
@@ -186,6 +198,9 @@ $client_properties = $wpdb->get_results( $wpdb->prepare(
                     </a>
                 </div>
             <?php else : ?>
+                <div id="ofp-inspection-empty-notice" style="display:none; text-align:center; padding:48px 20px; background:rgba(255,255,255,0.02); border:1px dashed var(--border-color); border-radius:14px; margin-bottom:20px;">
+                    <p style="color:var(--text-muted); font-size:14px; margin:0;">No inspection requests match your selected filters or search query.</p>
+                </div>
                 <div class="ofp-inspections-list">
                     <?php foreach ( $inquiries as $inq ) : 
                         $lead_name  = $inq->lead_name ?: 'Prospect';
@@ -206,7 +221,13 @@ $client_properties = $wpdb->get_results( $wpdb->prepare(
                             ( $inq->preferred_viewing_time ? " ({$inq->preferred_viewing_time})" : "" ) . "."
                         );
                     ?>
-                        <div class="ofp-inspection-card" id="inspection-card-<?php echo esc_attr( $inq->id ); ?>">
+                        <div class="ofp-inspection-card" id="inspection-card-<?php echo esc_attr( $inq->id ); ?>"
+                             data-id="<?php echo esc_attr( $inq->id ); ?>"
+                             data-status="<?php echo esc_attr( $inq->status ); ?>"
+                             data-tour="<?php echo esc_attr( $inq->tour_type ); ?>"
+                             data-property="<?php echo (int) $inq->property_id; ?>"
+                             data-search="<?php echo esc_attr( strtolower( $lead_name . ' ' . $lead_phone . ' ' . $inq->lead_email . ' ' . $prop_title . ' ' . $inq->message ) ); ?>"
+                             style="<?php echo ( $filter_status && $filter_status !== $inq->status ) ? 'display:none;' : ''; ?>">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
                                 
                                 <!-- Left Column: Prospect & Property Details -->

@@ -273,7 +273,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
         <?php endif; ?>
 
         <div style="display:grid; grid-template-columns: 1fr; gap:24px;">
-            <?php if ( $active_tab === 'sales' ) : ?>
+            <div id="ofp-sales-pane-sales" class="ofp-sales-pane" style="<?php echo $active_tab === 'sales' ? '' : 'display:none;'; ?>">
             <!-- 1. Active Deals & Sales Portfolio Table (Front & Center) -->
             <div class="ofp-card" id="my-sales" style="padding:24px;">
                 <div class="ofp-table-toolbar" style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
@@ -302,7 +302,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                         <h4 style="margin:0 0 8px;font-size:16px;font-weight:700;color:var(--text-main);">No Active Sales or Installment Plans Yet</h4>
                         <p style="margin:0 auto 20px;max-width:460px;font-size:13.5px;color:var(--text-muted);line-height:1.5;">Start by generating an installment offer for an interested buyer, or record an existing off-platform transaction manually.</p>
                         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-                            <a href="<?php echo esc_url( add_query_arg( 'tab', 'offer', home_url( '/property-sales' ) ) ); ?>" class="ofp-btn ofp-btn-primary" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:9px 18px;text-decoration:none;">
+                            <a href="<?php echo esc_url( add_query_arg( 'tab', 'offer', home_url( '/property-sales' ) ) ); ?>" data-tab="offer" class="ofp-btn ofp-btn-primary" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:9px 18px;text-decoration:none;">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                 <span>Create Installment Offer</span>
                             </a>
@@ -412,12 +412,13 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                     </div>
                 <?php endif; ?>
             </div>
+            </div><!-- #ofp-sales-pane-sales -->
 
-            <?php elseif ( $active_tab === 'offer' ) : ?>
+            <div id="ofp-sales-pane-offer" class="ofp-sales-pane" style="<?php echo $active_tab === 'offer' ? '' : 'display:none;'; ?>">
             <!-- 2. Create Installment Offer Form Card -->
             <div class="ofp-card" id="create-offer" style="padding:24px;">
                 <div style="margin-bottom:16px; text-align: left;">
-                    <a href="<?php echo esc_url( home_url( '/property-sales' ) ); ?>" class="ofp-back-link-left">
+                    <a href="<?php echo esc_url( home_url( '/property-sales' ) ); ?>" data-tab="sales" class="ofp-back-link-left">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
                         <span>Back to Sales</span>
                     </a>
@@ -576,13 +577,64 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 </script>
                 <?php endif; ?>
             </div>
-            <?php endif; ?>
+            </div><!-- #ofp-sales-pane-offer -->
         </div>
     </div>
 </div>
 </div> <!-- .ofp-content-area -->
 </main>
 </div> <!-- .ofp-shell -->
+
+<script>
+(function() {
+    function switchSalesTab(targetTab, updateHistory) {
+        if (!targetTab) return;
+        var targetPane = document.getElementById('ofp-sales-pane-' + targetTab);
+        if (!targetPane) return;
+
+        // Toggle tab buttons
+        document.querySelectorAll('.ofp-sales-tabs-nav .ofp-tab-btn[data-tab]').forEach(function(b) {
+            b.classList.toggle('active', b.getAttribute('data-tab') === targetTab);
+        });
+
+        // Toggle panes
+        document.querySelectorAll('.ofp-sales-pane').forEach(function(p) {
+            p.style.display = (p.id === 'ofp-sales-pane-' + targetTab) ? '' : 'none';
+        });
+
+        // Sync URL with pushState
+        if (updateHistory !== false && window.history && window.history.pushState) {
+            var url = new URL(window.location.href);
+            if (targetTab === 'sales') {
+                url.searchParams.delete('tab');
+            } else {
+                url.searchParams.set('tab', targetTab);
+            }
+            window.history.pushState({ salesTab: targetTab }, '', url.toString());
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-tab="sales"], [data-tab="offer"]').forEach(function(el) {
+            el.addEventListener('click', function(e) {
+                var tab = this.getAttribute('data-tab');
+                if (tab && document.getElementById('ofp-sales-pane-' + tab)) {
+                    e.preventDefault();
+                    switchSalesTab(tab, true);
+                }
+            });
+        });
+
+        window.addEventListener('popstate', function() {
+            var params = new URLSearchParams(window.location.search);
+            var tab = params.get('tab') || 'sales';
+            if (document.getElementById('ofp-sales-pane-' + tab)) {
+                switchSalesTab(tab, false);
+            }
+        });
+    });
+})();
+</script>
 <script>
 function ofpFilterSalesTable(query) {
     var val = (query || '').toLowerCase().trim();

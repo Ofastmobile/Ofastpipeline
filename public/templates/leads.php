@@ -283,7 +283,7 @@ $status_badges = [
                 $active = $filter_status === $val;
                 $url = add_query_arg( array_merge( array_diff_key( $filter_args, [ 'status' => 1 ] ), $val !== '' ? [ 'status' => $val ] : [] ), home_url( '/leads' ) );
             ?>
-                <a class="ofp-leads-pill <?php echo $active ? 'active' : ''; ?>" href="<?php echo esc_url( $url ); ?>">
+                <a class="ofp-leads-pill <?php echo $active ? 'active' : ''; ?>" href="<?php echo esc_url( $url ); ?>" data-status="<?php echo esc_attr( $val ); ?>">
                     <span><?php echo esc_html( $f_info['label'] ); ?></span>
                     <span class="ofp-leads-pill-count"><?php echo (int) $f_info['count']; ?></span>
                 </a>
@@ -295,7 +295,7 @@ $status_badges = [
         <div style="padding:12px 16px;border-radius:8px;margin-bottom:14px;background:rgba(239,68,68,.12);border-left:4px solid #ef4444;"><?php echo esc_html( $bulk_error ); ?></div>
     <?php endif; ?>
 
-    <div class="ofp-card" style="padding: 0; overflow: hidden;">
+    <div class="ofp-card" id="ofp-leads-results-card" style="padding: 0; overflow: hidden; transition: opacity 0.2s ease;">
         <div style="padding: 24px; display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Recent Prospects</h3>
             <a href="<?php echo esc_url( home_url( '/import' ) ); ?>" style="font-size: 13px; color: var(--accent-blue); text-decoration: none; font-weight: 500;">Import</a>
@@ -348,8 +348,10 @@ $status_badges = [
                         </tr>
                     </thead>
                     <tbody id="ofp-leads-tbody">
-                        <?php foreach ( $leads as $lead ) : ?>
-                            <tr>
+                        <?php foreach ( $leads as $lead ) : 
+                            $lead_search = strtolower( ( $lead->name ?: '' ) . ' ' . $lead->phone . ' ' . ( $lead->email ?: '' ) . ' ' . ( $lead->message ?: '' ) );
+                        ?>
+                            <tr class="ofp-lead-row" data-status="<?php echo esc_attr( $lead->status ); ?>" data-search="<?php echo esc_attr( $lead_search ); ?>">
                                 <td><input type="checkbox" class="ofp-sel" name="lead_ids[]" value="<?php echo (int) $lead->id; ?>" form="ofp-bulk-form" aria-label="Select <?php echo esc_attr( $lead->name ?: $lead->phone ); ?>"></td>
                                 <td><?php echo esc_html( $lead->name ?: '—' ); ?></td>
                                 <td><strong><?php echo esc_html( $lead->phone ); ?></strong></td>
@@ -660,18 +662,150 @@ document.getElementById('send-message-form').addEventListener('submit', function
         .then(r => r.json())
         .then(res => {
             if (res.success) {
-                alert('Message sent successfully!');
+                if (window.OFP && typeof window.OFP.toast === 'function') {
+                    window.OFP.toast('Message sent successfully!', 'success');
+                } else {
+                    alert('Message sent successfully!');
+                }
                 closeMessageModal();
             } else {
-                alert(res.data || 'Failed to send message.');
+                if (window.OFP && typeof window.OFP.toast === 'function') {
+                    window.OFP.toast(res.data || 'Failed to send message.', 'error');
+                } else {
+                    alert(res.data || 'Failed to send message.');
+                }
             }
         })
-        .catch(() => alert('Network error. Please try again.'))
+        .catch(() => {
+            if (window.OFP && typeof window.OFP.toast === 'function') {
+                window.OFP.toast('Network error. Please try again.', 'error');
+            } else {
+                alert('Network error. Please try again.');
+            }
+        })
         .finally(() => {
             btn.disabled = false;
             btn.textContent = 'Send Message';
         });
 });
+
+// AJAX Tab Switch & Live Filter for Leads
+(function() {
+    var searchInput = document.querySelector('.ofp-leads-search-input');
+    var resultsCard = document.getElementById('ofp-leads-results-card');
+
+    function bindCheckboxEvents() {
+        var all = document.getElementById('ofp-sel-all');
+        var btn = document.getElementById('ofp-msg-selected');
+        var out = document.getElementById('ofp-sel-count');
+        if (!out || !btn) return;
+
+        function boxes() { return document.querySelectorAll('.ofp-sel'); }
+        function refresh() {
+            var n = 0;
+            boxes().forEach(function(b) { if (b.checked) n++; });
+            out.textContent = n;
+            btn.disabled = n === 0;
+        }
+
+        if (all) {
+            all.addEventListener('change', function() {
+                boxes().forEach(function(b) { b.checked = all.checked; });
+                refresh();
+            });
+        }
+        refresh();
+    }
+
+    function doClientFilter(query) {
+        var val = (query || '').trim().toLowerCase();
+        var rows = document.querySelectorAll('.ofp-lead-row');
+        rows.forEach(function(r) {
+            var blob = r.getAttribute('data-search') || '';
+            if (!val || blob.indexOf(val) !== -1) {
+                r.style.display = '';
+            } else {
+                r.style.display = 'none';
+            }
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            doClientFilter(this.value);
+        });
+    }
+
+    function loadLeadsAjax(url, push) {
+        if (!resultsCard) return;
+        resultsCard.style.opacity = '0.5';
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(res) { return res.text(); })
+            .then(function(html) {
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
+                var newCard = doc.getElementById('ofp-leads-results-card');
+                if (newCard) {
+                    resultsCard.innerHTML = newCard.innerHTML;
+                    resultsCard.style.opacity = '1';
+                }
+
+                // Update filter pills active state
+                var newPills = doc.querySelectorAll('.ofp-leads-pill');
+                if (newPills.length) {
+                    var currentPills = document.querySelectorAll('.ofp-leads-pill');
+                    currentPills.forEach(function(p, idx) {
+                        if (newPills[idx]) {
+                            p.className = newPills[idx].className;
+                            var countEl = p.querySelector('.ofp-leads-pill-count');
+                            var newCountEl = newPills[idx].querySelector('.ofp-leads-pill-count');
+                            if (countEl && newCountEl) countEl.textContent = newCountEl.textContent;
+                        }
+                    });
+                }
+
+                if (push) {
+                    window.history.pushState({ url: url }, '', url);
+                }
+
+                bindCheckboxEvents();
+            })
+            .catch(function(err) {
+                console.error('AJAX lead tab load error:', err);
+                resultsCard.style.opacity = '1';
+                window.location.href = url;
+            });
+    }
+
+    document.addEventListener('click', function(e) {
+        var pill = e.target.closest('.ofp-leads-pill');
+        if (pill) {
+            e.preventDefault();
+            var url = pill.getAttribute('href');
+            document.querySelectorAll('.ofp-leads-pill').forEach(function(p) { p.classList.remove('active'); });
+            pill.classList.add('active');
+            loadLeadsAjax(url, true);
+            return;
+        }
+
+        var pageBtn = e.target.closest('.ofp-page-btn');
+        if (pageBtn) {
+            e.preventDefault();
+            var pageUrl = pageBtn.getAttribute('href');
+            loadLeadsAjax(pageUrl, true);
+            return;
+        }
+    });
+
+    window.addEventListener('popstate', function(e) {
+        if (e.state && e.state.url) {
+            loadLeadsAjax(e.state.url, false);
+        } else {
+            loadLeadsAjax(window.location.href, false);
+        }
+    });
+})();
 </script>
 </body>
 </html>
