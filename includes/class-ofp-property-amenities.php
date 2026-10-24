@@ -188,12 +188,35 @@ class OFP_Property_Amenities {
     /**
      * AJAX handler for inline custom amenity creation.
      */
+    /** Most custom amenities the whole platform will store (stops the list growing forever). */
+    const MAX_CUSTOM_AMENITIES = 300;
+
     public static function ajax_add_custom_amenity(): void {
-        check_ajax_referer( 'ofp_amenity_nonce', 'nonce', false );
+        // Clients add amenities that are not in the built-in list. That is allowed,
+        // but only for a logged-in client (or a WordPress editor), with a valid
+        // security token. check_ajax_referer(..., false) only RETURNS false, it does
+        // not stop the request, and the result used to be ignored, so anyone on the
+        // internet could add amenities.
+        $allowed = ( class_exists( 'OFP_Auth' ) && OFP_Auth::current_client() ) || current_user_can( 'edit_posts' );
+        if ( ! $allowed ) {
+            wp_send_json_error( [ 'message' => 'Please log in again to add an amenity.' ], 401 );
+        }
+        if ( ! check_ajax_referer( 'ofp_amenity_nonce', 'nonce', false ) ) {
+            wp_send_json_error( [ 'message' => 'This page has expired. Please reload it and try again.' ], 403 );
+        }
+
+        if ( ! defined( 'OFP_JSON_API' ) ) {
+            define( 'OFP_JSON_API', true ); // rate limit answers in JSON
+        }
+        OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'add_amenity', 30, 600 );
 
         $name = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
+        $name = function_exists( 'mb_substr' ) ? mb_substr( $name, 0, 40 ) : substr( $name, 0, 40 );
         if ( empty( $name ) ) {
             wp_send_json_error( [ 'message' => 'Amenity name cannot be empty.' ] );
+        }
+        if ( count( self::get_custom_amenities() ) >= self::MAX_CUSTOM_AMENITIES ) {
+            wp_send_json_error( [ 'message' => 'The custom amenity list is full. Please pick an existing amenity.' ] );
         }
 
         $created = self::add_custom_amenity( $name );

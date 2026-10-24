@@ -161,6 +161,11 @@ class OFP_Lead {
         }
 
         $wpdb->update( $wpdb->prefix . 'ofp_leads', $data, [ 'id' => $id ] );
+
+        // A finished lead gets no more automatic messages, whoever changed the status.
+        if ( in_array( $status, [ 'converted', 'dead', 'lost' ], true ) && class_exists( 'OFP_Queue' ) ) {
+            OFP_Queue::cancel_for_lead( $id );
+        }
     }
 
     /**

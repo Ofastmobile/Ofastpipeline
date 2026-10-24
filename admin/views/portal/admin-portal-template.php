@@ -99,6 +99,7 @@ $titles = [
     'settings'              => 'Platform Settings',
     'manage-admins'         => 'Admin Access & Permissions',
     'activity-logs'         => 'System Activity Audit Log',
+    'feedback'              => 'Client Feedback & Feature Requests',
     'investment'            => 'Real Estate Investment Engine',
 ];
 ?>
@@ -124,7 +125,9 @@ $titles = [
         <!-- Brand Header -->
         <div class="ofp-sb-header">
             <a href="<?php echo esc_url( home_url( '/admin-portal' ) ); ?>" class="ofp-sb-brand">
-                <div class="ofp-sb-logo-icon" style="font-size:16px;">⚡</div>
+                <div class="ofp-sb-logo-icon">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
                 <div class="ofp-sb-brand-info">
                     <span class="ofp-sb-brand-title">NaijaHub</span>
                     <span class="ofp-sb-brand-badge">v2.2.3</span>
@@ -232,6 +235,18 @@ $titles = [
                             <span>Reports & Analytics</span>
                         </a>
                     </li>
+                    <?php
+                    $fb_badge_cnt = class_exists( 'OFP_Feedback' ) ? OFP_Feedback::get_new_count() : 0;
+                    ?>
+                    <li class="ofp-nav-item <?php echo $tab === 'feedback' ? 'active' : ''; ?>">
+                        <a href="<?php echo esc_url( home_url( '/admin-portal?tab=feedback' ) ); ?>">
+                            <svg class="ofp-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg>
+                            <span>Feedback & Bugs</span>
+                            <?php if ( $fb_badge_cnt > 0 ) : ?>
+                                <span class="ofp-nav-badge warning" style="background:#f59e0b; color:#fff;"><?php echo esc_html( $fb_badge_cnt ); ?> new</span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
                     <li class="ofp-nav-item <?php echo $tab === 'investment' ? 'active' : ''; ?>">
                         <a href="<?php echo esc_url( home_url( '/admin-portal?tab=investment' ) ); ?>">
                             <svg class="ofp-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
@@ -302,12 +317,6 @@ $titles = [
                             <span class="ofp-nav-badge"><?php echo esc_html( $inquiries_month ); ?></span>
                         </a>
                     </li>
-                    <li class="ofp-nav-item <?php echo $tab === 'property-billing' ? 'active' : ''; ?>">
-                        <a href="<?php echo esc_url( home_url( '/admin-portal?tab=property-billing' ) ); ?>">
-                            <svg class="ofp-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" /></svg>
-                            <span>Listing Subscriptions</span>
-                        </a>
-                    </li>
                 </ul>
             </div>
 
@@ -366,7 +375,7 @@ $titles = [
         <header class="ofp-portal-header">
             <div class="ofp-portal-header-left">
                 <div class="ofp-nav-app-branding">
-                    <span class="ofp-nav-app-name">⚡ NaijaHub</span>
+                    <span class="ofp-nav-app-name">NaijaHub</span>
                     <span class="ofp-nav-app-version">v2.2.3</span>
                 </div>
                 <div class="ofp-portal-header-title-row">
@@ -735,6 +744,10 @@ $titles = [
                 <!-- Embedded Activity Logs Module -->
                 <?php include OFP_PATH . 'admin/views/activity-logs.php'; ?>
 
+            <?php elseif ( $tab === 'feedback' ) : ?>
+                <!-- Embedded Client Feedback & Bug Reports Module -->
+                <?php include OFP_PATH . 'admin/views/feedback-list.php'; ?>
+
             <?php elseif ( $tab === 'investment' ) : ?>
                 <!-- Embedded Investment Module (Coming Soon) -->
                 <?php include OFP_PATH . 'admin/views/investment.php'; ?>
@@ -1024,23 +1037,23 @@ $titles = [
 
                 // Catalog of all amenities (standard + custom)
                 $amenity_items = class_exists( 'OFP_Property_Amenities' ) ? OFP_Property_Amenities::get_all() : [
-                    'swimming_pool'   => [ 'label' => 'Swimming Pool',            'icon' => '🏊' ],
-                    'smart_home'      => [ 'label' => 'Smart Home Automation',   'icon' => '🏠' ],
-                    'power_247'       => [ 'label' => '24/7 Electricity / Gen',  'icon' => '⚡' ],
-                    'cctv_security'   => [ 'label' => 'CCTV & Uniformed Security','icon' => '🛡️' ],
-                    'gym'             => [ 'label' => 'Gym / Fitness Center',    'icon' => '🏋️' ],
-                    'elevator'        => [ 'label' => 'Elevator / Lift',         'icon' => '🛗' ],
-                    'playground'      => [ 'label' => "Children's Play Area",     'icon' => '🛝' ],
-                    'bq'              => [ 'label' => 'Boys Quarters (BQ)',      'icon' => '🏡' ],
-                    'water_treatment' => [ 'label' => 'Water Treatment Plant',   'icon' => '💧' ],
-                    'fitted_kitchen'  => [ 'label' => 'Fully Fitted Kitchen',    'icon' => '🍳' ],
+                    'swimming_pool'   => [ 'label' => 'Swimming Pool',            'icon' => '' ],
+                    'smart_home'      => [ 'label' => 'Smart Home Automation',   'icon' => '' ],
+                    'power_247'       => [ 'label' => '24/7 Electricity / Gen',  'icon' => '' ],
+                    'cctv_security'   => [ 'label' => 'CCTV & Uniformed Security','icon' => '' ],
+                    'gym'             => [ 'label' => 'Gym / Fitness Center',    'icon' => '' ],
+                    'elevator'        => [ 'label' => 'Elevator / Lift',         'icon' => '' ],
+                    'playground'      => [ 'label' => "Children's Play Area",     'icon' => '' ],
+                    'bq'              => [ 'label' => 'Boys Quarters (BQ)',      'icon' => '' ],
+                    'water_treatment' => [ 'label' => 'Water Treatment Plant',   'icon' => '' ],
+                    'fitted_kitchen'  => [ 'label' => 'Fully Fitted Kitchen',    'icon' => '' ],
                 ];
                 foreach ( (array) $val_amenities as $s_key ) {
                     if ( ! isset( $amenity_items[ $s_key ] ) ) {
                         $label = class_exists( 'OFP_Property_Amenities' ) ? OFP_Property_Amenities::get_label( $s_key ) : ucwords( str_replace( '_', ' ', $s_key ) );
                         $amenity_items[ $s_key ] = [
                             'label'    => $label,
-                            'icon'     => '✨',
+                            'icon'     => '',
                             'icon_svg' => class_exists( 'OFP_Property_Amenities' ) ? OFP_Property_Amenities::get_icon_svg( $s_key, 'w-4 h-4' ) : '',
                         ];
                     }
@@ -1096,7 +1109,7 @@ $titles = [
                         <!-- ── 1. Basic Information & Categorization ──────────────── -->
                         <div class="ofp-sec-card">
                             <div class="ofp-sec-header">
-                                <div class="ofp-sec-icon">🏛️</div>
+                                <div class="ofp-sec-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg></div>
                                 <div>
                                     <h4 class="ofp-sec-title">1. Basic Information &amp; Architecture</h4>
                                     <p class="ofp-sec-subtitle">Primary marketing headline, commercial intent, and real estate categorization.</p>
@@ -1164,7 +1177,7 @@ $titles = [
                         <!-- ── 2. Pricing, Commercial Terms & Title Deed ─────────── -->
                         <div class="ofp-sec-card">
                             <div class="ofp-sec-header">
-                                <div class="ofp-sec-icon">💰</div>
+                                <div class="ofp-sec-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
                                 <div>
                                     <h4 class="ofp-sec-title">2. Valuation, Billing Terms &amp; Title Verification</h4>
                                     <p class="ofp-sec-subtitle">Financial valuation, Nigerian Naira verbalizer, rent package, and official registered title deed.</p>
@@ -1242,7 +1255,7 @@ $titles = [
                         <!-- ── 3. Physical Location & Neighborhood ────────────────── -->
                         <div class="ofp-sec-card">
                             <div class="ofp-sec-header">
-                                <div class="ofp-sec-icon">📍</div>
+                                <div class="ofp-sec-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></div>
                                 <div>
                                     <h4 class="ofp-sec-title">3. Location &amp; Geographic Registry</h4>
                                     <p class="ofp-sec-subtitle">Physical neighborhood address, Nigerian prime location presets, and taxonomy linking.</p>
@@ -1290,7 +1303,7 @@ $titles = [
                         <!-- ── 4. Dimensions, Spaces & Land Sizing ─────────────────── -->
                         <div class="ofp-sec-card">
                             <div class="ofp-sec-header">
-                                <div class="ofp-sec-icon">📐</div>
+                                <div class="ofp-sec-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg></div>
                                 <div>
                                     <h4 class="ofp-sec-title">4. Dimensions, Spaces &amp; Finish Specifications</h4>
                                     <p class="ofp-sec-subtitle">Capacities, finish condition, Nigerian land sizing, and plot benchmarks.</p>
@@ -1301,7 +1314,7 @@ $titles = [
                             <div id="ofp_land_box" style="<?php echo ( $val_listing_type === 'land' || $val_property_type === 'land' ) ? 'display:block;' : 'display:none;'; ?> margin-bottom:20px; padding:18px; background:rgba(16,185,129,0.04); border:1px solid rgba(16,185,129,0.2); border-radius:10px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
                                     <strong style="color:#10b981; font-size:13.5px; display:flex; align-items:center; gap:6px;">
-                                        🌱 Nigerian Land Sizing &amp; Plot Breakdown
+                                        Nigerian Land Sizing &amp; Plot Breakdown
                                     </strong>
                                     <span class="ofp-kpi-pill positive" style="font-size:11px;">Standard Lagos Plot = 600 SQM</span>
                                 </div>
@@ -1464,7 +1477,7 @@ $titles = [
                         <!-- ── 5. Detailed Walkthrough Description & Story ────────── -->
                         <div class="ofp-sec-card">
                             <div class="ofp-sec-header">
-                                <div class="ofp-sec-icon">📝</div>
+                                <div class="ofp-sec-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg></div>
                                 <div>
                                     <h4 class="ofp-sec-title">5. Walkthrough Description &amp; Marketing Story</h4>
                                     <p class="ofp-sec-subtitle">Detailed architectural write-up, room distribution, kitchen layout, and estate features.</p>
@@ -1475,7 +1488,7 @@ $titles = [
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                                     <div style="display:flex; gap:8px;">
                                         <button type="button" class="ofp-chip-btn" id="ofp_btn_add_bullet">• Add Bullet</button>
-                                        <button type="button" class="ofp-chip-btn" id="ofp_btn_add_highlights">✨ Insert Key Highlights Template</button>
+                                        <button type="button" class="ofp-chip-btn" id="ofp_btn_add_highlights">Insert Key Highlights Template</button>
                                     </div>
                                     <span id="ofp_desc_words" style="font-size:11.5px; color:var(--ofp-text-muted);">0 words</span>
                                 </div>
@@ -1487,7 +1500,7 @@ $titles = [
                         <!-- ── 6. Media Studio, Gallery & Virtual Tour ────────────── -->
                         <div class="ofp-sec-card">
                             <div class="ofp-sec-header">
-                                <div class="ofp-sec-icon">🖼️</div>
+                                <div class="ofp-sec-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>
                                 <div>
                                     <h4 class="ofp-sec-title">6. Media Studio, Gallery &amp; Virtual Walkthrough</h4>
                                     <p class="ofp-sec-subtitle">High-resolution property photos, primary cover image, and YouTube/Vimeo walkthrough links.</p>
@@ -1548,7 +1561,7 @@ $titles = [
                                             <div class="ofp-gallery-card <?php echo $is_cover ? 'is-cover' : ''; ?>" data-id="<?php echo esc_attr( $gid ); ?>">
                                                 <img src="<?php echo esc_url( $thumb_url ); ?>" alt="Gallery image">
                                                 <?php if ( $is_cover ) : ?>
-                                                    <span class="ofp-gallery-badge-cover">★ Cover</span>
+                                                    <span class="ofp-gallery-badge-cover">Cover</span>
                                                 <?php endif; ?>
                                                 <div class="ofp-gallery-actions">
                                                     <button type="button" class="ofp-gallery-btn ofp-btn-set-cover" data-id="<?php echo esc_attr( $gid ); ?>" data-url="<?php echo esc_url( $thumb_url ); ?>">
@@ -1579,7 +1592,7 @@ $titles = [
                             <!-- ── 7. Amenities & Facility Provisions ─────────────────── -->
                             <div class="ofp-sec-card" style="display:flex; flex-direction:column;">
                                 <div class="ofp-sec-header">
-                                    <div class="ofp-sec-icon">✨</div>
+                                    <div class="ofp-sec-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg></div>
                                     <div style="flex:1;">
                                         <div style="display:flex; justify-content:space-between; align-items:center;">
                                             <h4 class="ofp-sec-title">7. Amenities &amp; Facility Provisions</h4>
@@ -1601,11 +1614,9 @@ $titles = [
                                 <div class="ofp-amenities-tiles" style="flex:1;">
                                     <?php foreach ( $amenity_items as $akey => $adata ) :
                                         $is_checked = in_array( $akey, (array) $val_amenities, true ) || in_array( $adata['label'], (array) $val_amenities, true );
-                                        $ico = ! empty( $adata['icon'] ) ? $adata['icon'] : '✨';
                                     ?>
                                         <label class="ofp-amenity-tile <?php echo $is_checked ? 'is-checked' : ''; ?>">
                                             <input type="checkbox" name="amenities[]" value="<?php echo esc_attr( $akey ); ?>" <?php checked( $is_checked ); ?>>
-                                            <span style="font-size:16px;"><?php echo esc_html( $ico ); ?></span>
                                             <span><?php echo esc_html( $adata['label'] ); ?></span>
                                         </label>
                                     <?php endforeach; ?>
@@ -1615,7 +1626,7 @@ $titles = [
                             <!-- ── 8. Inspection & Viewing Schedule ───────────────────── -->
                             <div class="ofp-sec-card" style="display:flex; flex-direction:column;">
                                 <div class="ofp-sec-header">
-                                    <div class="ofp-sec-icon">📅</div>
+                                    <div class="ofp-sec-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>
                                     <div>
                                         <h4 class="ofp-sec-title">8. Inspection &amp; Viewing Schedule</h4>
                                         <p class="ofp-sec-subtitle">Showing availability windows and estate gate protocol.</p>
@@ -1651,7 +1662,7 @@ $titles = [
                         <!-- ── 9. Ownership, Bank Routing & Status ────────────────── -->
                         <div class="ofp-sec-card">
                             <div class="ofp-sec-header">
-                                <div class="ofp-sec-icon">👤</div>
+                                <div class="ofp-sec-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></div>
                                 <div>
                                     <h4 class="ofp-sec-title">9. Ownership, Bank Routing &amp; Publishing Controls</h4>
                                     <p class="ofp-sec-subtitle">Assign agency ownership, configure direct bank account for transfers, and manage visibility.</p>

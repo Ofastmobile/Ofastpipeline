@@ -28,6 +28,40 @@ if ( $custom_domain ) {
     $embed_script_url = home_url( '/widget.js' );
     $embed_code       = '<div id="ofp-property-widget" data-client-id="' . esc_attr( $client->id ) . '" data-limit="6"></div>' . "\n" . '<script src="' . esc_url( $embed_script_url ) . '" async></script>';
 }
+
+// Ready-to-paste lead form. Uses fetch() so the visitor stays on the page (a plain
+// <form action> would navigate to the raw JSON reply), keeps the hidden honeypot
+// the API checks.
+$lead_sample  = '<form id="ofp-lead-form">' . "\n";
+$lead_sample .= '    <input type="hidden" name="client_id" value="' . esc_attr( $client->id ) . '">' . "\n";
+$lead_sample .= '    <input type="text" name="name" placeholder="Full Name" required>' . "\n";
+$lead_sample .= '    <input type="tel" name="phone" placeholder="Phone Number" required>' . "\n";
+$lead_sample .= '    <input type="email" name="email" placeholder="Email Address">' . "\n";
+$lead_sample .= '    <!-- Honeypot: keep it hidden and empty, do not remove -->' . "\n";
+$lead_sample .= '    <input type="text" name="website" style="display:none !important" tabindex="-1" autocomplete="off">' . "\n";
+$lead_sample .= '    <button type="submit">Send Inquiry</button>' . "\n";
+$lead_sample .= '</form>' . "\n";
+$lead_sample .= '<script>' . "\n";
+$lead_sample .= "document.getElementById('ofp-lead-form').addEventListener('submit', function (e) {\n";
+$lead_sample .= "    e.preventDefault();\n";
+$lead_sample .= "    var form = this, btn = form.querySelector('button[type=\"submit\"]');\n";
+$lead_sample .= "    btn.disabled = true;\n";
+$lead_sample .= "    fetch('" . esc_url_raw( $lead_endpoint ) . "', { method: 'POST', body: new FormData(form) })\n";
+$lead_sample .= "        .then(function (r) { return r.json(); })\n";
+$lead_sample .= "        .then(function (d) {\n";
+$lead_sample .= "            if (d.success) {\n";
+$lead_sample .= "                var p = document.createElement('p');\n";
+$lead_sample .= "                p.textContent = d.message || 'Thank you!';\n";
+$lead_sample .= "                form.innerHTML = '';\n";
+$lead_sample .= "                form.appendChild(p);\n";
+$lead_sample .= "            } else {\n";
+$lead_sample .= "                btn.disabled = false;\n";
+$lead_sample .= "                alert(d.message || 'Something went wrong. Please try again.');\n";
+$lead_sample .= "            }\n";
+$lead_sample .= "        })\n";
+$lead_sample .= "        .catch(function () { btn.disabled = false; alert('Network error. Please try again.'); });\n";
+$lead_sample .= "});\n";
+$lead_sample .= '</script>';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -186,7 +220,7 @@ if ( $custom_domain ) {
                                 </tr>
                                 <tr>
                                     <td><code>name</code></td>
-                                    <td><span style="color: #ef4444; font-weight: 700;">Required</span></td>
+                                    <td><span style="color: var(--text-muted);">Recommended</span></td>
                                     <td>Full name of the lead.</td>
                                 </tr>
                                 <tr>
@@ -207,7 +241,7 @@ if ( $custom_domain ) {
                                 <tr>
                                     <td><code>property_id</code></td>
                                     <td><span style="color: var(--text-muted);">Optional</span></td>
-                                    <td>ID or title of the property the inquiry relates to.</td>
+                                    <td>The <code>id</code> of the property, as returned by the property feed. Ignored if it is not one of your own listings.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -224,13 +258,7 @@ if ( $custom_domain ) {
                                 <span>Copy Code</span>
                             </button>
                         </div>
-                        <pre class="ofp-code-body" id="ofp-form-sample-code">&lt;form action="<?php echo esc_html( $lead_endpoint ); ?>" method="POST"&gt;
-    &lt;input type="hidden" name="client_id" value="<?php echo esc_attr( $client->id ); ?>"&gt;
-    &lt;input type="text" name="name" placeholder="Full Name" required&gt;
-    &lt;input type="tel" name="phone" placeholder="Phone Number" required&gt;
-    &lt;input type="email" name="email" placeholder="Email Address"&gt;
-    &lt;button type="submit"&gt;Send Inquiry&lt;/button&gt;
-&lt;/form&gt;</pre>
+                        <pre class="ofp-code-body" id="ofp-form-sample-code"><?php echo esc_html( $lead_sample ); ?></pre>
                     </div>
 
                     <div class="ofp-saas-notice">
@@ -442,7 +470,7 @@ if ( $custom_domain ) {
                                 <span class="ofp-pill ofp-pill-blue" style="font-size: 9px; padding: 1px 6px;">Optional</span>
                             </div>
                             <p class="ofp-spec-desc">
-                                Filter listings by category. Options: <code>sale</code>, <code>rent</code>, or <code>land</code>. Default: all active listings.
+                                Filter listings by category. Options: <code>sale</code>, <code>rent</code>, <code>land</code>, or <code>shortlet</code>. Default: all active listings.
                             </p>
                         </div>
                     </div>

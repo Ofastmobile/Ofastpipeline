@@ -265,7 +265,24 @@ class OFP_Host_Router {
 	 */
 	public static function maybe_redirect_app_root(): void {
 		$zone = self::current_zone();
-		if ( is_front_page() ) {
+
+		// A white label domain does not carry the platform's own legal pages.
+		// Visitors who land on them are sent to that client's marketplace.
+		if ( 'client' === $zone ) {
+			$wl = self::current_client_record();
+			if ( $wl && ! empty( $wl->is_white_label ) ) {
+				$path = trim( (string) wp_parse_url( (string) ( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH ), '/' );
+				if ( in_array( $path, [ 'privacy-policy', 'terms', 'terms-and-conditions', 'terms-conditions', 'terms-of-service' ], true ) ) {
+					wp_redirect( 'https://' . self::current_client_host() . '/marketplace/' );
+					exit;
+				}
+			}
+		}
+
+		// /marketplace/ is a custom route. With "Your homepage displays your latest
+		// posts" WordPress also reports it as the front page, which sent a white label
+		// domain's /marketplace/ back to /marketplace/ in an endless redirect loop.
+		if ( is_front_page() && '1' !== (string) get_query_var( 'ofp_marketplace', '' ) ) {
 			if ( $zone === 'app' ) {
 				wp_redirect( self::rewrite_portal_links( home_url( '/login' ), '/login' ) );
 				exit;

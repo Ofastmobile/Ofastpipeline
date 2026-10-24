@@ -88,13 +88,13 @@ Object.keys(previewData).forEach(function(inputName) {
         // Sync on input
         input.addEventListener('input', function() {
             var rawText = this.value;
-            var isVoice = inputName === 'followup_2_message' || inputName.indexOf('call_') === 0;
+            var isVoice = inputName.indexOf('call_') === 0;
             
             if (isVoice) {
-                var title = '📞 Voice Call Script';
-                if (inputName === 'call_interest_message') title = '📞 Instant Call: New Lead';
-                if (inputName === 'call_installment_message') title = '📞 Reminder Call: Installment Due';
-                if (inputName === 'call_rent_message') title = '📞 Reminder Call: Rent Due';
+                var title = 'Voice Call';
+                if (inputName === 'call_interest_message') title = 'Instant Call: New Lead';
+                if (inputName === 'call_installment_message') title = 'Reminder Call: Installment Due';
+                if (inputName === 'call_rent_message') title = 'Reminder Call: Rent Due';
                 preview.innerHTML = '<strong style="color:#be185d !important;">' + title + '</strong><p style="margin:0; color:#0f172a !important;">' + formatPreviewText(rawText) + '</p>';
             } else {
                 preview.innerHTML = formatPreviewText(rawText);

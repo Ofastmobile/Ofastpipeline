@@ -15,10 +15,46 @@ class OFP_Cron_Handler {
         add_action( 'ofp_daily_subscription_check', [ $this, 'check_subscriptions' ] );
         add_action( 'ofp_daily_credit_check',       [ $this, 'check_credits' ] );
         add_action( 'ofp_monthly_archive',          [ $this, 'monthly_archive' ] );
+
+        // Make sure every cron event exists, even after a plugin update with no reactivation.
+        add_action( 'init', [ __CLASS__, 'ensure_schedules' ] );
+
+        // Add the new instant email columns once, then clean up removed voice follow ups once.
+        OFP_Queue::ensure_columns();
+        OFP_Queue::migrate_voice_followups_once();
+    }
+
+    /**
+     * Create any cron event that is missing. Safe to run on every request,
+     * because an event that already exists is left alone.
+     */
+    public static function ensure_schedules(): void {
+        // The queue runs every 2 minutes. An older 5 minute event is replaced once.
+        $queue_schedule = wp_get_schedule( 'ofp_process_queue' );
+        if ( $queue_schedule && 'ofp_two_minutes' !== $queue_schedule ) {
+            wp_clear_scheduled_hook( 'ofp_process_queue' );
+            $queue_schedule = false;
+        }
+        if ( ! $queue_schedule ) {
+            wp_schedule_event( time() + 30, 'ofp_two_minutes', 'ofp_process_queue' );
+        }
+        if ( ! wp_next_scheduled( 'ofp_daily_subscription_check' ) ) {
+            wp_schedule_event( time() + 120, 'daily', 'ofp_daily_subscription_check' );
+        }
+        if ( ! wp_next_scheduled( 'ofp_daily_credit_check' ) ) {
+            wp_schedule_event( time() + 180, 'daily', 'ofp_daily_credit_check' );
+        }
+        if ( ! wp_next_scheduled( 'ofp_monthly_archive' ) ) {
+            wp_schedule_event( strtotime( 'first day of next month 02:00:00' ), 'monthly', 'ofp_monthly_archive' );
+        }
     }
 
     public function process_queue(): void {
-        OFP_Queue::process_due();
+        try {
+            OFP_Queue::process_due();
+        } catch ( \Throwable $e ) {
+            error_log( '[OFP_Cron_Handler] process_queue failed: ' . $e->getMessage() );
+        }
     }
 
     public function check_subscriptions(): void {

@@ -51,6 +51,21 @@ Needed because `app.../properties/` is already the **logged-in** "My Properties"
 
 ---
 
+## Update v2.2.10: marketplace host, property links, white label
+
+- Canonical public host is `marketplace.{base}`. `property.{base}` still works as an alias.
+- Single listings are `/property/{slug}/` on the marketplace host. The bare `/property/` is no longer a page
+  and now 301-redirects to `/marketplace/`.
+- White-label listings live only on the owner's own host (custom domain, else `{subdomain}.{base}`).
+  They are hidden from the main site, the marketplace, and site search.
+- On a white-label domain, `/marketplace/` shows only that client's listings. The root redirects to it.
+- Rewrite rules are flushed automatically once per plugin version, so a new route never needs a manual
+  Settings > Permalinks save after an update.
+- The embed/lead API (`/widget.js`, `/api/v1/properties`, `/api/v1/inquire`) is documented in
+  `white-label-dns-and-embed-widget-guide.md`.
+
+---
+
 ## Homepage — decision (no Elementor)
 
 Do **not** paste `hero.html` into a WordPress HTML widget or page builder.

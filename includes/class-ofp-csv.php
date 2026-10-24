@@ -869,7 +869,7 @@ class OFP_CSV {
                 $total_leads = array_sum( $series1 );
                 $total_conv  = array_sum( $series2 );
                 $active_leads = (int) $wpdb->get_var( $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status NOT IN ('converted', 'lost')",
+                    "SELECT COUNT(*) FROM {$p}ofp_leads WHERE client_id = %d AND status NOT IN ('converted', 'lost', 'dead')",
                     $client_id
                 ) );
                 $conv_rate = $total_leads > 0 ? round( ( $total_conv / $total_leads ) * 100 ) : 0;

@@ -2,9 +2,12 @@
  * Ofast Pipeline / MyPropertyHQ - Embeddable Property Widget
  * Allows clients to embed their active properties onto any external website.
  *
- * Usage:
+ * Usage (copy the exact snippet from your dashboard, /api-settings):
  * <div id="ofp-property-widget" data-client-id="YOUR_CLIENT_ID" data-limit="6"></div>
- * <script src="https://mypropertyhq.ng/wp-content/plugins/ofast-pipeline/assets/js/ofp-embed.js" async></script>
+ * <script src="https://YOUR-PLATFORM-DOMAIN/widget.js" async></script>
+ *
+ * Solo / white-label clients on their own domain can leave out data-client-id,
+ * the platform works it out from the domain the script is loaded from.
  */
 (function() {
     'use strict';
@@ -12,6 +15,29 @@
     // Prevent double execution
     if (window.__OFP_EMBED_INIT__) return;
     window.__OFP_EMBED_INIT__ = true;
+
+    // Everything that comes back from the API is treated as untrusted text and
+    // escaped before it goes into HTML. Titles and locations are typed by clients,
+    // and this script runs on THEIR visitors' pages, not on our site.
+    function esc(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    // Only http(s) links and images are allowed (blocks javascript: and data: URLs).
+    function safeUrl(value) {
+        var v = String(value == null ? '' : value).trim();
+        return /^https?:\/\//i.test(v) ? v : '';
+    }
+
+    function num(value) {
+        var n = parseInt(value, 10);
+        return isFinite(n) && n > 0 ? n : 0;
+    }
 
     // Determine script host origin
     var scriptOrigin = '';
@@ -206,17 +232,17 @@
 
                 var html = '<div class="ofp-property-grid">';
                 data.properties.forEach(function(item) {
-                    var title = item.title || 'Property';
-                    var price = item.formatted_price || 'Price on request';
-                    var loc = item.location || 'Location upon inquiry';
-                    var typeLabel = item.listing_type ? item.listing_type.toUpperCase() : 'FOR SALE';
-                    var img = item.image_url || '';
-                    var link = item.url || '#';
+                    var title = esc(item.title || 'Property');
+                    var price = esc(item.formatted_price || 'Price on request');
+                    var loc = esc(item.location || 'Location upon inquiry');
+                    var typeLabel = esc(item.listing_type ? String(item.listing_type).toUpperCase() : 'FOR SALE');
+                    var img = safeUrl(item.image_url);
+                    var link = safeUrl(item.url) || '#';
 
-                    html += '<a href="' + link + '" target="_blank" rel="noopener noreferrer" class="ofp-embed-card">';
+                    html += '<a href="' + esc(link) + '" target="_blank" rel="noopener noreferrer" class="ofp-embed-card">';
                     html += '<div class="ofp-embed-media">';
                     if (img) {
-                        html += '<img src="' + img + '" alt="' + title + '" loading="lazy" />';
+                        html += '<img src="' + esc(img) + '" alt="' + title + '" loading="lazy" />';
                     }
                     html += '<span class="ofp-embed-pill-type">' + typeLabel + '</span>';
                     html += '</div>';
@@ -230,11 +256,11 @@
                     html += '</div>';
 
                     html += '<div class="ofp-embed-specs">';
-                    if (item.bedrooms > 0) {
-                        html += '<span class="ofp-embed-spec-item"><strong>' + item.bedrooms + '</strong> Beds</span>';
+                    if (num(item.bedrooms) > 0) {
+                        html += '<span class="ofp-embed-spec-item"><strong>' + num(item.bedrooms) + '</strong> Beds</span>';
                     }
-                    if (item.bathrooms > 0) {
-                        html += '<span class="ofp-embed-spec-item"><strong>' + item.bathrooms + '</strong> Baths</span>';
+                    if (num(item.bathrooms) > 0) {
+                        html += '<span class="ofp-embed-spec-item"><strong>' + num(item.bathrooms) + '</strong> Baths</span>';
                     }
                     html += '<span class="ofp-embed-btn">View Details &rarr;</span>';
                     html += '</div>';

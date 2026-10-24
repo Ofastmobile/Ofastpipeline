@@ -131,8 +131,9 @@ class OFP_Credit {
             self::trigger_low_warning( $client_id, $channel, $remaining );
         }
 
-        // Pause automation if balance exhausted.
-        if ( $remaining <= 0 ) {
+        // Pause the pipeline only when SMS credit runs out. Running out of voice
+        // credit must never stop SMS and email follow ups.
+        if ( 'sms' === $channel && $remaining <= 0 ) {
             $wpdb->update(
                 $p . 'ofp_credits',
                 [ 'paused' => 1 ],
@@ -172,7 +173,7 @@ class OFP_Credit {
                 "UPDATE {$p}ofp_credits
                  SET {$col}_loaded    = {$col}_loaded + %f,
                      {$col}_remaining = {$col}_remaining + %f,
-                     paused           = 0,
+                     paused           = CASE WHEN sms_remaining <= 0 THEN 1 ELSE 0 END,
                      low_warned       = 0,
                      updated_at       = NOW()
                  WHERE client_id = %d",

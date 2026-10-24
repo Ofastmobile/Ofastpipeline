@@ -89,6 +89,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 
         if ( empty( $email ) || empty( $password ) ) {
             $error = 'Please enter your email and password.';
+        } elseif ( ! OFP_Security::verify_turnstile_request() ) {
+            $error = 'Please complete the security check and try again.';
         } else {
             $credentials_valid = OFP_Auth::check_credentials( $email, $password );
 
@@ -304,6 +306,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                                     <span class="ofp-checkbox-text">Remember me for 7 days</span>
                                 </label>
                             </div>
+
+                            <?php echo OFP_Security::turnstile_widget(); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 
                             <button type="submit" class="ofp-split-submit-btn">
                                 <span>Sign In</span>

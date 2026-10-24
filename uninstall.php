@@ -67,6 +67,7 @@ $option_keys = [
     'ofp_monnify_base_url',
     'ofp_turnstile_secret',
     'ofp_turnstile_site_key',
+    'ofp_rewrite_version',
 ];
 foreach ( $option_keys as $key ) {
     delete_option( $key );

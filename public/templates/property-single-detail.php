@@ -1,4 +1,5 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 // Phase 23: Facebook Meta Pixel Injection
 add_action( 'wp_head', function() {
     $post_id = get_the_ID();
@@ -352,7 +353,20 @@ if ( empty( $gallery_urls ) ) {
                     .then(data => {
                         this.inquiryLoading = false;
                         this.actionLoading = '';
-                        this.inquirySuccess = true;
+
+                        // The server answers 200 with success:false when it rejects a
+                        // lead (security check, bad phone, rate limit). This used to be
+                        // ignored, so the visitor saw "sent" while nothing was saved.
+                        const rejected = !!(data && data.success === false);
+                        if (rejected && action === 'booking') {
+                            this.inquiryError = (data && data.message) || 'We could not send your request. Please try again.';
+                            return;
+                        }
+                        // For WhatsApp and Call the visitor still reaches the agent, we
+                        // just do not claim the request was logged.
+                        if (!rejected) {
+                            this.inquirySuccess = true;
+                        }
 
                         if (action === 'whatsapp') {
                             window.open(targetWaUrl, '_blank');

@@ -1,4 +1,5 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 /**
  * OFP_Mailer
  *
@@ -266,7 +267,8 @@ class OFP_Mailer {
         string $to,
         string $subject,
         string $body_html,
-        int $client_id
+        int $client_id,
+        ?int $lead_id = null
     ): bool {
         if ( empty( $to ) || ! is_email( $to ) ) {
             return false;
@@ -310,7 +312,7 @@ class OFP_Mailer {
         if ( class_exists( 'OFP_Communications_Log' ) && ! empty( $client_id ) ) {
             OFP_Communications_Log::log(
                 (int) $client_id,
-                null,
+                $lead_id ?: null,
                 'email',
                 $to,
                 'outbound',

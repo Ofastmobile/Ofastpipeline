@@ -116,7 +116,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                         <td><strong><?php echo esc_html( strtoupper( $t->type ) ); ?></strong></td>
                         <td><?php echo esc_html( $t->business_name ); ?></td>
                         <td><?php echo esc_html( $t->lead_phone ); ?></td>
-                        <td><?php echo esc_html( $t->scheduled_at ); ?></td>
+                        <td><?php echo esc_html( get_date_from_gmt( $t->scheduled_at, 'Y-m-d H:i' ) ); ?></td>
                         <td><?php echo $status_badges[ $t->status ] ?? esc_html( $t->status ); ?></td>
                         <td><?php echo esc_html( $t->attempts ); ?></td>
                         <td>

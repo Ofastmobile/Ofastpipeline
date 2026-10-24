@@ -642,6 +642,35 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                 </div>
                             </div>
 
+                            <!-- Instant Email -->
+                            <div class="ofp-field-group" style="margin-bottom: 24px;">
+                                <div class="ofp-field-label-row">
+                                    <label class="ofp-field-label">1b. Instant Welcome Email (Sent immediately with the Instant SMS)</label>
+                                </div>
+                                <div class="ofp-input-box" style="margin-bottom: 10px;">
+                                    <input type="text" name="ofp_default_instant_email_subject"
+                                           value="<?php echo esc_attr( get_option( 'ofp_default_instant_email_subject', '' ) ); ?>"
+                                           placeholder="Thank you for contacting {{business_name}}">
+                                </div>
+                                <textarea id="ofp_instant_email" name="ofp_default_instant_email_message" rows="4"
+                                          placeholder="Hi {{name}}, thank you for contacting {{business_name}}. We have received your message and one of our team will reach out to you shortly. If you need us urgently, reply to this email or call us."><?php echo esc_textarea( get_option( 'ofp_default_instant_email_message', '' ) ); ?></textarea>
+                                <div class="ofp-char-counter-bar">
+                                    <span class="ofp-field-hint">Sent to leads who gave an email. Clients can change it on their Automation page. When a client leaves it empty, this text is used. Email costs no credit.</span>
+                                </div>
+                            </div>
+
+                            <!-- New lead alert default -->
+                            <div class="ofp-switch-row" style="margin-bottom: 24px;">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">New lead alert SMS to the client (default for new clients)</span>
+                                    <p class="ofp-switch-desc">When a lead comes in, the client always gets a bell alert and an email based on their notification setting. This switch decides whether new clients also get an SMS to their own phone. It uses 1 SMS credit per lead. Clients can change it on their Automation page.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_default_alert_sms" value="1" <?php checked( get_option( 'ofp_default_alert_sms', '1' ), '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
                             <!-- Follow-up 1 -->
                             <div class="ofp-field-group" style="margin-bottom: 24px;">
                                 <div class="ofp-field-label-row">
@@ -661,10 +690,10 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                 </div>
                             </div>
 
-                            <!-- Follow-up 2 (IVR Voice) -->
+                            <!-- Follow-up 2 -->
                             <div class="ofp-field-group" style="margin-bottom: 24px;">
                                 <div class="ofp-field-label-row">
-                                    <label class="ofp-field-label">3. Follow-up 2 Message (IVR Voice Call — 24 hours later)</label>
+                                    <label class="ofp-field-label">3. Follow-up 2 Message (SMS, 24 hours later)</label>
                                     <div class="ofp-chips-container">
                                         <span class="ofp-chips-label">Insert:</span>
                                         <button type="button" class="ofp-chip" data-insert="{{name}}" data-target="ofp_followup_2">+ {{name}}</button>
@@ -672,8 +701,8 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                     </div>
                                 </div>
                                 <textarea id="ofp_followup_2" name="ofp_default_followup_2" rows="4"
-                                          placeholder="Hello, this is a message from {{business_name}}. You recently showed interest in our services. Press 1 to speak with us now. Press 2 for our WhatsApp contact. Press 3 for a callback later."><?php echo esc_textarea( get_option( 'ofp_default_followup_2', '' ) ); ?></textarea>
-                                <p class="ofp-field-hint">Spoken by Text-to-Speech during automated voice IVR outreach. Keep phrasing natural and clear.</p>
+                                          placeholder="Hi {{name}}, this is {{business_name}}. We are still happy to help you with {{property}}. Reply to this message or call us anytime."><?php echo esc_textarea( get_option( 'ofp_default_followup_2', '' ) ); ?></textarea>
+                                <p class="ofp-field-hint">Sent as an SMS. Placeholders: {{name}} {{business_name}} {{property}} {{phone}}.</p>
                             </div>
 
                             <!-- Follow-up 3 -->
@@ -1077,7 +1106,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                                value="<?php echo esc_attr( $at_phone ); ?>"
                                                placeholder="e.g. +2348000000000">
                                     </div>
-                                    <p class="ofp-field-hint">Caller ID used when dialing automated IVR voice sequences.</p>
+                                    <p class="ofp-field-hint">Caller ID used for call script calls (lead interest and payment reminders).</p>
                                 </div>
                             </div>
                         </div>
@@ -1433,7 +1462,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                 </div>
                                 <div class="ofp-card-title-group">
                                     <h3>Cloudflare Turnstile (Anti-Bot Protection)</h3>
-                                    <p>Frictionless CAPTCHA alternative protecting lead generation forms, registration (/signup), and login (/login).</p>
+                                    <p>Frictionless CAPTCHA alternative protecting registration (/signup) and login (/login) only. Lead and inspection forms are not affected. Skipped on a white-label client's own custom domain unless that hostname is added to the widget in Cloudflare.</p>
                                 </div>
                             </div>
                             <?php if ( ! empty( $turnstile_site ) && $has_turnstile_sec ) : ?>
@@ -1465,7 +1494,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                         </button>
                                     </div>
-                                    <p class="ofp-field-hint">Leave blank in local development. When no secret key is set, Turnstile is automatically bypassed without errors.</p>
+                                    <p class="ofp-field-hint">Add every hostname that shows /login or /signup (your domain, app., and client subdomains) to this widget in Cloudflare. Leave blank to switch Turnstile off.</p>
                                 </div>
                             </div>
                         </div>

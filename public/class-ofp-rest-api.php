@@ -33,7 +33,10 @@ class OFP_REST_API {
     public function __construct() {
         add_action( 'rest_api_init', [ $this, 'register_routes' ] );
         add_action( 'rest_api_init', [ $this, 'add_cors_headers' ] );
-        add_action( 'init',          [ $this, 'handle_stealth_routes' ], 1 );
+        // Priority 20, not 1: the property CPT registers on init priority 10. At
+        // priority 1 get_permalink() cannot build pretty /property/{slug}/ URLs
+        // yet and returns ?post_type=ofp_property&p=ID instead.
+        add_action( 'init',          [ $this, 'handle_stealth_routes' ], 20 );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -49,20 +52,27 @@ class OFP_REST_API {
     public function add_cors_headers(): void {
         remove_filter( 'rest_pre_serve_request', 'rest_send_cors_headers' );
 
-        add_filter( 'rest_pre_serve_request', function ( $value ) {
+        add_filter( 'rest_pre_serve_request', function ( $value, $result = null, $request = null ) {
+            // Only OUR namespace is open to any origin. Every other REST route
+            // (wp/v2, WooCommerce, other plugins) keeps WordPress's own CORS
+            // handling. Before, this plugin replaced it site-wide.
+            if ( ! ( $request instanceof WP_REST_Request ) || 0 !== strpos( $request->get_route(), '/ofp/v1/' ) ) {
+                return rest_send_cors_headers( $value );
+            }
+
             header( 'Access-Control-Allow-Origin: *' );
             header( 'Access-Control-Allow-Methods: POST, GET, OPTIONS' );
             header( 'Access-Control-Allow-Headers: Content-Type, X-Requested-With' );
             header( 'Access-Control-Max-Age: 86400' );
 
             // Handle preflight OPTIONS requests.
-            if ( 'OPTIONS' === $_SERVER['REQUEST_METHOD'] ) {
+            if ( 'OPTIONS' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {
                 status_header( 200 );
                 exit;
             }
 
             return $value;
-        } );
+        }, 10, 3 );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -152,14 +162,11 @@ class OFP_REST_API {
             600
         );
 
-        // ── 3. Turnstile verification ─────────────────────────────────────────
-        $turnstile_token = $request->get_param( 'cf-turnstile-response' );
-        if ( ! OFP_Security::verify_turnstile( $turnstile_token ) ) {
-            return new WP_REST_Response(
-                [ 'success' => false, 'message' => 'Security verification failed. Please try again.' ],
-                200
-            );
-        }
+        // ── 3. (no Turnstile here) ────────────────────────────────────────────
+        // Turnstile is only on login and sign-up. Lead and inspection forms are
+        // protected by the honeypot, the phone check, the duplicate check and the
+        // per-IP rate limit above/below. For heavy bot traffic add a Cloudflare
+        // rate limiting rule on /api/v1/inquire and /wp-json/ofp/v1/capture-lead.
 
         // ── 4. Validate inputs ────────────────────────────────────────────────
         $client_id   = (int) $request->get_param( 'client_id' );
@@ -169,6 +176,22 @@ class OFP_REST_API {
         $property_id = (int) $request->get_param( 'property_id' ) ?: null;
         $message     = sanitize_textarea_field( (string) $request->get_param( 'message' ) );
         $source      = $request->get_header( 'referer' ) ?: 'property_detail';
+
+        // Match the column sizes (ofp_leads.name = 100, source = 150). A longer
+        // value makes the INSERT fail in strict SQL mode and the lead is lost.
+        $name   = function_exists( 'mb_substr' ) ? mb_substr( $name, 0, 100 )   : substr( $name, 0, 100 );
+        $source = function_exists( 'mb_substr' ) ? mb_substr( $source, 0, 150 ) : substr( $source, 0, 150 );
+
+        // A property id sent from outside is only trusted when it is a real
+        // listing AND belongs to the client it is sent with. Otherwise it is
+        // dropped (the lead itself is still saved).
+        if ( $property_id ) {
+            if ( 'ofp_property' !== get_post_type( $property_id ) ) {
+                $property_id = null;
+            } elseif ( $client_id && (int) get_post_meta( $property_id, 'ofp_client_id', true ) !== $client_id ) {
+                $property_id = null;
+            }
+        }
 
         // Support platform-owned listings (client_id 0)
         $is_platform_property = false;
@@ -229,6 +252,19 @@ class OFP_REST_API {
                 ) );
                 if ( $existing_lead_id ) {
                     $this->record_property_inquiry( $existing_lead_id, $property_id, $client_id, $request );
+                    // Keep the lead record in step with the new inspection request.
+                    $note = $this->inspection_note( $property_id, $request );
+                    if ( $note ) {
+                        $old = (string) $wpdb->get_var( $wpdb->prepare(
+                            "SELECT notes FROM {$wpdb->prefix}ofp_leads WHERE id = %d",
+                            $existing_lead_id
+                        ) );
+                        $wpdb->update(
+                            $wpdb->prefix . 'ofp_leads',
+                            [ 'notes' => trim( $old . "\n" . $note ) ],
+                            [ 'id' => $existing_lead_id ]
+                        );
+                    }
                 }
             }
             return new WP_REST_Response(
@@ -238,6 +274,14 @@ class OFP_REST_API {
         }
 
         // ── 7. Create lead and populate trigger queue ─────────────────────────
+        // An inspection request IS a lead. Its details (property, tour type, date,
+        // time) are written into the lead notes so the lead screen, triggers and
+        // automation all see them, not only the Inspections page.
+        $inspection = $property_id ? $this->inspection_note( $property_id, $request ) : '';
+        if ( $inspection ) {
+            $message = trim( $message . "\n" . $inspection );
+        }
+
         $lead_id = OFP_Lead::create(
             $client_id,
             $name,
@@ -259,6 +303,10 @@ class OFP_REST_API {
         // Automation queue only runs for clients with CRM configs
         if ( $client_id > 0 ) {
             OFP_Queue::populate_triggers( $client_id, $lead_id );
+
+            // Instant SMS and email to the lead, and a new lead alert to the client.
+            // This runs after the visitor has their thank you reply.
+            OFP_Queue::send_instant_after_response( $client_id, $lead_id );
 
             // Simple "an agent will reach out" call, if the client switched it on.
             // Only form leads reach this point. Manual uploads never do.
@@ -353,6 +401,27 @@ class OFP_REST_API {
      * @param  WP_REST_Request $request      Original request.
      * @return void
      */
+    /**
+     * One readable line describing an inspection request, or '' when the
+     * request carries no inspection details.
+     */
+    private function inspection_note( int $property_id, WP_REST_Request $request ): string {
+        $tour = sanitize_key( (string) ( $request->get_param( 'tour_type' ) ?? '' ) );
+        $date = sanitize_text_field( (string) ( $request->get_param( 'viewing_date' ) ?? '' ) );
+        $time = sanitize_text_field( (string) ( $request->get_param( 'viewing_time' ) ?? '' ) );
+        if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+            $date = '';
+        }
+        if ( '' === $tour && '' === $date && '' === $time ) {
+            return '';
+        }
+        $parts = [ 'Inspection request: ' . get_the_title( $property_id ) . ' (#' . $property_id . ')' ];
+        $parts[] = 'whatsapp_video' === $tour ? 'WhatsApp video tour' : 'Physical visit';
+        if ( $date ) { $parts[] = $date; }
+        if ( $time ) { $parts[] = substr( $time, 0, 30 ); }
+        return implode( ' | ', $parts );
+    }
+
     private function record_property_inquiry(
         int $lead_id,
         int $property_id,
@@ -364,17 +433,34 @@ class OFP_REST_API {
         $viewing_date = sanitize_text_field( $request->get_param( 'viewing_date' ) ?? '' );
         $message      = sanitize_textarea_field( $request->get_param( 'message' ) ?? '' );
 
-        $wpdb->insert(
-            $wpdb->prefix . 'ofp_property_inquiries',
-            [
-                'lead_id'               => $lead_id,
-                'property_id'           => $property_id,
-                'client_id'             => $client_id,
-                'preferred_viewing_date' => $viewing_date ?: null,
-                'message'               => $message ?: null,
-                'created_at'            => current_time( 'mysql' ),
-            ]
-        );
+        // The column is DATE. Anything that is not YYYY-MM-DD would make the
+        // whole insert fail, so it is stored as NULL instead.
+        if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $viewing_date ) ) {
+            $viewing_date = '';
+        }
+
+        $row = [
+            'lead_id'                => $lead_id,
+            'property_id'            => $property_id,
+            'client_id'              => $client_id,
+            'preferred_viewing_date' => $viewing_date ?: null,
+            'message'                => $message ?: null,
+            'created_at'             => current_time( 'mysql' ),
+        ];
+
+        // tour_type and preferred_viewing_time exist once OFP_Property_Inquiry has
+        // migrated the table. The property page sends both and the Inspections
+        // screen shows them, but they were never saved. Only written when the
+        // columns exist, so an un-migrated site does not lose the whole row.
+        if ( get_option( 'ofp_schema_inquiries_v2' ) ) {
+            $tour_type = sanitize_key( (string) ( $request->get_param( 'tour_type' ) ?? '' ) );
+            $view_time = sanitize_text_field( (string) ( $request->get_param( 'viewing_time' ) ?? '' ) );
+
+            $row['tour_type']              = in_array( $tour_type, [ 'physical', 'whatsapp_video' ], true ) ? $tour_type : 'physical';
+            $row['preferred_viewing_time'] = $view_time !== '' ? substr( $view_time, 0, 30 ) : null;
+        }
+
+        $wpdb->insert( $wpdb->prefix . 'ofp_property_inquiries', $row );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -383,7 +469,19 @@ class OFP_REST_API {
 
     /**
      * Public property feed for website embed widgets.
-     * Returns active properties for a given client with permalinks.
+     *
+     * What this returns, and why it is safe to leave public:
+     *  - Only a fixed allow-list of fields (see $properties below). No raw rows,
+     *    no table names, no file paths, no owner contact details.
+     *  - Only listings that are live in ofp_properties AND published in WordPress
+     *    AND not currently let (OFP_Property_Rent_Visibility applies through
+     *    WP_Query). The old raw SQL feed skipped the last two checks.
+     *  - Unknown, suspended, cancelled or trashed clients all get the same empty
+     *    200 answer, so client ids cannot be enumerated by status.
+     *
+     * Where each card links (decided by OFP_Property_CPT::rewrite_permalink_...):
+     *  - normal subscriber      -> marketplace.{base_domain}/property/{slug}/
+     *  - white label client     -> their own host (custom domain, else subdomain)
      *
      * @param  WP_REST_Request $request
      * @return WP_REST_Response
@@ -400,55 +498,91 @@ class OFP_REST_API {
             ], 400 );
         }
 
-        $limit = min( 24, max( 1, (int) ( $request->get_param( 'limit' ) ?: 6 ) ) );
-        $type  = sanitize_text_field( $request->get_param( 'type' ) ?: '' );
+        $limit    = min( 24, max( 1, (int) ( $request->get_param( 'limit' ) ?: 6 ) ) );
+        $type     = sanitize_key( (string) ( $request->get_param( 'type' ) ?: '' ) );
+        $type_key = in_array( $type, [ 'sale', 'rent', 'land', 'shortlet' ], true ) ? $type : '';
 
-        $p = $wpdb->prefix;
+        // Short cache: the feed is public and every visitor of every embedding
+        // website calls it. 60 seconds keeps the database quiet and new listings
+        // still appear within a minute.
+        $cache_key = 'ofp_feed_' . md5( $client_id . '|' . $limit . '|' . $type_key );
+        $cached    = get_transient( $cache_key );
+        if ( is_array( $cached ) ) {
+            return $this->feed_response( $cached );
+        }
+
+        $empty = [ 'success' => true, 'client_name' => '', 'count' => 0, 'properties' => [] ];
+        $p     = $wpdb->prefix;
+
         $client = $wpdb->get_row( $wpdb->prepare(
-            "SELECT id, business_name, owner_name, custom_domain, is_white_label FROM {$p}ofp_clients WHERE id = %d LIMIT 1",
+            "SELECT id, business_name, status FROM {$p}ofp_clients WHERE id = %d LIMIT 1",
             $client_id
         ) );
 
-        if ( ! $client ) {
-            return new WP_REST_Response( [
-                'success'    => false,
-                'message'    => 'Client not found.',
-                'properties' => [],
-            ], 404 );
+        if ( ! $client || in_array( $client->status, [ 'suspended', 'cancelled', 'trash' ], true ) ) {
+            return $this->feed_response( $empty );
         }
 
-        $where = [ 'client_id = %d', "status = 'live'" ];
+        $where = [ 'client_id = %d', "status = 'live'", 'wp_post_id > 0' ];
         $args  = [ $client_id ];
 
-        if ( in_array( $type, [ 'sale', 'rent', 'land' ], true ) ) {
+        if ( $type_key !== '' ) {
             $where[] = 'listing_type = %s';
-            $args[]  = $type;
+            $args[]  = $type_key;
         }
 
-        $where_sql = implode( ' AND ', $where );
-        $args[]    = $limit;
+        // Ask for more rows than the limit: some are removed below (not published,
+        // currently let), and the visitor should still get a full grid.
+        $args[] = $limit * 3;
 
         $rows = $wpdb->get_results( $wpdb->prepare(
-            "SELECT id, wp_post_id, title, price, location_text, listing_type, created_at 
-             FROM {$p}ofp_properties 
-             WHERE {$where_sql} 
-             ORDER BY id DESC 
+            "SELECT id, wp_post_id, title, price, location_text, listing_type
+             FROM {$p}ofp_properties
+             WHERE " . implode( ' AND ', $where ) . "
+             ORDER BY id DESC
              LIMIT %d",
             ...$args
         ) );
 
-        $properties = [];
+        $by_post = [];
         foreach ( (array) $rows as $row ) {
-            $post_id   = (int) $row->wp_post_id;
-            $permalink = get_permalink( $post_id ) ?: '';
+            $by_post[ (int) $row->wp_post_id ] = $row;
+        }
 
-            // If white label client has a custom domain configured, ensure permalink targets their domain
-            if ( ! empty( $client->is_white_label ) && ! empty( $client->custom_domain ) ) {
-                $custom_host = preg_replace( '#^https?://#', '', trim( $client->custom_domain ) );
-                $permalink   = preg_replace( '#^https?://[^/]+#', 'https://' . $custom_host, $permalink );
+        if ( ! $by_post ) {
+            $empty['client_name'] = (string) $client->business_name;
+            return $this->feed_response( $empty );
+        }
+
+        // WP_Query so that publish status and the "currently let" rule are applied.
+        // ofp_all_clients lifts the white label host scoping, because this feed is
+        // called from the main host or from a client's external website, not from
+        // the white label client's own domain.
+        $query = new WP_Query( [
+            'post_type'           => 'ofp_property',
+            'post_status'         => 'publish',
+            'post__in'            => array_keys( $by_post ),
+            'orderby'             => 'post__in',
+            'posts_per_page'      => $limit,
+            'no_found_rows'       => true,
+            'ignore_sticky_posts' => true,
+            'ofp_all_clients'     => true,
+        ] );
+
+        $period_suffix = [ 'year' => '/yr', 'month' => '/mo', 'night' => '/night' ];
+        $properties    = [];
+
+        foreach ( $query->posts as $post ) {
+            $post_id = (int) $post->ID;
+            $row     = $by_post[ $post_id ] ?? null;
+            if ( ! $row ) {
+                continue;
             }
 
-            // Cover Image
+            // The post_type_link filter puts white label listings on their own host
+            // (or subdomain) and normal subscribers on the marketplace subdomain.
+            $permalink = (string) get_permalink( $post_id );
+
             $img_url = get_the_post_thumbnail_url( $post_id, 'medium_large' );
             if ( ! $img_url ) {
                 $gallery = get_post_meta( $post_id, 'ofp_gallery', true );
@@ -460,31 +594,48 @@ class OFP_REST_API {
                 $img_url = defined( 'OFP_URL' ) ? OFP_URL . 'assets/images/placeholder-property.jpg' : '';
             }
 
-            $bedrooms    = (int) get_post_meta( $post_id, 'ofp_bedrooms', true );
-            $bathrooms   = (int) get_post_meta( $post_id, 'ofp_bathrooms', true );
             $currency    = get_post_meta( $post_id, 'ofp_currency', true ) ?: 'NGN';
             $curr_symbol = ( $currency === 'USD' ) ? '$' : ( ( $currency === 'GBP' ) ? '£' : '₦' );
+            $rent_period = (string) get_post_meta( $post_id, 'ofp_rent_period', true );
+            $suffix      = ( 'rent' === $row->listing_type && isset( $period_suffix[ $rent_period ] ) )
+                ? ' ' . $period_suffix[ $rent_period ]
+                : '';
 
             $properties[] = [
                 'id'              => (int) $row->id,
-                'title'           => $row->title,
+                'title'           => (string) $row->title,
                 'price'           => (float) $row->price,
-                'formatted_price' => $curr_symbol . number_format( (float) $row->price ),
-                'location'        => $row->location_text ?: '',
-                'listing_type'    => $row->listing_type ?: 'sale',
-                'bedrooms'        => $bedrooms,
-                'bathrooms'       => $bathrooms,
-                'image_url'       => $img_url,
+                'formatted_price' => $curr_symbol . number_format( (float) $row->price ) . $suffix,
+                'location'        => (string) ( $row->location_text ?: '' ),
+                'listing_type'    => (string) ( $row->listing_type ?: 'sale' ),
+                'bedrooms'        => (int) get_post_meta( $post_id, 'ofp_bedrooms', true ),
+                'bathrooms'       => (int) get_post_meta( $post_id, 'ofp_bathrooms', true ),
+                'image_url'       => (string) $img_url,
                 'url'             => $permalink,
             ];
         }
 
-        return new WP_REST_Response( [
+        $payload = [
             'success'     => true,
-            'client_name' => $client->business_name ?: $client->owner_name,
+            // Brand name only. owner_name is a private person's name.
+            'client_name' => (string) $client->business_name,
             'count'       => count( $properties ),
             'properties'  => $properties,
-        ], 200 );
+        ];
+
+        set_transient( $cache_key, $payload, 60 );
+
+        return $this->feed_response( $payload );
+    }
+
+    /**
+     * Wrap a feed payload with a short public cache header, so browsers and
+     * Cloudflare can absorb repeat hits from busy client websites.
+     */
+    private function feed_response( array $payload ): WP_REST_Response {
+        $response = new WP_REST_Response( $payload, 200 );
+        $response->header( 'Cache-Control', 'public, max-age=60' );
+        return $response;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -492,20 +643,33 @@ class OFP_REST_API {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Handles clean, stealth SaaS routes:
+     * Handles clean, branded SaaS routes:
      *  - /widget.js          -> Serves embed script without plugin path
-     *  - /api/v1/inquire     -> Stealth lead capture endpoint
-     *  - /api/v1/properties  -> Stealth property feed endpoint
+     *  - /api/v1/inquire     -> Lead capture endpoint
+     *  - /api/v1/properties  -> Property feed endpoint
      *
      * Supports automatic client identification from custom domains / subdomains.
+     *
+     * NOTE: these hide the plugin folder from the SNIPPET a client pastes, not from
+     * the site. WordPress still prints /wp-content/plugins/ofast-pipeline/ asset
+     * URLs on public pages, so do not rely on this for secrecy. The real
+     * protections are the allow-listed feed above, the ABSPATH guard on every PHP
+     * file, and web server settings (no directory listing).
      */
     public function handle_stealth_routes(): void {
         $uri  = $_SERVER['REQUEST_URI'] ?? '';
         $path = trim( (string) parse_url( $uri, PHP_URL_PATH ), '/' );
 
+        if ( ! in_array( $path, [ 'widget.js', 'api/v1/inquire', 'api/v1/properties' ], true ) ) {
+            return;
+        }
+
+        $method = strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) );
+
         // 1. /widget.js
         if ( $path === 'widget.js' ) {
             header( 'Content-Type: application/javascript; charset=utf-8' );
+            header( 'X-Content-Type-Options: nosniff' );
             header( 'Access-Control-Allow-Origin: *' );
             header( 'Cache-Control: public, max-age=3600' );
             $file = OFP_PATH . 'assets/js/ofp-embed.js';
@@ -515,21 +679,38 @@ class OFP_REST_API {
             exit;
         }
 
+        // Both API routes below answer in JSON and are called cross-origin.
+        header( 'Access-Control-Allow-Origin: *' );
+        header( 'X-Content-Type-Options: nosniff' );
+
         // 2. /api/v1/inquire
         if ( $path === 'api/v1/inquire' ) {
-            header( 'Access-Control-Allow-Origin: *' );
             header( 'Access-Control-Allow-Methods: POST, OPTIONS' );
             header( 'Access-Control-Allow-Headers: Content-Type, X-Requested-With, Authorization' );
 
-            if ( ( $_SERVER['REQUEST_METHOD'] ?? '' ) === 'OPTIONS' ) {
+            if ( $method === 'OPTIONS' ) {
                 status_header( 204 );
                 exit;
             }
+            if ( $method !== 'POST' ) {
+                header( 'Allow: POST, OPTIONS' );
+                wp_send_json( [ 'success' => false, 'message' => 'Method not allowed.' ], 405 );
+            }
 
-            // Parse body
+            // Tell OFP_Security::check_rate_limit() to answer in JSON, not an HTML page.
+            if ( ! defined( 'OFP_JSON_API' ) ) {
+                define( 'OFP_JSON_API', true );
+            }
+            nocache_headers();
+
+            // WordPress adds slashes to $_POST. The REST server removes them before
+            // a handler sees the data, this route has to do the same, otherwise
+            // "O'Brien" is saved as "O\'Brien".
             $raw_input   = file_get_contents( 'php://input' );
-            $json_body   = json_decode( $raw_input, true );
-            $body_params = is_array( $json_body ) ? array_merge( $_POST, $json_body ) : $_POST;
+            $json_body   = json_decode( (string) $raw_input, true );
+            $body_params = is_array( $json_body )
+                ? array_merge( wp_unslash( $_POST ), $json_body )
+                : wp_unslash( $_POST );
 
             // Auto-resolve client_id from host if on custom domain or client subdomain
             if ( empty( $body_params['client_id'] ) && class_exists( 'OFP_Host_Router' ) ) {
@@ -541,24 +722,33 @@ class OFP_REST_API {
 
             $req = new WP_REST_Request( 'POST', '/ofp/v1/capture-lead' );
             $req->set_body_params( $body_params );
+
+            // A hand-built request has no headers. Pass the real referer through so
+            // the lead's "source" shows which page of the client's site it came from.
+            if ( ! empty( $_SERVER['HTTP_REFERER'] ) ) {
+                $req->set_header( 'referer', esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) );
+            }
+
             $res = $this->capture_lead( $req );
 
             wp_send_json( $res->get_data(), $res->get_status() );
-            exit;
         }
 
         // 3. /api/v1/properties
         if ( $path === 'api/v1/properties' ) {
-            header( 'Access-Control-Allow-Origin: *' );
             header( 'Access-Control-Allow-Methods: GET, OPTIONS' );
             header( 'Access-Control-Allow-Headers: Content-Type, X-Requested-With' );
 
-            if ( ( $_SERVER['REQUEST_METHOD'] ?? '' ) === 'OPTIONS' ) {
+            if ( $method === 'OPTIONS' ) {
                 status_header( 204 );
                 exit;
             }
+            if ( $method !== 'GET' && $method !== 'HEAD' ) {
+                header( 'Allow: GET, HEAD, OPTIONS' );
+                wp_send_json( [ 'success' => false, 'message' => 'Method not allowed.', 'properties' => [] ], 405 );
+            }
 
-            $query_params = $_GET;
+            $query_params = wp_unslash( $_GET );
 
             // Auto-resolve client_id from host if on custom domain or client subdomain
             if ( empty( $query_params['client_id'] ) && class_exists( 'OFP_Host_Router' ) ) {
@@ -572,8 +762,10 @@ class OFP_REST_API {
             $req->set_query_params( $query_params );
             $res = $this->get_properties( $req );
 
+            foreach ( $res->get_headers() as $name => $value ) {
+                header( $name . ': ' . $value );
+            }
             wp_send_json( $res->get_data(), $res->get_status() );
-            exit;
         }
     }
 }

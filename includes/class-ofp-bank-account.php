@@ -327,7 +327,35 @@ class OFP_Bank_Account {
 		return [ 'success' => false, 'message' => $msg ];
 	}
 
+	/**
+	 * Only a logged-in client (or a WordPress admin) may use the bank tools.
+	 * These calls spend the platform's Paystack key and reveal the name on a bank
+	 * account, so they must never be open to anonymous visitors. The only screen
+	 * that uses them is the client account page.
+	 */
+	private static function caller_allowed(): bool {
+		return ( class_exists( 'OFP_Auth' ) && OFP_Auth::current_client() ) || current_user_can( 'manage_options' );
+	}
+
 	public static function ajax_resolve_account(): void {
+		if ( ! self::caller_allowed() ) {
+			wp_send_json_error( [ 'message' => 'Please log in again to verify a bank account.' ], 401 );
+		}
+		if ( ! check_ajax_referer( 'ofp_bank_lookup', 'nonce', false ) ) {
+			wp_send_json_error( [ 'message' => 'This page has expired. Please reload it and try again.' ], 403 );
+		}
+
+		// 20 lookups per 10 minutes for one client, and the same for one IP.
+		// check_rate_limit() answers in JSON when OFP_JSON_API is defined.
+		if ( ! defined( 'OFP_JSON_API' ) ) {
+			define( 'OFP_JSON_API', true );
+		}
+		$client = class_exists( 'OFP_Auth' ) ? OFP_Auth::current_client() : null;
+		if ( $client && ! empty( $client->id ) ) {
+			OFP_Security::check_rate_limit( 'client:' . (int) $client->id, 'bank_resolve', 20, 600 );
+		}
+		OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'bank_resolve', 20, 600 );
+
 		$account_number = sanitize_text_field( $_POST['account_number'] ?? '' );
 		$bank_code      = sanitize_text_field( $_POST['bank_code'] ?? '' );
 
@@ -340,6 +368,9 @@ class OFP_Bank_Account {
 	}
 
 	public static function ajax_get_bank_list(): void {
+		if ( ! self::caller_allowed() ) {
+			wp_send_json_error( [ 'message' => 'Please log in again.' ], 401 );
+		}
 		wp_send_json_success( [ 'banks' => self::get_banks() ] );
 	}
 }

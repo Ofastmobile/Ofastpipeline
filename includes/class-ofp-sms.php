@@ -90,6 +90,19 @@ class OFP_SMS {
     }
 
     /**
+     * How many SMS segments a message uses. One segment holds 160 characters.
+     * A longer message is split into pieces of 153 characters.
+     * This is an estimate for plain text messages.
+     */
+    public static function segments( string $message ): int {
+        $length = mb_strlen( $message );
+        if ( $length <= 160 ) {
+            return 1;
+        }
+        return (int) ceil( $length / 153 );
+    }
+
+    /**
      * Send an SMS to a single phone number.
      *
      * @param  string $phone    Recipient phone number.
@@ -135,7 +148,7 @@ class OFP_SMS {
                 $phone,
                 'outbound',
                 $message,
-                6.99,
+                ! empty( $result['success'] ) ? ( ( class_exists( 'OFP_Queue' ) ? OFP_Queue::SMS_COST : 6.99 ) * self::segments( $message ) ) : 0.00,
                 ! empty( $result['success'] ) ? 'sent' : 'failed',
                 $this->provider,
                 $result['provider_ref'] ?? null

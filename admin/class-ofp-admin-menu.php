@@ -102,11 +102,20 @@ class OFP_Admin_Menu {
         add_submenu_page( 'ofp-overview', 'Customers',       'Customers',       'read', 'ofp-customers',       [ $this, 'render_customers' ] );
         add_submenu_page( 'ofp-overview', 'Trigger Queue',   'Trigger Queue',   'read', 'ofp-triggers',        [ $this, 'render_triggers' ] );
         add_submenu_page( 'ofp-overview', 'Communications',  'Communications',  'read', 'ofp-communications',  [ $this, 'render_communications' ] );
-        add_submenu_page( 'ofp-overview', 'Billing',         'Billing',         'read', 'ofp-billing',         [ $this, 'render_billing' ] );
+        add_submenu_page( 'ofp-overview', 'Billing & Subscriptions', 'Billing & Subscriptions', 'read', 'ofp-billing', [ $this, 'render_billing' ] );
         add_submenu_page( 'ofp-overview', 'Reports',         'Reports',         'read', 'ofp-reports',         [ $this, 'render_reports' ] );
         add_submenu_page( 'ofp-overview', 'Funding Requests', 'Funding Requests', 'read', 'ofp-funding-requests', [ $this, 'render_funding_requests' ] ); // Phase 17
         add_submenu_page( 'ofp-overview', 'Send Notification', 'Send Notification', 'manage_options', 'ofp-send-notification', [ $this, 'render_send_notification' ] ); // Phase 17b
         add_submenu_page( 'ofp-overview', 'Activity Logs',   'Activity Logs',   'read', 'ofp-activity-logs',   [ $this, 'render_activity_logs' ] ); // Phase 21
+
+        $fb_badge = '';
+        if ( class_exists( 'OFP_Feedback' ) ) {
+            $fb_count = OFP_Feedback::get_new_count();
+            if ( $fb_count > 0 ) {
+                $fb_badge = ' <span class="update-plugins count-' . $fb_count . '"><span class="plugin-count">' . $fb_count . '</span></span>';
+            }
+        }
+        add_submenu_page( 'ofp-overview', 'Feedback & Requests', 'Feedback & Requests' . $fb_badge, 'read', 'ofp-feedback', [ $this, 'render_feedback' ] );
         add_submenu_page( 'ofp-overview', 'Rent Oversight',  'Rent Oversight',  'read', 'ofp-rent-oversight',  [ $this, 'render_rent_oversight' ] );
         add_submenu_page( 'ofp-overview', 'Investment',      'Investment',      'read', 'ofp-investment',      [ $this, 'render_investment' ] );
 
@@ -191,6 +200,7 @@ class OFP_Admin_Menu {
     public function render_billing():        void { $this->load_view( 'billing' ); }
     public function render_reports():        void { $this->load_view( 'reports' ); }
     public function render_activity_logs():  void { $this->load_view( 'activity-logs' ); }
+    public function render_feedback():       void { $this->load_view( 'feedback-list' ); }
     public function render_rent_oversight(): void { $this->load_view( 'rent-oversight' ); }
     public function render_investment():     void { $this->load_view( 'investment' ); }
 
@@ -261,7 +271,7 @@ class OFP_Admin_Menu {
             $sub_error = 'That subdomain is already used by another client.';
         }
         if ( $sub_error ) {
-            $this->set_message( '❌ ' . $sub_error, 'error' );
+            $this->set_message( '' . $sub_error, 'error' );
             wp_safe_redirect( $add_url );
             exit;
         }
@@ -272,14 +282,14 @@ class OFP_Admin_Menu {
             OFP_White_Label::ensure_schema();
             if ( ! OFP_White_Label::schema_ready() ) {
                 $why = (string) get_option( 'ofp_white_label_schema_error', 'unknown reason' );
-                $this->set_message( '❌ White Label could not be turned on because the database could not be updated (' . $why . ').', 'error' );
+                $this->set_message( 'White Label could not be turned on because the database could not be updated (' . $why . ').', 'error' );
                 wp_safe_redirect( $add_url );
                 exit;
             }
             $custom_domain = OFP_White_Label::normalize_domain( wp_unslash( $_POST['custom_domain'] ?? '' ) );
             $domain_err    = OFP_White_Label::validate_custom_domain( $custom_domain, 0 );
             if ( $domain_err ) {
-                $this->set_message( '❌ ' . $domain_err, 'error' );
+                $this->set_message( '' . $domain_err, 'error' );
                 wp_safe_redirect( $add_url );
                 exit;
             }
@@ -312,10 +322,10 @@ class OFP_Admin_Menu {
         }
 
         if ( $client_id ) {
-            $this->set_message( '✅ Client created successfully. Welcome email sent.', 'success' );
+            $this->set_message( 'Client created successfully. Welcome email sent.', 'success' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients&added=' . $client_id ) );
         } else {
-            $this->set_message( '❌ Failed to create client. Email may already be registered.', 'error' );
+            $this->set_message( 'Failed to create client. Email may already be registered.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients&action=add' ) );
         }
 
@@ -336,13 +346,13 @@ class OFP_Admin_Menu {
 
         $allowed = [ 'active', 'suspended', 'cancelled', 'grace' ];
         if ( ! $client_id || ! in_array( $status, $allowed, true ) ) {
-            $this->set_message( '❌ Invalid request.', 'error' );
+            $this->set_message( 'Invalid request.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients' ) );
             exit;
         }
 
         OFP_Subscription::manual_toggle( $client_id, $status );
-        $this->set_message( '✅ Client status updated to ' . $status . '.', 'success' );
+        $this->set_message( 'Client status updated to ' . $status . '.', 'success' );
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients&client_id=' . $client_id ) );
         exit;
     }
@@ -359,9 +369,9 @@ class OFP_Admin_Menu {
         $client_id = (int) ( $_POST['client_id'] ?? 0 );
 
         if ( OFP_Client::approve( $client_id ) ) {
-            $this->set_message( '✅ Client approved. Notification email sent.', 'success' );
+            $this->set_message( 'Client approved. Notification email sent.', 'success' );
         } else {
-            $this->set_message( '❌ Could not approve client — check their current status.', 'error' );
+            $this->set_message( 'Could not approve client — check their current status.', 'error' );
         }
 
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients' ) );
@@ -380,7 +390,7 @@ class OFP_Admin_Menu {
         $client_id = (int) ( $_POST['client_id'] ?? 0 );
         OFP_Client::delete( $client_id );
 
-        $this->set_message( '✅ Client cancelled.', 'success' );
+        $this->set_message( 'Client cancelled.', 'success' );
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients' ) );
         exit;
     }
@@ -397,9 +407,9 @@ class OFP_Admin_Menu {
         $client_id = (int) ( $_POST['client_id'] ?? 0 );
 
         if ( OFP_Client::reset_password( $client_id ) ) {
-            $this->set_message( '✅ Password reset. New credentials emailed to client.', 'success' );
+            $this->set_message( 'Password reset. New credentials emailed to client.', 'success' );
         } else {
-            $this->set_message( '❌ Password reset failed.', 'error' );
+            $this->set_message( 'Password reset failed.', 'error' );
         }
 
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients&client_id=' . $client_id ) );
@@ -422,7 +432,7 @@ class OFP_Admin_Menu {
         $pass  = wp_unslash( $_POST['password'] ?? '' );
 
         if ( ! $name || ! is_email( $email ) || strlen( $pass ) < 8 ) {
-            $this->set_message( '❌ All fields required. Password must be at least 8 characters.', 'error' );
+            $this->set_message( 'All fields required. Password must be at least 8 characters.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-admins' ) );
             exit;
         }
@@ -436,7 +446,7 @@ class OFP_Admin_Menu {
         );
 
         if ( $exists ) {
-            $this->set_message( '❌ That email is already registered as an admin.', 'error' );
+            $this->set_message( 'That email is already registered as an admin.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-admins' ) );
             exit;
         }
@@ -453,7 +463,7 @@ class OFP_Admin_Menu {
             ]
         );
 
-        $this->set_message( '✅ Co-admin added. They must also have a WordPress user account with this email to access wp-admin.', 'success' );
+        $this->set_message( 'Co-admin added. They must also have a WordPress user account with this email to access wp-admin.', 'success' );
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-admins' ) );
         exit;
     }
@@ -477,7 +487,7 @@ class OFP_Admin_Menu {
         $target_id = (int) ( $_POST['admin_id'] ?? 0 );
 
         if ( ! $target_id ) {
-            $this->set_message( '❌ Invalid request.', 'error' );
+            $this->set_message( 'Invalid request.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-admins' ) );
             exit;
         }
@@ -491,26 +501,26 @@ class OFP_Admin_Menu {
         );
 
         if ( ! $target ) {
-            $this->set_message( '❌ Admin not found.', 'error' );
+            $this->set_message( 'Admin not found.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-admins' ) );
             exit;
         }
 
         if ( $target->is_protected ) {
-            $this->set_message( '❌ This account is protected and cannot be deleted.', 'error' );
+            $this->set_message( 'This account is protected and cannot be deleted.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-admins' ) );
             exit;
         }
 
         // Prevent deleting another super_admin (extra guard).
         if ( $target->role === 'super_admin' ) {
-            $this->set_message( '❌ Super admin accounts cannot be deleted.', 'error' );
+            $this->set_message( 'Super admin accounts cannot be deleted.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-admins' ) );
             exit;
         }
 
         $wpdb->delete( $wpdb->prefix . 'ofp_admins', [ 'id' => $target_id ] );
-        $this->set_message( '✅ Admin removed.', 'success' );
+        $this->set_message( 'Admin removed.', 'success' );
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-admins' ) );
         exit;
     }
@@ -644,6 +654,9 @@ class OFP_Admin_Menu {
             'ofp_app_name'            => sanitize_text_field( wp_unslash( $_POST['ofp_app_name']            ?? '' ) ),
             // Default pipeline messages
             'ofp_default_instant_sms' => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_instant_sms'] ?? '' ) ),
+            'ofp_default_instant_email_subject' => sanitize_text_field( wp_unslash( $_POST['ofp_default_instant_email_subject'] ?? '' ) ),
+            'ofp_default_instant_email_message' => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_instant_email_message'] ?? '' ) ),
+            'ofp_default_alert_sms'   => empty( $_POST['ofp_default_alert_sms'] ) ? '0' : '1',
             'ofp_default_followup_1'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_1']  ?? '' ) ),
             'ofp_default_followup_2'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_2']  ?? '' ) ),
             'ofp_default_followup_3'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_3']  ?? '' ) ),
@@ -758,7 +771,7 @@ class OFP_Admin_Menu {
         }
 
         // Build a descriptive success message.
-        $msg = '✅ Settings saved successfully.';
+        $msg = 'Settings saved successfully.';
         if ( ! empty( $updated_keys ) ) {
             $msg .= ' Updated keys: ' . implode( ', ', $updated_keys ) . '.';
         }
@@ -788,7 +801,7 @@ class OFP_Admin_Menu {
         $year      = (int) ( $_POST['year']      ?? gmdate( 'Y' ) );
 
         if ( ! $client_id ) {
-            $this->set_message( '❌ Please select a client.', 'error' );
+            $this->set_message( 'Please select a client.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-reports' ) );
             exit;
         }
@@ -796,9 +809,9 @@ class OFP_Admin_Menu {
         $result = OFP_CSV::generate_monthly_report( $client_id, $month, $year );
 
         if ( $result ) {
-            $this->set_message( '✅ Report generated and emailed to the client.', 'success' );
+            $this->set_message( 'Report generated and emailed to the client.', 'success' );
         } else {
-            $this->set_message( '❌ Report generation failed. Check error logs.', 'error' );
+            $this->set_message( 'Report generation failed. Check error logs.', 'error' );
         }
 
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-reports' ) );
@@ -819,9 +832,9 @@ class OFP_Admin_Menu {
 
         if ( $trigger_id ) {
             OFP_Queue::retry( $trigger_id );
-            $this->set_message( '✅ Trigger re-queued for retry in 30 minutes.', 'success' );
+            $this->set_message( 'Trigger re-queued for retry in 30 minutes.', 'success' );
         } else {
-            $this->set_message( '❌ Invalid trigger.', 'error' );
+            $this->set_message( 'Invalid trigger.', 'error' );
         }
 
         $redirect_filter = sanitize_text_field( wp_unslash( $_POST['return_filter'] ?? '' ) );
@@ -841,9 +854,9 @@ class OFP_Admin_Menu {
         $trigger_id = (int) ( $_POST['trigger_id'] ?? 0 );
 
         if ( $trigger_id && OFP_Queue::cancel_trigger( $trigger_id ) ) {
-            $this->set_message( '✅ Trigger cancelled.', 'success' );
+            $this->set_message( 'Trigger cancelled.', 'success' );
         } else {
-            $this->set_message( '❌ Invalid trigger.', 'error' );
+            $this->set_message( 'Invalid trigger.', 'error' );
         }
 
         $redirect_filter = sanitize_text_field( wp_unslash( $_POST['return_filter'] ?? '' ) );
@@ -864,7 +877,7 @@ class OFP_Admin_Menu {
 
         $client_id = (int) ( $_POST['client_id'] ?? 0 );
         if ( ! $client_id ) {
-            $this->set_message( '❌ Invalid client.', 'error' );
+            $this->set_message( 'Invalid client.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients' ) );
             exit;
         }
@@ -882,7 +895,7 @@ class OFP_Admin_Menu {
                 )
             );
             if ( $exists ) {
-                $this->set_message( '❌ That email is already used by another client.', 'error' );
+                $this->set_message( 'That email is already used by another client.', 'error' );
                 wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients&client_id=' . $client_id . '&action=edit' ) );
                 exit;
             }
@@ -915,7 +928,7 @@ class OFP_Admin_Menu {
                     $sub_error = 'That subdomain is already used by another client.';
                 }
                 if ( $sub_error ) {
-                    $this->set_message( '❌ ' . $sub_error, 'error' );
+                    $this->set_message( '' . $sub_error, 'error' );
                     wp_safe_redirect( $edit_url );
                     exit;
                 }
@@ -929,7 +942,7 @@ class OFP_Admin_Menu {
             $domain     = OFP_White_Label::normalize_domain( wp_unslash( $_POST['custom_domain'] ?? '' ) );
             $domain_err = OFP_White_Label::validate_custom_domain( $domain, $client_id );
             if ( $domain_err ) {
-                $this->set_message( '❌ ' . $domain_err, 'error' );
+                $this->set_message( '' . $domain_err, 'error' );
                 wp_safe_redirect( $edit_url );
                 exit;
             }
@@ -938,7 +951,7 @@ class OFP_Admin_Menu {
                 $data['is_white_label'] = empty( $_POST['is_white_label'] ) ? 0 : 1;
             } else {
                 $why = (string) get_option( 'ofp_white_label_schema_error', 'unknown reason' );
-                $this->set_message( '❌ White Label could not be saved because the database could not be updated (' . $why . '). Send this message to support.', 'error' );
+                $this->set_message( 'White Label could not be saved because the database could not be updated (' . $why . '). Send this message to support.', 'error' );
                 wp_safe_redirect( $edit_url );
                 exit;
             }
@@ -967,7 +980,7 @@ class OFP_Admin_Menu {
         }
 
         $this->set_message(
-            $updated ? '✅ Client details updated.' : '❌ Update failed.',
+            $updated ? 'Client details updated.' : 'Update failed.',
             $updated ? 'success' : 'error'
         );
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients&client_id=' . $client_id ) );
@@ -988,9 +1001,9 @@ class OFP_Admin_Menu {
         $client_id = (int) ( $_POST['client_id'] ?? 0 );
 
         if ( OFP_Client::trash( $client_id ) ) {
-            $this->set_message( '✅ Client moved to trash. It will be permanently deleted in 30 days.', 'success' );
+            $this->set_message( 'Client moved to trash. It will be permanently deleted in 30 days.', 'success' );
         } else {
-            $this->set_message( '❌ Could not move client to trash.', 'error' );
+            $this->set_message( 'Could not move client to trash.', 'error' );
         }
 
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients' ) );
@@ -1009,9 +1022,9 @@ class OFP_Admin_Menu {
         $client_id = (int) ( $_POST['client_id'] ?? 0 );
 
         if ( OFP_Client::restore( $client_id ) ) {
-            $this->set_message( '✅ Client restored.', 'success' );
+            $this->set_message( 'Client restored.', 'success' );
         } else {
-            $this->set_message( '❌ Could not restore client.', 'error' );
+            $this->set_message( 'Could not restore client.', 'error' );
         }
 
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients&filter=trash' ) );
@@ -1045,7 +1058,7 @@ class OFP_Admin_Menu {
         $client    = OFP_Client::get( $client_id );
 
         if ( ! $client ) {
-            $this->set_message( '❌ Client not found.', 'error' );
+            $this->set_message( 'Client not found.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients' ) );
             exit;
         }
@@ -1087,26 +1100,26 @@ class OFP_Admin_Menu {
         $reference = sanitize_text_field( wp_unslash( $_POST['reference'] ?? '' ) );
 
         if ( ! $client_id ) {
-            $this->set_message( '❌ Invalid client.', 'error' );
+            $this->set_message( 'Invalid client.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients' ) );
             exit;
         }
 
         if ( ! in_array( $channel, [ 'sms', 'voice' ], true ) ) {
-            $this->set_message( '❌ Invalid credit channel. Must be sms or voice.', 'error' );
+            $this->set_message( 'Invalid credit channel. Must be sms or voice.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients&client_id=' . $client_id ) );
             exit;
         }
 
         if ( $amount < 100 ) {
-            $this->set_message( '❌ Minimum top-up amount is NGN 100.', 'error' );
+            $this->set_message( 'Minimum top-up amount is NGN 100.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients&client_id=' . $client_id ) );
             exit;
         }
 
         $client = OFP_Client::get( $client_id );
         if ( ! $client ) {
-            $this->set_message( '❌ Client not found.', 'error' );
+            $this->set_message( 'Client not found.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients' ) );
             exit;
         }
@@ -1120,7 +1133,7 @@ class OFP_Admin_Menu {
         $label = $channel === 'sms' ? 'SMS' : 'Voice';
 
         $this->set_message(
-            '✅ NGN ' . number_format( $amount, 2 ) . " loaded to {$client->business_name}'s {$label} credit balance.",
+            'NGN ' . number_format( $amount, 2 ) . " loaded to {$client->business_name}'s {$label} credit balance.",
             'success'
         );
 
@@ -1144,7 +1157,7 @@ class OFP_Admin_Menu {
         $sub_id = (int) ( $_POST['subscription_id'] ?? 0 );
 
         if ( ! $sub_id ) {
-            $this->set_message( '❌ Invalid subscription ID.', 'error' );
+            $this->set_message( 'Invalid subscription ID.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-billing' ) );
             exit;
         }
@@ -1154,7 +1167,7 @@ class OFP_Admin_Menu {
         );
 
         if ( ! $sub || $sub->status === 'paid' ) {
-            $this->set_message( '❌ Subscription not found or already paid.', 'error' );
+            $this->set_message( 'Subscription not found or already paid.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-billing' ) );
             exit;
         }
@@ -1197,7 +1210,7 @@ class OFP_Admin_Menu {
             OFP_Mailer::send_payment_confirmed( $client, (float) $sub->amount, $sub->type );
         }
 
-        $this->set_message( '✅ Subscription manually marked as paid. Client has been granted 30 days access.', 'success' );
+        $this->set_message( 'Subscription manually marked as paid. Client has been granted 30 days access.', 'success' );
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-billing' ) );
         exit;
     }

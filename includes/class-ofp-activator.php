@@ -620,6 +620,28 @@ class OFP_Activator {
             KEY type (type)
         ) {$charset_collate};" );
 
+        // ── 22. ofp_feedback (Feature Requests & Bug Reports) ─────────────────
+        dbDelta( "CREATE TABLE {$p}ofp_feedback (
+            id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            client_id   BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            type        VARCHAR(30)     NOT NULL DEFAULT 'feature_request',
+            title       VARCHAR(255)    NOT NULL,
+            category    VARCHAR(100)             DEFAULT 'general',
+            description LONGTEXT        NOT NULL,
+            video_url   VARCHAR(500)             DEFAULT NULL,
+            priority    VARCHAR(30)              DEFAULT 'medium',
+            status      VARCHAR(30)     NOT NULL DEFAULT 'new',
+            admin_notes TEXT                     DEFAULT NULL,
+            page_url    VARCHAR(500)             DEFAULT NULL,
+            device_info TEXT                     DEFAULT NULL,
+            created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY client_id (client_id),
+            KEY type (type),
+            KEY status (status)
+        ) {$charset_collate};" );
+
         // Store the schema version so future upgrades can run targeted migrations.
         update_option( 'ofp_db_version', OFP_VERSION );
     }

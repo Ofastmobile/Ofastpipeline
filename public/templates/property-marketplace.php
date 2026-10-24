@@ -1,4 +1,5 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 $current_listing_type = sanitize_text_field( $_GET['listing_type'] ?? 'all' );
 $current_sort         = sanitize_text_field( $_GET['sort'] ?? 'featured' );
 $current_verified     = ! empty( $_GET['verified'] );

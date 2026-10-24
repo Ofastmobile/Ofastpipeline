@@ -14,8 +14,8 @@ Or as the admin, pull the Client ID from wp-admin → OFast Pipeline → Clients
 
 ## 2. Copy-paste snippet (Elementor "Custom HTML" widget)
 
-Replace `CLIENT_ID_HERE` and `YOUR_TURNSTILE_SITE_KEY` below. The site key
-is in wp-admin → OFast Pipeline → Settings → Cloudflare Turnstile.
+Replace `CLIENT_ID_HERE` below. (Turnstile is only used on /login and /signup,
+not on lead forms.)
 
 ```html
 <form id="ofp-lead-form">
@@ -27,12 +27,9 @@ is in wp-admin → OFast Pipeline → Settings → Cloudflare Turnstile.
     <!-- Honeypot — must stay hidden and empty. Do not remove. -->
     <input type="text" name="website" style="display:none !important" tabindex="-1" autocomplete="off">
 
-    <div class="cf-turnstile" data-sitekey="YOUR_TURNSTILE_SITE_KEY"></div>
-
     <button type="submit">Get Started</button>
 </form>
 
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script>
 document.getElementById('ofp-lead-form').addEventListener('submit', async function (e) {
     e.preventDefault();
@@ -75,4 +72,4 @@ for **standalone landing pages**, not property listing pages.
 - [ ] Confirm the instant SMS arrives within a few minutes (cron runs every 5 min).
 - [ ] Try submitting the honeypot field via browser dev tools — confirm it's silently rejected.
 - [ ] Submit 4 times quickly from the same IP — confirm the 4th is rate-limited.
-- [ ] Confirm Turnstile actually blocks a scripted/automated submission once the secret key is set in Settings.
+- [ ] Turnstile is not part of this form. For heavy bot traffic add a Cloudflare rate limiting rule on `/api/v1/inquire` and `/wp-json/ofp/v1/capture-lead`.

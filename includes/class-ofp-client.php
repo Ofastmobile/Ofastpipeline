@@ -167,7 +167,7 @@ class OFP_Client {
         if ( ! $config_exists ) {
             $wpdb->insert(
                 $wpdb->prefix . 'ofp_pipeline_configs',
-                [
+                array_merge( [
                     'client_id'              => $client_id,
                     'instant_sms_enabled'    => 1,
                     'instant_sms_message'    => get_option( 'ofp_default_instant_sms', '' ),
@@ -175,7 +175,7 @@ class OFP_Client {
                     'followup_1_type'        => 'sms',
                     'followup_1_message'     => get_option( 'ofp_default_followup_1', '' ),
                     'followup_2_delay_hours' => 24,
-                    'followup_2_type'        => 'voice',
+                    'followup_2_type'        => 'sms',
                     'followup_2_message'     => get_option( 'ofp_default_followup_2', '' ),
                     'followup_3_delay_hours' => 72,
                     'followup_3_type'        => 'sms',
@@ -184,7 +184,7 @@ class OFP_Client {
                     'ivr_option_1_action'    => 'transfer',
                     'ivr_option_2_action'    => 'sms',
                     'ivr_option_3_action'    => 'schedule',
-                ]
+                ], OFP_Queue::default_new_config_fields() )
             );
         }
 

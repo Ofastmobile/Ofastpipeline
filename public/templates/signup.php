@@ -187,6 +187,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             $error = $ofp_check_details( $business_name, $owner_name, $email, $phone, $subdomain );
         }
 
+        if ( ! $error && ! OFP_Security::verify_turnstile_request() ) {
+            $error = 'Please complete the security check and try again.';
+        }
+
         if ( ! $error ) {
             if (
                 $ofp_hit_limit( 'email|' . strtolower( $email ), 3, HOUR_IN_SECONDS ) ||
@@ -479,6 +483,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                                         >
                                     </div>
                                 </div>
+
+                                <?php echo OFP_Security::turnstile_widget(); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 
                                 <button type="submit" class="ofp-split-submit-btn" style="margin-top:10px;">
                                     <span>Create Free Agency Portal</span>

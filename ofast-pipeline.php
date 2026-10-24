@@ -3,7 +3,7 @@
  * Plugin Name: OFast Pipeline
  * Plugin URI:  https://ofastpipeline.com
  * Description: Done-for-you lead pipeline and CRM automation engine for SMB clients in Nigeria.
- * Version:     2.2.9
+ * Version:     2.2.11
  * Author:      Olabode / Bofast World
  * Author URI:  https://bofastworld.com
  * Text Domain: ofast-pipeline
@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION', '2.2.9' );
+define( 'OFP_VERSION', '2.2.11' );
 define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
@@ -77,6 +77,7 @@ require_once OFP_PATH . 'includes/class-ofp-property-inquiry.php';
 require_once OFP_PATH . 'includes/class-ofp-property-land.php';
 require_once OFP_PATH . 'includes/class-ofp-property-amenities.php';
 require_once OFP_PATH . 'includes/class-ofp-watermark.php';
+require_once OFP_PATH . 'includes/class-ofp-feedback.php';
 
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-paystack.php';
@@ -105,6 +106,18 @@ add_filter( 'cron_schedules', function ( array $schedules ): array {
         'interval' => 300,
         'display'  => sprintf( __( 'Every 5 Minutes (%s)', 'ofast-pipeline' ), class_exists( 'OFP_Brand' ) ? OFP_Brand::name() : 'App' ),
     ];
+    // Used by the queue. The Cloudflare ping every 2 minutes runs it when due.
+    $schedules['ofp_two_minutes'] = [
+        'interval' => 120,
+        'display'  => __( 'Every 2 Minutes', 'ofast-pipeline' ),
+    ];
+    // WordPress has no monthly schedule of its own, so the monthly clean up never ran.
+    if ( ! isset( $schedules['monthly'] ) ) {
+        $schedules['monthly'] = [
+            'interval' => 30 * DAY_IN_SECONDS,
+            'display'  => __( 'Once Monthly', 'ofast-pipeline' ),
+        ];
+    }
     return $schedules;
 } );
 
@@ -152,6 +165,7 @@ OFP_Prembly::init();
     OFP_Property_Receipt_Generator::init();
     OFP_Property_Inquiry::init();
     OFP_Watermark::init();
+    OFP_Feedback::init();
 } );
 
 // ── Frontend Admin Bar Control ─────────────────────────────────────────────
@@ -168,9 +182,18 @@ add_action( 'wp_head', function (): void {
 }, 1 );
 
 add_action( 'init', function (): void {
-    if ( get_option( 'ofp_flush_rewrite_rules' ) ) {
+    // Flush when asked to (activation) AND once after every plugin version change.
+    // /marketplace/, /agent/{slug}, /property-checkout/ and the other custom routes
+    // are rewrite rules: uploading a new version does not register them with
+    // WordPress until the rules are flushed, which used to need a manual
+    // Settings > Permalinks > Save.
+    $needs_flush = (bool) get_option( 'ofp_flush_rewrite_rules' )
+        || get_option( 'ofp_rewrite_version' ) !== OFP_VERSION;
+
+    if ( $needs_flush ) {
         flush_rewrite_rules();
         delete_option( 'ofp_flush_rewrite_rules' );
+        update_option( 'ofp_rewrite_version', OFP_VERSION, false );
     }
 }, 999 );
 

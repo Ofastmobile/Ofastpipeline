@@ -77,33 +77,71 @@ When an independent real estate agency wants their own dedicated branded portal:
 
 ## 3. Website Featured Properties Embed Widget
 
-Both regular subscribers and white-label clients can embed their active property listings onto their personal or company websites (WordPress, Elementor, Divi, Wix, Squarespace, or raw HTML).
+Both regular subscribers and white-label clients can show their live listings on any website
+(WordPress, Elementor, Divi, Wix, Squarespace, raw HTML). Each client copies their own snippet
+from **/api-settings**; the dashboard fills in the right domain and client id.
 
-### The Embed Snippet
-Found on their dashboard at **/api-settings**:
+### The snippet (what /api-settings generates)
+
+Subscriber, or white-label on a platform subdomain:
 
 ```html
-<!-- MyPropertyHQ Featured Properties Widget -->
-<div id="ofp-property-widget" data-client-id="CLIENT_ID_HERE" data-limit="6"></div>
-<script src="https://mypropertyhq.ng/wp-content/plugins/ofast-pipeline/assets/js/ofp-embed.js" async></script>
+<div id="ofp-property-widget" data-client-id="CLIENT_ID" data-limit="6"></div>
+<script src="https://YOUR-PLATFORM-DOMAIN/widget.js" async></script>
 ```
 
-### How the Embed Script Operates
-1. **Zero Library Dependencies:** Built in pure, vanilla JavaScript with scoped CSS styles that will not conflict with the client's website theme or page builder styles.
-2. **REST API Endpoint:** Fetches live data from `GET /wp-json/ofp/v1/properties?client_id={id}&limit=6`.
-3. **Card Design:** Automatically generates responsive property cards featuring cover photos, price tags, title, location, bed/bath counters, and a "View Details" call-to-action.
-4. **Smart Permalinks:**
-   * For **subscribers**, clicking a card opens `https://marketplace.mypropertyhq.ng/property/{slug}/`.
-   * For **white-label clients**, clicking a card opens `https://portal.theircompany.com/property/{slug}/`.
+White-label client with a custom domain (no client id needed, the domain identifies them):
 
-### Optional Widget Customizations
-Clients can customize the HTML attributes on the `<div>`:
+```html
+<div id="ofp-property-widget" data-limit="6"></div>
+<script src="https://portal.theircompany.com/widget.js" async></script>
+```
+
+### Public routes
+
+| Route | Purpose |
+|---|---|
+| `GET /widget.js` | The embed script (served without the plugin folder in the URL) |
+| `GET /api/v1/properties?client_id=ID&limit=6&type=sale` | Property feed used by the widget |
+| `POST /api/v1/inquire` | Lead capture (same engine as `/wp-json/ofp/v1/capture-lead`) |
+
+`/wp-json/ofp/v1/properties` and `/capture-lead` still work and return the same data.
+
+### What the feed returns (and does not)
+
+- Fixed fields only: id (WordPress post id), title, price, formatted price (rent shows `/yr`, `/mo`, `/night`),
+  location, listing type, beds, baths, image URL, link. No table names, file paths, owner phone/email or owner name.
+- Only listings that are **live**, **published** and **not currently let**.
+- Unknown, suspended, cancelled and trashed clients all get the same empty answer.
+- Cached for 60 seconds, so new listings show within a minute.
+- `type` accepts `sale`, `rent`, `land`, `shortlet`. `limit` is 1 to 24.
+
+### Where a card click goes
+
+| Client | Link opens |
+|---|---|
+| Subscriber | `https://marketplace.{base}/property/{slug}/` on the shared marketplace |
+| White-label, custom domain | `https://{custom_domain}/property/{slug}/` |
+| White-label, no custom domain | `https://{subdomain}.{base}/property/{slug}/` |
+
+This is decided in one place, `OFP_Property_CPT::rewrite_permalink_to_property_subdomain()` using
+`OFP_White_Label::host_for_post()`. Emails, SMS, wp-admin "View" and the widget all get the same link.
+White-label listings are never served on the main site or the marketplace (single page, archive, search).
+If a main-site visitor opens an old link to one, WordPress redirects them to the owner's own domain.
+
+### Widget attributes
 
 | Attribute | Default | Options | Description |
 |---|---|---|---|
-| `data-client-id` | *(Required)* | Numeric ID | Identifies which agency's properties to display. |
-| `data-limit` | `6` | `3`, `6`, `9`, `12` | Total number of properties to display. |
-| `data-type` | *(All)* | `sale`, `rent`, `land` | Filter to show only sales, rentals, or land deals. |
+| `data-client-id` | *(required, except on a custom domain)* | Numeric ID | Whose properties to show |
+| `data-limit` | `6` | 1 to 24 | Number of properties |
+| `data-type` | *(all)* | `sale`, `rent`, `land`, `shortlet` | Filter by listing type |
+
+### Lead form on the client's own site
+
+The dashboard sample uses `fetch()` to `/api/v1/inquire`, includes the hidden honeypot field (`website`) and,
+when Turnstile is switched on in Settings, the Turnstile widget. If Turnstile is on, the client's website
+domain must be added to the hostnames of the Turnstile widget in Cloudflare.
 
 ---
 

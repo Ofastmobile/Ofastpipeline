@@ -136,9 +136,19 @@ class OFP_White_Label {
 			return $clauses;
 		}
 
-		$post_type = $query->get( 'post_type' );
-		$is_property_query = $post_type === 'ofp_property' || ( is_array( $post_type ) && in_array( 'ofp_property', $post_type, true ) );
-		if ( ! $is_property_query ) {
+		// A "pure" property query asks for ofp_property and nothing else.
+		// A "mixed" query can also return properties without naming the type:
+		// the default site search (empty post_type + ?s=), post_type=any, or an
+		// array such as ['post','ofp_property']. Those must be scoped too, or a
+		// white label listing shows up in the main site's search results.
+		$types = array_values( array_filter( (array) $query->get( 'post_type' ) ) );
+		$pure  = ( $types === [ 'ofp_property' ] );
+		$mixed = ! $pure && (
+			in_array( 'ofp_property', $types, true )
+			|| in_array( 'any', $types, true )
+			|| ( empty( $types ) && $query->is_search() )
+		);
+		if ( ! $pure && ! $mixed ) {
 			return $clauses;
 		}
 
@@ -151,14 +161,18 @@ class OFP_White_Label {
 
 		if ( $white_label ) {
 			// On their own domain: only their own properties.
-			$clauses['where'] .= $wpdb->prepare(
-				" AND EXISTS (
+			// In a mixed query other post types (pages, posts) stay visible.
+			$exists = $wpdb->prepare(
+				"EXISTS (
 					SELECT 1 FROM {$properties} ofp_wl_p
 					WHERE ofp_wl_p.wp_post_id = {$posts}.ID
 					  AND ofp_wl_p.client_id = %d
 				)",
 				(int) $white_label->id
 			);
+			$clauses['where'] .= $mixed
+				? " AND ( {$posts}.post_type <> 'ofp_property' OR {$exists} )"
+				: " AND {$exists}";
 		} else {
 			// Everywhere else: white label properties never appear.
 			$clauses['where'] .= " AND NOT EXISTS (
@@ -170,6 +184,67 @@ class OFP_White_Label {
 		}
 
 		return $clauses;
+	}
+
+	// -------------------------------------------------------------------------
+	// Which host does a white label client's content live on?
+	// -------------------------------------------------------------------------
+
+	/**
+	 * The public host of a white label client: their custom domain when set,
+	 * otherwise {subdomain}.{base_domain}. Null for non white label clients,
+	 * or when no host can be built (no custom domain and no base domain).
+	 *
+	 * @param object|null $client Row with is_white_label, custom_domain, subdomain.
+	 */
+	public static function host_for_client( $client ): ?string {
+		if ( ! $client || empty( $client->is_white_label ) ) {
+			return null;
+		}
+		if ( ! empty( $client->custom_domain ) ) {
+			$host = self::normalize_domain( (string) $client->custom_domain );
+			if ( $host !== '' ) {
+				return $host;
+			}
+		}
+		$base = strtolower( trim( (string) get_option( 'ofp_crm_base_domain', '' ) ) );
+		$sub  = strtolower( trim( (string) ( $client->subdomain ?? '' ) ) );
+		if ( $base !== '' && $sub !== '' ) {
+			return $sub . '.' . $base;
+		}
+		return null;
+	}
+
+	/**
+	 * Public host for the white label client that owns a property post,
+	 * or null when the property belongs to a normal subscriber or to the
+	 * platform. Memoised, because permalinks are built many times per page.
+	 */
+	public static function host_for_post( int $post_id ): ?string {
+		static $memo    = [];
+		static $clients = [];
+
+		if ( array_key_exists( $post_id, $memo ) ) {
+			return $memo[ $post_id ];
+		}
+		$memo[ $post_id ] = null;
+
+		if ( $post_id <= 0 || ! self::schema_ready() ) {
+			return null;
+		}
+		$owner = (int) get_post_meta( $post_id, 'ofp_client_id', true );
+		if ( $owner <= 0 ) {
+			return null;
+		}
+		if ( ! array_key_exists( $owner, $clients ) ) {
+			global $wpdb;
+			$clients[ $owner ] = $wpdb->get_row( $wpdb->prepare(
+				"SELECT id, is_white_label, custom_domain, subdomain FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
+				$owner
+			) );
+		}
+		$memo[ $post_id ] = self::host_for_client( $clients[ $owner ] );
+		return $memo[ $post_id ];
 	}
 
 	// -------------------------------------------------------------------------

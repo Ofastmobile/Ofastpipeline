@@ -2051,6 +2051,19 @@ class OFP_Property_CPT {
             return $post_link;
         }
 
+        // A white label client's listing ALWAYS lives on their own host (custom
+        // domain, else {subdomain}.{base_domain}), never on the shared marketplace,
+        // because the marketplace hides white label listings (OFP_White_Label).
+        // Doing this here, at the source, keeps every link right: embed widget,
+        // wp-admin "View", emails and SMS. Previously a white label client with
+        // only a subdomain got a marketplace link that returned 404.
+        if ( class_exists( 'OFP_White_Label' ) ) {
+            $wl_host = OFP_White_Label::host_for_post( (int) $post->ID );
+            if ( $wl_host ) {
+                return preg_replace( '#^https?://[^/]+#', 'https://' . $wl_host, $post_link );
+            }
+        }
+
         // On a solo company (white label) domain, keep the property permalink on that custom domain
         if ( class_exists( 'OFP_Brand' ) && OFP_Brand::is_solo_host() ) {
             $host = OFP_Host_Router::current_client_host();
@@ -2075,6 +2088,15 @@ class OFP_Property_CPT {
     public function maybe_redirect_old_property_url(): void {
         $path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
         $segments = array_values( array_filter( explode( '/', $path ) ) );
+
+        // /marketplace/ replaced the old /property/ directory page. Single listings
+        // are still /property/{slug}/, but the bare /property/ has no page any more
+        // and used to 404. Send old bookmarks and search results to the marketplace.
+        if ( count( $segments ) === 1 && $segments[0] === 'property' ) {
+            wp_safe_redirect( home_url( '/marketplace/' ), 301 );
+            exit;
+        }
+
         if ( count( $segments ) === 2 && $segments[0] === 'properties' ) {
             $slug = sanitize_title( $segments[1] );
             $post = get_page_by_path( $slug, OBJECT, 'ofp_property' );

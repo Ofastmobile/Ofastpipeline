@@ -265,7 +265,7 @@ class OFP_Voice_Notice {
 
         // One interest call per lead. Any earlier voice call to this lead means we are done.
         $already = (int) $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}ofp_communications_log WHERE lead_id = %d AND type = 'voice'",
+            "SELECT COUNT(*) FROM {$wpdb->prefix}ofp_communications_log WHERE lead_id = %d AND type = 'voice' AND ( status IS NULL OR status <> 'failed' )",
             $lead_id
         ) );
         if ( $already ) {
@@ -289,6 +289,16 @@ class OFP_Voice_Notice {
         $result = self::place_call( $client_id, (string) $lead->phone, $script, $lead_id );
         if ( ! $result['success'] ) {
             self::note_problem( $client_id, 'interest call to ' . ( $lead->name ?: 'a new lead' ), $result['error'] );
+
+            // Try again in 30 minutes, at most 2 more times. No point when there is no credit.
+            if ( 'no_credits' !== $result['error'] ) {
+                $tries_key = 'ofp_vn_try_' . $lead_id;
+                $tries     = (int) get_transient( $tries_key );
+                if ( $tries < 2 ) {
+                    set_transient( $tries_key, $tries + 1, DAY_IN_SECONDS );
+                    wp_schedule_single_event( time() + 1800, 'ofp_send_interest_call', [ $lead_id ] );
+                }
+            }
         }
     }
 
@@ -344,9 +354,12 @@ class OFP_Voice_Notice {
             return;
         }
 
-        // Each call is placed once.
-        $done_key = 'ofp_vn_done_' . md5( $key ?: wp_json_encode( $payload ) );
-        if ( get_transient( $done_key ) ) {
+        // Each call is placed once. The retry counter is not part of the identity.
+        $identity = $payload;
+        unset( $identity['try'] );
+        $done_key = 'ofp_vn_done_' . md5( $key ?: wp_json_encode( $identity ) );
+        $lock_key = $done_key . '_lock';
+        if ( get_transient( $done_key ) || get_transient( $lock_key ) ) {
             return;
         }
 
@@ -357,15 +370,28 @@ class OFP_Voice_Notice {
             return;
         }
 
-        set_transient( $done_key, 1, 2 * DAY_IN_SECONDS );
+        // Short lock so two runs cannot place the same call at the same time.
+        set_transient( $lock_key, 1, 600 );
 
         $client = self::client_row( $client_id );
         $vars['business_name'] = $client ? $client->business_name : '';
         $script = self::render_script( $settings[ $type . '_message' ], $vars );
 
         $result = self::place_call( $client_id, $phone, $script, 0 );
-        if ( ! $result['success'] ) {
-            self::note_problem( $client_id, $type . ' reminder call to ' . ( $vars['name'] ?? 'a customer' ), $result['error'] );
+        if ( ! empty( $result['success'] ) ) {
+            set_transient( $done_key, 1, 2 * DAY_IN_SECONDS );
+            return;
+        }
+
+        // The call was not placed. Free the lock and try again in 30 minutes,
+        // at most 2 more times. No point when there is no credit.
+        delete_transient( $lock_key );
+        self::note_problem( $client_id, $type . ' reminder call to ' . ( $vars['name'] ?? 'a customer' ), $result['error'] );
+
+        $try = (int) ( $payload['try'] ?? 0 );
+        if ( 'no_credits' !== $result['error'] && $try < 2 ) {
+            $payload['try'] = $try + 1;
+            wp_schedule_single_event( time() + 1800, 'ofp_send_voice_reminder', [ $payload ] );
         }
     }
 }

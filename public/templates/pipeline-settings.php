@@ -17,6 +17,27 @@ $config = $wpdb->get_row(
     )
 );
 
+// A client with no config row would see a blank page. Create a default one.
+if ( ! $config ) {
+    $wpdb->insert(
+        $wpdb->prefix . 'ofp_pipeline_configs',
+        [
+            'client_id'              => (int) $client->id,
+            'instant_sms_enabled'    => 1,
+            'followup_1_type'        => 'sms',
+            'followup_2_type'        => 'sms',
+            'followup_3_type'        => 'sms',
+            'updated_at'             => current_time( 'mysql' ),
+        ]
+    );
+    $config = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}ofp_pipeline_configs WHERE client_id = %d LIMIT 1",
+            $client->id
+        )
+    );
+}
+
 $saved   = false;
 $error   = '';
 
@@ -37,44 +58,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_voice_notice_no
     exit;
 }
 
-// ── Handle audio upload (Phase 22) ────────────────────────────────────────
-if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_audio_upload_nonce'] ) ) {
-    if ( wp_verify_nonce(
-        sanitize_text_field( wp_unslash( $_POST['ofp_audio_upload_nonce'] ) ),
-        'ofp_upload_audio_' . $client->id
-    ) ) {
-        $result = OFP_Pipeline_Audio::upload( $client->id, $_FILES['voice_audio'] ?? [] );
-        if ( is_wp_error( $result ) ) {
-            $error = $result->get_error_message();
-        } else {
-            $saved = true;
-        }
-    } else {
-        $error = 'Security check failed — please refresh and try again.';
-    }
-}
-
-// ── Handle audio removal (Phase 22) ───────────────────────────────────────
-if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_audio_remove_nonce'] ) ) {
-    if ( wp_verify_nonce(
-        sanitize_text_field( wp_unslash( $_POST['ofp_audio_remove_nonce'] ) ),
-        'ofp_remove_audio_' . $client->id
-    ) ) {
-        OFP_Pipeline_Audio::remove( $client->id );
-        $saved = true;
-    }
-}
-
-// Reload config after any audio operation so template reflects the change.
-if ( $saved || $error ) {
-    $config = $wpdb->get_row(
-        $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}ofp_pipeline_configs WHERE client_id = %d LIMIT 1",
-            $client->id
-        )
-    );
-}
-
 // ── Handle form submission ─────────────────────────────────────────────────
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_pipeline_nonce'] ) ) {
 
@@ -84,22 +67,44 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_pipeline_nonce'
     ) ) {
         $error = 'Security check failed. Please refresh and try again.';
     } else {
-        $wpdb->update(
-            $wpdb->prefix . 'ofp_pipeline_configs',
-            [
+        // Only sms or email are allowed. Delay is 1 to 720 hours.
+        $clean_type  = static function ( $value ): string {
+            return OFP_Queue::clean_type( sanitize_key( wp_unslash( (string) $value ) ) );
+        };
+        $clean_delay = static function ( $value, int $fallback ): int {
+            $hours = absint( $value );
+            if ( $hours < 1 ) {
+                $hours = $fallback;
+            }
+            return min( 720, $hours );
+        };
+
+        $config_data = [
                 'instant_sms_enabled'    => ! empty( $_POST['instant_sms_enabled'] ) ? 1 : 0,
                 'instant_sms_message'    => sanitize_textarea_field( wp_unslash( $_POST['instant_sms_message']    ?? '' ) ),
-                'followup_1_delay_hours' => absint( $_POST['followup_1_delay_hours'] ?? 1 ),
-                'followup_1_type'        => sanitize_text_field( wp_unslash( $_POST['followup_1_type'] ?? 'sms' ) ),
+                'followup_1_delay_hours' => $clean_delay( $_POST['followup_1_delay_hours'] ?? 0, 1 ),
+                'followup_1_type'        => $clean_type( $_POST['followup_1_type'] ?? 'sms' ),
                 'followup_1_message'     => sanitize_textarea_field( wp_unslash( $_POST['followup_1_message']     ?? '' ) ),
-                'followup_2_delay_hours' => absint( $_POST['followup_2_delay_hours'] ?? 24 ),
-                'followup_2_type'        => sanitize_text_field( wp_unslash( $_POST['followup_2_type'] ?? 'voice' ) ),
+                'followup_2_delay_hours' => $clean_delay( $_POST['followup_2_delay_hours'] ?? 0, 24 ),
+                'followup_2_type'        => $clean_type( $_POST['followup_2_type'] ?? 'sms' ),
                 'followup_2_message'     => sanitize_textarea_field( wp_unslash( $_POST['followup_2_message']     ?? '' ) ),
-                'followup_3_delay_hours' => absint( $_POST['followup_3_delay_hours'] ?? 72 ),
-                'followup_3_type'        => sanitize_text_field( wp_unslash( $_POST['followup_3_type'] ?? 'sms' ) ),
+                'followup_3_delay_hours' => $clean_delay( $_POST['followup_3_delay_hours'] ?? 0, 72 ),
+                'followup_3_type'        => $clean_type( $_POST['followup_3_type'] ?? 'sms' ),
                 'followup_3_message'     => sanitize_textarea_field( wp_unslash( $_POST['followup_3_message']     ?? '' ) ),
                 'updated_at'             => current_time( 'mysql' ),
-            ],
+        ];
+
+        // The new fields exist once the plugin has added their columns.
+        if ( OFP_Queue::columns_ready() ) {
+            $config_data['instant_email_enabled'] = ! empty( $_POST['instant_email_enabled'] ) ? 1 : 0;
+            $config_data['instant_email_subject'] = sanitize_text_field( wp_unslash( $_POST['instant_email_subject'] ?? '' ) );
+            $config_data['instant_email_message'] = sanitize_textarea_field( wp_unslash( $_POST['instant_email_message'] ?? '' ) );
+            $config_data['alert_sms_enabled']     = ! empty( $_POST['alert_sms_enabled'] ) ? 1 : 0;
+        }
+
+        $wpdb->update(
+            $wpdb->prefix . 'ofp_pipeline_configs',
+            $config_data,
             [ 'client_id' => $client->id ]
         );
 
@@ -126,9 +131,21 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_pipeline_nonce'
 
 $type_options = [
     'sms'   => 'SMS',
-    'voice' => 'Voice Call',
     'email' => 'Email',
 ];
+
+// Warn about messages that are empty, because an empty message sends nothing.
+$empty_notes = [];
+if ( $config ) {
+    if ( ! empty( $config->instant_sms_enabled ) && trim( (string) $config->instant_sms_message ) === '' ) {
+        $empty_notes[] = 'Instant SMS is switched on but has no message, so nothing will be sent.';
+    }
+    foreach ( [ 1, 2, 3 ] as $n ) {
+        if ( trim( (string) ( $config->{"followup_{$n}_message"} ?? '' ) ) === '' ) {
+            $empty_notes[] = 'Follow-up ' . $n . ' has no message, so it will be skipped.';
+        }
+    }
+}
 
 // ── Data for Call Scripts ──────────────────────────────────────────────────
 $call_settings = class_exists( 'OFP_Voice_Notice' ) ? OFP_Voice_Notice::settings( (int) $client->id ) : [];
@@ -170,6 +187,27 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
             <?php wp_nonce_field( 'ofp_save_pipeline_' . $client->id, 'ofp_pipeline_nonce' ); ?>
             <?php wp_nonce_field( 'ofp_voice_notice_' . (int) $client->id, 'ofp_voice_notice_nonce' ); ?>
 
+            <?php if ( $empty_notes ) : ?>
+                <div class="ofp-alert ofp-alert-error" style="margin-bottom: 16px;">
+                    <?php foreach ( $empty_notes as $note ) : ?>
+                        <div><?php echo esc_html( $note ); ?></div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+            <p class="ofp-hint" style="margin-bottom: 16px;">You can use {{name}}, {{business_name}}, {{property}} and {{phone}} in any message below.</p>
+
+            <div class="ofp-card" style="margin-bottom: 20px;">
+                <div class="ofp-card-header">
+                    <h3>New lead alert to you</h3>
+                    <label class="ofp-toggle">
+                        <input type="checkbox" name="alert_sms_enabled" value="1"
+                            <?php checked( $config?->alert_sms_enabled ?? 1, 1 ); ?>>
+                        <span class="ofp-toggle-slider"></span>
+                    </label>
+                </div>
+                <p class="ofp-hint" style="margin-bottom:0;">The moment a lead comes in, you get a bell alert and an email, based on your notification settings. This switch also sends an SMS to your own phone number. That SMS uses one SMS credit.</p>
+            </div>
+
             <div class="ofp-pipeline-timeline" id="ofpPipelineTimeline" data-business-name="<?php echo esc_attr( $client->business_name ?? 'My Business' ); ?>">
                 <div class="ofp-timeline-progress" id="ofpTimelineProgress"></div>
 
@@ -186,7 +224,7 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                                     <span class="ofp-toggle-slider"></span>
                                 </label>
                             </div>
-                            <p class="ofp-hint" style="margin-bottom:12px;">Sent within 5 minutes of a lead submitting your form.</p>
+                            <p class="ofp-hint" style="margin-bottom:12px;">Sent to the lead straight after they submit your form. If it fails, it is tried again automatically.</p>
                             <div class="ofp-field" style="margin-bottom:0;">
                                 <label>Message</label>
                                 <textarea name="instant_sms_message" rows="3" maxlength="320"
@@ -196,6 +234,38 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                                 <p class="ofp-hint" style="margin-top:6px;">Keep under 160 characters for a single SMS credit. Current:
                                     <span id="ofp-sms-count-0">0</span> characters.
                                 </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Instant Email ─────────────────────────────────────────── -->
+                <div class="ofp-timeline-step">
+                    <div class="ofp-timeline-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><polyline points="3,7 12,13 21,7"></polyline></svg></div>
+                    <div class="ofp-timeline-content">
+                        <div class="ofp-card">
+                            <div class="ofp-card-header">
+                                <h3>Instant Email</h3>
+                                <label class="ofp-toggle">
+                                    <input type="checkbox" name="instant_email_enabled" value="1"
+                                        <?php checked( $config?->instant_email_enabled ?? 1, 1 ); ?>>
+                                    <span class="ofp-toggle-slider"></span>
+                                </label>
+                            </div>
+                            <p class="ofp-hint" style="margin-bottom:12px;">Sent at the same time as the Instant SMS, to leads who gave an email address. It uses your email template, replies come to your email, and it costs no credit.</p>
+                            <div class="ofp-field">
+                                <label>Subject</label>
+                                <input type="text" name="instant_email_subject" maxlength="150"
+                                       value="<?php echo esc_attr( $config?->instant_email_subject ?? '' ); ?>"
+                                       placeholder="<?php echo esc_attr( OFP_Queue::default_instant_email_subject() ); ?>">
+                            </div>
+                            <div class="ofp-field" style="margin-bottom:0;">
+                                <label>Message</label>
+                                <textarea name="instant_email_message" rows="4" maxlength="2000"
+                                          placeholder="<?php echo esc_attr( OFP_Queue::default_instant_email_message() ); ?>"><?php
+                                    echo esc_textarea( $config?->instant_email_message ?? '' );
+                                ?></textarea>
+                                <p class="ofp-hint" style="margin-top:6px;">Leave the message empty to use the default text shown above.</p>
                             </div>
                         </div>
                     </div>
@@ -212,7 +282,7 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                             <div class="ofp-form-row">
                                 <div class="ofp-field">
                                     <label>Delay (hours after lead capture)</label>
-                                    <input type="number" name="followup_1_delay_hours" min="1" max="168"
+                                    <input type="number" name="followup_1_delay_hours" min="1" max="720"
                                            value="<?php echo esc_attr( $config?->followup_1_delay_hours ?? 1 ); ?>">
                                 </div>
                                 <div class="ofp-field">
@@ -244,12 +314,12 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                     <div class="ofp-timeline-content">
                         <div class="ofp-card">
                             <div class="ofp-card-header">
-                                <h3>Follow-up 2 (Voice Call)</h3>
+                                <h3>Follow-up 2</h3>
                             </div>
                             <div class="ofp-form-row">
                                 <div class="ofp-field">
                                     <label>Delay (hours after lead capture)</label>
-                                    <input type="number" name="followup_2_delay_hours" min="1" max="168"
+                                    <input type="number" name="followup_2_delay_hours" min="1" max="720"
                                            value="<?php echo esc_attr( $config?->followup_2_delay_hours ?? 24 ); ?>">
                                 </div>
                                 <div class="ofp-field">
@@ -257,7 +327,7 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                                     <select name="followup_2_type" class="ofp-select">
                                         <?php foreach ( $type_options as $val => $label ) : ?>
                                             <option value="<?php echo esc_attr( $val ); ?>"
-                                                <?php selected( $config?->followup_2_type ?? 'voice', $val ); ?>>
+                                                <?php selected( $config?->followup_2_type ?? 'sms', $val ); ?>>
                                                 <?php echo esc_html( $label ); ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -265,42 +335,11 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                                 </div>
                             </div>
                             <div class="ofp-field" style="margin-bottom:0;">
-                                <label>Voice Script (read aloud during the call)</label>
+                                <label>Message</label>
                                 <textarea name="followup_2_message" rows="3"
-                                          placeholder="Hello {{name}}, this is a message from {{business_name}} regarding your recent inquiry. We would love to connect with you."><?php
+                                          placeholder="Hi {{name}}, we would love to help you with {{property}}. Reply to this message or call us anytime. {{business_name}}"><?php
                                     echo esc_textarea( $config?->followup_2_message ?? '' );
                                 ?></textarea>
-                                <p class="ofp-hint" style="margin-top:6px;">Write this as natural speech — it is read aloud by a text-to-speech engine.</p>
-                                
-                                <hr style="border:none; border-top:1px solid var(--border-color); margin:16px 0;">
-                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                                    <label style="display:inline-block; font-size:12px; font-weight:600; color:var(--text-muted); margin:0;">Custom Voice Audio (Optional)</label>
-                                    <span class="ofp-badge ofp-badge-yellow" style="font-size:10px; font-weight:700; letter-spacing:0.04em; padding:2px 8px;">Coming Soon</span>
-                                </div>
-                                <?php if ( ! empty( $config?->voice_audio_url ) ) : ?>
-                                    <div style="margin-bottom:12px; padding:12px; background:rgba(16,185,129,0.1); border-radius:8px; border:1px solid rgba(16,185,129,0.2);">
-                                        <p style="margin:0 0 8px; font-size:13px; color:var(--text-main); font-weight:500;">
-                                            ✅ Custom audio active. This overrides the text script.
-                                        </p>
-                                        <audio controls src="<?php echo esc_url( $config?->voice_audio_url ); ?>" style="width:100%; height:32px;"></audio>
-                                    </div>
-                                <?php endif; ?>
-                                <div style="font-size:13px; padding:12px; border:1px dashed var(--border-color); border-radius:8px; background:var(--bg-body);">
-                                    <p style="margin:0 0 10px; color:var(--text-muted);">
-                                        Upload an MP3 or WAV recording to override the robotic voice. Keep it under 5 MB.
-                                    </p>
-                                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                                        <input type="file" name="voice_audio" accept=".mp3,.wav,audio/mpeg,audio/wav" style="flex:1; font-size:13px; min-width:180px;" required form="ofp_audio_upload_form">
-                                        <button type="submit" class="ofp-btn ofp-btn-secondary" style="padding:6px 14px; min-width:auto; height:auto; width:auto;" form="ofp_audio_upload_form">Upload Audio</button>
-                                    </div>
-                                    <?php if ( ! empty( $config?->voice_audio_url ) ) : ?>
-                                        <div style="margin-top:8px;">
-                                            <button type="submit" class="ofp-btn ofp-btn-secondary" style="padding:4px 12px; min-width:auto; height:auto; width:auto; font-size:12px; color:var(--accent-red);" form="ofp_audio_remove_form">
-                                                Remove Audio (revert to text-to-speech)
-                                            </button>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -435,15 +474,6 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
 
                 </form>
 
-                <!-- ── Audio Upload / Remove Forms (Phase 22) ────────────── -->
-                <form id="ofp_audio_upload_form" method="POST" action="" enctype="multipart/form-data" style="display:none;">
-                    <?php wp_nonce_field( 'ofp_upload_audio_' . $client->id, 'ofp_audio_upload_nonce' ); ?>
-                </form>
-                <?php if ( ! empty( $config?->voice_audio_url ) ) : ?>
-                    <form id="ofp_audio_remove_form" method="POST" action="" style="display:none;">
-                        <?php wp_nonce_field( 'ofp_remove_audio_' . $client->id, 'ofp_audio_remove_nonce' ); ?>
-                    </form>
-                <?php endif; ?>
                 <?php endif; // $config ?>
 
             </div>
@@ -462,9 +492,8 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                             <div class="ofp-chat-bubble" id="preview_followup_1_message">
                                 Hi John, just checking in — did you get our earlier message? - My Business
                             </div>
-                            <div class="ofp-chat-bubble call-bubble" id="preview_followup_2_message" style="color: #0f172a !important;">
-                                <strong style="color: #be185d !important;">📞 Voice Call Script</strong>
-                                <p style="margin:0; color: #0f172a !important;">Hello John, this is a quick follow-up from My Business regarding your inquiry.</p>
+                            <div class="ofp-chat-bubble" id="preview_followup_2_message">
+                                Hi John, we would love to help you with Sunset Villa. Reply to this message or call us anytime. My Business
                             </div>
                             <div class="ofp-chat-bubble" id="preview_followup_3_message">
                                 Hi John, we have been trying to reach you. We would love to help. Call or message us anytime. - My Business

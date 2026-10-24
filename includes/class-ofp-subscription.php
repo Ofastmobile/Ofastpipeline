@@ -382,7 +382,7 @@ class OFP_Subscription {
                 // otherwise fall back to hardcoded defaults.
                 $wpdb->insert(
                     $wpdb->prefix . 'ofp_pipeline_configs',
-                    [
+                    array_merge( [
                         'client_id'              => $client_id,
                         'instant_sms_enabled'    => 1,
                         'instant_sms_message'    => get_option( 'ofp_default_instant_sms', self::default_instant_sms() ),
@@ -390,8 +390,8 @@ class OFP_Subscription {
                         'followup_1_type'        => 'sms',
                         'followup_1_message'     => get_option( 'ofp_default_followup_1', self::default_followup_sms() ),
                         'followup_2_delay_hours' => 24,
-                        'followup_2_type'        => 'voice',
-                        'followup_2_message'     => get_option( 'ofp_default_followup_2', self::default_ivr_message() ),
+                        'followup_2_type'        => 'sms',
+                        'followup_2_message'     => get_option( 'ofp_default_followup_2', self::default_followup_2_sms() ),
                         'followup_3_delay_hours' => 72,
                         'followup_3_type'        => 'sms',
                         'followup_3_message'     => get_option( 'ofp_default_followup_3', self::default_followup_3_sms() ),
@@ -399,7 +399,7 @@ class OFP_Subscription {
                         'ivr_option_1_action'    => 'transfer',
                         'ivr_option_2_action'    => 'sms',
                         'ivr_option_3_action'    => 'schedule',
-                    ]
+                    ], OFP_Queue::default_new_config_fields() )
                 );
             }
         }
@@ -1196,6 +1196,10 @@ class OFP_Subscription {
      *
      * @return string
      */
+    private static function default_followup_2_sms(): string {
+        return 'Hi {{name}}, this is {{business_name}}. We are still happy to help you with {{property}}. Reply to this message or call us anytime.';
+    }
+
     private static function default_ivr_message(): string {
         return 'Hello, this is a message from {{business_name}}. You recently showed interest in our services. Press 1 to speak with us now. Press 2 to receive our WhatsApp contact. Press 3 for us to call you back later.';
     }

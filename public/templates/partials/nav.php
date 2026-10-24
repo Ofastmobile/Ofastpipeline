@@ -40,10 +40,28 @@ $allowed_svg = [
     'path' => [ 'stroke-linecap' => true, 'stroke-linejoin' => true, 'd' => true, 'fill' => true, 'stroke' => true ],
 ];
 
-// ── Navigation items ──────────────────────────────────────────────────────────
-$nav_items = [];
+// ── Navigation items grouped by workflow ─────────────────────────────────────
+$nav_sections = [
+    'overview' => [
+        'title' => 'Overview',
+        'items' => [],
+    ],
+    'crm' => [
+        'title' => 'CRM & Leads',
+        'items' => [],
+    ],
+    'properties' => [
+        'title' => 'Property Commerce',
+        'items' => [],
+    ],
+    'workspace' => [
+        'title' => 'Workspace & Billing',
+        'items' => [],
+    ],
+];
 
-$nav_items[] = [
+// 1. OVERVIEW
+$nav_sections['overview']['items'][] = [
     'label'  => 'Dashboard',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>',
     'url'    => home_url( '/dashboard' ),
@@ -51,11 +69,20 @@ $nav_items[] = [
     'locked' => false,
 ];
 
-$nav_items[] = [
-    'label'  => 'My Properties',
-    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>',
-    'url'    => home_url( '/properties' ),
-    'slug'   => 'properties',
+$nav_sections['overview']['items'][] = [
+    'label'  => 'Reports',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>',
+    'url'    => home_url( '/reports' ),
+    'slug'   => 'reports',
+    'locked' => false,
+];
+
+// 2. CRM & LEADS
+$nav_sections['crm']['items'][] = [
+    'label'  => 'My Leads',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>',
+    'url'    => home_url( '/leads' ),
+    'slug'   => 'leads',
     'locked' => false,
 ];
 
@@ -64,7 +91,7 @@ $pending_inspections_count = (int) $wpdb->get_var( $wpdb->prepare(
     $client->id
 ) );
 
-$nav_items[] = [
+$nav_sections['crm']['items'][] = [
     'label'  => 'Inspections',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>',
     'url'    => home_url( '/inspections' ),
@@ -73,7 +100,40 @@ $nav_items[] = [
     'locked' => false,
 ];
 
-$nav_items[] = [
+$nav_sections['crm']['items'][] = [
+    'label'  => 'Customers',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>',
+    'url'    => home_url( '/customers' ),
+    'slug'   => 'customers',
+    'locked' => false,
+];
+
+$nav_sections['crm']['items'][] = [
+    'label'  => 'Communications',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" /></svg>',
+    'url'    => home_url( '/message-templates' ),
+    'slug'   => 'message-templates',
+    'locked' => false,
+];
+
+$nav_sections['crm']['items'][] = [
+    'label'  => 'Automation',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>',
+    'url'    => home_url( '/pipeline-settings' ),
+    'slug'   => 'pipeline-settings',
+    'locked' => false,
+];
+
+// 3. PROPERTY COMMERCE
+$nav_sections['properties']['items'][] = [
+    'label'  => 'My Properties',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>',
+    'url'    => home_url( '/properties' ),
+    'slug'   => 'properties',
+    'locked' => false,
+];
+
+$nav_sections['properties']['items'][] = [
     'label'  => 'Sales & Installments',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7.5 16.5l3-3 2.25 2.25L19.5 9" /></svg>',
     'url'    => OFP_Subscription::has_paid_plan( (int) $client->id ) ? home_url( '/property-sales' ) : home_url( '/pricing' ),
@@ -81,7 +141,7 @@ $nav_items[] = [
     'locked' => ! OFP_Subscription::has_paid_plan( (int) $client->id ),
 ];
 
-$nav_items[] = [
+$nav_sections['properties']['items'][] = [
     'label'  => 'Transactions',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 5.25h-15A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75h15a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0019.5 5.25zM2.25 9h19.5M6 13.5h3" /></svg>',
     'url'    => home_url( '/property-payments' ),
@@ -89,8 +149,7 @@ $nav_items[] = [
     'locked' => false,
 ];
 
-
-$nav_items[] = [
+$nav_sections['properties']['items'][] = [
     'label'  => 'Rent & Tenants',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>',
     'url'    => OFP_Property_Rent::can_manage( (int) $client->id ) ? home_url( '/tenants' ) : home_url( '/pricing' ),
@@ -98,7 +157,7 @@ $nav_items[] = [
     'locked' => ! OFP_Property_Rent::can_manage( (int) $client->id ),
 ];
 
-$nav_items[] = [
+$nav_sections['properties']['items'][] = [
     'label'  => 'Investment',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>',
     'url'    => home_url( '/investment' ),
@@ -107,63 +166,7 @@ $nav_items[] = [
     'locked' => false,
 ];
 
-$nav_items[] = [
-    'label'  => 'My Leads',
-    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>',
-    'url'    => home_url( '/leads' ),
-    'slug'   => 'leads',
-    'locked' => false,
-];
-
-$nav_items[] = [
-    'label'  => 'Customers',
-    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>',
-    'url'    => home_url( '/customers' ),
-    'slug'   => 'customers',
-    'locked' => false,
-];
-
-$nav_items[] = [
-    'label'  => 'Automation',
-    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>',
-    'url'    => home_url( '/pipeline-settings' ),
-    'slug'   => 'pipeline-settings',
-    'locked' => false,
-];
-
-$nav_items[] = [
-    'label'  => 'Integrations & API',
-    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 9.75L16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" /></svg>',
-    'url'    => home_url( '/api-settings' ),
-    'slug'   => 'api-settings',
-    'locked' => false,
-];
-
-$nav_items[] = [
-    'label'  => 'Communications',
-    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" /></svg>',
-    'url'    => home_url( '/message-templates' ),
-    'slug'   => 'message-templates',
-    'locked' => false,
-];
-
-$nav_items[] = [
-    'label'  => 'Credits & Billing',
-    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>',
-    'url'    => home_url( '/credits' ),
-    'slug'   => 'credits',
-    'locked' => false,
-];
-
-$nav_items[] = [
-    'label'  => 'Reports',
-    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>',
-    'url'    => home_url( '/reports' ),
-    'slug'   => 'reports',
-    'locked' => false,
-];
-
-// Show Team menu to Main Clients and Managers
+// 4. WORKSPACE & BILLING
 $can_view_team = false;
 $current_user = OFP_Auth::current_user();
 if ( $current_user ) {
@@ -175,7 +178,7 @@ if ( $current_user ) {
 }
 
 if ( $can_view_team ) {
-    $nav_items[] = [
+    $nav_sections['workspace']['items'][] = [
         'label'  => 'Team',
         'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>',
         'url'    => OFP_Subscription::has_paid_plan( (int) $client->id ) ? home_url( '/team' ) : home_url( '/pricing' ),
@@ -184,10 +187,17 @@ if ( $can_view_team ) {
     ];
 }
 
+$nav_sections['workspace']['items'][] = [
+    'label'  => 'Credits & Billing',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>',
+    'url'    => home_url( '/credits' ),
+    'slug'   => 'credits',
+    'locked' => false,
+];
 
 // Funding — main client only, team members can't pay or manage billing
 if ( $current_user && empty( $current_user->is_team_member ) && ! OFP_Brand::hide_plan_prompts( $client ) ) {
-    $nav_items[] = [
+    $nav_sections['workspace']['items'][] = [
         'label'  => 'Funding',
         'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
         'url'    => home_url( '/funding' ),
@@ -196,19 +206,32 @@ if ( $current_user && empty( $current_user->is_team_member ) && ! OFP_Brand::hid
     ];
 }
 
-
-// Plans & Pricing: hidden for solo companies, they have no plan to choose
-if ( ! OFP_Brand::hide_plan_prompts( $client ) ) {
-$nav_items[] = [
-    'label'  => 'Plans & Pricing',
-    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" /></svg>',
-    'url'    => home_url( '/pricing' ),
-    'slug'   => 'pricing',
+$nav_sections['workspace']['items'][] = [
+    'label'  => 'Integrations & API',
+    'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 9.75L16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" /></svg>',
+    'url'    => home_url( '/api-settings' ),
+    'slug'   => 'api-settings',
     'locked' => false,
 ];
 
+// Plans & Pricing: hidden for solo companies, they have no plan to choose
+if ( ! OFP_Brand::hide_plan_prompts( $client ) ) {
+    $nav_sections['workspace']['items'][] = [
+        'label'  => 'Plans & Pricing',
+        'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" /></svg>',
+        'url'    => home_url( '/pricing' ),
+        'slug'   => 'pricing',
+        'locked' => false,
+    ];
 }
 
+// Flat list maintained for backward compatibility
+$nav_items = [];
+foreach ( $nav_sections as $section ) {
+    foreach ( $section['items'] as $item ) {
+        $nav_items[] = $item;
+    }
+}
 ?>
 
 <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>" id="ofp-client-portal-css-bundle">
@@ -231,36 +254,40 @@ svg { max-width: 100%; box-sizing: border-box; }
         </div>
         
         <nav class="ofp-sidebar-nav" aria-label="Client portal navigation">
-            <div class="ofp-nav-group">
-                <div class="ofp-nav-group-label">Overview</div>
-                <ul>
-                    <?php foreach ( $nav_items as $item ) :
-                        $is_active = ! $item['locked'] && $item['slug'] && (
-                            strpos( $current_url, '/' . $item['slug'] ) !== false ||
-                            ( $item['slug'] === 'api-settings' && preg_match( '#/(api-settings|api)(/|$)#', $current_url ) ) ||
-                            ( $item['slug'] === 'tenants' && strpos( $current_url, '/rent' ) !== false ) ||
-                            ( $item['slug'] === 'profile' && strpos( $current_url, '/account' ) !== false )
-                        );
-                        $classes = 'ofp-nav-item';
-                        if ( $is_active )      $classes .= ' active';
-                        if ( $item['locked'] ) $classes .= ' locked';
-                    ?>
-                        <li>
-                            <a href="<?php echo esc_url( $item['url'] ); ?>"
-                               class="<?php echo esc_attr( $classes ); ?>"
-                               <?php echo $item['locked'] ? 'aria-disabled="true"' : ''; ?>>
-                                <span class="ofp-nav-icon">
-                                    <?php echo wp_kses( $item['icon'], $allowed_svg ); ?>
-                                </span>
-                                <span class="ofp-nav-label"><?php echo esc_html( $item['label'] ); ?></span>
-                                <?php if ( ! empty( $item['badge'] ) ) : ?>
-                                    <span class="ofp-nav-badge"><?php echo esc_html( $item['badge'] ); ?></span>
-                                <?php endif; ?>
-                            </a>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
+            <?php foreach ( $nav_sections as $sec_key => $section ) :
+                if ( empty( $section['items'] ) ) continue;
+            ?>
+                <div class="ofp-nav-group">
+                    <div class="ofp-nav-group-label"><?php echo esc_html( $section['title'] ); ?></div>
+                    <ul>
+                        <?php foreach ( $section['items'] as $item ) :
+                            $is_active = ! $item['locked'] && $item['slug'] && (
+                                strpos( $current_url, '/' . $item['slug'] ) !== false ||
+                                ( $item['slug'] === 'api-settings' && preg_match( '#/(api-settings|api)(/|$)#', $current_url ) ) ||
+                                ( $item['slug'] === 'tenants' && strpos( $current_url, '/rent' ) !== false ) ||
+                                ( $item['slug'] === 'profile' && strpos( $current_url, '/account' ) !== false )
+                            );
+                            $classes = 'ofp-nav-item';
+                            if ( $is_active )      $classes .= ' active';
+                            if ( $item['locked'] ) $classes .= ' locked';
+                        ?>
+                            <li>
+                                <a href="<?php echo esc_url( $item['url'] ); ?>"
+                                   class="<?php echo esc_attr( $classes ); ?>"
+                                   <?php echo $item['locked'] ? 'aria-disabled="true"' : ''; ?>>
+                                    <span class="ofp-nav-icon">
+                                        <?php echo wp_kses( $item['icon'], $allowed_svg ); ?>
+                                    </span>
+                                    <span class="ofp-nav-label"><?php echo esc_html( $item['label'] ); ?></span>
+                                    <?php if ( ! empty( $item['badge'] ) ) : ?>
+                                        <span class="ofp-nav-badge"><?php echo esc_html( $item['badge'] ); ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endforeach; ?>
         </nav>
 
         <div class="ofp-sidebar-footer">
@@ -302,6 +329,10 @@ svg { max-width: 100%; box-sizing: border-box; }
                         <a href="<?php echo esc_url( home_url( '/activity-logs' ) ); ?>" class="ofp-dropdown-item">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             Activity Log
+                        </a>
+                        <a href="javascript:void(0)" class="ofp-dropdown-item ofp-open-feedback-trigger" data-type="feature_request">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m2.25 8.25l-3.75-3.75H5.25a2.25 2.25 0 01-2.25-2.25V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25v9a2.25 2.25 0 01-2.25 2.25h-2.25l-4.5 4.5z" /></svg>
+                            Feedback & Bug Report
                         </a>
                         <a href="<?php echo esc_url( OFP_Client_Portal::logout_url() ); ?>" class="ofp-dropdown-item danger">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
@@ -1090,4 +1121,6 @@ svg { max-width: 100%; box-sizing: border-box; }
         })();
         </script>
         
+        <?php include OFP_PATH . 'public/templates/partials/feedback-modal.php'; ?>
+
         <div class="ofp-content-area">
