@@ -107,11 +107,16 @@ class OFP_Subscription {
             return 'free';
         }
 
+        static $plan_cache = [];
+        if ( isset( $plan_cache[ $client_id ] ) ) {
+            return $plan_cache[ $client_id ];
+        }
+
         $best = 'free';
 
         $client = OFP_Client::get( $client_id );
         if ( self::is_plan_expired( $client ) ) {
-            return 'free';
+            return $plan_cache[ $client_id ] = 'free';
         }
         if ( $client ) {
             $best = self::higher_plan( $best, $client->plan ?? null );
@@ -125,7 +130,7 @@ class OFP_Subscription {
             $best = self::higher_plan( $best, $listing );
         }
 
-        return $best;
+        return $plan_cache[ $client_id ] = $best;
     }
 
     /**

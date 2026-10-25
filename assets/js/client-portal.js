@@ -616,43 +616,54 @@
     var ProgressEngine = {
         start: function (label) {
             var els = getPreloaderElements();
+            if (!els.track || !els.bar || !els.island) return;
             clearInterval(progressTimer);
-            progressVal = 22;
+
+            if (!progressVal || progressVal < 25) {
+                progressVal = 25;
+            }
 
             els.track.classList.add('is-active');
+            els.island.classList.add('is-active');
             els.bar.style.width = progressVal + '%';
 
             var textEl = els.island.querySelector('.ofp-glass-preloader-text');
-            if (textEl) textEl.textContent = label || 'Syncing...';
-            els.island.classList.add('is-active');
+            if (textEl && label) {
+                textEl.textContent = label;
+            }
 
             progressTimer = setInterval(function () {
-                if (progressVal < 85) {
-                    progressVal += Math.random() * 8 + 3;
-                    if (progressVal > 85) progressVal = 85;
+                if (progressVal < 88) {
+                    progressVal += Math.random() * 6 + 3;
+                    if (progressVal > 88) progressVal = 88;
                     els.bar.style.width = progressVal + '%';
                 }
-            }, 220);
+            }, 180);
         },
         set: function (pct) {
             var els = getPreloaderElements();
+            if (!els.track || !els.bar || !els.island) return;
             els.track.classList.add('is-active');
             els.island.classList.add('is-active');
-            els.bar.style.width = Math.min(100, Math.max(0, pct)) + '%';
+            progressVal = Math.min(100, Math.max(0, pct));
+            els.bar.style.width = progressVal + '%';
         },
         done: function () {
             var els = getPreloaderElements();
+            if (!els.track || !els.bar || !els.island) return;
             clearInterval(progressTimer);
             progressVal = 100;
+            els.bar.style.transition = 'width 0.12s ease-out';
             els.bar.style.width = '100%';
 
             setTimeout(function () {
                 els.track.classList.remove('is-active');
                 els.island.classList.remove('is-active');
                 setTimeout(function () {
+                    progressVal = 0;
                     els.bar.style.width = '0%';
-                }, 250);
-            }, 220);
+                }, 120);
+            }, 80);
         }
     };
 
@@ -831,13 +842,24 @@
     var origFetch = window.fetch;
     if (origFetch) {
         var activeRequests = 0;
+        var fetchTimeout = null;
         window.fetch = function () {
             activeRequests++;
             ProgressEngine.start('Syncing...');
+
+            clearTimeout(fetchTimeout);
+            fetchTimeout = setTimeout(function () {
+                if (activeRequests > 0) {
+                    activeRequests = 0;
+                    ProgressEngine.done();
+                }
+            }, 8000);
+
             return origFetch.apply(this, arguments).finally(function () {
                 activeRequests--;
                 if (activeRequests <= 0) {
                     activeRequests = 0;
+                    clearTimeout(fetchTimeout);
                     ProgressEngine.done();
                 }
             });
@@ -860,11 +882,14 @@
             if (href.indexOf('#') === 0 || href.indexOf('javascript:') === 0 || href.indexOf('tel:') === 0 || href.indexOf('mailto:') === 0) return;
             if (link.getAttribute('target') === '_blank' || link.hasAttribute('download')) return;
 
+            // Ignore modal triggers or buttons styled as links
+            if (link.getAttribute('role') === 'button' || link.classList.contains('ofp-modal-trigger') || link.hasAttribute('data-dismiss')) return;
+
             // Check if same origin or relative
             try {
                 var targetUrl = new URL(link.href, window.location.href);
                 if (targetUrl.origin !== window.location.origin) return;
-                if (targetUrl.href === window.location.href) return;
+                if (targetUrl.pathname === window.location.pathname && targetUrl.search === window.location.search && targetUrl.hash) return;
             } catch (err) {
                 return;
             }
@@ -873,12 +898,39 @@
             setTimeout(function () {
                 if (!e.defaultPrevented) {
                     var label = 'Loading...';
-                    var linkText = (link.textContent || '').trim().replace(/\s+/g, ' ');
-                    if (link.closest('.ofp-sidebar') || link.closest('.ofp-bottom-nav') || link.closest('.ofp-user-menu') || link.closest('.ofp-topbar')) {
-                        if (linkText && linkText.length < 24) {
-                            label = linkText + '...';
+
+                    // Extract page title cleanly from link
+                    var labelEl = link.querySelector('.ofp-nav-label, .ofp-dropdown-item-title, .ofp-bottom-nav-label');
+                    var rawText = '';
+                    if (labelEl && labelEl.textContent.trim()) {
+                        rawText = labelEl.textContent.trim();
+                    } else if (link.getAttribute('title') && link.getAttribute('title').trim()) {
+                        rawText = link.getAttribute('title').trim();
+                    } else if (link.getAttribute('aria-label') && link.getAttribute('aria-label').trim()) {
+                        rawText = link.getAttribute('aria-label').trim();
+                    } else if (link.getAttribute('data-slug')) {
+                        var slug = link.getAttribute('data-slug').replace(/[-_]/g, ' ');
+                        rawText = slug.charAt(0).toUpperCase() + slug.slice(1);
+                    } else {
+                        var clone = link.cloneNode(true);
+                        var unwanted = clone.querySelectorAll('.ofp-nav-badge, svg, .ofp-nav-icon, .badge');
+                        for (var i = 0; i < unwanted.length; i++) {
+                            if (unwanted[i].parentNode) unwanted[i].parentNode.removeChild(unwanted[i]);
                         }
+                        rawText = clone.textContent.trim();
                     }
+
+                    // Clean out numbers, symbols, excessive whitespace
+                    var cleanName = rawText.replace(/\s+/g, ' ').replace(/[0-9]+$/, '').trim();
+                    if (cleanName && cleanName.length > 1 && cleanName.length < 35) {
+                        label = cleanName + '...';
+                    }
+
+                    // Persist to sessionStorage for the incoming page
+                    try {
+                        sessionStorage.setItem('ofp_nav_label', label);
+                    } catch (err) {}
+
                     ProgressEngine.start(label);
                 }
             }, 30);
@@ -891,25 +943,41 @@
             if (form && form.getAttribute('target') === '_blank') return;
             setTimeout(function () {
                 if (!e.defaultPrevented) {
+                    try {
+                        sessionStorage.setItem('ofp_nav_label', 'Saving...');
+                    } catch (err) {}
                     ProgressEngine.start('Saving...');
                 }
             }, 30);
         });
 
-        // Browser beforeunload hook
+        // Browser beforeunload hook: preserve active label, only fallback to Loading... if inactive
         window.addEventListener('beforeunload', function () {
-            ProgressEngine.start('Loading...');
+            var els = getPreloaderElements();
+            if (!els.island || !els.island.classList.contains('is-active')) {
+                ProgressEngine.start('Loading...');
+            }
         });
 
         // Browser pageshow hook (back/forward cache restoration)
         window.addEventListener('pageshow', function () {
+            try { sessionStorage.removeItem('ofp_nav_label'); } catch(e) {}
             ProgressEngine.done();
         });
 
-        // Fresh page load completion: finish any residual loader smoothly
-        setTimeout(function () {
+        // Fresh page load completion: finish initial preloader instantly once DOM is ready
+        function finishInitialPageLoad() {
             ProgressEngine.done();
-        }, 150);
+        }
+
+        if (document.readyState === 'interactive' || document.readyState === 'complete') {
+            finishInitialPageLoad();
+        } else {
+            document.addEventListener('DOMContentLoaded', finishInitialPageLoad, { once: true });
+        }
+
+        // Failsafe timer (max 350ms)
+        setTimeout(finishInitialPageLoad, 350);
     }
 
     // ── Persistent Sidebar Navigation Scroll Restoration ────────────────────
@@ -1033,20 +1101,30 @@
     }
 
     // ── Init all ─────────────────────────────────────────────────────────────
+    // Run preloader initialization immediately so click & unload handlers are ready without waiting
+    initNavigationPreloader();
+
     document.addEventListener('DOMContentLoaded', function () {
-        initSidebarToggle();
-        initSidebarScrollRestoration();
-        initCharCounters();
-        initFormLoadingState();
-        initAutoDismissAlerts();
-        initSignupPlanToggle();
-        initLeadStatusConfirm();
-        initPasswordStrength();
-        initThemeToggle();
-        initUserDropdown();
-        initOfpCustomSelects();
-        initAjaxLeads();
-        initNavigationPreloader();
+        var safeInit = function (fn, name) {
+            try {
+                fn();
+            } catch (err) {
+                console.warn('OFP Portal: init ' + name + ' failed:', err);
+            }
+        };
+
+        safeInit(initSidebarToggle, 'initSidebarToggle');
+        safeInit(initSidebarScrollRestoration, 'initSidebarScrollRestoration');
+        safeInit(initCharCounters, 'initCharCounters');
+        safeInit(initFormLoadingState, 'initFormLoadingState');
+        safeInit(initAutoDismissAlerts, 'initAutoDismissAlerts');
+        safeInit(initSignupPlanToggle, 'initSignupPlanToggle');
+        safeInit(initLeadStatusConfirm, 'initLeadStatusConfirm');
+        safeInit(initPasswordStrength, 'initPasswordStrength');
+        safeInit(initThemeToggle, 'initThemeToggle');
+        safeInit(initUserDropdown, 'initUserDropdown');
+        safeInit(initOfpCustomSelects, 'initOfpCustomSelects');
+        safeInit(initAjaxLeads, 'initAjaxLeads');
 
         // Convert any existing page flash alert to modern toast if present
         var legacySuccess = document.querySelector('.ofp-alert-success');

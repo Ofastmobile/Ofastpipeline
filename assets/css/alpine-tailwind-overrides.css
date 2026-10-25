@@ -29,12 +29,11 @@ html.dark .hero-bg {
 
 /* Custom styling for range sliders */
 input[type=range]::-webkit-slider-thumb {
-    pointer-events: all;
+    pointer-events: auto;
     width: 24px;
     height: 24px;
     -webkit-appearance: none;
     appearance: none;
-    @apply w-6 h-6 appearance-none pointer-events-auto;
 }
 
 /* Base font settings - Front end font is Segoe UI */

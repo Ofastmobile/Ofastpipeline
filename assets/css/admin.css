@@ -473,71 +473,265 @@
     color: var(--ofp-slate-800);
 }
 
-/* ── Top Header & Actions ─────────────────────────────────────────────────── */
-.ofp-settings-topbar {
+/* ── Modern SaaS Command Header ─────────────────────────────────────────── */
+.is-portal-mode .ofp-saas-header {
+    display: none !important;
+}
+
+.ofp-saas-header {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.02);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #ffffff;
-    border: 1px solid var(--ofp-slate-200);
-    border-radius: var(--ofp-radius);
-    padding: 20px 28px;
-    margin-bottom: 20px;
-    box-shadow: var(--ofp-card-shadow);
-    gap: 20px;
+    gap: 24px;
     flex-wrap: wrap;
+    position: relative;
+    overflow: hidden;
 }
 
-.ofp-topbar-left {
+.ofp-saas-header::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #2563eb 0%, #8b5cf6 50%, #10b981 100%);
+}
+
+.ofp-saas-header-content {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
+    max-width: 760px;
 }
 
-.ofp-settings-title-row {
+.ofp-saas-breadcrumbs {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.ofp-crumb-app {
+    color: #2563eb;
+    font-weight: 700;
+}
+
+.ofp-crumb-sep {
+    color: #cbd5e1;
+}
+
+.ofp-crumb-current {
+    color: #0f172a;
+}
+
+.ofp-saas-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.ofp-saas-title-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1.5px solid #bfdbfe;
+    color: #2563eb;
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
 }
 
-.ofp-settings-title {
-    font-size: 24px !important;
+.ofp-saas-title-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.ofp-saas-title {
+    font-size: 22px !important;
     font-weight: 800 !important;
-    color: var(--ofp-slate-900) !important;
-    letter-spacing: -0.02em;
+    color: #0f172a !important;
+    letter-spacing: -0.025em;
     margin: 0 !important;
-    line-height: 1.2 !important;
+    line-height: 1.25 !important;
 }
 
-.ofp-topbar-badge {
+.ofp-saas-subtitle {
+    margin: 6px 0 0 !important;
+    font-size: 13px !important;
+    color: #64748b !important;
+    line-height: 1.55 !important;
+}
+
+/* SaaS Metadata Badges */
+.ofp-saas-badge {
     display: inline-flex;
     align-items: center;
     gap: 5px;
     font-size: 11px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
     padding: 3px 9px;
     border-radius: 100px;
-    background: var(--ofp-purple-bg);
-    color: var(--ofp-purple);
-    border: 1px solid var(--ofp-purple-border);
+    line-height: 1;
 }
 
-.ofp-settings-desc {
-    font-size: 13px;
-    color: var(--ofp-slate-500);
-    margin: 0;
-    line-height: 1.5;
+.ofp-badge-super {
+    background: #f5f3ff;
+    color: #7c3aed;
+    border: 1px solid #ddd6fe;
 }
 
-.ofp-topbar-actions {
+.ofp-badge-live {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+.ofp-badge-vault {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+
+.ofp-pulse-ring {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+    animation: ofpPulseGlow 2s infinite;
+}
+
+@keyframes ofpPulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+    70% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Header Actions: Search & Save */
+.ofp-saas-header-actions {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-wrap: wrap;
 }
 
+.ofp-saas-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 0 12px;
+    width: 260px;
+    height: 40px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ofp-saas-search-box:focus-within {
+    background: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    width: 300px;
+}
+
+.ofp-saas-search-box svg {
+    width: 16px;
+    height: 16px;
+    color: #94a3b8;
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+
+.ofp-saas-search-box input {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+    color: #0f172a !important;
+    width: 100% !important;
+    padding: 0 !important;
+    height: auto !important;
+}
+
+.ofp-saas-search-box input::placeholder {
+    color: #94a3b8;
+}
+
+.ofp-search-kbd {
+    font-size: 10px;
+    font-weight: 700;
+    color: #94a3b8;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 2px 5px;
+    line-height: 1;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.ofp-btn-saas-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff !important;
+    border: none;
+    height: 40px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+
+.ofp-btn-saas-save:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.38);
+    transform: translateY(-1px);
+}
+
+.ofp-btn-saas-save:active {
+    transform: translateY(0);
+}
+
+.ofp-btn-saas-save svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+}
+
+.ofp-save-shortcut {
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 4px;
+    padding: 2px 5px;
+    line-height: 1;
+    margin-left: 2px;
+}
+
+/* Legacy button compatibility */
 .ofp-btn-save-master {
     display: inline-flex !important;
     align-items: center !important;
@@ -545,60 +739,121 @@
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
     color: #ffffff !important;
     border: none !important;
-    padding: 10px 22px !important;
-    border-radius: var(--ofp-radius-sm) !important;
-    font-size: 14px !important;
+    padding: 10px 20px !important;
+    border-radius: 10px !important;
+    font-size: 13.5px !important;
     font-weight: 600 !important;
     cursor: pointer !important;
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    height: 42px !important;
-    line-height: 1 !important;
+    transition: all 0.2s ease !important;
 }
 
-.ofp-btn-save-master:hover {
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35) !important;
-    transform: translateY(-1px);
-}
-
-.ofp-btn-save-master:active {
-    transform: translateY(0);
-}
-
-.ofp-btn-save-master svg {
-    width: 17px;
-    height: 17px;
-    fill: currentColor;
-}
-
-/* ── System Health Strip ──────────────────────────────────────────────────── */
+/* ── Modern Telemetry System Health Strip ─────────────────────────────────── */
 .ofp-health-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
     gap: 14px;
-    margin-bottom: 24px;
+    margin-bottom: 26px;
 }
 
 .ofp-health-card {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
     background: #ffffff;
-    border: 1px solid var(--ofp-slate-200);
-    border-radius: var(--ofp-radius-sm);
-    padding: 14px 18px;
-    box-shadow: var(--ofp-card-shadow);
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
     text-decoration: none;
     color: inherit;
-    transition: all 0.2s ease;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.ofp-health-card-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
 }
 
 .ofp-health-card:hover {
-    border-color: var(--ofp-primary-border);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
-    transform: translateY(-1px);
+    border-color: #93c5fd;
+    box-shadow: 0 8px 22px -4px rgba(37, 99, 235, 0.12);
+    transform: translateY(-2px);
+}
+
+.ofp-health-arrow {
+    width: 14px;
+    height: 14px;
+    color: #94a3b8;
+    opacity: 0.5;
+    transform: translateX(0);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.ofp-health-card:hover .ofp-health-arrow {
+    color: #2563eb;
+    opacity: 1;
+    transform: translateX(3px);
+}
+
+.ofp-health-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.ofp-health-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.ofp-health-status {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ofp-status-dot {
+    width: 7.5px;
+    height: 7.5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.ofp-status-dot.dot-green {
+    background: #10b981;
+    box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.25);
+}
+
+.ofp-status-dot.dot-yellow {
+    background: #f59e0b;
+    box-shadow: 0 0 0 2.5px rgba(245, 158, 11, 0.25);
+}
+
+.ofp-status-dot.dot-blue {
+    background: #3b82f6;
+    box-shadow: 0 0 0 2.5px rgba(59, 130, 246, 0.25);
+}
+
+.ofp-status-dot.dot-gray {
+    background: #94a3b8;
+    box-shadow: 0 0 0 2.5px rgba(148, 163, 184, 0.25);
 }
 
 /* ── Colored Icon System (Replaces Emojis) ────────────────────────────────── */
@@ -617,25 +872,32 @@
     height: 100%;
 }
 
+.ofp-icon-xs {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    padding: 3.5px;
+}
+
 .ofp-icon-sm {
-    width: 26px;
-    height: 26px;
-    border-radius: 7px;
-    padding: 5px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    padding: 6px;
 }
 
 .ofp-icon-md {
     width: 40px;
     height: 40px;
-    border-radius: 10px;
+    border-radius: 11px;
     padding: 9px;
 }
 
 .ofp-icon-lg {
     width: 46px;
     height: 46px;
-    border-radius: 12px;
-    padding: 11px;
+    border-radius: 13px;
+    padding: 10px;
 }
 
 /* Duotone / Colored palettes for icon containers */
@@ -659,77 +921,222 @@
 .ofp-nav-item.is-active .icon-teal    { background: #0d9488; color: #ffffff; border-color: #0d9488; }
 .ofp-nav-item.is-active .icon-sky     { background: #0284c7; color: #ffffff; border-color: #0284c7; }
 
-
-.ofp-health-meta {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.ofp-health-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--ofp-slate-400);
-}
-
-.ofp-health-status {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--ofp-slate-900);
+/* ── Settings SaaS Header Toolbar ────────────────────────────────────────── */
+.ofp-settings-toolbar {
     display: flex;
     align-items: center;
-    gap: 6px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+    padding: 4px 2px;
 }
 
-.ofp-status-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
+.ofp-settings-telemetry-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.ofp-telemetry-badge-title {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.ofp-telemetry-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ofp-telemetry-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 11px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #0f172a;
+    cursor: pointer;
+    transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.ofp-telemetry-chip:hover {
+    border-color: #93c5fd;
+    background: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.08);
+}
+
+.ofp-telemetry-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.ofp-telemetry-val {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.ofp-settings-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.ofp-settings-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0 12px;
+    width: 250px;
+    height: 38px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.ofp-settings-search-box:focus-within {
+    border-color: #10b981;
+    background: #ffffff;
+    box-shadow: 0 0 0 3.5px rgba(16, 185, 129, 0.15);
+    width: 290px;
+}
+
+.ofp-settings-search-box svg {
+    width: 15px;
+    height: 15px;
+    color: #94a3b8;
+    margin-right: 8px;
     flex-shrink: 0;
 }
 
-.ofp-status-dot.dot-green { background: #10b981; box-shadow: 0 0 0 2px #d1fae5; }
-.ofp-status-dot.dot-yellow { background: #f59e0b; box-shadow: 0 0 0 2px #fef3c7; }
-.ofp-status-dot.dot-blue { background: #3b82f6; box-shadow: 0 0 0 2px #dbeafe; }
-.ofp-status-dot.dot-gray { background: #94a3b8; box-shadow: 0 0 0 2px #f1f5f9; }
+.ofp-settings-search-box input {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+    color: #0f172a !important;
+    width: 100% !important;
+    padding: 0 !important;
+    height: auto !important;
+}
 
-/* ── Main Layout: Sidebar & Content Panels ────────────────────────────────── */
+.ofp-settings-search-box input::placeholder {
+    color: #94a3b8;
+}
+
+/* ── Modern Horizontal Segmented Tabs Navigation Bar ─────────────────────── */
+.ofp-settings-tabs-header-bar {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    padding: 5px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.ofp-settings-tabs-header-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.ofp-settings-tabs-scroll {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: max-content;
+}
+
+.ofp-settings-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+    position: relative;
+}
+
+.ofp-settings-tab-btn:hover {
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.ofp-settings-tab-btn.is-active {
+    background: #ffffff;
+    color: #064e3b;
+    font-weight: 700;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.ofp-settings-tab-btn.is-active .ofp-nav-pill {
+    background: #ecfdf5;
+    color: #059669;
+    border-color: #a7f3d0;
+}
+
+.ofp-tab-label {
+    line-height: 1;
+}
+
+/* ── Full Width Settings Layout & Panels ─────────────────────────────────── */
 .ofp-settings-layout {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 24px;
-    align-items: start;
+    display: block;
+    width: 100%;
 }
 
-@media (max-width: 960px) {
-    .ofp-settings-layout {
-        grid-template-columns: 1fr;
-    }
+.ofp-settings-panels {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: block !important;
 }
 
-/* ── Sidebar Navigation ───────────────────────────────────────────────────── */
+/* ── SaaS Sidebar Navigation ──────────────────────────────────────────────── */
 .ofp-settings-nav {
     background: #ffffff;
-    border: 1px solid var(--ofp-slate-200);
-    border-radius: var(--ofp-radius);
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
     padding: 16px 10px;
-    box-shadow: var(--ofp-card-shadow);
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
     position: sticky;
-    top: 36px;
+    top: 40px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 18px;
 }
 
 .ofp-nav-group {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
 }
 
 .ofp-nav-group-title {
@@ -737,8 +1144,8 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--ofp-slate-400);
-    padding: 6px 14px 2px;
+    color: #94a3b8;
+    padding: 6px 12px 4px;
 }
 
 .ofp-nav-item {
@@ -746,61 +1153,67 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 10px 14px;
-    border-radius: var(--ofp-radius-sm);
-    color: var(--ofp-slate-600);
+    padding: 9px 12px;
+    border-radius: 10px;
+    color: #475569;
     text-decoration: none;
-    font-size: 13px;
+    font-size: 13.5px;
     font-weight: 500;
-    transition: all 0.15s ease;
-    border-left: 3px solid transparent;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
     cursor: pointer;
     background: transparent;
-    border-top: none;
-    border-right: none;
-    border-bottom: none;
+    border: none;
     width: 100%;
     text-align: left;
     box-sizing: border-box;
+    position: relative;
 }
 
 .ofp-nav-item:hover {
-    background: var(--ofp-slate-50);
-    color: var(--ofp-slate-900);
+    background: #f8fafc;
+    color: #0f172a;
 }
 
 .ofp-nav-item.is-active {
-    background: linear-gradient(90deg, #eff6ff 0%, #ffffff 100%);
-    color: var(--ofp-primary);
+    background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+    color: #1d4ed8;
     font-weight: 600;
-    border-left: 3px solid var(--ofp-primary);
+    box-shadow: 0 1px 4px rgba(37, 99, 235, 0.08);
+}
+
+.ofp-nav-item.is-active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3.5px;
+    border-radius: 0 4px 4px 0;
+    background: #2563eb;
 }
 
 .ofp-nav-item-left {
     display: flex;
     align-items: center;
     gap: 10px;
-}
-
-.ofp-nav-item-icon {
-    font-size: 16px;
-    width: 20px;
-    text-align: center;
-    line-height: 1;
+    min-width: 0;
 }
 
 .ofp-nav-pill {
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 600;
-    padding: 2px 6px;
+    padding: 2px 7px;
     border-radius: 100px;
-    background: var(--ofp-slate-100);
-    color: var(--ofp-slate-500);
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    transition: all 0.15s ease;
 }
 
 .ofp-nav-item.is-active .ofp-nav-pill {
-    background: var(--ofp-primary-light);
-    color: var(--ofp-primary);
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
 }
 
 /* ── Content Panes ────────────────────────────────────────────────────────── */
@@ -1697,40 +2110,43 @@
     color: #f1f5f9;
 }
 
-/* ── Floating Sticky Action Bar (Pure White) ────────────────────────────── */
+/* ── Floating Sticky Action Dock (Dark Glassmorphic) ────────────────────── */
 .ofp-sticky-footer-bar {
     position: fixed;
-    bottom: 20px;
-    left: calc(160px + 24px);
-    right: 24px;
-    max-width: calc(100vw - 160px - 48px);
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: var(--ofp-radius);
-    padding: 14px 24px;
+    bottom: 24px;
+    left: calc(160px + 32px);
+    right: 32px;
+    max-width: calc(100vw - 160px - 64px);
+    background: rgba(15, 23, 42, 0.92) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 16px !important;
+    padding: 12px 24px !important;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
     z-index: 9999;
     margin: 0;
-    color: #1e293b;
+    color: #f8fafc !important;
     gap: 16px;
     box-sizing: border-box;
+    transition: all 0.25s ease;
 }
 
 body.folded .ofp-sticky-footer-bar {
-    left: calc(36px + 24px);
-    max-width: calc(100vw - 36px - 48px);
+    left: calc(36px + 32px);
+    max-width: calc(100vw - 36px - 64px);
 }
 
 @media screen and (max-width: 782px) {
     .ofp-sticky-footer-bar {
-        left: 16px;
-        right: 16px;
-        max-width: calc(100vw - 32px);
-        bottom: 16px;
-        padding: 12px 16px;
+        left: 14px;
+        right: 14px;
+        max-width: calc(100vw - 28px);
+        bottom: 14px;
+        padding: 10px 16px;
     }
 }
 
@@ -1738,13 +2154,13 @@ body.folded .ofp-sticky-footer-bar {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 13.5px;
+    font-size: 13px;
     font-weight: 600;
-    color: #1e293b;
+    color: #e2e8f0 !important;
 }
 
 .ofp-sticky-left span {
-    color: #1e293b;
+    color: #e2e8f0 !important;
 }
 
 .ofp-pulse-dot {
@@ -1752,8 +2168,9 @@ body.folded .ofp-sticky-footer-bar {
     height: 8px;
     background: #10b981;
     border-radius: 50%;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35);
     flex-shrink: 0;
+    animation: ofpPulseGlow 2s infinite;
 }
 
 .ofp-sticky-right {
