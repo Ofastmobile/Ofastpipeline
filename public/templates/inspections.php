@@ -169,7 +169,7 @@ $client_properties = $wpdb->get_results( $wpdb->prepare(
                 </div>
 
                 <!-- Bottom Row: Sleek Segmented Pill Tabs -->
-                <div class="ofp-segmented-nav ofp-inspection-tabs" style="display: flex; gap: 6px; flex-wrap: wrap; margin: 0; padding-top: 14px; border-top: 1px solid var(--border-color);">
+                <div class="ofp-segmented-nav ofp-inspection-tabs" style="display: flex; gap: 6px; margin: 0; padding-top: 14px; border-top: 1px solid var(--border-color);">
                     <button type="button" data-status="" class="ofp-inspection-tab ofp-segmented-tab <?php echo empty( $filter_status ) ? 'active' : ''; ?>">
                         <span>All Requests</span>
                         <span class="ofp-tab-badge" id="tab-cnt-all"><?php echo $total_count; ?></span>

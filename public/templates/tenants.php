@@ -565,7 +565,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             </div>
 
             <!-- ── Tabs Header (Clean Minimal Underline Style) ── -->
-            <div style="display:flex; border-bottom:1px solid var(--border-color); margin-bottom:20px; overflow-x:auto; gap:4px;">
+            <div class="ofp-sales-tabs-nav ofp-tabs-bar-scroll" style="display:flex; border-bottom:1px solid var(--border-color); margin-bottom:20px; overflow-x:auto; gap:4px;">
                 <a href="<?php echo esc_url( add_query_arg( 'tab', 'leases', home_url( '/tenants' ) ) ); ?>" class="ofp-tab-btn <?php echo $active_tab === 'leases' ? 'active' : ''; ?>">
                     Leases &amp; Offers
                 </a>
@@ -689,7 +689,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                                             <td style="text-align:right;">
                                                 <div style="display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
                                                     <?php if ( $share_url && $l->status === 'pending_offer' ) : ?>
-                                                        <button type="button" class="ofp-btn ofp-btn-sm" style="background:var(--bg-body); color:var(--text-main); border:1px solid var(--border-color);" onclick="navigator.clipboard.writeText('<?php echo esc_js( $share_url ); ?>'); alert('Offer link copied to clipboard!');">
+                                                        <button type="button" class="ofp-btn ofp-btn-sm" style="background:var(--bg-body); color:var(--text-main); border:1px solid var(--border-color);" onclick="navigator.clipboard.writeText('<?php echo esc_js( $share_url ); ?>'); if(window.OFP && typeof window.OFP.toast === 'function'){ window.OFP.toast('Offer link copied to clipboard!', 'success'); } else { alert('Offer link copied to clipboard!'); }">
                                                             Copy Link
                                                         </button>
                                                     <?php endif; ?>

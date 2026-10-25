@@ -40,6 +40,22 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_leads_nonce'] )
                     OFP_Queue::cancel_for_lead( $lead_id );
                 }
                 $message = 'success';
+
+                if ( ! empty( $_SERVER['HTTP_X_REQUESTED_WITH'] ) && strtolower( $_SERVER['HTTP_X_REQUESTED_WITH'] ) === 'xmlhttprequest' ) {
+                    $badges = [
+                        'new'        => '<span class="ofp-badge ofp-badge-blue">New</span>',
+                        'contacted'  => '<span class="ofp-badge ofp-badge-yellow">Contacted</span>',
+                        'interested' => '<span class="ofp-badge ofp-badge-orange">Interested</span>',
+                        'converted'  => '<span class="ofp-badge ofp-badge-green">✅ Converted</span>',
+                        'dead'       => '<span class="ofp-badge ofp-badge-grey">Dead</span>',
+                    ];
+                    wp_send_json_success( [
+                        'message'    => 'Lead status updated to ' . ucfirst( $new_status ),
+                        'new_status' => $new_status,
+                        'lead_id'    => $lead_id,
+                        'badge_html' => $badges[ $new_status ] ?? esc_html( $new_status ),
+                    ] );
+                }
             }
         }
     }
@@ -182,10 +198,10 @@ $status_badges = [
     </div>
 
     <!-- Dashboard Layout: Top Charts -->
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 32px;">
+    <div class="ofp-leads-top-charts-grid">
         
         <!-- Main Line Chart -->
-        <div class="ofp-card" style="display: flex; flex-direction: column;">
+        <div class="ofp-card ofp-leads-chart-card" style="display: flex; flex-direction: column;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                 <div>
                     <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Prospect Generation</h3>
@@ -217,7 +233,7 @@ $status_badges = [
         </div>
 
         <!-- Conversion Goal Donut Chart -->
-        <div class="ofp-card" style="display: flex; flex-direction: column;">
+        <div class="ofp-card ofp-leads-chart-card" style="display: flex; flex-direction: column;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                 <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Conversion Goal</h3>
                 <div style="padding: 4px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.1); color: var(--accent-green); font-size: 12px; font-weight: 700;">
@@ -356,7 +372,7 @@ $status_badges = [
                                 <td><?php echo esc_html( $lead->name ?: '—' ); ?></td>
                                 <td><strong><?php echo esc_html( $lead->phone ); ?></strong></td>
                                 <td><?php echo esc_html( $lead->email ?: '—' ); ?></td>
-                                <td><?php echo $status_badges[ $lead->status ] ?? esc_html( $lead->status ); ?></td>
+                                <td class="ofp-lead-status-cell"><?php echo $status_badges[ $lead->status ] ?? esc_html( $lead->status ); ?></td>
                                 <td style="color: var(--text-muted);"><?php echo $lead->ivr_response ? esc_html( 'Pressed ' . $lead->ivr_response ) : '—'; ?></td>
                                 <td style="white-space:nowrap;font-size:12px;color:var(--text-muted);">
                                     <?php echo esc_html( gmdate( 'M j, Y', strtotime( $lead->created_at ) ) ); ?>

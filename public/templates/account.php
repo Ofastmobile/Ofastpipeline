@@ -463,7 +463,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Profile', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/profile.css?v=' . OFP_VERSION ); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/profile.css?v=' . ( file_exists( OFP_PATH . 'assets/css/profile.css' ) ? filemtime( OFP_PATH . 'assets/css/profile.css' ) : OFP_VERSION ) ); ?>">
 </head>
 <body class="ofp-portal-body ofp-profile-body">
 
@@ -658,39 +658,28 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
         </div>
     </div>
 
-    <!-- ── Bottom Card: Branding & Bank Details ───────────────────────────── -->
-    <div class="ofp-profile-card ofp-branding-card">
-        <div class="ofp-productions-header-row" style="margin-bottom: 22px; border-bottom: 1px solid var(--prof-border); padding-bottom: 16px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <div style="width:38px; height:38px; border-radius:10px; background:rgba(0,188,181,0.12); display:flex; align-items:center; justify-content:center; color:var(--prof-teal); flex-shrink:0;">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+    <!-- ── 2-Column Split: Branding (Left) & Bank/CAC (Right) ───────────── -->
+    <div class="ofp-branding-bank-split-grid">
+        
+        <!-- Column 1: Branding & White-Label Portal Card -->
+        <div class="ofp-profile-card ofp-branding-card" style="min-width:0 !important; margin-bottom:0 !important; height:100% !important;">
+            <div class="ofp-productions-header-row" style="margin-bottom: 22px; border-bottom: 1px solid var(--prof-border); padding-bottom: 16px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="width:38px; height:38px; border-radius:10px; background:rgba(0,188,181,0.12); display:flex; align-items:center; justify-content:center; color:var(--prof-teal); flex-shrink:0;">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="ofp-productions-title" style="margin:0;">Branding &amp; White-Label Portal</h3>
+                            <p style="margin:2px 0 0; font-size:12.5px; color:var(--prof-text-sub);">Custom white-label portal identity &amp; receipt seal</p>
+                        </div>
+                    </div>
+                    <button type="button" class="ofp-productions-view-all" onclick="openEditModal('tab-branding')" style="background:rgba(255,255,255,0.04); border:1px solid var(--prof-border); border-radius:8px; padding:6px 14px; cursor:pointer;">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        <span>Customize Branding</span>
+                    </button>
                 </div>
-                <div>
-                    <h3 class="ofp-productions-title" style="margin:0;">Branding & Bank Details</h3>
-                    <p style="margin:2px 0 0; font-size:12.5px; color:var(--prof-text-sub);">Custom white-label portal identity and client payout bank accounts</p>
-                </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <button type="button" class="ofp-productions-view-all" onclick="openEditModal('tab-branding')" style="background:rgba(255,255,255,0.04); border:1px solid var(--prof-border); border-radius:8px; padding:6px 14px; cursor:pointer;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                    <span>Customize Branding</span>
-                </button>
-                <button type="button" class="ofp-productions-view-all" onclick="openEditModal('tab-banking')" style="background:rgba(255,255,255,0.04); border:1px solid var(--prof-border); border-radius:8px; padding:6px 14px; cursor:pointer;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                    <span>Manage Bank Accounts</span>
-                </button>
-            </div>
-        </div>
 
-        <!-- 2-Column Split: Left = Branding, Right = Bank Accounts -->
-        <div class="ofp-branding-bank-content-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 26px;">
-            
-            <!-- Column 1: Branding Identity -->
-            <div class="ofp-branding-col">
-                <h4 style="font-size:13.5px; font-weight:600; color:#ffffff; margin:0 0 14px; display:flex; align-items:center; gap:8px;">
-                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--prof-teal);"></span>
-                    Branding & White-Label Portal
-                </h4>
+                <div class="ofp-branding-col">
 
                 <div style="background:var(--prof-card-inner, #131722); border:1px solid var(--prof-border); border-radius:12px; padding:18px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
@@ -776,11 +765,11 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                     </div>
                 </div>
 
-                <!-- ── Help Shape the Platform (Feedback & Bug Report) ──────────── -->
+                <!-- ── Help Shape the Platform (Feedback & Bug Report) under Stamp ── -->
                 <div style="margin-top:16px;">
                     <h4 style="font-size:13.5px; font-weight:600; color:#ffffff; margin:0 0 10px; display:flex; align-items:center; gap:8px;">
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span>
-                        Platform Feedback & Suggestions
+                        Platform Feedback &amp; Suggestions
                     </h4>
                     <div style="background:var(--prof-card-inner, #131722); border:1px solid var(--prof-border); border-radius:12px; padding:16px 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;">
                         <div style="display:flex; align-items:center; gap:12px;">
@@ -794,63 +783,179 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                         </div>
                         <button type="button" class="ofp-open-feedback-trigger" data-type="feature_request" style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; background:#10b981; color:#ffffff; border:none; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:background 0.15s ease;">
                             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
-                            <span>Feedback & Bug Report</span>
+                            <span>Feedback &amp; Bug Report</span>
                         </button>
                     </div>
                 </div>
             </div>
+        </div> <!-- /.ofp-branding-card -->
 
-            <!-- Column 2: Bank Accounts -->
-            <div class="ofp-bank-col">
-                <h4 style="font-size:13.5px; font-weight:600; color:#ffffff; margin:0 0 14px; display:flex; align-items:center; gap:8px;">
-                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e;"></span>
-                    Client Bank & Payout Accounts
-                </h4>
+        <!-- Column 2: Bank Accounts & CAC / KYC Verification Card -->
+        <div class="ofp-profile-card ofp-bank-card-section" style="display:flex; flex-direction:column; justify-content:space-between; min-width:0 !important; margin-bottom:0 !important; height:100% !important;">
+            <div>
+                <div class="ofp-productions-header-row" style="margin-bottom: 22px; border-bottom: 1px solid var(--prof-border); padding-bottom: 16px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="width:38px; height:38px; border-radius:10px; background:rgba(34,197,94,0.12); display:flex; align-items:center; justify-content:center; color:#22c55e; flex-shrink:0;">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="ofp-productions-title" style="margin:0;">Client Bank &amp; Payout Accounts</h3>
+                            <p style="margin:2px 0 0; font-size:12.5px; color:var(--prof-text-sub);">Payout bank accounts &amp; government CAC verification</p>
+                        </div>
+                    </div>
+                    <button type="button" class="ofp-productions-view-all" onclick="openEditModal('tab-banking')" style="background:rgba(255,255,255,0.04); border:1px solid var(--prof-border); border-radius:8px; padding:6px 14px; cursor:pointer;">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                        <span><?php echo ! empty( $client_banks ) ? 'Manage Accounts' : '+ Link Account'; ?></span>
+                    </button>
+                </div>
 
-                <div style="display:flex; flex-direction:column; gap:10px;">
+                <div class="ofp-bank-col">
+
+                <div style="display:flex; flex-direction:column; gap:12px;">
                     <?php if ( ! empty( $client_banks ) ) : foreach ( $client_banks as $bank ) : ?>
-                        <div style="background:var(--prof-card-inner, #131722); border:1px solid var(--prof-border); border-radius:12px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
-                            <div style="display:flex; align-items:center; gap:12px;">
-                                <div style="width:38px; height:38px; border-radius:10px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); display:flex; align-items:center; justify-content:center; color:#22c55e; flex-shrink:0;">
-                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                                </div>
-                                <div>
+                        <div class="ofp-bank-card-container">
+                            <div class="ofp-bank-preview ofp-profile-bank-card <?php echo ( (int) $bank->is_default === 1 ) ? 'is-primary' : ''; ?>" onclick="openEditModal('tab-banking')" style="cursor:pointer;" title="Click to manage bank accounts">
+                                <!-- Abuja City Gate Landmark Silhouette Overlay -->
+                                <svg class="ofp-bank-card-landmark" viewBox="0 0 220 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <linearGradient id="ofpAbujaGateGrad_<?php echo (int) $bank->id; ?>" x1="0" y1="0" x2="1" y2="1">
+                                            <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.55"/>
+                                            <stop offset="50%" stop-color="#34d399" stop-opacity="0.38"/>
+                                            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.22"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <path d="M 18 150 C 45 130 65 85 80 20 L 90 28 C 76 88 56 130 36 150 Z" fill="url(#ofpAbujaGateGrad_<?php echo (int) $bank->id; ?>)" stroke="#fbbf24" stroke-width="0.8" stroke-opacity="0.6"/>
+                                    <path d="M 202 150 C 175 130 155 85 140 20 L 130 28 C 144 88 164 130 184 150 Z" fill="url(#ofpAbujaGateGrad_<?php echo (int) $bank->id; ?>)" stroke="#fbbf24" stroke-width="0.8" stroke-opacity="0.6"/>
+                                    <line x1="80" y1="20" x2="110" y2="65" stroke="#38bdf8" stroke-width="0.75" stroke-opacity="0.45"/>
+                                    <line x1="140" y1="20" x2="110" y2="65" stroke="#38bdf8" stroke-width="0.75" stroke-opacity="0.45"/>
+                                    <line x1="84" y1="38" x2="110" y2="65" stroke="#34d399" stroke-width="0.6" stroke-opacity="0.35"/>
+                                    <line x1="136" y1="38" x2="110" y2="65" stroke="#34d399" stroke-width="0.6" stroke-opacity="0.35"/>
+                                    <polygon points="110,48 118,58 110,68 102,58" fill="#fbbf24" fill-opacity="0.35" stroke="#fbbf24" stroke-width="1" stroke-opacity="0.7"/>
+                                    <rect x="88" y="36" width="44" height="26" rx="2" fill="none" stroke="#34d399" stroke-width="0.8" stroke-opacity="0.5"/>
+                                    <path d="M 64 150 L 64 92 L 80 76 L 140 76 L 156 92 L 156 150" fill="none" stroke="#34d399" stroke-width="1" stroke-opacity="0.6"/>
+                                    <line x1="60" y1="92" x2="160" y2="92" stroke="#fbbf24" stroke-width="0.8" stroke-opacity="0.5"/>
+                                    <path d="M 88 150 L 88 116 C 88 100 132 100 132 116 L 132 150" fill="none" stroke="#fbbf24" stroke-width="1.4" stroke-opacity="0.75"/>
+                                    <path d="M 94 150 L 94 118 C 94 106 126 106 126 118 L 126 150" fill="none" stroke="#34d399" stroke-width="0.8" stroke-opacity="0.45"/>
+                                    <line x1="10" y1="150" x2="210" y2="150" stroke="#34d399" stroke-width="1.2" stroke-opacity="0.5"/>
+                                </svg>
+
+                                <!-- Top Bar: EMV Chip + Contactless Waves + Bank Name (Capitalized by default) -->
+                                <div class="ofp-bank-preview-top">
+                                    <div style="display:flex; align-items:center; gap:12px;">
+                                        <div class="ofp-bank-chip"></div>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round"><path d="M8.5 16.5a5 5 0 0 1 0-7"/><path d="M12 19a8.5 8.5 0 0 0 0-12"/><path d="M15.5 21.5a12 12 0 0 0 0-17"/></svg>
+                                    </div>
                                     <div style="display:flex; align-items:center; gap:8px;">
-                                        <strong style="color:#ffffff; font-size:14px;"><?php echo esc_html( $bank->bank_name ); ?></strong>
                                         <?php if ( (int) $bank->is_default === 1 ) : ?>
-                                            <span style="font-size:10px; background:rgba(34,197,94,0.15); color:#22c55e; padding:2px 8px; border-radius:10px; font-weight:600;">Primary</span>
+                                            <span class="ofp-card-badge-primary">
+                                                <span class="ofp-badge-dot"></span> Primary
+                                            </span>
                                         <?php endif; ?>
+                                        <span class="ofp-bank-preview-label">
+                                            <?php echo esc_html( strtoupper( $bank->bank_name ?: 'BANK NAME' ) ); ?>
+                                        </span>
                                     </div>
-                                    <div style="font-family:monospace; font-size:14px; font-weight:600; color:var(--prof-teal); margin-top:2px;">
-                                        <?php echo esc_html( $bank->account_number ); ?>
+                                </div>
+
+                                <!-- Middle: Account Number (Grouped 4-digits, Capitalized / Monospace) -->
+                                <div class="ofp-bank-preview-num">
+                                    <?php 
+                                        $raw_acc = preg_replace('/\s+/', '', (string) $bank->account_number);
+                                        $formatted_acc = trim(chunk_split($raw_acc, 4, ' '));
+                                        echo esc_html( $formatted_acc ?: '0000 0000 00' ); 
+                                    ?>
+                                </div>
+
+                                <!-- Bottom Bar: Beneficiary (Capitalized by default) + NGN Currency Pill + Verve/Debit mark -->
+                                <div class="ofp-bank-preview-bottom">
+                                    <div class="ofp-bank-preview-field">
+                                        <span class="ofp-bank-preview-sub">Beneficiary</span>
+                                        <span class="ofp-bank-preview-val">
+                                            <?php echo esc_html( strtoupper( $bank->account_name ?: 'OFFICIAL BENEFICIARY' ) ); ?>
+                                        </span>
                                     </div>
-                                    <div style="font-size:11.5px; color:var(--prof-text-sub); margin-top:2px;">
-                                        <?php echo esc_html( $bank->account_name ); ?>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <span class="ofp-card-currency-pill">
+                                            <svg width="14" height="10" viewBox="0 0 18 12" fill="none"><rect width="6" height="12" fill="#008751"/><rect x="6" width="6" height="12" fill="#ffffff"/><rect x="12" width="6" height="12" fill="#008751"/></svg> NGN
+                                        </span>
+                                        <span class="ofp-card-brand-mark">DEBIT</span>
                                     </div>
                                 </div>
                             </div>
-
-                            <button type="button" onclick="openEditModal('tab-banking')" style="background:none; border:none; color:var(--prof-text-sub); font-size:12px; cursor:pointer; text-decoration:underline;">
-                                Details
-                            </button>
                         </div>
                     <?php endforeach; else : ?>
-                        <div style="background:var(--prof-card-inner, #131722); border:1px dashed var(--prof-border); border-radius:12px; padding:26px 20px; text-align:center;">
-                            <div style="width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.04); display:inline-flex; align-items:center; justify-content:center; color:var(--prof-text-sub); margin-bottom:10px;">
-                                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                        <!-- Default Physical ATM Card with Abuja City Gate Landmark (Clean, no buttons on card) -->
+                        <div class="ofp-bank-card-container">
+                            <div class="ofp-bank-preview ofp-profile-bank-card" onclick="openEditModal('tab-banking')" style="cursor:pointer;" title="Click to link your bank account">
+                                <!-- Abuja City Gate Landmark Silhouette Overlay -->
+                                <svg class="ofp-bank-card-landmark" viewBox="0 0 220 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <linearGradient id="ofpAbujaGateGrad_default" x1="0" y1="0" x2="1" y2="1">
+                                            <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.55"/>
+                                            <stop offset="50%" stop-color="#34d399" stop-opacity="0.38"/>
+                                            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.22"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <path d="M 18 150 C 45 130 65 85 80 20 L 90 28 C 76 88 56 130 36 150 Z" fill="url(#ofpAbujaGateGrad_default)" stroke="#fbbf24" stroke-width="0.8" stroke-opacity="0.6"/>
+                                    <path d="M 202 150 C 175 130 155 85 140 20 L 130 28 C 144 88 164 130 184 150 Z" fill="url(#ofpAbujaGateGrad_default)" stroke="#fbbf24" stroke-width="0.8" stroke-opacity="0.6"/>
+                                    <line x1="80" y1="20" x2="110" y2="65" stroke="#38bdf8" stroke-width="0.75" stroke-opacity="0.45"/>
+                                    <line x1="140" y1="20" x2="110" y2="65" stroke="#38bdf8" stroke-width="0.75" stroke-opacity="0.45"/>
+                                    <line x1="84" y1="38" x2="110" y2="65" stroke="#34d399" stroke-width="0.6" stroke-opacity="0.35"/>
+                                    <line x1="136" y1="38" x2="110" y2="65" stroke="#34d399" stroke-width="0.6" stroke-opacity="0.35"/>
+                                    <polygon points="110,48 118,58 110,68 102,58" fill="#fbbf24" fill-opacity="0.35" stroke="#fbbf24" stroke-width="1" stroke-opacity="0.7"/>
+                                    <rect x="88" y="36" width="44" height="26" rx="2" fill="none" stroke="#34d399" stroke-width="0.8" stroke-opacity="0.5"/>
+                                    <path d="M 64 150 L 64 92 L 80 76 L 140 76 L 156 92 L 156 150" fill="none" stroke="#34d399" stroke-width="1" stroke-opacity="0.6"/>
+                                    <line x1="60" y1="92" x2="160" y2="92" stroke="#fbbf24" stroke-width="0.8" stroke-opacity="0.5"/>
+                                    <path d="M 88 150 L 88 116 C 88 100 132 100 132 116 L 132 150" fill="none" stroke="#fbbf24" stroke-width="1.4" stroke-opacity="0.75"/>
+                                    <path d="M 94 150 L 94 118 C 94 106 126 106 126 118 L 126 150" fill="none" stroke="#34d399" stroke-width="0.8" stroke-opacity="0.45"/>
+                                    <line x1="10" y1="150" x2="210" y2="150" stroke="#34d399" stroke-width="1.2" stroke-opacity="0.5"/>
+                                </svg>
+
+                                <!-- Top Bar: EMV Chip + Contactless Waves + Bank Name (Capitalized by default) -->
+                                <div class="ofp-bank-preview-top">
+                                    <div style="display:flex; align-items:center; gap:12px;">
+                                        <div class="ofp-bank-chip"></div>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round"><path d="M8.5 16.5a5 5 0 0 1 0-7"/><path d="M12 19a8.5 8.5 0 0 0 0-12"/><path d="M15.5 21.5a12 12 0 0 0 0-17"/></svg>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <span class="ofp-bank-preview-label">
+                                            BANK NAME
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Middle: Account Number (Grouped 4-digits, Capitalized / Monospace) -->
+                                <div class="ofp-bank-preview-num" style="letter-spacing:0.18em;">
+                                    0000 0000 00
+                                </div>
+
+                                <!-- Bottom Bar: Beneficiary (Capitalized by default) + NGN Currency Pill + Verve/Debit mark -->
+                                <div class="ofp-bank-preview-bottom">
+                                    <div class="ofp-bank-preview-field">
+                                        <span class="ofp-bank-preview-sub">Beneficiary</span>
+                                        <span class="ofp-bank-preview-val">
+                                            <?php 
+                                                $default_holder = ! empty( $client->business_name ) ? $client->business_name : ( ! empty( $user->display_name ) ? $user->display_name : 'OFFICIAL BENEFICIARY' );
+                                                echo esc_html( strtoupper( $default_holder ) ); 
+                                            ?>
+                                        </span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <span class="ofp-card-currency-pill">
+                                            <svg width="14" height="10" viewBox="0 0 18 12" fill="none"><rect width="6" height="12" fill="#008751"/><rect x="6" width="6" height="12" fill="#ffffff"/><rect x="12" width="6" height="12" fill="#008751"/></svg> NGN
+                                        </span>
+                                        <span class="ofp-card-brand-mark">DEBIT</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div style="font-size:13.5px; color:#ffffff; font-weight:500;">No bank account configured yet</div>
-                            <p style="font-size:12px; color:var(--prof-text-sub); margin:4px 0 14px;">Add your payout account so buyers and tenants can send payments directly.</p>
-                            <button type="button" onclick="openEditModal('tab-banking')" class="ofp-btn-edit-profile" style="padding:6px 16px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                                <span>Add Bank Account</span>
-                            </button>
                         </div>
                     <?php endif; ?>
                 </div>
+            </div>
+        </div>
 
-                <!-- ── Official Business & Identity Verification Status ──────────── -->
-                <div style="margin-top:16px;">
+        <!-- ── Official Business & Identity Verification Status ──────────── -->
+        <div style="margin-top:16px;">
                     <h4 style="font-size:13.5px; font-weight:600; color:#ffffff; margin:0 0 10px; display:flex; align-items:center; gap:8px;">
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:<?php echo ! empty( $client->is_verified ) ? '#10b981' : '#f59e0b'; ?>;"></span>
                         KYC / KYB Verification
@@ -908,10 +1013,9 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                             </button>
                         </div>
                     <?php endif; ?>
-                </div>
-            </div>
-        </div> <!-- /.ofp-branding-bank-content-grid -->
-    </div> <!-- /.ofp-branding-card -->
+                </div> <!-- /KYC block -->
+        </div> <!-- /.ofp-bank-card-section -->
+    </div> <!-- /.ofp-branding-bank-split-grid -->
 
 </div> <!-- /.ofp-profile-page-wrap -->
 
@@ -1235,7 +1339,8 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                             <p style="font-size:13px; color:var(--prof-text-sub); margin-bottom:16px;">No bank account configured yet.</p>
                         <?php endif; ?>
 
-                        <h4 style="font-size:14px; color:#ffffff; margin:20px 0 12px;">Add New Bank Account</h4>
+                        <h4 style="font-size:14px; color:#ffffff; margin:20px 0 14px;">Add New Bank Account</h4>
+
                         <div class="ofp-form-row-2">
                             <div class="ofp-field-group">
                                 <label>Bank Name</label>
@@ -1594,7 +1699,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
         }
     }
 
-    // ── Live Bank Account Resolution via Paystack ──────────────────────────────
+    // ── Live Bank Account Resolution & Modal Card Preview Sync ────────────────
     (function() {
         const bankSelect   = document.getElementById('ofp-bank-code-select');
         const bankHidden   = document.getElementById('ofp-bank-name-hidden');

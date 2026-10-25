@@ -19,11 +19,10 @@
     // starts closed on a fresh page load to avoid an unexpected full-screen
     // overlay on first paint.
     function initSidebarToggle() {
-        var toggle   = document.getElementById('ofp-sidebar-toggle');
-        var backdrop = document.getElementById('ofp-sidebar-backdrop');
-        var body     = document.body;
-
-        if ( ! toggle ) return;
+        var toggle      = document.getElementById('ofp-sidebar-toggle');
+        var collapseBtn = document.getElementById('ofp-sidebar-collapse-btn');
+        var backdrop    = document.getElementById('ofp-sidebar-backdrop');
+        var body        = document.body;
 
         var DESKTOP_BREAKPOINT = 1025;
         var STORAGE_KEY = 'ofp_sidebar_closed';
@@ -32,40 +31,63 @@
             return window.innerWidth >= DESKTOP_BREAKPOINT;
         }
 
-        // Apply the saved desktop preference on load.
-        if ( isDesktop() && window.localStorage.getItem(STORAGE_KEY) === '1' ) {
-            body.classList.add('ofp-sidebar-closed');
-            toggle.setAttribute('aria-expanded', 'false');
-        }
+        // Apply saved desktop preference on load
+        try {
+            if ( isDesktop() && window.localStorage && window.localStorage.getItem(STORAGE_KEY) === '1' ) {
+                body.classList.add('ofp-sidebar-closed');
+                if ( toggle ) toggle.setAttribute('aria-expanded', 'false');
+            }
+        } catch (e) {}
 
-        function toggleSidebar() {
+        function handleToggle(e) {
+            if ( e ) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             if ( isDesktop() ) {
                 var nowClosed = body.classList.toggle('ofp-sidebar-closed');
-                window.localStorage.setItem(STORAGE_KEY, nowClosed ? '1' : '0');
-                toggle.setAttribute('aria-expanded', nowClosed ? 'false' : 'true');
+                try {
+                    window.localStorage.setItem(STORAGE_KEY, nowClosed ? '1' : '0');
+                } catch (err) {}
+                if ( toggle ) toggle.setAttribute('aria-expanded', nowClosed ? 'false' : 'true');
             } else {
                 var nowOpen = body.classList.toggle('ofp-sidebar-open');
-                toggle.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
+                if ( toggle ) toggle.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
             }
         }
 
-        toggle.addEventListener('click', toggleSidebar);
+        window.ofpToggleSidebar = handleToggle;
+
+        if ( collapseBtn && !collapseBtn._ofpBound ) {
+            collapseBtn._ofpBound = true;
+            collapseBtn.addEventListener('click', handleToggle);
+        }
+
+        if ( toggle && !toggle._ofpBound ) {
+            toggle._ofpBound = true;
+            toggle.addEventListener('click', handleToggle);
+        }
 
         // Tapping the backdrop closes the sidebar on mobile.
-        if ( backdrop ) {
-            backdrop.addEventListener('click', function () {
+        if ( backdrop && !backdrop._ofpBound ) {
+            backdrop._ofpBound = true;
+            backdrop.addEventListener('click', function (e) {
+                if ( e ) e.preventDefault();
                 body.classList.remove('ofp-sidebar-open');
-                toggle.setAttribute('aria-expanded', 'false');
+                if ( toggle ) toggle.setAttribute('aria-expanded', 'false');
             });
         }
 
         // Closing the mobile sidebar automatically when resizing up to desktop,
         // so it doesn't stay stuck open as an overlay at a wider viewport.
-        window.addEventListener('resize', function () {
-            if ( isDesktop() ) {
-                body.classList.remove('ofp-sidebar-open');
-            }
-        });
+        if ( !window._ofpResizeBound ) {
+            window._ofpResizeBound = true;
+            window.addEventListener('resize', function () {
+                if ( isDesktop() ) {
+                    body.classList.remove('ofp-sidebar-open');
+                }
+            });
+        }
     }
 
     // ── SMS character counter ────────────────────────────────────────────────
@@ -171,20 +193,59 @@
         var selects = document.querySelectorAll('[name="new_status"]');
         selects.forEach(function (select) {
             select.addEventListener('change', function () {
-                if ( this.value === 'converted' ) {
+                var self = this;
+                var newStatus = self.value;
+                if ( newStatus === 'converted' ) {
                     if ( ! window.confirm('Mark this lead as converted? This will cancel any remaining automated follow-ups.') ) {
-                        // Reset to previous value — find the original selected option.
-                        for ( var i = 0; i < this.options.length; i++ ) {
-                            if ( this.options[i].defaultSelected ) {
-                                this.value = this.options[i].value;
+                        for ( var i = 0; i < self.options.length; i++ ) {
+                            if ( self.options[i].defaultSelected ) {
+                                self.value = self.options[i].value;
                                 break;
                             }
                         }
                         return;
                     }
                 }
-                // Submit the parent form.
-                this.closest('form').submit();
+
+                var form = self.closest('form');
+                if (!form) return;
+
+                var row = self.closest('tr');
+                var statusCell = row ? row.querySelector('.ofp-lead-status-cell') : null;
+                self.disabled = true;
+
+                var formData = new FormData(form);
+                fetch(form.action || window.location.href, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    self.disabled = false;
+                    if (res && res.success) {
+                        if (row) {
+                            row.setAttribute('data-status', newStatus);
+                        }
+                        if (statusCell && res.data && res.data.badge_html) {
+                            statusCell.innerHTML = res.data.badge_html;
+                        }
+                        if (newStatus === 'converted' && form.parentNode) {
+                            form.parentNode.innerHTML = '<span style="font-size:12px;color:#9ca3af;">Closed</span>';
+                        }
+                        if (window.OFP && typeof window.OFP.toast === 'function') {
+                            window.OFP.toast((res.data && res.data.message) ? res.data.message : ('Lead status updated to ' + newStatus), 'success');
+                        }
+                    } else {
+                        if (window.OFP && typeof window.OFP.toast === 'function') {
+                            window.OFP.toast((res && res.data) ? res.data : 'Failed to update status', 'error');
+                        }
+                    }
+                })
+                .catch(function(err) {
+                    self.disabled = false;
+                    form.submit();
+                });
             });
 
             // Prevent the auto-submit from firing on page load.
@@ -434,55 +495,83 @@
         });
     }
 
-    // ── Global OFP Namespace: Top Progress Bar & Modern Toasts ───────────────
+    // ── Global OFP Namespace: Platform Frosted Glass Preloader & Modern Toasts ──
+    var progressTrackEl = null;
     var progressEl = null;
+    var glassIslandEl = null;
     var progressTimer = null;
     var progressVal = 0;
 
-    function getProgressBar() {
-        if (!progressEl) {
-            progressEl = document.getElementById('ofp-top-progress');
-            if (!progressEl) {
-                progressEl = document.createElement('div');
-                progressEl.id = 'ofp-top-progress';
-                document.body.appendChild(progressEl);
+    function getPreloaderElements() {
+        var target = document.body || document.documentElement;
+        if (!progressTrackEl) {
+            progressTrackEl = document.getElementById('ofp-top-progress-track');
+            if (!progressTrackEl && target) {
+                progressTrackEl = document.createElement('div');
+                progressTrackEl.id = 'ofp-top-progress-track';
+                target.appendChild(progressTrackEl);
             }
         }
-        return progressEl;
+        if (!progressEl) {
+            progressEl = document.getElementById('ofp-top-progress');
+            if (!progressEl && progressTrackEl) {
+                progressEl = document.createElement('div');
+                progressEl.id = 'ofp-top-progress';
+                progressTrackEl.appendChild(progressEl);
+            }
+        }
+        if (!glassIslandEl) {
+            glassIslandEl = document.getElementById('ofp-glass-preloader');
+            if (!glassIslandEl && target) {
+                glassIslandEl = document.createElement('div');
+                glassIslandEl.id = 'ofp-glass-preloader';
+                glassIslandEl.innerHTML = '<div class="ofp-glass-spinner"></div><span class="ofp-glass-preloader-text">Loading...</span>';
+                target.appendChild(glassIslandEl);
+            }
+        }
+        return { track: progressTrackEl, bar: progressEl, island: glassIslandEl };
     }
 
     var ProgressEngine = {
-        start: function () {
-            var bar = getProgressBar();
+        start: function (label) {
+            var els = getPreloaderElements();
             clearInterval(progressTimer);
-            progressVal = 20;
-            bar.classList.add('is-active');
-            bar.style.width = progressVal + '%';
+            progressVal = 22;
+
+            els.track.classList.add('is-active');
+            els.bar.style.width = progressVal + '%';
+
+            var textEl = els.island.querySelector('.ofp-glass-preloader-text');
+            if (textEl) textEl.textContent = label || 'Syncing...';
+            els.island.classList.add('is-active');
 
             progressTimer = setInterval(function () {
                 if (progressVal < 85) {
                     progressVal += Math.random() * 8 + 3;
                     if (progressVal > 85) progressVal = 85;
-                    bar.style.width = progressVal + '%';
+                    els.bar.style.width = progressVal + '%';
                 }
-            }, 250);
+            }, 220);
         },
         set: function (pct) {
-            var bar = getProgressBar();
-            bar.classList.add('is-active');
-            bar.style.width = Math.min(100, Math.max(0, pct)) + '%';
+            var els = getPreloaderElements();
+            els.track.classList.add('is-active');
+            els.island.classList.add('is-active');
+            els.bar.style.width = Math.min(100, Math.max(0, pct)) + '%';
         },
         done: function () {
-            var bar = getProgressBar();
+            var els = getPreloaderElements();
             clearInterval(progressTimer);
             progressVal = 100;
-            bar.style.width = '100%';
+            els.bar.style.width = '100%';
+
             setTimeout(function () {
-                bar.classList.remove('is-active');
+                els.track.classList.remove('is-active');
+                els.island.classList.remove('is-active');
                 setTimeout(function () {
-                    bar.style.width = '0%';
+                    els.bar.style.width = '0%';
                 }, 250);
-            }, 200);
+            }, 220);
         }
     };
 
@@ -492,9 +581,10 @@
             if (!this.container) {
                 this.container = document.querySelector('.ofp-toast-container');
                 if (!this.container) {
+                    var target = document.body || document.documentElement;
                     this.container = document.createElement('div');
                     this.container.className = 'ofp-toast-container';
-                    document.body.appendChild(this.container);
+                    if (target) target.appendChild(this.container);
                 }
             }
             return this.container;
@@ -582,13 +672,87 @@
         return ToastEngine.show(titleOrMsg, type, duration, detailMsg);
     };
 
+    // Universal AJAX save helper for portal forms (in-place save + toast, neglecting full reload)
+    window.OFP.ajaxSave = function (form, options) {
+        options = options || {};
+        if (typeof form === 'string') form = document.querySelector(form);
+        if (!form) return Promise.reject(new Error('Form not found'));
+
+        var submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('input[type="submit"]');
+        var origText = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            if (options.loadingText) submitBtn.textContent = options.loadingText;
+        }
+
+        var formData = new FormData(form);
+        if (options.extraData) {
+            Object.keys(options.extraData).forEach(function (k) {
+                formData.append(k, options.extraData[k]);
+            });
+        }
+
+        var url = options.url || form.action || window.location.href;
+
+        return fetch(url, {
+            method: form.method || 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (res) {
+            var ct = res.headers.get('content-type') || '';
+            if (ct.indexOf('application/json') !== -1) {
+                return res.json();
+            }
+            return res.text().then(function (t) { return { success: res.ok, data: t }; });
+        })
+        .then(function (data) {
+            if (data && data.success) {
+                var msg = (data.data && data.data.message) || data.message || options.successMessage || 'Saved successfully';
+                window.OFP.toast(msg, 'success');
+                if (typeof options.onSuccess === 'function') options.onSuccess(data);
+            } else {
+                var errMsg = (data && data.data) || data.message || options.errorMessage || 'Failed to save';
+                window.OFP.toast(errMsg, 'error');
+                if (typeof options.onError === 'function') options.onError(data);
+            }
+            return data;
+        })
+        .catch(function (err) {
+            window.OFP.toast(options.networkError || 'Network error. Please try again.', 'error');
+            if (typeof options.onError === 'function') options.onError(err);
+            throw err;
+        })
+        .finally(function () {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                if (origText) submitBtn.textContent = origText;
+            }
+        });
+    };
+
+    // Alert Toast Bridge: seamlessly upgrades any standard alert() into modern floating toasts
+    var origAlert = window.alert;
+    window.alert = function (msg) {
+        if (window.OFP && typeof window.OFP.toast === 'function') {
+            var str = String(msg || '');
+            var isSuccess = /success|copied|saved|updated|done|confirmed|created/i.test(str);
+            var isError = /error|failed|invalid|required|denied|wrong/i.test(str);
+            var isWarning = /warning|caution|alert|too large|attention/i.test(str);
+            var type = isSuccess ? 'success' : (isError ? 'error' : (isWarning ? 'warning' : 'info'));
+            window.OFP.toast(str, type);
+        } else {
+            origAlert(msg);
+        }
+    };
+
     // Global fetch interceptor to drive top preloader automatically
     var origFetch = window.fetch;
     if (origFetch) {
         var activeRequests = 0;
         window.fetch = function () {
             activeRequests++;
-            ProgressEngine.start();
+            ProgressEngine.start('Syncing...');
             return origFetch.apply(this, arguments).finally(function () {
                 activeRequests--;
                 if (activeRequests <= 0) {
@@ -599,9 +763,198 @@
         };
     }
 
+    // ── Navigation & Page Preloader Interceptors ──────────────────────────────
+    function initNavigationPreloader() {
+        // Intercept all menu & page link clicks across the portal
+        document.addEventListener('click', function (e) {
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+            var link = e.target.closest('a');
+            if (!link) return;
+
+            var href = link.getAttribute('href');
+            if (!href) return;
+
+            // Ignore hash anchors, javascript, tel, mailto, target="_blank", or download
+            if (href.indexOf('#') === 0 || href.indexOf('javascript:') === 0 || href.indexOf('tel:') === 0 || href.indexOf('mailto:') === 0) return;
+            if (link.getAttribute('target') === '_blank' || link.hasAttribute('download')) return;
+
+            // Check if same origin or relative
+            try {
+                var targetUrl = new URL(link.href, window.location.href);
+                if (targetUrl.origin !== window.location.origin) return;
+                if (targetUrl.href === window.location.href) return;
+            } catch (err) {
+                return;
+            }
+
+            // Slight deferral so if an in-page tab switcher calls e.preventDefault(), we don't trigger full navigation preloader
+            setTimeout(function () {
+                if (!e.defaultPrevented) {
+                    var label = 'Loading...';
+                    var linkText = (link.textContent || '').trim().replace(/\s+/g, ' ');
+                    if (link.closest('.ofp-sidebar') || link.closest('.ofp-bottom-nav') || link.closest('.ofp-user-menu') || link.closest('.ofp-topbar')) {
+                        if (linkText && linkText.length < 24) {
+                            label = linkText + '...';
+                        }
+                    }
+                    ProgressEngine.start(label);
+                }
+            }, 30);
+        });
+
+        // Intercept standard form submissions
+        document.addEventListener('submit', function (e) {
+            if (e.defaultPrevented) return;
+            var form = e.target;
+            if (form && form.getAttribute('target') === '_blank') return;
+            setTimeout(function () {
+                if (!e.defaultPrevented) {
+                    ProgressEngine.start('Saving...');
+                }
+            }, 30);
+        });
+
+        // Browser beforeunload hook
+        window.addEventListener('beforeunload', function () {
+            ProgressEngine.start('Loading...');
+        });
+
+        // Browser pageshow hook (back/forward cache restoration)
+        window.addEventListener('pageshow', function () {
+            ProgressEngine.done();
+        });
+
+        // Fresh page load completion: finish any residual loader smoothly
+        setTimeout(function () {
+            ProgressEngine.done();
+        }, 150);
+    }
+
+    // ── Persistent Sidebar Navigation Scroll Restoration ────────────────────
+    function initSidebarScrollRestoration() {
+        var sidebarNav = document.querySelector('.ofp-sidebar-nav');
+        if (!sidebarNav) return;
+
+        var SCROLL_KEY = 'ofp_sidebar_scroll';
+        var CLICKED_KEY = 'ofp_sidebar_last_clicked_slug';
+
+        function getActiveItem() {
+            var active = sidebarNav.querySelector('.ofp-nav-item.active');
+            if (!active) {
+                // Match current URL pathname against nav link items
+                var currentPath = window.location.pathname.replace(/\/+$/, '');
+                var links = sidebarNav.querySelectorAll('a.ofp-nav-item[href]');
+                for (var i = 0; i < links.length; i++) {
+                    try {
+                        var linkUrl = new URL(links[i].href, window.location.origin);
+                        var linkPath = linkUrl.pathname.replace(/\/+$/, '');
+                        if (linkPath && currentPath === linkPath) {
+                            active = links[i];
+                            break;
+                        }
+                    } catch (e) {}
+                }
+            }
+            if (!active) {
+                // Fallback to last clicked slug
+                var lastSlug = null;
+                try { lastSlug = sessionStorage.getItem(CLICKED_KEY); } catch (e) {}
+                if (lastSlug) {
+                    active = sidebarNav.querySelector('a.ofp-nav-item[data-slug="' + lastSlug + '"]');
+                }
+            }
+            return active;
+        }
+
+        function ensureActiveItemVisible(smooth) {
+            var active = getActiveItem();
+            if (!active) return;
+
+            // Ensure active highlight is present
+            if (!active.classList.contains('active')) {
+                sidebarNav.querySelectorAll('.ofp-nav-item.active').forEach(function (el) {
+                    el.classList.remove('active');
+                });
+                active.classList.add('active');
+            }
+
+            var navRect = sidebarNav.getBoundingClientRect();
+            var actRect = active.getBoundingClientRect();
+
+            // Check if active item is outside of the visible viewport
+            var isOutside = (actRect.top < (navRect.top + 16)) || (actRect.bottom > (navRect.bottom - 16));
+            if (isOutside) {
+                active.scrollIntoView({
+                    block: 'center',
+                    inline: 'nearest',
+                    behavior: smooth ? 'smooth' : 'auto'
+                });
+                try {
+                    sessionStorage.setItem(SCROLL_KEY, sidebarNav.scrollTop);
+                } catch (e) {}
+            }
+        }
+
+        function restoreScroll() {
+            var saved = null;
+            try { saved = sessionStorage.getItem(SCROLL_KEY); } catch (e) {}
+            if (saved !== null && !isNaN(parseInt(saved, 10))) {
+                sidebarNav.scrollTop = parseInt(saved, 10);
+            }
+            ensureActiveItemVisible(false);
+        }
+
+        // Restore immediately
+        restoreScroll();
+
+        // Re-check after layout calculation
+        setTimeout(function () {
+            ensureActiveItemVisible(false);
+        }, 80);
+
+        // Record clicks on nav items
+        sidebarNav.addEventListener('click', function (e) {
+            var link = e.target.closest('a.ofp-nav-item');
+            if (!link || link.classList.contains('locked')) return;
+
+            var slug = link.getAttribute('data-slug') || '';
+            try {
+                sessionStorage.setItem(SCROLL_KEY, sidebarNav.scrollTop);
+                if (slug) {
+                    sessionStorage.setItem(CLICKED_KEY, slug);
+                }
+            } catch (err) {}
+        });
+
+        // Debounced manual scroll listener
+        var scrollTimer = null;
+        sidebarNav.addEventListener('scroll', function () {
+            clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(function () {
+                try {
+                    sessionStorage.setItem(SCROLL_KEY, sidebarNav.scrollTop);
+                } catch (e) {}
+            }, 80);
+        }, { passive: true });
+
+        // Save right before unload/reload
+        window.addEventListener('beforeunload', function () {
+            try {
+                sessionStorage.setItem(SCROLL_KEY, sidebarNav.scrollTop);
+            } catch (e) {}
+        });
+
+        // Restore on pageshow (e.g. back/forward navigation)
+        window.addEventListener('pageshow', function () {
+            restoreScroll();
+        });
+    }
+
     // ── Init all ─────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         initSidebarToggle();
+        initSidebarScrollRestoration();
         initCharCounters();
         initFormLoadingState();
         initAutoDismissAlerts();
@@ -612,6 +965,7 @@
         initUserDropdown();
         initOfpCustomSelects();
         initAjaxLeads();
+        initNavigationPreloader();
 
         // Convert any existing page flash alert to modern toast if present
         var legacySuccess = document.querySelector('.ofp-alert-success');

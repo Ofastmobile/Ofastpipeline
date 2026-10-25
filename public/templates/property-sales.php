@@ -262,7 +262,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 <?php if ( $share_url ) : ?>
                     <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                         <input type="text" readonly value="<?php echo esc_attr( $share_url ); ?>" style="max-width:600px;flex:1;padding:10px 12px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;font-size:14px;">
-                        <button type="button" class="ofp-btn ofp-btn-primary" onclick="navigator.clipboard.writeText(this.previousElementSibling.value)">Copy Link</button>
+                        <button type="button" class="ofp-btn ofp-btn-primary" onclick="navigator.clipboard.writeText(this.previousElementSibling.value); if(window.OFP && typeof window.OFP.toast === 'function'){ window.OFP.toast('Offer link copied to clipboard!', 'success'); }">Copy Link</button>
                     </div>
                 <?php endif; ?>
             </div>
@@ -401,7 +401,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                                     <td style="text-align:right;">
                                         <?php if ( ! empty( $offer->offer_token ) && $offer->status === 'pending' ) : ?>
                                             <input type="hidden" value="<?php echo esc_attr( add_query_arg( 'offer', rawurlencode( $offer->offer_token ), home_url( '/property-offer' ) ) ); ?>">
-                                            <button type="button" class="ofp-btn ofp-btn-small" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);alert('Link copied!')" style="margin-right:4px;">Copy Link</button>
+                                            <button type="button" class="ofp-btn ofp-btn-small" onclick="navigator.clipboard.writeText(this.previousElementSibling.value); if(window.OFP && typeof window.OFP.toast === 'function'){ window.OFP.toast('Link copied to clipboard!', 'success'); } else { alert('Link copied!'); }" style="margin-right:4px;">Copy Link</button>
                                         <?php endif; ?>
                                         <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_client_resend_offer&offer_id=' . $offer->id ), 'ofp_client_resend_offer' ) ); ?>" class="ofp-btn ofp-btn-small" style="background:var(--bg-card); color:var(--text-main); border:1px solid #dcdcde;">Resend</a>
                                     </td>

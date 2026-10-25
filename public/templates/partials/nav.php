@@ -234,7 +234,7 @@ foreach ( $nav_sections as $section ) {
 }
 ?>
 
-<link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>" id="ofp-client-portal-css-bundle">
+<link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . ( file_exists( OFP_PATH . 'assets/css/client-portal.css' ) ? filemtime( OFP_PATH . 'assets/css/client-portal.css' ) : OFP_VERSION ) ); ?>" id="ofp-client-portal-css-bundle">
 <?php OFP_Brand::print_head( $client ); ?>
 <style id="ofp-svg-failsafe">
 svg { max-width: 100%; box-sizing: border-box; }
@@ -247,10 +247,13 @@ svg { max-width: 100%; box-sizing: border-box; }
     <div class="ofp-sidebar-backdrop" id="ofp-sidebar-backdrop"></div>
 
     <aside class="ofp-sidebar" id="ofp-sidebar">
-        <div class="ofp-sidebar-header">
+        <div class="ofp-sidebar-header" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
             <a class="ofp-nav-brand" href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>">
                 <?php echo OFP_Brand::sidebar_brand_html( $client ); ?>
             </a>
+            <button type="button" class="ofp-sidebar-collapse-btn" id="ofp-sidebar-collapse-btn" aria-label="Hide navigation" title="Hide navigation" style="margin-left:auto;">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 19l-7-7 7-7" /></svg>
+            </button>
         </div>
         
         <nav class="ofp-sidebar-nav" aria-label="Client portal navigation">
@@ -263,8 +266,11 @@ svg { max-width: 100%; box-sizing: border-box; }
                         <?php foreach ( $section['items'] as $item ) :
                             $is_active = ! $item['locked'] && $item['slug'] && (
                                 strpos( $current_url, '/' . $item['slug'] ) !== false ||
+                                ( $item['slug'] === 'dashboard' && ( rtrim( $current_url, '/' ) === rtrim( home_url(), '/' ) || strpos( $current_url, '/dashboard' ) !== false ) ) ||
+                                ( $item['slug'] === 'message-templates' && ( strpos( $current_url, '/communications' ) !== false || strpos( $current_url, '/message-templates' ) !== false ) ) ||
+                                ( $item['slug'] === 'pipeline-settings' && ( strpos( $current_url, '/automation' ) !== false || strpos( $current_url, '/pipeline-settings' ) !== false ) ) ||
                                 ( $item['slug'] === 'api-settings' && preg_match( '#/(api-settings|api)(/|$)#', $current_url ) ) ||
-                                ( $item['slug'] === 'tenants' && strpos( $current_url, '/rent' ) !== false ) ||
+                                ( $item['slug'] === 'tenants' && ( strpos( $current_url, '/rent' ) !== false || strpos( $current_url, '/tenants' ) !== false ) ) ||
                                 ( $item['slug'] === 'profile' && strpos( $current_url, '/account' ) !== false )
                             );
                             $classes = 'ofp-nav-item';
@@ -274,6 +280,7 @@ svg { max-width: 100%; box-sizing: border-box; }
                             <li>
                                 <a href="<?php echo esc_url( $item['url'] ); ?>"
                                    class="<?php echo esc_attr( $classes ); ?>"
+                                   data-slug="<?php echo esc_attr( $item['slug'] ); ?>"
                                    <?php echo $item['locked'] ? 'aria-disabled="true"' : ''; ?>>
                                     <span class="ofp-nav-icon">
                                         <?php echo wp_kses( $item['icon'], $allowed_svg ); ?>
@@ -288,6 +295,23 @@ svg { max-width: 100%; box-sizing: border-box; }
                     </ul>
                 </div>
             <?php endforeach; ?>
+            <script>
+            (function(){
+                try {
+                    var nav = document.querySelector('.ofp-sidebar-nav');
+                    if (!nav) return;
+                    var saved = sessionStorage.getItem('ofp_sidebar_scroll');
+                    if (saved !== null && !isNaN(parseInt(saved, 10))) {
+                        nav.scrollTop = parseInt(saved, 10);
+                    } else {
+                        var act = nav.querySelector('.ofp-nav-item.active');
+                        if (act) {
+                            act.scrollIntoView({ block: 'center', inline: 'nearest' });
+                        }
+                    }
+                } catch(e) {}
+            })();
+            </script>
         </nav>
 
         <div class="ofp-sidebar-footer">
@@ -434,8 +458,8 @@ svg { max-width: 100%; box-sizing: border-box; }
 
         <header class="ofp-topbar ofp-topbar-transparent">
             
-            <button class="ofp-sidebar-toggle" id="ofp-sidebar-toggle" aria-label="Toggle navigation">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;color:var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" /></svg>
+            <button class="ofp-sidebar-toggle" id="ofp-sidebar-toggle" aria-label="Toggle navigation" title="Toggle navigation">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" /></svg>
             </button>
 
             <div class="ofp-hero-greeting-pill">
@@ -521,6 +545,17 @@ svg { max-width: 100%; box-sizing: border-box; }
 
             </div>
         </header>
+
+        <script>
+        (function(){
+            // Fast FOUC prevention on desktop
+            try {
+                if (window.innerWidth >= 1025 && window.localStorage && window.localStorage.getItem('ofp_sidebar_closed') === '1') {
+                    document.body.classList.add('ofp-sidebar-closed');
+                }
+            } catch(e) {}
+        })();
+        </script>
 
             <!-- Bottom Controls Row inside full-width hero header -->
             <div class="ofp-hero-topbar-controls">

@@ -386,7 +386,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                     </div>
 
                     <!-- Financial Metric Highlights -->
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:14px;">
+                    <div class="ofp-metric-highlight-grid" style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:10px; margin-bottom:14px;">
                         <div style="padding:10px 12px; background:var(--bg-body); border-radius:10px; border:1px solid var(--border-color);">
                             <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); font-weight:600; margin-bottom:2px;">Total Price</div>
                             <div style="font-size:14px; font-weight:700; color:var(--text-main);">₦<?php echo esc_html( number_format( (float) $detail_purchase->total_price ) ); ?></div>
@@ -475,7 +475,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                                     <td>
                                         <?php if ( $ins->status !== 'paid' && class_exists( 'OFP_Property_Checkout' ) ) : ?>
                                             <input type="hidden" value="<?php echo esc_attr( OFP_Property_Checkout::payment_link( (int) $detail_purchase->id ) ); ?>">
-                                            <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="var link=this.previousElementSibling.value; if(navigator.clipboard &amp;&amp; navigator.clipboard.writeText){ navigator.clipboard.writeText(link); } else { prompt('Copy this payment link:', link); } var b=this, t=b.innerHTML; b.innerHTML='Copied!'; setTimeout(function(){ b.innerHTML=t; }, 2000);">
+                                            <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="var link=this.previousElementSibling.value; if(navigator.clipboard &amp;&amp; navigator.clipboard.writeText){ navigator.clipboard.writeText(link); } else { prompt('Copy this payment link:', link); } if(window.OFP && typeof window.OFP.toast === 'function'){ window.OFP.toast('Payment link copied to clipboard!', 'success'); } var b=this, t=b.innerHTML; b.innerHTML='Copied!'; setTimeout(function(){ b.innerHTML=t; }, 2000);">
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:13px;height:13px;display:inline-block;vertical-align:middle;margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>Copy Link
                                             </button>
                                         <?php else : ?>

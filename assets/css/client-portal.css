@@ -183,8 +183,11 @@ html.light body.ofp-portal-body {
     height: 72px;
     display: flex;
     align-items: center;
-    padding: 0 24px;
+    justify-content: space-between;
+    padding: 0 16px 0 20px;
     border-bottom: 1px solid var(--border-color);
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .ofp-nav-brand {
@@ -207,21 +210,70 @@ html.light body.ofp-portal-body {
 .ofp-sidebar-nav {
     flex: 1;
     overflow-y: auto;
-    padding: 24px 16px;
+    padding: 16px 14px 2px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.ofp-sidebar-nav::-webkit-scrollbar {
+    width: 5px;
+}
+
+.ofp-sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ofp-sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 99px;
+}
+
+.ofp-sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+[data-theme="light"] .ofp-sidebar-nav,
+html.light .ofp-sidebar-nav {
+    scrollbar-color: rgba(0, 0, 0, 0.14) transparent;
+}
+
+[data-theme="light"] .ofp-sidebar-nav::-webkit-scrollbar-thumb,
+html.light .ofp-sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.14);
 }
 
 .ofp-nav-group {
-    margin-bottom: 24px;
+    margin-bottom: 18px;
+}
+
+.ofp-nav-group:last-child {
+    margin-bottom: 0 !important;
+}
+
+.ofp-nav-group:last-child ul {
+    margin-bottom: 0 !important;
+}
+
+.ofp-nav-group:last-child li:last-child {
+    margin-bottom: 0 !important;
 }
 
 .ofp-nav-group-label {
-    font-size: 11px;
+    font-size: 11.5px;
     text-transform: uppercase;
-    color: var(--text-muted);
-    font-weight: 600;
-    letter-spacing: 1px;
+    color: var(--text-main, #f8fafc);
+    opacity: 0.85;
+    font-weight: 800;
+    letter-spacing: 0.08em;
     margin-bottom: 8px;
     padding: 0 12px;
+}
+
+[data-theme="light"] .ofp-nav-group-label,
+html.light .ofp-nav-group-label {
+    color: #0f172a;
+    opacity: 0.82;
+    font-weight: 800;
 }
 
 .ofp-sidebar-nav ul {
@@ -238,7 +290,7 @@ html.light body.ofp-portal-body {
     padding: 10px 12px;
     border-radius: 8px;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-muted);
     text-decoration: none;
     transition: background-color 0.2s ease, color 0.2s ease;
@@ -290,14 +342,15 @@ html.light body.ofp-portal-body {
 
 /* ── Sidebar Footer & User Profile Card ──────────────────────────────────── */
 .ofp-sidebar-footer {
-    padding: 12px 14px 14px;
+    padding: 3px 10px 6px;
     border-top: 1px solid var(--border-color);
     margin-top: auto;
     background: var(--bg-sidebar);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 2px;
     position: relative;
+    flex-shrink: 0;
 }
 
 .ofp-sidebar-user-card {
@@ -311,7 +364,7 @@ html.light body.ofp-portal-body {
     gap: 10px;
     width: 100%;
     cursor: pointer;
-    padding: 8px 10px;
+    padding: 5px 8px;
     border-radius: 10px;
     border: 1px solid transparent;
     background: transparent;
@@ -446,17 +499,229 @@ html.light body.ofp-portal-body {
     z-index: 100;
 }
 
+/* ── Sidebar Toggle Button ─────────────────────────────────────────────────── */
 .ofp-sidebar-toggle {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: transparent;
     border: none;
     cursor: pointer;
-    padding: 4px;
+    padding: 6px 8px;
+    margin-right: 12px;
+    border-radius: 8px;
+    color: var(--text-main, #ffffff);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
 }
 
+.ofp-sidebar-toggle .ofp-sidebar-toggle-text {
+    display: none;
+    font-size: 13px;
+    font-weight: 600;
+    margin-left: 8px;
+    letter-spacing: 0.2px;
+}
+
+/* ── Sidebar Header Collapse Button (Reduced size & shifted far right) ─────── */
+.ofp-sidebar-collapse-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
+    padding: 0 !important;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: var(--text-muted, #94a3b8);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.ofp-sidebar-collapse-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: scale(1.08);
+}
+
+.ofp-sidebar-collapse-btn:active {
+    transform: scale(0.95);
+}
+
+.ofp-sidebar-collapse-btn svg {
+    width: 14px !important;
+    height: 14px !important;
+    display: block;
+}
+
+[data-theme="light"] .ofp-sidebar-collapse-btn,
+html.light .ofp-sidebar-collapse-btn {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #64748b;
+}
+
+[data-theme="light"] .ofp-sidebar-collapse-btn:hover,
+html.light .ofp-sidebar-collapse-btn:hover {
+    background: rgba(0, 0, 0, 0.09);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #0f172a;
+}
+
+/* ── Desktop Sidebar Hide / Unhide (> 1024px) ────────────────────────────── */
+@media (min-width: 1025px) {
+    .ofp-sidebar {
+        transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                    min-width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                    max-width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                    margin-left 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                    opacity 0.22s ease,
+                    visibility 0.22s ease !important;
+        will-change: width, margin-left, opacity;
+    }
+
+    /* Completely hide sidebar when closed on desktop */
+    body.ofp-sidebar-closed .ofp-sidebar {
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        border-right: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+        overflow: hidden !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-main {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+
+    /* When sidebar is OPEN on desktop, hide the topbar unhide button */
+    body:not(.ofp-sidebar-closed) .ofp-topbar .ofp-sidebar-toggle {
+        display: none !important;
+    }
+
+    /* When sidebar is CLOSED on desktop, show the unhide button prominently in the topbar (Icon only) */
+    body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.09);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        padding: 8px 10px;
+        border-radius: 8px;
+        color: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        margin-right: 14px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle:hover {
+        background: rgba(255, 255, 255, 0.18);
+        border-color: rgba(255, 255, 255, 0.32);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle:active {
+        transform: translateY(0);
+    }
+
+    [data-theme="light"] body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle,
+    html.light body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle {
+        background: rgba(0, 0, 0, 0.05);
+        border-color: rgba(0, 0, 0, 0.12);
+        color: #0f172a;
+    }
+
+    [data-theme="light"] body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle:hover,
+    html.light body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle:hover {
+        background: rgba(0, 0, 0, 0.09);
+        border-color: rgba(0, 0, 0, 0.2);
+    }
+}
+
+/* ── Mobile Sidebar Rules (<= 1024px) ─────────────────────────────────────── */
 @media (max-width: 1024px) {
-    .ofp-sidebar-toggle {
-        display: block;
+    /* REMOVE collapse button on mobile - mobile uses topbar hamburger and backdrop */
+    .ofp-sidebar-collapse-btn {
+        display: none !important;
+    }
+
+    /* Mobile hamburger menu in topbar */
+    .ofp-topbar .ofp-sidebar-toggle {
+        display: inline-flex !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 6px 8px !important;
+        color: var(--text-main, #ffffff) !important;
+        margin-right: 10px !important;
+    }
+
+    /* Mobile off-canvas drawer: 100dvh, flex-column, header & footer sticky */
+    .ofp-sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        width: 270px !important;
+        max-width: 85vw !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        z-index: 9999 !important;
+        transform: translateX(-100%) !important;
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    body.ofp-sidebar-open .ofp-sidebar {
+        transform: translateX(0) !important;
+    }
+
+    /* On mobile the header where the app name is should be sticky */
+    .ofp-sidebar-header {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 20 !important;
+        background: var(--bg-sidebar) !important;
+        flex-shrink: 0 !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        padding: 0 16px 0 20px !important;
+    }
+
+    /* The middle navigation scrolls smoothly */
+    .ofp-sidebar-nav {
+        flex: 1 1 auto !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        min-height: 0 !important;
+    }
+
+    /* The profile card at the bottom should be sticky */
+    .ofp-sidebar-footer {
+        position: sticky !important;
+        bottom: 0 !important;
+        z-index: 20 !important;
+        background: var(--bg-sidebar) !important;
+        flex-shrink: 0 !important;
+        border-top: 1px solid var(--border-color) !important;
+        margin-top: auto !important;
     }
 }
 
@@ -5313,15 +5578,89 @@ html.dark .ofp-stylized-map-box {
     line-height: 1.2;
 }
 
-/* Responsive */
+/* ── Dashboard Responsive Rules ───────────────────────────────────────────── */
 @media (max-width: 1100px) {
     .ofp-zentra-kpi-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr) !important;
     }
 
     .ofp-zentra-analytics-grid,
-    .ofp-zentra-bottom-grid {
-        grid-template-columns: 1fr;
+    .ofp-zentra-bottom-grid,
+    .ofp-bottom-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    .ofp-zentra-card {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    .ofp-promo-card {
+        min-width: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .ofp-table-card {
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow-x: auto !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .ofp-zentra-analytics-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+        margin-bottom: 20px !important;
+    }
+
+    .ofp-zentra-card {
+        padding: 16px !important;
+        border-radius: 14px !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+    }
+
+    .ofp-zentra-card-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .ofp-chart-header-controls {
+        width: 100% !important;
+    }
+
+    .ofp-zentra-select {
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .ofp-bottom-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+
+    .ofp-promo-card {
+        padding: 16px !important;
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    .ofp-promo-stats {
+        gap: 10px !important;
+    }
+
+    .ofp-table-card {
+        padding: 14px !important;
     }
 }
 
@@ -5345,6 +5684,69 @@ html.dark .ofp-stylized-map-box {
     .ofp-kpi-badge {
         font-size: 10px !important;
         padding: 2px 7px !important;
+    }
+}
+
+/* ── Universal Mobile Horizontal Scroll for All Tabs & Switchers ─────────── */
+@media (max-width: 1024px) {
+    .ofp-tabs,
+    .ofp-segmented-nav,
+    .ofp-funding-tabs,
+    .ofp-notif-tabs,
+    .ofp-im-tabs,
+    .ofp-leads-filter-pills,
+    .ofp-txn-filter-pills,
+    .ofp-sales-tabs-nav,
+    .ofp-inspection-tabs,
+    .ofp-modal-tabs,
+    .ofp-filter-tabs,
+    .ofp-filter-tabs-wrap,
+    .ofp-tabs-bar-scroll,
+    .ofp-search-modal-tabs,
+    .ofp-horizontal-scroll-tabs {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding-bottom: 4px !important;
+    }
+
+    .ofp-tabs::-webkit-scrollbar,
+    .ofp-segmented-nav::-webkit-scrollbar,
+    .ofp-funding-tabs::-webkit-scrollbar,
+    .ofp-notif-tabs::-webkit-scrollbar,
+    .ofp-im-tabs::-webkit-scrollbar,
+    .ofp-leads-filter-pills::-webkit-scrollbar,
+    .ofp-txn-filter-pills::-webkit-scrollbar,
+    .ofp-sales-tabs-nav::-webkit-scrollbar,
+    .ofp-inspection-tabs::-webkit-scrollbar,
+    .ofp-modal-tabs::-webkit-scrollbar,
+    .ofp-filter-tabs::-webkit-scrollbar,
+    .ofp-filter-tabs-wrap::-webkit-scrollbar,
+    .ofp-tabs-bar-scroll::-webkit-scrollbar,
+    .ofp-search-modal-tabs::-webkit-scrollbar,
+    .ofp-horizontal-scroll-tabs::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .ofp-tab,
+    .ofp-segmented-tab,
+    .ofp-funding-tab,
+    .ofp-notif-tab,
+    .ofp-im-tab,
+    .ofp-leads-pill,
+    .ofp-txn-pill,
+    .ofp-tab-btn,
+    .ofp-inspection-tab,
+    .ofp-modal-tab-btn,
+    .ofp-filter-tab {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
     }
 }
 
@@ -7658,7 +8060,8 @@ html.light .ofp-btn-outline:hover {
 .ofp-form-card,
 .ofp-property-card,
 .ofp-specs-card,
-.ofp-report-card {
+.ofp-report-card,
+.ofp-profile-card {
     background: rgba(30, 41, 59, 0.45) !important;
     backdrop-filter: blur(20px) saturate(190%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
@@ -7672,7 +8075,8 @@ html.light .ofp-btn-outline:hover {
 .ofp-kpi-card:not(.ofp-kpi-card-hero):hover,
 .ofp-spec-counter-card:hover,
 .ofp-pricing-card:hover,
-.ofp-property-card:hover {
+.ofp-property-card:hover,
+.ofp-profile-card:hover {
     border-color: rgba(255, 255, 255, 0.2) !important;
     box-shadow: 0 14px 40px 0 rgba(0, 0, 0, 0.38), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
 }
@@ -7693,6 +8097,7 @@ html.light .ofp-btn-outline:hover {
 [data-theme="light"] .ofp-property-card,
 [data-theme="light"] .ofp-specs-card,
 [data-theme="light"] .ofp-report-card,
+[data-theme="light"] .ofp-profile-card,
 html.light .ofp-card,
 html.light .ofp-zentra-card,
 html.light .ofp-kpi-card:not(.ofp-kpi-card-hero),
@@ -7707,7 +8112,8 @@ html.light .ofp-section,
 html.light .ofp-form-card,
 html.light .ofp-property-card,
 html.light .ofp-specs-card,
-html.light .ofp-report-card {
+html.light .ofp-report-card,
+html.light .ofp-profile-card {
     background: rgba(255, 255, 255, 0.72) !important;
     backdrop-filter: blur(20px) saturate(190%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
@@ -7721,12 +8127,14 @@ html.light .ofp-report-card {
 [data-theme="light"] .ofp-spec-counter-card:hover,
 [data-theme="light"] .ofp-pricing-card:hover,
 [data-theme="light"] .ofp-property-card:hover,
+[data-theme="light"] .ofp-profile-card:hover,
 html.light .ofp-card:hover,
 html.light .ofp-zentra-card:hover,
 html.light .ofp-kpi-card:not(.ofp-kpi-card-hero):hover,
 html.light .ofp-spec-counter-card:hover,
 html.light .ofp-pricing-card:hover,
-html.light .ofp-property-card:hover {
+html.light .ofp-property-card:hover,
+html.light .ofp-profile-card:hover {
     border-color: rgba(255, 255, 255, 0.95) !important;
     box-shadow: 0 16px 40px 0 rgba(15, 23, 42, 0.1), inset 0 1px 1px 0 #ffffff !important;
 }
@@ -7967,7 +8375,7 @@ html.light .ofp-nav-item:hover {
     border: 1px solid rgba(255, 255, 255, 0.22) !important;
     box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.25), inset 0 1px 0 0 rgba(255, 255, 255, 0.28) !important;
     color: #ffffff !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
 }
 
 [data-theme="light"] .ofp-nav-item.active,
@@ -7978,7 +8386,7 @@ html.light .ofp-nav-item.active {
     border: 1px solid rgba(255, 255, 255, 0.95) !important;
     box-shadow: 0 4px 16px 0 rgba(15, 23, 42, 0.08), inset 0 1px 1px 0 #ffffff !important;
     color: #0f172a !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
 }
 
 .ofp-sidebar-user-trigger {
@@ -8924,23 +9332,156 @@ html.light .ofp-tag-chip {
     color: var(--text-main, #f8fafc);
 }
 
-/* ── Top Reading Line Preloader (YouTube / GitHub style) ──────────────────── */
-#ofp-top-progress {
+/* ── Platform Frosted Glass Preloader System (VisionOS Glass Dynamic Island) ── */
+#ofp-top-progress-track {
     position: fixed;
     top: 0;
     left: 0;
-    width: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd);
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.7), 0 0 5px rgba(96, 165, 250, 0.5);
-    z-index: 1000000;
+    width: 100%;
+    height: 3.5px;
+    background: rgba(28, 34, 51, 0.88); /* Exact dark mode nav bar background color (#1c2233) */
+    backdrop-filter: blur(25px) saturate(190%);
+    -webkit-backdrop-filter: blur(25px) saturate(190%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 9999999;
     pointer-events: none;
     opacity: 0;
-    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    transition: opacity 0.25s ease;
 }
 
-#ofp-top-progress.is-active {
+#ofp-top-progress-track.is-active {
     opacity: 1;
+}
+
+#ofp-top-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(28, 34, 51, 0.6) 0%, rgba(255, 255, 255, 0.85) 45%, #ffffff 65%, rgba(28, 34, 51, 0.7) 100%);
+    background-size: 200% 100%;
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.85), 0 0 8px rgba(28, 34, 51, 0.7), 0 1px 2px rgba(0, 0, 0, 0.4);
+    border-radius: 0 99px 99px 0;
+    transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: ofpGlassShimmer 1.8s infinite linear;
+}
+
+[data-theme="dark"] #ofp-top-progress-track,
+html.dark #ofp-top-progress-track,
+html:not(.light):not([data-theme="light"]) #ofp-top-progress-track {
+    background: rgba(28, 34, 51, 0.88);
+    backdrop-filter: blur(25px) saturate(190%);
+    -webkit-backdrop-filter: blur(25px) saturate(190%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] #ofp-top-progress,
+html.dark #ofp-top-progress,
+html:not(.light):not([data-theme="light"]) #ofp-top-progress {
+    background: linear-gradient(90deg, rgba(28, 34, 51, 0.6) 0%, rgba(255, 255, 255, 0.85) 45%, #ffffff 65%, rgba(28, 34, 51, 0.7) 100%);
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.85), 0 0 8px rgba(28, 34, 51, 0.7), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Light mode preserves current liquid glass styling */
+[data-theme="light"] #ofp-top-progress-track,
+html.light #ofp-top-progress-track {
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] #ofp-top-progress,
+html.light #ofp-top-progress {
+    background: linear-gradient(90deg, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.85) 45%, #0f172a 70%, rgba(15, 23, 42, 0.25) 100%);
+    box-shadow: 0 0 12px rgba(15, 23, 42, 0.35);
+}
+
+@keyframes ofpGlassShimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+/* Floating Frosted Glass Dynamic Island Pill */
+#ofp-glass-preloader {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-26px) scale(0.92);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10000000;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 16px 7px 12px;
+    border-radius: 9999px;
+    background: rgba(28, 34, 51, 0.88) !important; /* Exact dark mode nav bar background color (#1c2233) with frosted glass blur */
+    backdrop-filter: blur(25px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(25px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    box-shadow: 0 18px 44px -8px rgba(0, 0, 0, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
+    color: var(--text-main, #f8fafc);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1), transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="dark"] #ofp-glass-preloader,
+html.dark #ofp-glass-preloader,
+html:not(.light):not([data-theme="light"]) #ofp-glass-preloader {
+    background: rgba(28, 34, 51, 0.88) !important; /* Nav bar bg color */
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    box-shadow: 0 18px 44px -8px rgba(0, 0, 0, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
+    color: var(--text-main, #f8fafc);
+}
+
+/* Light mode preserves current liquid glass styling */
+[data-theme="light"] #ofp-glass-preloader,
+html.light #ofp-glass-preloader {
+    background: rgba(255, 255, 255, 0.82) !important;
+    border: 1px solid rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 18px 40px -8px rgba(15, 23, 42, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.98) !important;
+    color: #0f172a;
+}
+
+#ofp-glass-preloader.is-active {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.ofp-glass-spinner {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    border-top-color: #ffffff;
+    border-right-color: rgba(255, 255, 255, 0.75);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    animation: ofpGlassSpin 0.75s linear infinite;
+    flex-shrink: 0;
+}
+
+[data-theme="light"] .ofp-glass-spinner,
+html.light .ofp-glass-spinner {
+    border: 2px solid rgba(15, 23, 42, 0.16);
+    border-top-color: #0f172a;
+    border-right-color: rgba(15, 23, 42, 0.65);
+    box-shadow: none;
+}
+
+@keyframes ofpGlassSpin {
+    to { transform: rotate(360deg); }
+}
+
+.ofp-glass-preloader-text {
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 /* ── Modern Toast Notification Component ──────────────────────────────────── */
@@ -9093,4 +9634,243 @@ html.light .ofp-toast {
     width: 100%;
     transform-origin: left;
     transition: width linear;
+}
+
+/* ── Physical ATM Card Component (OPay Emerald & Abuja City Gate Theme) ── */
+.ofp-bank-card-container {
+    width: 100%;
+    max-width: 360px;
+    margin-bottom: 14px;
+}
+
+.ofp-bank-preview {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    aspect-ratio: 1.586 / 1;
+    min-height: 220px;
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #022c22 0%, #064e3b 35%, #042f2e 72%, #081a17 100%) !important;
+    border: 1px solid rgba(52, 211, 153, 0.35) !important;
+    box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.65), 0 0 24px -4px rgba(16, 185, 129, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+    overflow: hidden;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    user-select: none;
+}
+
+.ofp-bank-preview:hover {
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 22px 45px -8px rgba(0, 0, 0, 0.75), 0 0 32px -4px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Subtle holographic diagonal sheen */
+.ofp-bank-preview::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 85% 15%, rgba(52, 211, 153, 0.22) 0%, transparent 60%),
+                linear-gradient(115deg, rgba(255, 255, 255, 0.08) 0%, transparent 35%, rgba(251, 191, 36, 0.06) 65%, transparent 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Abuja City Gate Landmark Silhouette */
+.ofp-bank-card-landmark {
+    position: absolute;
+    right: -10px;
+    bottom: -6px;
+    width: 220px;
+    height: 160px;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.28;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.ofp-bank-preview:hover .ofp-bank-card-landmark {
+    opacity: 0.38;
+    transform: scale(1.03);
+}
+
+.ofp-bank-preview.is-primary {
+    border-color: rgba(52, 211, 153, 0.55) !important;
+    box-shadow: 0 18px 40px -8px rgba(0, 0, 0, 0.7), 0 0 28px -2px rgba(16, 185, 129, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+.ofp-bank-preview-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    margin-bottom: 0;
+}
+
+.ofp-bank-chip {
+    width: 36px;
+    height: 26px;
+    background: linear-gradient(135deg, #fcd34d 0%, #d97706 70%, #b45309 100%);
+    border-radius: 5px;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 2px 5px rgba(0, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.ofp-bank-chip::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    bottom: 5px;
+    left: 7px;
+    right: 7px;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    border-radius: 3px;
+}
+
+.ofp-bank-chip::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.ofp-bank-preview-label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase !important;
+    letter-spacing: 0.12em;
+    color: #ffffff !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+    max-width: 170px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ofp-bank-preview-num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    color: #ffffff !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8), 0 0 12px rgba(52, 211, 153, 0.3);
+    position: relative;
+    z-index: 2;
+    margin: 12px 0;
+}
+
+.ofp-bank-preview-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    position: relative;
+    z-index: 2;
+    gap: 8px;
+}
+
+.ofp-bank-preview-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.ofp-bank-preview-sub {
+    font-size: 8.5px;
+    font-weight: 800;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em;
+    color: #6ee7b7 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.ofp-bank-preview-val {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #ffffff !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ofp-card-badge-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(34, 197, 94, 0.22);
+    border: 1px solid rgba(52, 211, 153, 0.45);
+    color: #4ade80 !important;
+    font-size: 9.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 2.5px 7px;
+    border-radius: 99px;
+}
+
+.ofp-card-badge-primary .ofp-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 8px #22c55e;
+}
+
+.ofp-card-currency-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #ecfdf5 !important;
+    backdrop-filter: blur(4px);
+    flex-shrink: 0;
+}
+
+.ofp-card-brand-mark {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 900;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.ofp-bank-card-empty {
+    border: 2px dashed var(--prof-border, rgba(255, 255, 255, 0.15));
+    border-radius: 16px;
+    padding: 28px 24px;
+    background: rgba(255, 255, 255, 0.02);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
 }

@@ -142,7 +142,7 @@ $initial_kpis = $initial_data['kpis'] ?? [];
 
     <!-- ── Monthly Performance Bar Chart ── -->
     <div class="ofp-card" style="margin-bottom: 32px; display: flex; flex-direction: column;">
-        <div class="ofp-chart-card-header" style="display: flex !important; justify-content: space-between !important; align-items: center !important; margin-bottom: 20px !important; gap: 16px !important; flex-wrap: nowrap !important;">
+        <div class="ofp-chart-card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 16px; flex-wrap: wrap;">
             <div class="ofp-chart-title-wrap" style="display: inline-flex !important; align-items: center !important; gap: 12px !important; flex-shrink: 0 !important; white-space: nowrap !important;">
                 <h3 style="margin: 0; font-size: 16px; font-weight: 600;" id="ofp-chart-heading">
                     Monthly Performance
