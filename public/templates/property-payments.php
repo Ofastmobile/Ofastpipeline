@@ -354,8 +354,8 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 </div>
             </div>
 
-            <div class="ofp-table-responsive">
-                <table class="ofp-table" id="ofp-property-payments-table" style="width:100%;">
+            <div class="ofp-table-responsive" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                <table class="ofp-table" id="ofp-property-payments-table" style="width:100%; min-width:880px; white-space:nowrap;">
                     <thead>
                         <tr>
                             <th>Receipt / ID</th>

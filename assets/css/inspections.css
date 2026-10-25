@@ -57,3 +57,187 @@
         [data-theme="dark"] .ofp-status-confirmed { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
         [data-theme="dark"] .ofp-status-completed { background: rgba(16, 185, 129, 0.2); color: #34d399; }
         [data-theme="dark"] .ofp-status-cancelled { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+
+/* ── Inspection KPI Overview Grid: 4 cols on desktop, 2 cols on tablet & mobile ── */
+.ofp-inspection-kpi-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 16px !important;
+    margin-bottom: 24px !important;
+}
+
+@media (max-width: 1024px) {
+    .ofp-inspection-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 14px !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .ofp-inspection-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+    }
+    .ofp-inspection-kpi-grid .ofp-stat-card {
+        padding: 14px 12px !important;
+        border-radius: 12px !important;
+    }
+    .ofp-inspection-kpi-grid .ofp-stat-card div:first-child {
+        font-size: 11px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    .ofp-inspection-kpi-grid .ofp-stat-card div:last-child {
+        font-size: 22px !important;
+    }
+}
+
+/* ── Filter Toolbar Desktop & Mobile Layout ──────────────────────────────── */
+.ofp-inspection-toolbar-row {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 0;
+}
+
+.ofp-inspection-controls-group {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* On Desktop: Starts with search, then the 2 filters in one line */
+.ofp-inspection-search-wrap {
+    flex: 0 1 280px;
+    min-width: 180px;
+    max-width: 320px;
+}
+
+.ofp-inspection-filters-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+
+.ofp-inspection-filter-toggle {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    color: var(--text-main, #0f172a);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
+}
+
+.ofp-inspection-filter-toggle:hover,
+.ofp-inspection-filter-toggle.active {
+    background: var(--bg-sidebar, rgba(255, 255, 255, 0.08));
+    border-color: var(--accent-blue, #3b82f6);
+    color: var(--accent-blue, #3b82f6);
+}
+
+.ofp-filter-count-badge {
+    background: var(--accent-blue, #3b82f6);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    height: 18px;
+    min-width: 18px;
+    border-radius: 99px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    line-height: 1;
+}
+
+/* ── Mobile Filter Collapsible Behavior (<= 768px) ────────────────────────── */
+@media (max-width: 768px) {
+    .ofp-inspection-toolbar-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .ofp-inspection-controls-group {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .ofp-inspection-search-wrap {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
+    .ofp-inspection-filter-toggle {
+        display: inline-flex !important;
+    }
+
+    /* Filter box starts collapsed / hidden on mobile */
+    .ofp-inspection-filters-box {
+        display: none !important;
+        width: 100% !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        padding: 14px !important;
+        background: var(--bg-subtle, rgba(255, 255, 255, 0.03)) !important;
+        border: 1px solid var(--border-color, #e2e8f0) !important;
+        border-radius: 12px !important;
+        margin-top: 6px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* When unhidden / expanded on mobile */
+    .ofp-inspection-filters-box.ofp-filters-expanded {
+        display: flex !important;
+        animation: ofpSlideDownFilter 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .ofp-inspection-filters-box .ofp-select,
+    .ofp-inspection-filters-box .ofp-inspection-select {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .ofp-inspection-filters-box #ofp-inspection-clear-btn {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    #ofp-inspection-counter {
+        text-align: right;
+        padding-top: 4px;
+    }
+}
+
+@keyframes ofpSlideDownFilter {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

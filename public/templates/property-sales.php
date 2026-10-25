@@ -272,22 +272,22 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             <div class="ofp-alert ofp-alert-error" style="margin-bottom:24px;"><?php echo esc_html( $error ); ?></div>
         <?php endif; ?>
 
-        <div style="display:grid; grid-template-columns: 1fr; gap:24px;">
-            <div id="ofp-sales-pane-sales" class="ofp-sales-pane" style="<?php echo $active_tab === 'sales' ? '' : 'display:none;'; ?>">
+        <div style="display:grid; grid-template-columns: minmax(0, 1fr); width:100%; max-width:100%; gap:24px;">
+            <div id="ofp-sales-pane-sales" class="ofp-sales-pane" style="<?php echo $active_tab === 'sales' ? '' : 'display:none;'; ?>; width:100%; max-width:100%; min-width:0; overflow:hidden;">
             <!-- 1. Active Deals & Sales Portfolio Table (Front & Center) -->
-            <div class="ofp-card" id="my-sales" style="padding:24px;">
+            <div class="ofp-card" id="my-sales" style="padding:24px; width:100%; max-width:100%; min-width:0; box-sizing:border-box; overflow:hidden;">
                 <div class="ofp-table-toolbar" style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
                         <h3 style="margin:0 0 4px;font-size:18px;font-weight:700;color:var(--text-main);">Active Deals &amp; Sales Portfolio</h3>
                         <p style="margin:0;font-size:13px;color:var(--text-muted);">Real-time tracking of buyer purchases, verification status, and installment schedules.</p>
                     </div>
                     <?php if ( ! empty( $existing_offers ) || ! empty( $my_purchases ) ) : ?>
-                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                        <div class="ofp-table-search" style="min-width:280px;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; max-width:100%;">
+                        <div class="ofp-table-search" style="flex:1; min-width:180px; max-width:100%;">
                             <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                             <input type="text" id="ofp-sales-search-input" class="ofp-input ofp-txn-search-input" placeholder="Search deals, buyers, properties..." onkeyup="ofpFilterSalesTable(this.value)">
                         </div>
-                        <span id="ofp-sales-count-badge" class="ofp-btn ofp-btn-outline" style="font-size:12px; font-weight:600; padding:6px 14px; border-radius:8px; pointer-events:none;">
+                        <span id="ofp-sales-count-badge" class="ofp-btn ofp-btn-outline" style="font-size:12px; font-weight:600; padding:6px 14px; border-radius:8px; pointer-events:none; flex-shrink:0;">
                             <?php echo count( $my_purchases ); ?> Deals
                         </span>
                     </div>
@@ -312,8 +312,8 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                         </div>
                     </div>
                 <?php else : ?>
-                    <div class="ofp-table-responsive">
-                        <table class="ofp-table" id="ofp-sales-portfolio-table" style="width: 100%; white-space: nowrap;">
+                    <div class="ofp-table-responsive" style="width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; display: block; box-sizing: border-box;">
+                        <table class="ofp-table" id="ofp-sales-portfolio-table" style="width: 100%; min-width: 760px; white-space: nowrap;">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -414,9 +414,9 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             </div>
             </div><!-- #ofp-sales-pane-sales -->
 
-            <div id="ofp-sales-pane-offer" class="ofp-sales-pane" style="<?php echo $active_tab === 'offer' ? '' : 'display:none;'; ?>">
+            <div id="ofp-sales-pane-offer" class="ofp-sales-pane" style="<?php echo $active_tab === 'offer' ? '' : 'display:none;'; ?>; width:100%; max-width:100%; min-width:0; overflow:hidden;">
             <!-- 2. Create Installment Offer Form Card -->
-            <div class="ofp-card" id="create-offer" style="padding:24px;">
+            <div class="ofp-card" id="create-offer" style="padding:24px; width:100%; max-width:100%; min-width:0; box-sizing:border-box; overflow:hidden;">
                 <div style="margin-bottom:16px; text-align: left;">
                     <a href="<?php echo esc_url( home_url( '/property-sales' ) ); ?>" data-tab="sales" class="ofp-back-link-left">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
@@ -440,7 +440,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                     <?php wp_nonce_field( 'ofp_property_offer_' . $client->id, 'ofp_property_offer_nonce' ); ?>
                     <input type="hidden" name="ofp_create_property_offer" value="1">
 
-                    <div class="ofp-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                    <div class="ofp-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px;">
                         <div class="ofp-field">
                             <label>Property</label>
                             <select name="property_id" id="ofp-offer-property" required class="ofp-select" style="width:100%;">

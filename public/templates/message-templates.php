@@ -1011,14 +1011,14 @@ $type_badges = [
         ?>
 
 
-        <div style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
+        <div class="ofp-branding-grid">
             
             <!-- Left: Settings Form Card -->
-            <div class="ofp-card" style="flex: 1; min-width: 420px; padding: 24px;">
+            <div class="ofp-card ofp-branding-form-card" style="padding: 24px;">
                 <form id="email-branding-form">
                     
                     <!-- Mode Switcher -->
-                    <div style="margin-bottom: 24px; background: var(--bg-lighter); padding: 6px; border-radius: 12px; display: inline-flex; border: 1px solid var(--border-color);">
+                    <div style="margin-bottom: 24px; background: var(--bg-lighter); padding: 6px; border-radius: 12px; display: inline-flex; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 4px;">
                         <label style="margin:0; cursor:pointer; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" id="label-mode-visual">
                             <input type="radio" name="email_template_mode" value="visual" <?php checked( $tpl_mode, 'visual' ); ?> onchange="toggleBrandingMode()" style="display:none;">
                             Visual Customizer
@@ -1124,7 +1124,7 @@ $type_badges = [
                     </div>
 
                     <!-- Action Buttons -->
-                    <div style="display: flex; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color); align-items: center;">
+                    <div style="display: flex; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color); align-items: center; flex-wrap: wrap;">
                         <button type="submit" class="ofp-btn ofp-btn-primary" id="btn-save-branding" style="padding: 10px 24px;">Save Email Branding</button>
                         <button type="button" class="ofp-btn ofp-btn-send-test" id="btn-send-test-bottom" onclick="sendTestEmail()">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -1137,7 +1137,7 @@ $type_badges = [
             </div>
 
             <!-- Right: Interactive Live Preview Card -->
-            <div style="flex: 1.1; min-width: 420px; display: flex; flex-direction: column;">
+            <div class="ofp-branding-preview-col">
                 <div class="ofp-card" style="padding: 16px 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 12px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981;"></span>

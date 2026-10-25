@@ -104,8 +104,8 @@ $client_properties = $wpdb->get_results( $wpdb->prepare(
                 </div>
             <?php endif; ?>
 
-            <!-- Metrics Overview Cards -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <!-- Metrics Overview Cards (Responsive: 4 on desktop, 2 on tablet & mobile) -->
+            <div class="ofp-inspection-kpi-grid" style="margin-bottom: 24px;">
                 <div class="ofp-stat-card" style="padding: 18px 20px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--border-color);">
                     <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Total Requests</div>
                     <div style="font-size: 26px; font-weight: 800; color: var(--text-main);"><?php echo number_format( $total_count ); ?></div>
@@ -125,12 +125,13 @@ $client_properties = $wpdb->get_results( $wpdb->prepare(
             </div>
 
             <!-- Filter & Search Toolbar (Redesigned with AJAX Tab Switching) -->
-            <div class="ofp-card" style="padding: 18px 20px; margin-bottom: 24px; border-radius: 14px;">
-                <!-- Top Row: Search Box, Dropdowns, Counter -->
-                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px;">
-                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; flex: 1; min-width: 280px;">
-                        <!-- Real-time Search Box -->
-                        <div class="ofp-comm-search-box" style="flex: 1; min-width: 220px; max-width: 360px;">
+            <div class="ofp-card ofp-inspection-toolbar-card" style="padding: 18px 20px; margin-bottom: 24px; border-radius: 14px;">
+                <!-- Top Row: Starts with search, then the 2 filters in one line on desktop; collapsible on mobile -->
+                <div class="ofp-inspection-toolbar-row">
+                    <div class="ofp-inspection-controls-group">
+                        
+                        <!-- 1. Real-time Search Box (Starts with search on desktop) -->
+                        <div class="ofp-comm-search-box ofp-inspection-search-wrap">
                             <input type="text" id="ofp-inspection-search-input" 
                                    placeholder="Search prospect, phone, property..." 
                                    class="ofp-input ofp-comm-search-input"
@@ -140,30 +141,42 @@ $client_properties = $wpdb->get_results( $wpdb->prepare(
                             </svg>
                         </div>
 
-                        <!-- Tour Type Dropdown -->
-                        <select id="ofp-inspection-tour-select" class="ofp-select" style="font-size: 12.5px; height: 38px; padding: 0 12px; min-width: 140px;">
-                            <option value="">All Tour Types</option>
-                            <option value="physical" <?php selected( $filter_tour_type, 'physical' ); ?>>Physical Showing</option>
-                            <option value="whatsapp_video" <?php selected( $filter_tour_type, 'whatsapp_video' ); ?>>WhatsApp Video</option>
-                        </select>
+                        <!-- Mobile Filter Toggle Button (Shown on mobile to hide & unhide the filter box) -->
+                        <button type="button" id="ofp-inspection-filter-toggle" class="ofp-btn ofp-btn-sm ofp-inspection-filter-toggle" aria-expanded="false" title="Toggle Filters">
+                            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                            </svg>
+                            <span>Filters</span>
+                            <span class="ofp-filter-count-badge" id="ofp-filter-count-badge" style="display:none;"></span>
+                        </button>
 
-                        <!-- Property Dropdown -->
-                        <?php if ( ! empty( $client_properties ) ) : ?>
-                            <select id="ofp-inspection-prop-select" class="ofp-select" style="font-size: 12.5px; height: 38px; padding: 0 12px; max-width: 200px;">
-                                <option value="">All Listings</option>
-                                <?php foreach ( $client_properties as $cp ) : ?>
-                                    <option value="<?php echo (int) $cp->wp_post_id; ?>" <?php selected( $filter_prop_id, (int) $cp->wp_post_id ); ?>>
-                                        <?php echo esc_html( wp_trim_words( $cp->title, 5 ) ); ?>
-                                    </option>
-                                <?php endforeach; ?>
+                        <!-- 2 & 3. The 2 Filters (Tour Type & Property) + Clear button in one line on desktop -->
+                        <div class="ofp-inspection-filters-box" id="ofp-inspection-filters-box">
+                            <!-- Tour Type Dropdown -->
+                            <select id="ofp-inspection-tour-select" class="ofp-select ofp-inspection-select" style="font-size: 12.5px; height: 38px; padding: 0 12px; min-width: 140px;">
+                                <option value="">All Tour Types</option>
+                                <option value="physical" <?php selected( $filter_tour_type, 'physical' ); ?>>Physical Showing</option>
+                                <option value="whatsapp_video" <?php selected( $filter_tour_type, 'whatsapp_video' ); ?>>WhatsApp Video</option>
                             </select>
-                        <?php endif; ?>
 
-                        <button type="button" id="ofp-inspection-clear-btn" class="ofp-btn ofp-btn-sm ofp-btn-ghost" style="height: 38px; display: none;">Clear</button>
+                            <!-- Property Dropdown -->
+                            <?php if ( ! empty( $client_properties ) ) : ?>
+                                <select id="ofp-inspection-prop-select" class="ofp-select ofp-inspection-select" style="font-size: 12.5px; height: 38px; padding: 0 12px; max-width: 200px;">
+                                    <option value="">All Listings</option>
+                                    <?php foreach ( $client_properties as $cp ) : ?>
+                                        <option value="<?php echo (int) $cp->wp_post_id; ?>" <?php selected( $filter_prop_id, (int) $cp->wp_post_id ); ?>>
+                                            <?php echo esc_html( wp_trim_words( $cp->title, 5 ) ); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php endif; ?>
+
+                            <button type="button" id="ofp-inspection-clear-btn" class="ofp-btn ofp-btn-sm ofp-btn-ghost" style="height: 38px; display: none;">Clear</button>
+                        </div>
                     </div>
 
                     <!-- Records Counter Badge -->
-                    <div id="ofp-inspection-counter" style="font-size: 12.5px; color: var(--text-muted); font-weight: 500;">
+                    <div id="ofp-inspection-counter" style="font-size: 12.5px; color: var(--text-muted); font-weight: 500; white-space: nowrap; flex-shrink: 0;">
                         Showing <strong style="color: var(--text-main);" id="ofp-inspection-visible-count"><?php echo count( $inquiries ); ?></strong> of <strong style="color: var(--text-main);"><?php echo $total_count; ?></strong> requests
                     </div>
                 </div>

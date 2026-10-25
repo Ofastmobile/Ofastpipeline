@@ -526,8 +526,8 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                     </select>
                 </div>
             </div>
-            <div style="position:relative;height:230px;">
-                <canvas id="ofp-chart-cashflow"></canvas>
+            <div style="position:relative;height:230px;width:100%;min-width:0;max-width:100%;overflow:hidden;">
+                <canvas id="ofp-chart-cashflow" style="display:block;width:100% !important;max-width:100% !important;"></canvas>
             </div>
         </div>
 
@@ -789,6 +789,8 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                     }
                 }
             });
+
+            window.ofpCashFlowChart = chartInstance;
 
             var periodSelect = document.getElementById('ofp-cashflow-period');
             if (periodSelect) {

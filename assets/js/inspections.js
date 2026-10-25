@@ -163,12 +163,38 @@ document.addEventListener('DOMContentLoaded', function() {
             clearBtn.style.display = hasFilters ? 'inline-flex' : 'none';
         }
 
+        // Update mobile active filter badge count
+        const filterBadge = document.getElementById('ofp-filter-count-badge');
+        if (filterBadge) {
+            let activeFilterCount = 0;
+            if (tour) activeFilterCount++;
+            if (prop) activeFilterCount++;
+            if (activeFilterCount > 0) {
+                filterBadge.textContent = activeFilterCount;
+                filterBadge.style.display = 'inline-flex';
+            } else {
+                filterBadge.style.display = 'none';
+            }
+        }
+
         // Update tab badge counts
         const allBadge = document.getElementById('tab-cnt-all');
         if (allBadge) allBadge.textContent = counts.all;
         ['pending', 'confirmed', 'completed', 'cancelled'].forEach(function(st) {
             const b = document.getElementById('tab-cnt-' + st);
             if (b) b.textContent = counts[st] || 0;
+        });
+    }
+
+    // Mobile filter toggle (hide/unhide filter box)
+    const filterToggleBtn = document.getElementById('ofp-inspection-filter-toggle');
+    const filterBox       = document.getElementById('ofp-inspection-filters-box');
+    if (filterToggleBtn && filterBox) {
+        filterToggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const isExpanded = filterBox.classList.toggle('ofp-filters-expanded');
+            filterToggleBtn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+            filterToggleBtn.classList.toggle('active', isExpanded);
         });
     }
 

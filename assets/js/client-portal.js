@@ -21,6 +21,8 @@
     function initSidebarToggle() {
         var toggle      = document.getElementById('ofp-sidebar-toggle');
         var collapseBtn = document.getElementById('ofp-sidebar-collapse-btn');
+        var railToggle  = document.getElementById('ofp-sidebar-rail-toggle');
+        var closeBtn    = document.getElementById('ofp-sidebar-close-btn');
         var backdrop    = document.getElementById('ofp-sidebar-backdrop');
         var body        = document.body;
 
@@ -54,6 +56,20 @@
                 var nowOpen = body.classList.toggle('ofp-sidebar-open');
                 if ( toggle ) toggle.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
             }
+
+            // Dispatch resize so Chart.js canvases smoothly recalculate without shrinking columns
+            var triggerResize = function() {
+                try {
+                    window.dispatchEvent(new Event('resize'));
+                    if (window.ofpCashFlowChart && typeof window.ofpCashFlowChart.resize === 'function') {
+                        window.ofpCashFlowChart.resize();
+                    }
+                } catch(err) {}
+            };
+            triggerResize();
+            setTimeout(triggerResize, 80);
+            setTimeout(triggerResize, 280);
+            setTimeout(triggerResize, 350);
         }
 
         window.ofpToggleSidebar = handleToggle;
@@ -63,19 +79,46 @@
             collapseBtn.addEventListener('click', handleToggle);
         }
 
+        if ( railToggle && !railToggle._ofpBound ) {
+            railToggle._ofpBound = true;
+            railToggle.addEventListener('click', handleToggle);
+        }
+
+        if ( closeBtn && !closeBtn._ofpBound ) {
+            closeBtn._ofpBound = true;
+            closeBtn.addEventListener('click', function(e) {
+                if ( e ) e.preventDefault();
+                body.classList.remove('ofp-sidebar-open');
+                if ( toggle ) toggle.setAttribute('aria-expanded', 'false');
+            });
+        }
+
         if ( toggle && !toggle._ofpBound ) {
             toggle._ofpBound = true;
             toggle.addEventListener('click', handleToggle);
         }
 
+        var brandLink = sidebar ? sidebar.querySelector('.ofp-nav-brand') : null;
+        if ( brandLink && !brandLink._ofpBound ) {
+            brandLink._ofpBound = true;
+            brandLink.addEventListener('click', function(e) {
+                if ( isDesktop() && body.classList.contains('ofp-sidebar-closed') ) {
+                    e.preventDefault();
+                    handleToggle();
+                }
+            });
+        }
+
         // Tapping the backdrop closes the sidebar on mobile.
         if ( backdrop && !backdrop._ofpBound ) {
             backdrop._ofpBound = true;
-            backdrop.addEventListener('click', function (e) {
+            var dismissSidebar = function (e) {
                 if ( e ) e.preventDefault();
                 body.classList.remove('ofp-sidebar-open');
                 if ( toggle ) toggle.setAttribute('aria-expanded', 'false');
-            });
+            };
+            backdrop.addEventListener('click', dismissSidebar);
+            backdrop.addEventListener('touchend', dismissSidebar);
         }
 
         // Closing the mobile sidebar automatically when resizing up to desktop,
@@ -328,9 +371,21 @@
         if ( btn._ofpThemeBound ) return;
         btn._ofpThemeBound = true;
 
-        if ( btn.hasAttribute('onclick') ) {
-            btn.removeAttribute('onclick');
-        }
+        var touchMoved = false;
+        btn.addEventListener('touchstart', function () {
+            touchMoved = false;
+        }, { passive: true });
+
+        btn.addEventListener('touchmove', function () {
+            touchMoved = true;
+        }, { passive: true });
+
+        btn.addEventListener('touchend', function (e) {
+            if ( ! touchMoved ) {
+                e.preventDefault();
+                togglePortalTheme();
+            }
+        });
 
         btn.addEventListener('click', function (e) {
             e.preventDefault();
@@ -340,16 +395,28 @@
 
     // ── User & Notification Dropdown Toggle ─────────────────────────────────
     function initUserDropdown() {
-        var userMenu = document.getElementById('ofp-user-menu');
-        var avatar   = document.getElementById('ofp-user-avatar');
-        var notifMenu    = document.getElementById('ofp-notif-menu');
-        var notifTrigger = document.getElementById('ofp-notif-trigger');
+        var userMenu         = document.getElementById('ofp-user-menu');
+        var avatar           = document.getElementById('ofp-user-avatar');
+        var notifMenu        = document.getElementById('ofp-notif-menu');
+        var notifTrigger     = document.getElementById('ofp-notif-trigger');
+        var topbarUserMenu   = document.getElementById('ofp-topbar-profile-menu');
+        var topbarAvatar     = document.getElementById('ofp-topbar-user-avatar');
 
         if ( avatar && userMenu ) {
             avatar.addEventListener('click', function (e) {
                 e.stopPropagation();
                 if ( notifMenu ) notifMenu.classList.remove('active');
+                if ( topbarUserMenu ) topbarUserMenu.classList.remove('active');
                 userMenu.classList.toggle('active');
+            });
+        }
+
+        if ( topbarAvatar && topbarUserMenu ) {
+            topbarAvatar.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if ( notifMenu ) notifMenu.classList.remove('active');
+                if ( userMenu ) userMenu.classList.remove('active');
+                topbarUserMenu.classList.toggle('active');
             });
         }
 
@@ -357,16 +424,30 @@
             notifTrigger.addEventListener('click', function (e) {
                 e.stopPropagation();
                 if ( userMenu ) userMenu.classList.remove('active');
+                if ( topbarUserMenu ) topbarUserMenu.classList.remove('active');
                 notifMenu.classList.toggle('active');
             });
         }
 
-        document.addEventListener('click', function (e) {
+        var dismissMenus = function (e) {
             if ( userMenu && ! userMenu.contains(e.target) ) {
                 userMenu.classList.remove('active');
             }
+            if ( topbarUserMenu && ! topbarUserMenu.contains(e.target) ) {
+                topbarUserMenu.classList.remove('active');
+            }
             if ( notifMenu && ! notifMenu.contains(e.target) ) {
                 notifMenu.classList.remove('active');
+            }
+        };
+
+        document.addEventListener('click', dismissMenus);
+        document.addEventListener('touchend', function(e) {
+            // Dismiss if tap outside
+            if ( (userMenu && userMenu.classList.contains('active') && !userMenu.contains(e.target)) ||
+                 (topbarUserMenu && topbarUserMenu.classList.contains('active') && !topbarUserMenu.contains(e.target)) ||
+                 (notifMenu && notifMenu.classList.contains('active') && !notifMenu.contains(e.target)) ) {
+                dismissMenus(e);
             }
         });
     }

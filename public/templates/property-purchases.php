@@ -436,8 +436,8 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             <?php if ( empty( $installments ) ) : ?>
                 <p class="ofp-hint">No installments found for this purchase.</p>
             <?php else : ?>
-                <div class="ofp-table-responsive">
-                    <table class="ofp-table" style="width:100%;">
+                <div class="ofp-table-responsive" style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                    <table class="ofp-table" style="width:100%; min-width:680px; white-space:nowrap;">
                         <thead>
                             <tr>
                                 <th>#</th>

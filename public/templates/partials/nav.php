@@ -248,11 +248,17 @@ svg { max-width: 100%; box-sizing: border-box; }
 
     <aside class="ofp-sidebar" id="ofp-sidebar">
         <div class="ofp-sidebar-header" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-            <a class="ofp-nav-brand" href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>">
+            <a class="ofp-nav-brand" href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>" title="Ofast Pipeline">
                 <?php echo OFP_Brand::sidebar_brand_html( $client ); ?>
             </a>
-            <button type="button" class="ofp-sidebar-collapse-btn" id="ofp-sidebar-collapse-btn" aria-label="Hide navigation" title="Hide navigation" style="margin-left:auto;">
+            <button type="button" class="ofp-sidebar-collapse-btn" id="ofp-sidebar-collapse-btn" aria-label="Toggle navigation" title="Toggle navigation" style="margin-left:auto;">
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <button type="button" class="ofp-sidebar-rail-toggle" id="ofp-sidebar-rail-toggle" aria-label="Expand navigation" title="Expand navigation" style="display:none; margin:0 auto;">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
+            </button>
+            <button type="button" class="ofp-sidebar-close-btn" id="ofp-sidebar-close-btn" aria-label="Close navigation" title="Close navigation" style="margin-left:auto; display:none;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
         </div>
         
@@ -281,6 +287,7 @@ svg { max-width: 100%; box-sizing: border-box; }
                                 <a href="<?php echo esc_url( $item['url'] ); ?>"
                                    class="<?php echo esc_attr( $classes ); ?>"
                                    data-slug="<?php echo esc_attr( $item['slug'] ); ?>"
+                                   title="<?php echo esc_attr( $item['label'] ); ?>"
                                    <?php echo $item['locked'] ? 'aria-disabled="true"' : ''; ?>>
                                     <span class="ofp-nav-icon">
                                         <?php echo wp_kses( $item['icon'], $allowed_svg ); ?>
@@ -459,29 +466,31 @@ svg { max-width: 100%; box-sizing: border-box; }
         <header class="ofp-topbar ofp-topbar-transparent">
             
             <button class="ofp-sidebar-toggle" id="ofp-sidebar-toggle" aria-label="Toggle navigation" title="Toggle navigation">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
             </button>
 
             <div class="ofp-hero-greeting-pill">
                 <span class="ofp-status-dot-pulse"></span>
-                <span>
-                    <?php 
-                        $hour = current_time('H');
-                        $greeting = 'Good evening';
-                        if ($hour < 12) { $greeting = 'Good morning'; }
-                        elseif ($hour < 18) { $greeting = 'Good afternoon'; }
-                        echo esc_html( $greeting . ', ' . explode(' ', trim($client->owner_name))[0] ); 
-                    ?>!
-                </span>
-                <span class="ofp-hero-date-divider">&bull;</span>
-                <span class="ofp-hero-date"><?php echo date('M j, Y'); ?></span>
+                <div class="ofp-hero-greeting-text-wrap">
+                    <span class="ofp-hero-greeting-text">
+                        <?php 
+                            $hour = current_time('H');
+                            $greeting = 'Good evening';
+                            if ($hour < 12) { $greeting = 'Good morning'; }
+                            elseif ($hour < 18) { $greeting = 'Good afternoon'; }
+                            echo esc_html( $greeting . ', ' . explode(' ', trim($client->owner_name))[0] ); 
+                        ?>!
+                    </span>
+                    <span class="ofp-hero-date-divider">&bull;</span>
+                    <span class="ofp-hero-date"><?php echo date('M j, Y'); ?></span>
+                </div>
             </div>
 
             <div class="ofp-topbar-spacer" style="flex:1;"></div>
 
             <div class="ofp-topbar-actions">
                 <!-- Theme Toggle Desktop Icon -->
-                <button class="ofp-icon-btn" id="ofp-theme-toggle" type="button" aria-label="Toggle Theme" title="Toggle Light/Dark Theme">
+                <button class="ofp-icon-btn" id="ofp-theme-toggle" type="button" aria-label="Toggle Theme" title="Toggle Light/Dark Theme" onclick="if(typeof window.ofpToggleTheme==='function'){window.ofpToggleTheme();}else if(typeof window.togglePortalTheme==='function'){window.togglePortalTheme();}">
                     <svg class="theme-toggle-moon" style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                     </svg>
@@ -539,6 +548,45 @@ svg { max-width: 100%; box-sizing: border-box; }
                                     <a href="<?php echo esc_url( home_url( '/notification-settings' ) ); ?>" style="font-size:12px; color:var(--accent-blue); text-decoration:none; font-weight:500;">Show all</a>
                                 </div>
                             <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Menu in Topbar (Sticky on Mobile) -->
+                <div class="ofp-user-menu ofp-topbar-user-menu" style="position:relative;" id="ofp-topbar-profile-menu">
+                    <div class="ofp-user-avatar" id="ofp-topbar-user-avatar" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" style="cursor:pointer;" title="User Profile">
+                        <?php if ( ! empty( $client->logo_url ) ) : ?>
+                            <img src="<?php echo esc_url( $client->logo_url ); ?>" alt="Logo">
+                        <?php else : ?>
+                            <?php echo esc_html( strtoupper( substr( $client->business_name, 0, 2 ) ) ); ?>
+                        <?php endif; ?>
+                    </div>
+                    <div class="ofp-dropdown" style="width: 250px; right: 0;">
+                        <div class="ofp-dropdown-header">
+                            <strong><?php echo esc_html( $client->owner_name ); ?></strong>
+                            <span><?php echo esc_html( $client->email ); ?></span>
+                        </div>
+                        <div class="ofp-dropdown-body">
+                            <a href="<?php echo esc_url( home_url( '/account' ) ); ?>" class="ofp-dropdown-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                                Profile Settings
+                            </a>
+                            <a href="<?php echo esc_url( home_url( '/notification-settings' ) ); ?>" class="ofp-dropdown-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>
+                                Notification Settings
+                            </a>
+                            <a href="<?php echo esc_url( home_url( '/activity-logs' ) ); ?>" class="ofp-dropdown-item">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                Activity Log
+                            </a>
+                            <a href="javascript:void(0)" class="ofp-dropdown-item ofp-open-feedback-trigger" data-type="feature_request">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m2.25 8.25l-3.75-3.75H5.25a2.25 2.25 0 01-2.25-2.25V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25v9a2.25 2.25 0 01-2.25 2.25h-2.25l-4.5 4.5z" /></svg>
+                                Feedback & Bug Report
+                            </a>
+                            <a href="<?php echo esc_url( OFP_Client_Portal::logout_url() ); ?>" class="ofp-dropdown-item danger">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
+                                Sign out
+                            </a>
                         </div>
                     </div>
                 </div>

@@ -52,6 +52,31 @@
     margin-bottom: 18px;
 }
 
+@media (max-width: 1024px) {
+    .ofp-cu-filters {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding-bottom: 6px !important;
+    }
+
+    .ofp-cu-filters::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .ofp-cu-pill,
+    .ofp-cu-msg-btn {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+    }
+}
+
 .ofp-cu-pill {
     display: inline-flex;
     align-items: center;

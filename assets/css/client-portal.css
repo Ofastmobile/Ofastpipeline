@@ -577,98 +577,369 @@ html.light .ofp-sidebar-collapse-btn:hover {
 /* ── Desktop Sidebar Hide / Unhide (> 1024px) ────────────────────────────── */
 @media (min-width: 1025px) {
     .ofp-sidebar {
-        transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-                    min-width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-                    max-width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-                    margin-left 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+        transition: width 0.32s ease-out,
+                    min-width 0.32s ease-out,
+                    max-width 0.32s ease-out,
+                    margin-left 0.32s ease-out,
                     opacity 0.22s ease,
                     visibility 0.22s ease !important;
         will-change: width, margin-left, opacity;
     }
 
-    /* Completely hide sidebar when closed on desktop */
+    .ofp-main {
+        transition: width 0.32s ease-out,
+                    max-width 0.32s ease-out,
+                    flex 0.32s ease-out !important;
+        will-change: width;
+    }
+
+    /* ── Desktop Collapsed Mini-Sidebar Rail (Icons at Edge) ─────────────── */
+    /* When hiding menu, apply ease-in */
     body.ofp-sidebar-closed .ofp-sidebar {
-        width: 0 !important;
-        min-width: 0 !important;
-        max-width: 0 !important;
+        width: 72px !important;
+        min-width: 72px !important;
+        max-width: 72px !important;
         margin-left: 0 !important;
         padding-left: 0 !important;
         padding-right: 0 !important;
-        border-right: none !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        visibility: hidden !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        visibility: visible !important;
         overflow: hidden !important;
+        border-right: 1px solid var(--border-color) !important;
+        transition: width 0.3s ease-in,
+                    min-width 0.3s ease-in,
+                    max-width 0.3s ease-in !important;
     }
 
     body.ofp-sidebar-closed .ofp-main {
-        width: 100% !important;
-        max-width: 100% !important;
-        flex: 1 1 100% !important;
+        transition: width 0.3s ease-in,
+                    max-width 0.3s ease-in,
+                    flex 0.3s ease-in !important;
     }
 
-    /* When sidebar is OPEN on desktop, hide the topbar unhide button */
+    body.ofp-sidebar-closed .ofp-sidebar-header {
+        padding: 0 !important;
+        justify-content: center !important;
+        align-items: center !important;
+        height: 72px !important;
+        width: 72px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* In mini sidebar: REMOVE logo entirely and move hamburger toggle button here */
+    body.ofp-sidebar-closed .ofp-nav-brand {
+        display: none !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-sidebar-collapse-btn {
+        display: none !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-sidebar-rail-toggle {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 42px !important;
+        height: 42px !important;
+        margin: 0 auto !important;
+        border-radius: 12px !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 1px solid rgba(255, 255, 255, 0.16) !important;
+        color: #ffffff !important;
+        cursor: pointer !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-sidebar-rail-toggle:hover {
+        background: rgba(255, 255, 255, 0.2) !important;
+        border-color: rgba(255, 255, 255, 0.32) !important;
+        transform: scale(1.06) !important;
+    }
+
+    [data-theme="light"] body.ofp-sidebar-closed .ofp-sidebar-rail-toggle,
+    html.light body.ofp-sidebar-closed .ofp-sidebar-rail-toggle {
+        background: rgba(0, 0, 0, 0.05) !important;
+        border-color: rgba(0, 0, 0, 0.12) !important;
+        color: #0f172a !important;
+    }
+
+    [data-theme="light"] body.ofp-sidebar-closed .ofp-sidebar-rail-toggle:hover,
+    html.light body.ofp-sidebar-closed .ofp-sidebar-rail-toggle:hover {
+        background: rgba(0, 0, 0, 0.09) !important;
+        border-color: rgba(0, 0, 0, 0.2) !important;
+    }
+
+    /* Mini sidebar navigation: NO scrollbars (horizontal or vertical) */
+    body.ofp-sidebar-closed .ofp-sidebar-nav {
+        padding: 10px 0 !important;
+        margin: 0 !important;
+        width: 72px !important;
+        max-width: 72px !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-sidebar-nav::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
+
+    /* Hide category section headers in collapsed mode */
+    body.ofp-sidebar-closed .ofp-nav-group-label {
+        display: none !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-nav-group {
+        margin: 0 0 4px 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-nav-group ul {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        list-style: none !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-nav-group li {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+    }
+
+    /* Center navigation items in collapsed mini sidebar */
+    body.ofp-sidebar-closed .ofp-nav-item {
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 0 !important;
+        margin: 4px auto !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        max-width: 44px !important;
+        border-radius: 12px !important;
+        position: relative !important;
+        box-sizing: border-box !important;
+        border: 1px solid transparent !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        transform: none !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-nav-item:hover {
+        background: rgba(255, 255, 255, 0.08) !important;
+        transform: scale(1.05) !important;
+    }
+
+    [data-theme="light"] body.ofp-sidebar-closed .ofp-nav-item:hover,
+    html.light body.ofp-sidebar-closed .ofp-nav-item:hover {
+        background: rgba(0, 0, 0, 0.05) !important;
+        transform: scale(1.05) !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-nav-item.active {
+        background: rgba(255, 255, 255, 0.15) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
+        color: #ffffff !important;
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+        transform: none !important;
+    }
+
+    [data-theme="light"] body.ofp-sidebar-closed .ofp-nav-item.active,
+    html.light body.ofp-sidebar-closed .ofp-nav-item.active {
+        background: rgba(255, 255, 255, 0.95) !important;
+        border-color: rgba(203, 213, 225, 0.9) !important;
+        color: #0f172a !important;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-nav-icon {
+        margin: 0 !important;
+        width: 20px !important;
+        height: 20px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-nav-label {
+        display: none !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-nav-badge {
+        position: absolute !important;
+        top: 2px !important;
+        right: 2px !important;
+        font-size: 9px !important;
+        padding: 1px 4px !important;
+        min-width: 14px !important;
+        height: 14px !important;
+        line-height: 12px !important;
+    }
+
+    /* Collapsed user footer profile */
+    body.ofp-sidebar-closed .ofp-sidebar-footer {
+        padding: 12px 0 !important;
+        width: 72px !important;
+        max-width: 72px !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-sidebar-user-trigger {
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 0 !important;
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+        margin: 0 auto !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        box-sizing: border-box !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-sidebar-user-avatar {
+        width: 32px !important;
+        height: 32px !important;
+        margin: 0 !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-sidebar-user-info,
+    body.ofp-sidebar-closed .ofp-sidebar-user-chevron {
+        display: none !important;
+    }
+
+    body.ofp-sidebar-closed .ofp-main {
+        width: calc(100% - 72px) !important;
+        max-width: calc(100% - 72px) !important;
+        flex: 1 1 calc(100% - 72px) !important;
+    }
+
+    /* On desktop, hide topbar hamburger when rail toggle is active so there's no duplicate */
+    body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle {
+        display: none !important;
+    }
+
     body:not(.ofp-sidebar-closed) .ofp-topbar .ofp-sidebar-toggle {
         display: none !important;
     }
 
-    /* When sidebar is CLOSED on desktop, show the unhide button prominently in the topbar (Icon only) */
-    body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle {
-        display: inline-flex !important;
-        align-items: center;
-        justify-content: center;
-        background: rgba(255, 255, 255, 0.09);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        padding: 8px 10px;
-        border-radius: 8px;
-        color: #ffffff;
-        cursor: pointer;
-        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        margin-right: 14px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
-
-    body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle:hover {
-        background: rgba(255, 255, 255, 0.18);
-        border-color: rgba(255, 255, 255, 0.32);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-    }
-
-    body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle:active {
-        transform: translateY(0);
-    }
-
     [data-theme="light"] body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle,
     html.light body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle {
-        background: rgba(0, 0, 0, 0.05);
-        border-color: rgba(0, 0, 0, 0.12);
-        color: #0f172a;
+        background: rgba(0, 0, 0, 0.06) !important;
+        border-color: rgba(0, 0, 0, 0.14) !important;
+        color: #0f172a !important;
     }
 
     [data-theme="light"] body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle:hover,
     html.light body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle:hover {
-        background: rgba(0, 0, 0, 0.09);
-        border-color: rgba(0, 0, 0, 0.2);
+        background: rgba(0, 0, 0, 0.10) !important;
+        border-color: rgba(0, 0, 0, 0.22) !important;
     }
 }
 
-/* ── Mobile Sidebar Rules (<= 1024px) ─────────────────────────────────────── */
+/* ── Mobile & Tablet Topbar & Sidebar Rules (<= 1024px) ─────────────────────────────── */
 @media (max-width: 1024px) {
     /* REMOVE collapse button on mobile - mobile uses topbar hamburger and backdrop */
     .ofp-sidebar-collapse-btn {
         display: none !important;
     }
 
-    /* Mobile hamburger menu in topbar */
-    .ofp-topbar .ofp-sidebar-toggle {
+    /* Sticky Top Nav Bar on Mobile and Tablet */
+    .ofp-topbar,
+    .ofp-topbar.ofp-topbar-transparent {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        height: 64px !important;
+        padding: 0 16px !important;
+        z-index: 1000 !important;
+        background: rgba(15, 23, 42, 0.94) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.14) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+        display: flex !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
+    }
+
+    [data-theme="light"] .ofp-topbar,
+    [data-theme="light"] .ofp-topbar.ofp-topbar-transparent,
+    html.light .ofp-topbar,
+    html.light .ofp-topbar.ofp-topbar-transparent {
+        background: rgba(255, 255, 255, 0.95) !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+    }
+
+    /* Offset full header so hero content is not obscured by fixed topbar */
+    .ofp-hero-full-header {
+        padding-top: 64px !important;
+    }
+
+    /* Mobile & tablet unhide hamburger menu in topbar */
+    body .ofp-topbar .ofp-sidebar-toggle,
+    body:not(.ofp-sidebar-closed) .ofp-topbar .ofp-sidebar-toggle,
+    body.ofp-sidebar-closed .ofp-topbar .ofp-sidebar-toggle,
+    .ofp-topbar.ofp-topbar-transparent .ofp-sidebar-toggle {
         display: inline-flex !important;
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 6px 8px !important;
-        color: var(--text-main, #ffffff) !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        padding: 0 !important;
+        border-radius: 9px !important;
+        background: rgba(255, 255, 255, 0.12) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+        cursor: pointer !important;
         margin-right: 10px !important;
+        flex-shrink: 0 !important;
+        z-index: 1002 !important;
+        transition: all 0.2s ease !important;
+    }
+
+    [data-theme="light"] body .ofp-topbar .ofp-sidebar-toggle,
+    html.light body .ofp-topbar .ofp-sidebar-toggle,
+    [data-theme="light"] .ofp-topbar.ofp-topbar-transparent .ofp-sidebar-toggle,
+    html.light .ofp-topbar.ofp-topbar-transparent .ofp-sidebar-toggle {
+        background: rgba(0, 0, 0, 0.06) !important;
+        border-color: rgba(0, 0, 0, 0.14) !important;
+        color: #0f172a !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body .ofp-topbar .ofp-sidebar-toggle svg {
+        width: 20px !important;
+        height: 20px !important;
+        stroke: currentColor !important;
+        stroke-width: 2.2 !important;
+        display: block !important;
     }
 
     /* Mobile off-canvas drawer: 100dvh, flex-column, header & footer sticky */
@@ -677,21 +948,38 @@ html.light .ofp-sidebar-collapse-btn:hover {
         top: 0 !important;
         left: 0 !important;
         bottom: 0 !important;
+        width: 280px !important;
+        max-width: 85vw !important;
         height: 100vh !important;
         height: 100dvh !important;
-        max-height: 100dvh !important;
-        width: 270px !important;
-        max-width: 85vw !important;
+        z-index: 10001 !important;
+        transform: translateX(-100%) !important;
+        box-shadow: 4px 0 30px rgba(0, 0, 0, 0.45) !important;
+        background: var(--bg-sidebar) !important;
         display: flex !important;
         flex-direction: column !important;
-        overflow: hidden !important;
-        z-index: 9999 !important;
-        transform: translateX(-100%) !important;
-        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        pointer-events: none !important;
+        transition: transform 0.3s ease-in !important;
     }
 
     body.ofp-sidebar-open .ofp-sidebar {
         transform: translateX(0) !important;
+        pointer-events: auto !important;
+        transition: transform 0.32s ease-out !important;
+    }
+
+    body:not(.ofp-sidebar-open) .ofp-sidebar {
+        transform: translateX(-100%) !important;
+        pointer-events: none !important;
+        transition: transform 0.3s ease-in !important;
+    }
+
+    body:not(.ofp-sidebar-open) .ofp-sidebar-backdrop {
+        transition: opacity 0.3s ease-in, visibility 0.3s ease-in !important;
+    }
+
+    body.ofp-sidebar-open .ofp-sidebar-backdrop {
+        transition: opacity 0.32s ease-out, visibility 0.32s ease-out !important;
     }
 
     /* On mobile the header where the app name is should be sticky */
@@ -991,21 +1279,25 @@ html.light .ofp-hero-full-header-overlay {
 }
 
 /* Glassmorphism Menus on Top-Right of Hero */
-.ofp-topbar-transparent .ofp-topbar-actions {
-    gap: 12px;
-    margin-right: 34px;
+.ofp-topbar-transparent .ofp-topbar-actions,
+.ofp-topbar-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin-right: 0 !important;
+    flex-shrink: 0 !important;
 }
 
-/* Sticky Light & Dark (L&D) Theme Toggle Button - iPhone Frosted Glassmorphism */
+/* Light & Dark (L&D) Theme Toggle Button - iPhone Frosted Glassmorphism */
 #ofp-theme-toggle {
-    position: fixed !important;
-    top: 18px !important;
-    right: 14px !important;
-    z-index: 1050 !important;
-    width: 42px !important;
-    height: 42px !important;
-    border-radius: 13px !important;
-    display: flex !important;
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    z-index: 10 !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 11px !important;
+    display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer !important;
@@ -1014,15 +1306,16 @@ html.light .ofp-hero-full-header-overlay {
     -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
     border: 1px solid rgba(255, 255, 255, 0.55) !important;
     color: #0f172a !important;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65) !important;
+    box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.1), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65) !important;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    flex-shrink: 0 !important;
 }
 
 #ofp-theme-toggle:hover {
     background: rgba(255, 255, 255, 0.48) !important;
     border-color: rgba(255, 255, 255, 0.8) !important;
     transform: translateY(-1px) scale(1.04) !important;
-    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.16), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85) !important;
+    box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.16), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85) !important;
 }
 
 [data-theme="dark"] #ofp-theme-toggle,
@@ -1032,7 +1325,7 @@ html.dark #ofp-theme-toggle {
     -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
     border: 1px solid rgba(255, 255, 255, 0.18) !important;
     color: #f8fafc !important;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
+    box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
 }
 
 [data-theme="dark"] #ofp-theme-toggle:hover,
@@ -1040,7 +1333,7 @@ html.dark #ofp-theme-toggle:hover {
     background: rgba(30, 41, 59, 0.65) !important;
     border-color: rgba(255, 255, 255, 0.28) !important;
     transform: translateY(-1px) scale(1.04) !important;
-    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.32) !important;
+    box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.32) !important;
 }
 
 .ofp-topbar-transparent .ofp-topbar-actions .ofp-btn-balance {
@@ -1212,6 +1505,17 @@ html.dark .ofp-hero-greeting-pill {
     }
 }
 
+.ofp-hero-greeting-text-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ofp-hero-greeting-text {
+    font-size: 13px;
+    font-weight: 600;
+}
+
 .ofp-hero-date-divider {
     color: rgba(15, 23, 42, 0.4);
     font-size: 11px;
@@ -1231,6 +1535,47 @@ html.dark .ofp-hero-date-divider {
 [data-theme="dark"] .ofp-hero-date,
 html.dark .ofp-hero-date {
     color: #cbd5e1;
+}
+
+/* Greeting pill on mobile: date comes under greeting */
+@media (max-width: 768px) {
+    .ofp-hero-greeting-pill {
+        display: inline-flex !important;
+        align-items: center !important;
+        padding: 4px 10px !important;
+        gap: 7px !important;
+        border-radius: 12px !important;
+        max-width: calc(100vw - 160px) !important;
+    }
+
+    .ofp-hero-greeting-text-wrap {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1px !important;
+        line-height: 1.15 !important;
+    }
+
+    .ofp-hero-greeting-text {
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 170px !important;
+    }
+
+    .ofp-hero-date-divider {
+        display: none !important;
+    }
+
+    .ofp-hero-date {
+        font-size: 10px !important;
+        opacity: 0.75 !important;
+        font-weight: 500 !important;
+        white-space: nowrap !important;
+        line-height: 1 !important;
+    }
 }
 
 .ofp-hero-topbar-controls {
@@ -5204,10 +5549,13 @@ html.light .ofp-kpi-card-hero {
 
 /* 2. Analytics Row (Cash Flow + Month Breakdown) */
 .ofp-zentra-analytics-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
+    display: grid !important;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) !important;
     gap: 20px;
     margin-bottom: 24px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .ofp-zentra-card {
@@ -5216,6 +5564,10 @@ html.light .ofp-kpi-card-hero {
     border-radius: 20px;
     padding: 24px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
 }
 
 .ofp-zentra-card-header {
@@ -5698,6 +6050,7 @@ html.dark .ofp-stylized-map-box {
     .ofp-txn-filter-pills,
     .ofp-sales-tabs-nav,
     .ofp-inspection-tabs,
+    .ofp-cu-filters,
     .ofp-modal-tabs,
     .ofp-filter-tabs,
     .ofp-filter-tabs-wrap,
@@ -5725,6 +6078,7 @@ html.dark .ofp-stylized-map-box {
     .ofp-txn-filter-pills::-webkit-scrollbar,
     .ofp-sales-tabs-nav::-webkit-scrollbar,
     .ofp-inspection-tabs::-webkit-scrollbar,
+    .ofp-cu-filters::-webkit-scrollbar,
     .ofp-modal-tabs::-webkit-scrollbar,
     .ofp-filter-tabs::-webkit-scrollbar,
     .ofp-filter-tabs-wrap::-webkit-scrollbar,
@@ -5743,10 +6097,98 @@ html.dark .ofp-stylized-map-box {
     .ofp-txn-pill,
     .ofp-tab-btn,
     .ofp-inspection-tab,
+    .ofp-cu-pill,
+    .ofp-cu-msg-btn,
     .ofp-modal-tab-btn,
     .ofp-filter-tab {
         flex-shrink: 0 !important;
         white-space: nowrap !important;
+    }
+
+    /* Inspection page grid: 2 columns on tablet and mobile */
+    .ofp-inspection-kpi-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 12px !important;
+    }
+}
+
+/* ── Sales & Installment Table & Form Responsiveness ──────────────────────── */
+@media (max-width: 768px) {
+    .ofp-form-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .ofp-table-toolbar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    .ofp-table-toolbar .ofp-table-search {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .ofp-metric-highlight-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .ofp-metric-highlight-grid {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+    }
+}
+
+/* ── Email Branding Responsive Layout ────────────────────────────────────── */
+.ofp-branding-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 24px;
+    align-items: flex-start;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ofp-branding-form-card {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.ofp-branding-preview-col {
+    min-width: 0;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+    .ofp-branding-grid {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+    }
+
+    .ofp-branding-form-card {
+        padding: 18px 16px !important;
+    }
+
+    #preview-wrapper {
+        min-height: 480px !important;
+        padding: 12px 8px !important;
+        box-sizing: border-box !important;
+        overflow-x: auto !important;
+    }
+
+    #live-email-preview-frame {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 440px !important;
     }
 }
 
@@ -8424,9 +8866,61 @@ html.light .ofp-sidebar-user-card.active .ofp-sidebar-user-trigger {
 }
 
 .ofp-sidebar-backdrop {
-    backdrop-filter: blur(12px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
-    background: rgba(0, 0, 0, 0.45) !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 9998 !important;
+    background: rgba(0, 0, 0, 0.55) !important;
+    backdrop-filter: blur(8px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(160%) !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transition: opacity 0.25s ease, visibility 0.25s ease !important;
+}
+
+body.ofp-sidebar-open .ofp-sidebar-backdrop {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+.ofp-sidebar-close-btn {
+    display: none !important;
+}
+
+@media (max-width: 1024px) {
+    .ofp-sidebar-close-btn {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 34px !important;
+        height: 34px !important;
+        border-radius: 9px !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: #ffffff !important;
+        cursor: pointer !important;
+        flex-shrink: 0 !important;
+        transition: background 0.2s, transform 0.2s !important;
+    }
+
+    [data-theme="light"] .ofp-sidebar-close-btn,
+    html.light .ofp-sidebar-close-btn {
+        background: rgba(0, 0, 0, 0.06) !important;
+        border-color: rgba(0, 0, 0, 0.12) !important;
+        color: #0f172a !important;
+    }
+
+    .ofp-sidebar-close-btn:hover {
+        background: rgba(255, 255, 255, 0.2) !important;
+        transform: scale(1.04) !important;
+    }
 }
 
 /* ── Reports Chart Header & Inline Filter Controls ── */
@@ -9873,4 +10367,349 @@ html.light .ofp-toast {
     align-items: center;
     justify-content: center;
     gap: 12px;
+}
+
+/* ── Mobile & Tablet Topbar Sticky Fit & L&D Button Alignment (<= 1024px) ──── */
+@media (max-width: 1024px) {
+    /* Exact Search Bar Frosted Glass for Topbar Background */
+    .ofp-topbar,
+    .ofp-topbar.ofp-topbar-transparent {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        height: 60px !important;
+        padding: 0 14px !important;
+        z-index: 9990 !important;
+        background: rgba(15, 23, 42, 0.5) !important;
+        backdrop-filter: blur(20px) saturate(190%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        box-sizing: border-box !important;
+    }
+
+    [data-theme="light"] .ofp-topbar,
+    [data-theme="light"] .ofp-topbar.ofp-topbar-transparent,
+    html.light .ofp-topbar,
+    html.light .ofp-topbar.ofp-topbar-transparent {
+        background: rgba(255, 255, 255, 0.32) !important;
+        backdrop-filter: blur(20px) saturate(190%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.55) !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65) !important;
+    }
+
+    /* Bring down the search bar and the buttons under to the initial bottom position */
+    .ofp-hero-full-header {
+        padding-top: 60px !important;
+        min-height: 290px !important;
+    }
+
+    .ofp-hero-full-header-overlay {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-end !important;
+        min-height: 290px !important;
+        padding: 0 16px 20px 16px !important;
+        box-sizing: border-box !important;
+    }
+
+    .ofp-hero-topbar-controls {
+        margin-top: auto !important;
+        width: 100% !important;
+        padding-top: 60px !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        box-sizing: border-box !important;
+    }
+
+    .ofp-hero-search-box {
+        max-width: 100% !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .ofp-hero-action-buttons {
+        display: flex !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    .ofp-topbar-actions {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Mobile L&D Toggle button & Notification trigger touch responsiveness */
+    #ofp-theme-toggle,
+    #ofp-notif-trigger {
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        max-width: 36px !important;
+        border-radius: 10px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        margin: 0 !important;
+        cursor: pointer !important;
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: transparent !important;
+        user-select: none !important;
+        background: rgba(15, 23, 42, 0.5) !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        color: #f8fafc !important;
+    }
+
+    [data-theme="light"] #ofp-theme-toggle,
+    [data-theme="light"] #ofp-notif-trigger,
+    html.light #ofp-theme-toggle,
+    html.light #ofp-notif-trigger {
+        background: rgba(255, 255, 255, 0.32) !important;
+        border: 1px solid rgba(255, 255, 255, 0.55) !important;
+        color: #0f172a !important;
+    }
+
+    #ofp-theme-toggle svg,
+    #ofp-theme-toggle path {
+        pointer-events: none !important;
+    }
+
+    #ofp-notif-menu {
+        position: relative !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Mobile Sticky Profile Menu */
+    .ofp-topbar-user-menu {
+        display: inline-flex !important;
+        position: relative !important;
+        align-items: center !important;
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+    }
+
+    .ofp-topbar-user-menu .ofp-user-avatar {
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        max-width: 36px !important;
+        border-radius: 50% !important;
+        cursor: pointer !important;
+        border: 2px solid rgba(255, 255, 255, 0.6) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        background: var(--bg-card);
+        color: var(--accent-orange);
+        font-weight: 700;
+        font-size: 13px;
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+
+    .ofp-topbar-user-menu .ofp-dropdown {
+        position: absolute !important;
+        top: 100% !important;
+        right: 0 !important;
+        margin-top: 10px !important;
+        width: min(250px, calc(100vw - 24px)) !important;
+        z-index: 9999 !important;
+    }
+
+    /* Safe padding for mobile sticky sidebar footer */
+    .ofp-sidebar-footer {
+        position: sticky !important;
+        bottom: 0 !important;
+        z-index: 50 !important;
+        background: var(--bg-sidebar) !important;
+        border-top: 1px solid var(--border-color) !important;
+        padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    }
+
+    @media (max-width: 480px) {
+        #ofp-notif-menu .ofp-dropdown {
+            width: min(300px, calc(100vw - 24px)) !important;
+            right: -6px !important;
+        }
+
+        .ofp-topbar-user-menu .ofp-dropdown {
+            right: -6px !important;
+        }
+    }
+}
+
+/* ── Desktop Sticky Controls (L&D Theme Toggle & Notification Toggle) ────── */
+@media (min-width: 1025px) {
+    /* Hide mobile topbar profile menu on desktop — desktop has sidebar user profile */
+    .ofp-topbar-user-menu {
+        display: none !important;
+    }
+
+    /* Desktop Sticky L&D Theme Toggle Button */
+    #ofp-theme-toggle {
+        position: fixed !important;
+        top: 18px !important;
+        right: 18px !important;
+        z-index: 1050 !important;
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 11px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        background: rgba(255, 255, 255, 0.32) !important;
+        backdrop-filter: blur(20px) saturate(190%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.55) !important;
+        color: #0f172a !important;
+        box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.1), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65) !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        flex-shrink: 0 !important;
+    }
+
+    #ofp-theme-toggle:hover {
+        background: rgba(255, 255, 255, 0.48) !important;
+        border-color: rgba(255, 255, 255, 0.8) !important;
+        transform: translateY(-1px) scale(1.04) !important;
+        box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.16), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85) !important;
+    }
+
+    /* Desktop Sticky Notification Toggle */
+    #ofp-notif-menu {
+        position: fixed !important;
+        top: 18px !important;
+        right: 66px !important;
+        z-index: 1050 !important;
+        margin: 0 !important;
+    }
+
+    #ofp-notif-trigger {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 11px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        background: rgba(255, 255, 255, 0.32) !important;
+        backdrop-filter: blur(20px) saturate(190%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.55) !important;
+        color: #0f172a !important;
+        box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.1), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65) !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        flex-shrink: 0 !important;
+    }
+
+    #ofp-notif-trigger:hover {
+        background: rgba(255, 255, 255, 0.48) !important;
+        border-color: rgba(255, 255, 255, 0.8) !important;
+        transform: translateY(-1px) scale(1.04) !important;
+        box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.16), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85) !important;
+    }
+
+    #ofp-notif-menu .ofp-dropdown {
+        position: fixed !important;
+        top: 64px !important;
+        right: 18px !important;
+        z-index: 1060 !important;
+    }
+
+    /* Dark theme for sticky desktop controls */
+    [data-theme="dark"] #ofp-theme-toggle,
+    html.dark #ofp-theme-toggle,
+    [data-theme="dark"] #ofp-notif-trigger,
+    html.dark #ofp-notif-trigger {
+        background: rgba(15, 23, 42, 0.5) !important;
+        backdrop-filter: blur(20px) saturate(190%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        color: #f8fafc !important;
+        box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
+    }
+
+    [data-theme="dark"] #ofp-theme-toggle:hover,
+    html.dark #ofp-theme-toggle:hover,
+    [data-theme="dark"] #ofp-notif-trigger:hover,
+    html.dark #ofp-notif-trigger:hover {
+        background: rgba(30, 41, 59, 0.65) !important;
+        border-color: rgba(255, 255, 255, 0.28) !important;
+        transform: translateY(-1px) scale(1.04) !important;
+        box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.32) !important;
+    }
+
+    .ofp-topbar-transparent .ofp-topbar-actions,
+    .ofp-topbar-actions {
+        margin-right: 96px !important;
+    }
+}
+
+/* ── Sales & Installments Mobile Table Responsiveness ──────────────────────── */
+@media (max-width: 768px) {
+    .ofp-container {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    #my-sales.ofp-card,
+    #create-offer.ofp-card {
+        padding: 16px 12px !important;
+        border-radius: 14px !important;
+    }
+
+    .ofp-sales-tabs-nav {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        white-space: nowrap !important;
+        scrollbar-width: none !important;
+    }
+
+    .ofp-sales-tabs-nav::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .ofp-sales-tabs-nav .ofp-tab-btn {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        padding: 8px 14px !important;
+        font-size: 13px !important;
+    }
+
+    .ofp-table-responsive {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        display: block !important;
+        box-sizing: border-box !important;
+    }
+
+    .ofp-table-responsive table {
+        min-width: 720px !important;
+    }
 }
