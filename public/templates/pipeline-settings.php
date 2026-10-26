@@ -169,6 +169,26 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
 
     <div class="ofp-container">
 
+        <div class="ofp-page-header ofp-automation-header">
+            <div class="ofp-header-title">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span class="ofp-icon-badge">⚡</span>
+                    <div>
+                        <h1 style="margin:0; font-size: 22px; font-weight: 700; color: var(--text-main);">Automation & Pipeline</h1>
+                        <p class="ofp-subtitle" style="margin:3px 0 0; font-size: 13px; color: var(--text-muted);">
+                            Customize automated instant SMS, emails, scheduled follow-ups and AI voice reminders.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <?php if ( $config ) : ?>
+            <div class="ofp-mobile-view-toggle">
+                <button type="button" class="ofp-toggle-pill active" id="ofpBtnShowConfig" onclick="ofpSwitchTab('config')">⚙️ Setup Steps</button>
+                <button type="button" class="ofp-toggle-pill" id="ofpBtnShowPreview" onclick="ofpSwitchTab('preview')">📱 Live Preview</button>
+            </div>
+            <?php endif; ?>
+        </div>
+
         <div class="ofp-pipeline-layout">
             <div class="ofp-pipeline-main">
                 <?php if ( $saved ) : ?>
@@ -424,7 +444,7 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                                 <div class="ofp-field" style="margin-bottom:0;">
                                     <label for="call_interest_message">What the call says</label>
                                     <textarea id="call_interest_message" name="call_interest_message" rows="3" maxlength="<?php echo (int) $max_chars; ?>"><?php echo esc_textarea( $call_settings['interest_message'] ?? '' ); ?></textarea>
-                                    <p class="ofp-hint" style="margin-top:4px; font-size:11px; margin-bottom:0; white-space:nowrap;">{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}. 400 characters max.</p>
+                                    <p class="ofp-hint" style="margin-top:4px; font-size:11px; margin-bottom:0; word-break:break-word;">{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}. 400 characters max.</p>
                                 </div>
                             </div>
 
@@ -447,7 +467,7 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                                     <div class="ofp-field" style="margin-bottom:0;">
                                         <label for="call_installment_message">What the call says</label>
                                         <textarea id="call_installment_message" name="call_installment_message" rows="3" maxlength="<?php echo (int) $max_chars; ?>"><?php echo esc_textarea( $call_settings['installment_message'] ?? '' ); ?></textarea>
-                                        <p class="ofp-hint" style="margin-top:4px; font-size:11px; margin-bottom:0; white-space:nowrap;">{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}. 400 characters max.</p>
+                                        <p class="ofp-hint" style="margin-top:4px; font-size:11px; margin-bottom:0; word-break:break-word;">{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}. 400 characters max.</p>
                                     </div>
                                 </div>
 
@@ -463,7 +483,7 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                                     <div class="ofp-field" style="margin-bottom:0;">
                                         <label for="call_rent_message">What the call says</label>
                                         <textarea id="call_rent_message" name="call_rent_message" rows="3" maxlength="<?php echo (int) $max_chars; ?>"><?php echo esc_textarea( $call_settings['rent_message'] ?? '' ); ?></textarea>
-                                        <p class="ofp-hint" style="margin-top:4px; font-size:11px; margin-bottom:0; white-space:nowrap;">{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}. 400 characters max.</p>
+                                        <p class="ofp-hint" style="margin-top:4px; font-size:11px; margin-bottom:0; word-break:break-word;">{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}. 400 characters max.</p>
                                     </div>
                                 </div>
                             </div>
@@ -473,7 +493,7 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
 
             </div>
 
-            <div class="ofp-form-actions" style="margin-left: 56px; margin-top: 14px; display: flex; align-items: center; gap: 12px;">
+            <div class="ofp-form-actions ofp-pipeline-actions">
                 <button type="submit" class="ofp-btn ofp-btn-primary ofp-btn-save">Save Settings</button>
                 <a href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>" class="ofp-btn ofp-btn-secondary ofp-btn-reduced">Cancel</a>
             </div>

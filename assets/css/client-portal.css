@@ -3048,6 +3048,234 @@ body.ofp-dark-mode .ofp-phone-body::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.15);
 }
 
+/* ── Automation & Pipeline Header & Mobile Controls ──────────────────────── */
+.ofp-automation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.ofp-icon-badge {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(124, 58, 237, 0.12));
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.ofp-mobile-view-toggle {
+    display: none;
+    background: var(--bg-card, #f8fafc);
+    border: 1px solid var(--border-color, #cbd5e1);
+    padding: 4px;
+    border-radius: 10px;
+    gap: 4px;
+}
+
+.ofp-toggle-pill {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ofp-toggle-pill.active {
+    background: var(--accent-blue, #2563eb);
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+.ofp-pipeline-actions {
+    margin-left: 56px;
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Tablet Breakpoint (max-width: 1024px) */
+@media (max-width: 1024px) {
+    .ofp-pipeline-layout {
+        gap: 28px;
+    }
+
+    .ofp-pipeline-sidebar {
+        width: 320px;
+    }
+
+    .ofp-phone-mockup {
+        width: 320px;
+    }
+}
+
+/* Mobile & Tablet Portrait Breakpoint (max-width: 860px) */
+@media (max-width: 860px) {
+    .ofp-mobile-view-toggle {
+        display: inline-flex;
+        width: 100%;
+    }
+
+    .ofp-toggle-pill {
+        flex: 1;
+        text-align: center;
+    }
+
+    .ofp-pipeline-layout {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .ofp-pipeline-main,
+    .ofp-pipeline-sidebar {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .ofp-pipeline-sidebar {
+        position: static !important;
+        top: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 8px;
+    }
+
+    .ofp-phone-mockup {
+        width: 100%;
+        max-width: 360px;
+        height: min(640px, 85vh);
+        margin: 0 auto;
+    }
+
+    .ofp-mobile-hide {
+        display: none !important;
+    }
+}
+
+/* Small Mobile Breakpoint (max-width: 600px) */
+@media (max-width: 600px) {
+    .ofp-automation-header {
+        margin-bottom: 16px;
+        padding-bottom: 14px;
+        gap: 12px;
+    }
+
+    .ofp-automation-header h1 {
+        font-size: 19px !important;
+    }
+
+    .ofp-pipeline-timeline {
+        margin-top: 14px;
+        max-width: 100%;
+    }
+
+    .ofp-pipeline-timeline::before,
+    .ofp-timeline-progress {
+        left: 15px;
+    }
+
+    .ofp-timeline-step {
+        padding-left: 44px;
+        margin-bottom: 20px;
+    }
+
+    .ofp-timeline-badge {
+        width: 32px;
+        height: 32px;
+        top: 12px;
+        box-shadow: 0 0 0 4px var(--bg-body);
+    }
+
+    .ofp-timeline-badge svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    .ofp-pipeline-form .ofp-card {
+        padding: 16px 14px !important;
+        border-radius: 12px !important;
+    }
+
+    .ofp-card-header {
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+
+    .ofp-pipeline-form .ofp-card h3 {
+        font-size: 14px;
+        line-height: 1.35;
+    }
+
+    .ofp-form-row {
+        gap: 12px;
+        flex-direction: column;
+    }
+
+    .ofp-form-row > .ofp-field {
+        min-width: 0 !important;
+        width: 100% !important;
+        margin-bottom: 0;
+    }
+
+    .ofp-pipeline-form .ofp-field input[type="text"],
+    .ofp-pipeline-form .ofp-field input[type="email"],
+    .ofp-pipeline-form .ofp-field input[type="number"],
+    .ofp-pipeline-form .ofp-field input[type="tel"],
+    .ofp-pipeline-form .ofp-field select,
+    .ofp-pipeline-form .ofp-field textarea {
+        font-size: 14px;
+        padding: 9px 12px;
+    }
+
+    .ofp-pipeline-actions {
+        margin-left: 0 !important;
+        margin-top: 20px;
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .ofp-pipeline-actions button,
+    .ofp-pipeline-actions a {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 11px 18px !important;
+        font-size: 14px !important;
+        text-align: center;
+    }
+
+    .ofp-phone-mockup {
+        max-width: 320px;
+        height: 520px;
+    }
+
+    #call-scripts .ofp-card-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 8px;
+    }
+
+    #call-scripts .ofp-card-header > div {
+        flex-wrap: wrap;
+    }
+}
+
 /* Template Preview Sidebar & Email view inside phone */
 .ofp-template-preview-sidebar {
     width: 360px;

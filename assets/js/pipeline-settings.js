@@ -120,3 +120,45 @@ Object.keys(previewData).forEach(function(inputName) {
         input.dispatchEvent(new Event('input'));
     }
 });
+
+
+// Mobile View Toggle: Setup Steps vs Live Preview
+window.ofpSwitchTab = function(tab) {
+    var main = document.querySelector('.ofp-pipeline-main');
+    var sidebar = document.querySelector('.ofp-pipeline-sidebar');
+    var btnConfig = document.getElementById('ofpBtnShowConfig');
+    var btnPreview = document.getElementById('ofpBtnShowPreview');
+    if (!main || !sidebar) return;
+
+    if (tab === 'preview') {
+        main.classList.add('ofp-mobile-hide');
+        sidebar.classList.remove('ofp-mobile-hide');
+        if (btnConfig) btnConfig.classList.remove('active');
+        if (btnPreview) btnPreview.classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        main.classList.remove('ofp-mobile-hide');
+        sidebar.classList.add('ofp-mobile-hide');
+        if (btnConfig) btnConfig.classList.add('active');
+        if (btnPreview) btnPreview.classList.remove('active');
+    }
+};
+
+function checkMobileTabs() {
+    var main = document.querySelector('.ofp-pipeline-main');
+    var sidebar = document.querySelector('.ofp-pipeline-sidebar');
+    var btnPreview = document.getElementById('ofpBtnShowPreview');
+    if (!main || !sidebar) return;
+
+    if (window.innerWidth <= 860) {
+        if (!btnPreview || !btnPreview.classList.contains('active')) {
+            sidebar.classList.add('ofp-mobile-hide');
+            main.classList.remove('ofp-mobile-hide');
+        }
+    } else {
+        main.classList.remove('ofp-mobile-hide');
+        sidebar.classList.remove('ofp-mobile-hide');
+    }
+}
+window.addEventListener('resize', checkMobileTabs);
+checkMobileTabs();
