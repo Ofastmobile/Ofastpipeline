@@ -1233,6 +1233,22 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                         </div>
                                     </div>
 
+                                    <?php if ( $plan_key !== 'free' ) : ?>
+                                    <?php foreach ( [ 3, 6, 12 ] as $pp_m ) :
+                                        $pp_saved = (float) get_option( "ofp_period_price_{$plan_key}_{$pp_m}", 0 );
+                                    ?>
+                                    <div class="ofp-tier-input-group">
+                                        <label><?php echo (int) $pp_m; ?>-Month Price (NGN) <span style="font-weight:400;opacity:.65;">leave 0 for monthly price x <?php echo (int) $pp_m; ?></span></label>
+                                        <div class="ofp-currency-input-wrap">
+                                            <span class="ofp-currency-symbol">₦</span>
+                                            <input type="number" step="0.01" min="0"
+                                                   name="period_price_<?php echo esc_attr( $plan_key ); ?>_<?php echo (int) $pp_m; ?>"
+                                                   value="<?php echo esc_attr( $pp_saved ); ?>">
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                    <?php endif; ?>
+
                                     <div class="ofp-tier-input-group">
                                         <label>Active Property Cap</label>
                                         <div class="ofp-input-box">

@@ -239,7 +239,7 @@ class OFP_Property_Receipt_Generator {
         if ( file_exists( $default_stamp_path ) ) {
             $default_stamp = 'data:image/png;base64,' . base64_encode( file_get_contents( $default_stamp_path ) );
         } else {
-            $default_stamp = OFP_URL . 'assets/images/receipt-verified-stamp.png';
+            $default_stamp = ofp_image_url( 'receipt-verified-stamp.png' );
         }
 
         $stamp_image_url = ( $brand_client && ! empty( $brand_client->stamp_url ) )

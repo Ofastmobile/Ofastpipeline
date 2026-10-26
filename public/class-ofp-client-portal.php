@@ -166,6 +166,12 @@ class OFP_Client_Portal {
             [],
             OFP_VERSION
         );
+        wp_enqueue_style(
+            'ofp-feedback-modal',
+            OFP_URL . 'assets/css/feedback-modal.css',
+            [ 'ofp-client-portal' ],
+            OFP_VERSION
+        );
 
         if ( in_array( $route, [ 'account', 'profile' ], true ) ) {
             wp_enqueue_style(
@@ -267,9 +273,17 @@ class OFP_Client_Portal {
             OFP_VERSION,
             true
         );
+        wp_enqueue_script(
+            'ofp-feedback-modal',
+            OFP_URL . 'assets/js/feedback-modal.js',
+            [ 'ofp-client-portal' ],
+            OFP_VERSION,
+            true
+        );
         wp_localize_script( 'ofp-client-portal', 'ofpClientData', [
             'ajaxurl' => admin_url( 'admin-ajax.php' ),
             'nonce'   => wp_create_nonce( 'ofp_client_ajax' ),
+            'siteUrl' => home_url(),
         ] );
 
         if ( in_array( $route, [ 'communications', 'message-templates' ], true ) ) {

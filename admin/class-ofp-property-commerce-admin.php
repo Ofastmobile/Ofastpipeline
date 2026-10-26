@@ -216,7 +216,7 @@ class OFP_Property_Commerce_Admin {
                         <?php foreach ( $subscriptions as $sub ) : ?>
                             <tr>
                                 <td><strong><?php echo esc_html( $sub->business_name ); ?></strong><br><small><?php echo esc_html( $sub->email ); ?></small></td>
-                                <td><?php echo esc_html( strtoupper( $sub->plan ?: '—' ) ); ?></td>
+                                <td><?php echo esc_html( OFP_Subscription::row_labels( $sub )['plan'] ); ?></td>
                                 <td><strong>₦<?php echo esc_html( number_format( (float) $sub->amount, 0 ) ); ?></strong></td>
                                 <td><?php echo esc_html( ucfirst( $sub->status ) ); ?></td>
                                 <td><?php echo $sub->period_start && $sub->period_end ? esc_html( $sub->period_start . ' → ' . $sub->period_end ) : '—'; ?></td>

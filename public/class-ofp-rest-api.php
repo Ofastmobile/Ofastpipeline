@@ -591,7 +591,7 @@ class OFP_REST_API {
                 }
             }
             if ( ! $img_url ) {
-                $img_url = defined( 'OFP_URL' ) ? OFP_URL . 'assets/images/placeholder-property.jpg' : '';
+                $img_url = function_exists( 'ofp_image_url' ) ? ofp_image_url( 'placeholder-property.jpg' ) : ( defined( 'OFP_URL' ) ? OFP_URL . 'assets/images/placeholder-property.jpg' : '' );
             }
 
             $currency    = get_post_meta( $post_id, 'ofp_currency', true ) ?: 'NGN';

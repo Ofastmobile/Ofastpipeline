@@ -772,7 +772,7 @@ $type_badges = [
             <!-- Right: Smartphone Mockup Preview Sidebar -->
             <div class="ofp-pipeline-sidebar">
                 <div class="ofp-phone-mockup">
-                    <img class="ofp-phone-frame-overlay" src="<?php echo esc_url( OFP_URL . 'assets/images/Smartphone-Mockup.png' ); ?>" alt="Smartphone Mockup" loading="lazy">
+                    <img class="ofp-phone-frame-overlay" src="<?php echo esc_url( ofp_image_url( 'Smartphone-Mockup.png' ) ); ?>" alt="Smartphone Mockup" loading="lazy">
                     <div class="ofp-phone-screen">
                         <div class="ofp-phone-header">
                             <div class="ofp-phone-contact" id="ofp-tpl-phone-header">SMS Preview</div>

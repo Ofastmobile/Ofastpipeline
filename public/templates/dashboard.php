@@ -246,7 +246,7 @@ if ( ! empty( $client_properties ) ) {
         $price_val = (float) get_post_meta( $p_id, 'ofp_price', true );
         $ltype     = get_post_meta( $p_id, 'ofp_listing_type', true ) ?: 'sale';
         $db_status = get_post_meta( $p_id, 'ofp_status', true ) ?: 'live';
-        $thumb     = get_the_post_thumbnail_url( $p_id, 'medium' ) ?: OFP_URL . 'assets/images/dashboard-hero-banner.webp';
+        $thumb     = get_the_post_thumbnail_url( $p_id, 'medium' ) ?: ofp_image_url( 'dashboard-hero-banner.webp' );
         $status_ctx = class_exists( 'OFP_Property_CPT' )
             ? OFP_Property_CPT::get_status_context( $p_id )
             : [
@@ -286,7 +286,7 @@ if ( ! empty( $client_properties ) ) {
             'type'      => 'Rent',
             'is_rent'   => true,
             'status'    => 'Occupied',
-            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.webp',
+            'thumb'     => ofp_image_url( 'dashboard-hero-banner.webp' ),
             'link'      => home_url( '/properties' ),
         ],
         [
@@ -298,7 +298,7 @@ if ( ! empty( $client_properties ) ) {
             'type'      => 'Sale',
             'is_rent'   => false,
             'status'    => 'Available',
-            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.webp',
+            'thumb'     => ofp_image_url( 'dashboard-hero-banner.webp' ),
             'link'      => home_url( '/properties' ),
         ],
         [
@@ -310,7 +310,7 @@ if ( ! empty( $client_properties ) ) {
             'type'      => 'Rent',
             'is_rent'   => true,
             'status'    => 'Available',
-            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.webp',
+            'thumb'     => ofp_image_url( 'dashboard-hero-banner.webp' ),
             'link'      => home_url( '/properties' ),
         ],
         [
@@ -322,7 +322,7 @@ if ( ! empty( $client_properties ) ) {
             'type'      => 'Sale',
             'is_rent'   => false,
             'status'    => 'Available',
-            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.webp',
+            'thumb'     => ofp_image_url( 'dashboard-hero-banner.webp' ),
             'link'      => home_url( '/properties' ),
         ],
         [
@@ -334,7 +334,7 @@ if ( ! empty( $client_properties ) ) {
             'type'      => 'Sale',
             'is_rent'   => false,
             'status'    => 'Occupied',
-            'thumb'     => OFP_URL . 'assets/images/dashboard-hero-banner.webp',
+            'thumb'     => ofp_image_url( 'dashboard-hero-banner.webp' ),
             'link'      => home_url( '/properties' ),
         ],
     ];
@@ -467,6 +467,23 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             </a>
         </div>
     <?php endif; ?>
+
+    <?php if ( ! empty( $client->is_white_label ) ) :
+        $wl_dash = OFP_White_Label::summary( $client );
+        if ( $wl_dash['type'] !== '' && $wl_dash['tone'] !== 'ok' ) : ?>
+        <div class="ofp-alert <?php echo $wl_dash['tone'] === 'bad' ? 'ofp-alert-error' : 'ofp-alert-warning'; ?>" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+            <span>
+                <?php if ( $wl_dash['type'] === 'yearly' ) : ?>
+                    <?php echo $wl_dash['tone'] === 'bad'
+                        ? 'Your yearly plan has ended, so this dashboard is on Free limits. Your website and properties are still online. Contact us to renew.'
+                        : 'Your yearly plan ends soon (' . esc_html( $wl_dash['note'] ) . '). Contact us to renew.'; ?>
+                <?php else : ?>
+                    Maintenance fee: <?php echo esc_html( $wl_dash['note'] ); ?>. Please contact us to pay.
+                <?php endif; ?>
+            </span>
+            <a href="<?php echo esc_url( home_url( '/credits' ) ); ?>" style="display:inline-block;background:var(--btn-primary);color:#fff;padding:8px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;white-space:nowrap;">View billing →</a>
+        </div>
+    <?php endif; endif; ?>
 
     <!-- ── 1. ZENTRA KPI STATS ROW ────────────────────────────────────── -->
     <div class="ofp-zentra-kpi-grid">

@@ -427,15 +427,15 @@ $tiktok_url         = ! empty( $extra['tiktok_url'] ) ? $extra['tiktok_url'] : '
 $whatsapp_url       = ! empty( $extra['whatsapp_url'] ) ? $extra['whatsapp_url'] : ( ! empty( $client->whatsapp_number ) ? 'https://wa.me/' . preg_replace('/[^0-9]/', '', $client->whatsapp_number) : ( ! empty( $client->phone ) ? 'https://wa.me/' . preg_replace('/[^0-9]/', '', $client->phone) : 'https://whatsapp.com' ) );
 
 // Avatar image URL
-$avatar_url = ! empty( $client->logo_url ) ? $client->logo_url : OFP_URL . 'assets/images/default-avatar.png';
+$avatar_url = ! empty( $client->logo_url ) ? $client->logo_url : ofp_image_url( 'default-avatar.png' );
 
 // Cover banner image URL
-$default_cover    = OFP_URL . 'assets/images/dashboard-hero-banner.webp';
+$default_cover    = ofp_image_url( 'dashboard-hero-banner.webp' );
 $cover_url        = ! empty( $client->cover_image_url ) ? $client->cover_image_url : $default_cover;
 $has_custom_cover = ! empty( $client->cover_image_url );
 
 // Stamp / seal image URL (used on receipts & vouchers)
-$default_stamp    = OFP_URL . 'assets/images/receipt-verified-stamp.png';
+$default_stamp    = ofp_image_url( 'receipt-verified-stamp.png' );
 $stamp_url        = ! empty( $client->stamp_url ) ? $client->stamp_url : $default_stamp;
 $has_custom_stamp = ! empty( $client->stamp_url );
 
@@ -449,6 +449,20 @@ if ( class_exists( 'OFP_Subscription' ) ) {
         $plan_badge = 'Silver User';
     } elseif ( ! empty( $client->plan ) ) {
         $plan_badge = ucfirst( $client->plan ) . ' User';
+    }
+}
+
+// White label: show the real billing state on the profile.
+if ( ! empty( $client->is_white_label ) ) {
+    $wl_prof = OFP_White_Label::summary( $client );
+    if ( $wl_prof['type'] === 'yearly' ) {
+        $plan_badge = OFP_White_Label::yearly_expired( $client )
+            ? 'White Label (Yearly, ended)'
+            : 'White Label (Yearly, until ' . gmdate( 'M j, Y', strtotime( (string) $client->subscription_expires ) ) . ')';
+    } elseif ( $wl_prof['type'] === 'lifetime' ) {
+        $plan_badge = 'White Label (Lifetime)';
+    } else {
+        $plan_badge = 'White Label';
     }
 }
 
@@ -508,7 +522,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                     <?php if ( ! empty( $client->logo_url ) ) : ?>
                         <img src="<?php echo esc_url( $client->logo_url ); ?>" alt="<?php echo esc_attr( $display_name ); ?>" class="ofp-avatar-img">
                     <?php else : ?>
-                        <img src="<?php echo esc_url( OFP_URL . 'assets/images/default-avatar.png' ); ?>" alt="<?php echo esc_attr( $display_name ); ?>" class="ofp-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <img src="<?php echo esc_url( ofp_image_url( 'default-avatar.png' ) ); ?>" alt="<?php echo esc_attr( $display_name ); ?>" class="ofp-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                         <span class="ofp-avatar-initials" style="display:none;"><?php echo esc_html( strtoupper( substr( $display_name, 0, 2 ) ) ); ?></span>
                     <?php endif; ?>
                 </div>
@@ -781,7 +795,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                                 <p style="margin:0; font-size:11.5px; color:var(--prof-text-sub, #94a3b8); line-height:1.4;">Got a feature idea or ran into an unexpected glitch? Share your thoughts with optional YouTube video walkthroughs.</p>
                             </div>
                         </div>
-                        <button type="button" class="ofp-open-feedback-trigger" data-type="feature_request" style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; background:#10b981; color:#ffffff; border:none; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:background 0.15s ease;">
+                        <button type="button" class="ofp-open-feedback-trigger" data-type="feature_request" onclick="if(window.ofpOpenFeedbackModal){window.ofpOpenFeedbackModal('feature_request');}" style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; background:#10b981; color:#ffffff; border:none; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:background 0.15s ease;">
                             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
                             <span>Feedback &amp; Bug Report</span>
                         </button>

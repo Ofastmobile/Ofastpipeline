@@ -700,24 +700,55 @@ class OFP_Mailer {
     }
 
     /**
+     * Billing email for a white label (yearly / lifetime) client.
+     * Kept free of the product name on purpose: it is their own business.
+     *
+     * @param object   $client Full ofp_clients row.
+     * @param string   $title  Heading and subject.
+     * @param string[] $lines  Paragraphs.
+     * @param bool     $urgent Red heading.
+     */
+    public static function send_wl_billing_notice( object $client, string $title, array $lines, bool $urgent = false ): bool {
+        $paras = '';
+        foreach ( $lines as $line ) {
+            $paras .= '<p>' . esc_html( $line ) . '</p>';
+        }
+        $body = '<h2' . ( $urgent ? ' style="color:#dc2626;"' : '' ) . '>' . esc_html( $title ) . '</h2>'
+            . '<p>Hi ' . esc_html( $client->owner_name ) . ',</p>'
+            . $paras
+            . '<p><a href="' . esc_url( home_url( '/credits' ) ) . '" style="display:inline-block;background:#1a73e8;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:8px;">View my billing</a></p>';
+        return self::send( $client->email, $client->owner_name, $title, $body );
+    }
+
+    /**
      * Send a payment confirmed / subscription renewed email.
      *
      * Called by OFP_Subscription::record_payment() after Monnify webhook
      * verifies a successful transaction.
      *
-     * @param  object $client  Full wp_ofp_clients row.
-     * @param  float  $amount  Amount paid in NGN.
-     * @param  string $type    Subscription type: 'crm' or 'listing'.
+     * @param  object      $client    Full wp_ofp_clients row.
+     * @param  float       $amount    Amount paid in NGN.
+     * @param  string      $type      Subscription type: 'crm' or 'listing'.
+     * @param  string|null $plan      Plan slug.
+     * @param  int         $months    Duration in months.
+     * @param  string|null $valid_to  End date string.
      * @return void
      */
     public static function send_payment_confirmed(
         object $client,
         float $amount,
-        string $type = 'crm'
+        string $type = 'crm',
+        ?string $plan = null,
+        int $months = 1,
+        ?string $valid_to = null
     ): void {
 
         $label  = $type === 'listing' ? 'Property Listing' : 'CRM Pipeline';
-        $expiry = gmdate( 'F j, Y', strtotime( '+30 days' ) );
+        if ( $plan && in_array( $plan, [ 'silver', 'gold' ], true ) ) {
+            $label = ucfirst( $plan ) . ' plan';
+        }
+        $months = max( 1, $months );
+        $expiry = gmdate( 'F j, Y', strtotime( $valid_to ?: '+30 days' ) );
 
         $body = '
             <h2>✅ Payment Received — ' . esc_html( $label ) . ' Subscription Renewed</h2>
@@ -733,7 +764,7 @@ class OFP_Mailer {
                     NGN ' . number_format( $amount, 2 ) . '
                 </p>
                 <p style="margin:0 0 10px;">
-                    <strong>Subscription:</strong> ' . esc_html( $label ) . '
+                    <strong>Subscription:</strong> ' . esc_html( $label ) . ( $months > 1 ? ' (' . (int) $months . ' months)' : '' ) . '
                 </p>
                 <p style="margin:0;">
                     <strong>Active Until:</strong> ' . esc_html( $expiry ) . '

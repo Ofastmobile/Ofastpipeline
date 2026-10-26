@@ -64,6 +64,11 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
                 'name'      => $p['name'] ?? ucfirst( $plan_id ),
                 'price'     => '₦' . number_format( $price_val ),
                 'price_num' => $price_val,
+                'periods'   => ( $plan_id !== 'free' && $price_val > 0 ) ? [
+                    3  => OFP_Property_CPT::get_period_price( $plan_id, 3 ),
+                    6  => OFP_Property_CPT::get_period_price( $plan_id, 6 ),
+                    12 => OFP_Property_CPT::get_period_price( $plan_id, 12 ),
+                ] : [],
                 'desc'      => $p['desc'] ?? '',
                 'features'  => (array) ( $p['features'] ?? [] ),
             ];
@@ -79,6 +84,18 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
             <div class="ofp-pricing-header">
                 <div class="ofp-pricing-title"><?php echo esc_html($p['name']); ?> Plan</div>
                 <div class="ofp-pricing-price"><?php echo esc_html($p['price']); ?> <span>/ month</span></div>
+                <?php if ( ! empty( $p['periods'] ) ) : ?>
+                <div class="ofp-pricing-desc" style="font-size:12px;opacity:.8;">
+                    Or pay ahead:
+                    <?php
+                    $period_bits = [];
+                    foreach ( $p['periods'] as $pm => $pp ) {
+                        $period_bits[] = $pm . ' months ₦' . number_format( $pp );
+                    }
+                    echo esc_html( implode( ' · ', $period_bits ) );
+                    ?>
+                </div>
+                <?php endif; ?>
                 <div class="ofp-pricing-desc"><?php echo esc_html($p['desc']); ?></div>
             </div>
 

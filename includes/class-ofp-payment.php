@@ -224,10 +224,12 @@ class OFP_Payment {
      * @param  float       $amount  The exact amount (NGN) this checkout expects.
      * @return string
      */
-    public static function generate_subscription_checkout_reference( int $client_id, string $type, ?string $plan = null, float $amount = 0.0 ): string {
+    public static function generate_subscription_checkout_reference( int $client_id, string $type, ?string $plan = null, float $amount = 0.0, int $months = 1 ): string {
         $amount_kobo = (int) round( $amount * 100 );
         if ( $type === 'listing' && $plan ) {
-            return sprintf( 'ofp_sub_listing_%d_%s_%d_%s', $client_id, $plan, $amount_kobo, wp_generate_password( 8, false, false ) );
+            // The months go after the amount, so a payment is always matched to the period it paid for.
+            $m = OFP_Property_CPT::normalize_months( $months );
+            return sprintf( 'ofp_sub_listing_%d_%s_%d_m%d_%s', $client_id, $plan, $amount_kobo, $m, wp_generate_password( 8, false, false ) );
         }
         return sprintf( 'ofp_sub_crm_%d_%d_%s', $client_id, $amount_kobo, wp_generate_password( 8, false, false ) );
     }
@@ -252,12 +254,14 @@ class OFP_Payment {
         if ( preg_match( '/^ofp_sub_crm_(\d+)_(\d+)_/', $reference, $m ) ) {
             return [ 'type' => 'crm', 'client_id' => (int) $m[1], 'plan' => null, 'expected_amount' => ( (int) $m[2] ) / 100 ];
         }
-        if ( preg_match( '/^ofp_sub_listing_(\d+)_(bronze|free|silver|gold)_(\d+)_/', $reference, $m ) ) {
+        // Older references have no "m<months>" part and mean 1 month.
+        if ( preg_match( '/^ofp_sub_listing_(\d+)_(bronze|free|silver|gold)_(\d+)_(?:m(\d+)_)?/', $reference, $m ) ) {
             return [
                 'type'            => 'listing',
                 'client_id'       => (int) $m[1],
                 'plan'            => OFP_Subscription::normalize_plan( $m[2] ),
                 'expected_amount' => ( (int) $m[3] ) / 100,
+                'months'          => OFP_Property_CPT::normalize_months( isset( $m[4] ) && $m[4] !== '' ? (int) $m[4] : 1 ),
             ];
         }
         return null;
@@ -283,8 +287,9 @@ class OFP_Payment {
      *                                      without re-charging the whole plan.
      * @return string|null                  Checkout URL, or null on failure.
      */
-    public static function initiate_subscription_checkout( int $client_id, string $type, ?string $plan = null, ?float $override_amount = null ): ?string {
+    public static function initiate_subscription_checkout( int $client_id, string $type, ?string $plan = null, ?float $override_amount = null, int $months = 1 ): ?string {
         $client = OFP_Client::get( $client_id );
+        $months = OFP_Property_CPT::normalize_months( $months );
         if ( ! $client ) {
             return null;
         }
@@ -317,8 +322,9 @@ class OFP_Payment {
                 return null;
             }
 
-            $amount      = $override_amount ?? OFP_Property_CPT::get_plan_price( $plan );
-            $description = ucfirst( $plan ) . ' Plan Payment';
+            // A shortfall payment (override) carries the months of the underpaid order it completes.
+            $amount      = $override_amount ?? OFP_Property_CPT::get_period_price( $plan, $months );
+            $description = ucfirst( $plan ) . ' Plan Payment' . ( $months > 1 ? " ({$months} months)" : '' );
         } else {
             return null;
         }
@@ -327,7 +333,7 @@ class OFP_Payment {
             return null;
         }
 
-        $reference = self::generate_subscription_checkout_reference( $client_id, $type, $plan, $amount );
+        $reference = self::generate_subscription_checkout_reference( $client_id, $type, $plan, $amount, $months );
         $gateway   = self::get_gateway();
 
         if ( ! $gateway || ! method_exists( $gateway, 'initiate_transaction' ) ) {
@@ -401,7 +407,8 @@ class OFP_Payment {
                 $expected,
                 $reference,
                 'checkout',
-                $parsed['plan']
+                $parsed['plan'],
+                (int) ( $parsed['months'] ?? 1 )
             );
             return true;
         }
@@ -413,7 +420,8 @@ class OFP_Payment {
             $reference,
             'checkout',
             $parsed['plan'],
-            $expected > 0 ? $expected : null
+            $expected > 0 ? $expected : null,
+            (int) ( $parsed['months'] ?? 1 )
         );
 
         if ( $expected > 0 && $amount_paid > ( $expected + $tolerance ) ) {

@@ -3,7 +3,7 @@
  * Plugin Name: OFast Pipeline
  * Plugin URI:  https://ofastpipeline.com
  * Description: Done-for-you lead pipeline and CRM automation engine for SMB clients in Nigeria.
- * Version:     2.2.11
+ * Version:     2.2.12
  * Author:      Olabode / Bofast World
  * Author URI:  https://bofastworld.com
  * Text Domain: ofast-pipeline
@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION', '2.2.11' );
+define( 'OFP_VERSION', '2.2.12' );
 define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
@@ -22,6 +22,34 @@ define( 'OFP_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 if ( ! defined( 'OFP\\OFP_PLUGIN_DIR' ) ) {
     define( 'OFP\\OFP_PLUGIN_DIR', OFP_PATH );
 }
+
+if ( ! defined( 'OFP_CDN_URL' ) ) {
+    define( 'OFP_CDN_URL', 'https://dl.ofastshop.com/mypropertyhq/images/' );
+}
+
+if ( ! function_exists( 'ofp_image_url' ) ) {
+    /**
+     * Return Cloudflare CDN or local asset URL for plugin images.
+     *
+     * @param string $filename File name or relative path.
+     * @return string Fully qualified image URL.
+     */
+    function ofp_image_url( string $filename ): string {
+        $filename = trim( $filename );
+        if ( '' === $filename ) {
+            return '';
+        }
+        if ( 0 === strpos( $filename, 'http://' ) || 0 === strpos( $filename, 'https://' ) || 0 === strpos( $filename, 'data:' ) ) {
+            return $filename;
+        }
+        $clean_file = ltrim( $filename, '/' );
+        if ( defined( 'OFP_CDN_URL' ) && ! empty( OFP_CDN_URL ) ) {
+            return trailingslashit( OFP_CDN_URL ) . rawurlencode( $clean_file );
+        }
+        return OFP_URL . 'assets/images/' . rawurlencode( $clean_file );
+    }
+}
+
 
 require_once OFP_PATH . 'includes/class-ofp-activator.php';
 require_once OFP_PATH . 'includes/class-ofp-deactivator.php';

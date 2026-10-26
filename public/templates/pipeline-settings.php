@@ -486,7 +486,7 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
             <?php if ( $config ) : ?>
             <div class="ofp-pipeline-sidebar">
                 <div class="ofp-phone-mockup">
-                    <img class="ofp-phone-frame-overlay" src="<?php echo esc_url( OFP_URL . 'assets/images/Smartphone-Mockup.png' ); ?>" alt="Smartphone Mockup" loading="lazy">
+                    <img class="ofp-phone-frame-overlay" src="<?php echo esc_url( ofp_image_url( 'Smartphone-Mockup.png' ) ); ?>" alt="Smartphone Mockup" loading="lazy">
                     <div class="ofp-phone-screen">
                         <div class="ofp-phone-header">
                             <div class="ofp-phone-contact">Message Preview</div>

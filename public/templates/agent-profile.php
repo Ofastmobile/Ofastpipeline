@@ -45,7 +45,7 @@ $agent_name = $client->business_name ?: $client->owner_name;
 $is_client_verified = ! empty( $client->is_verified );
 $agent_role = $is_client_verified ? 'Verified Agent' : 'Agent';
 $app_name = OFP_Brand::name();
-$agent_logo = ! empty( $client->logo_url ) ? $client->logo_url : OFP_URL . 'assets/images/default-avatar.png';
+$agent_logo = ! empty( $client->logo_url ) ? $client->logo_url : ofp_image_url( 'default-avatar.png' );
 $agent_bio  = ! empty( $client->bio ) ? $client->bio : 'We provide premium real estate services, helping you discover dream homes, luxury apartments, and commercial investments with complete peace of mind and professional guidance.';
 
 // ── Social handles & extra data from client profile ─────────────────────────
@@ -136,7 +136,7 @@ if ( $properties->have_posts() ) {
 // Cover image for the top banner
 $featured_cover = ! empty( $client->cover_image_url ) 
     ? $client->cover_image_url 
-    : ( OFP_URL . 'assets/images/dashboard-hero-banner.webp' );
+    : ofp_image_url( 'dashboard-hero-banner.webp' );
 
 // If agent hasn't set an explicit custom cover, use first property thumbnail if available
 if ( empty( $client->cover_image_url ) && $properties->have_posts() ) {
@@ -220,7 +220,7 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
 
             <div class="ofp-topbar-right">
                 <div class="ofp-topbar-user-badge">
-                    <img src="<?php echo esc_url( $agent_logo ); ?>" alt="<?php echo esc_attr( $agent_name ); ?>" class="ofp-topbar-avatar" onerror="this.src='<?php echo esc_url( OFP_URL . 'assets/images/default-avatar.png' ); ?>';">
+                    <img src="<?php echo esc_url( $agent_logo ); ?>" alt="<?php echo esc_attr( $agent_name ); ?>" class="ofp-topbar-avatar" onerror="this.src='<?php echo esc_url( ofp_image_url( 'default-avatar.png' ) ); ?>';">
                     <div class="ofp-topbar-user-info">
                         <span class="ofp-topbar-user-name"><?php echo esc_html( $agent_name ); ?></span>
                         <span class="ofp-topbar-user-role"><?php echo esc_html( $agent_role ); ?></span>
@@ -298,7 +298,7 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                     
                     <!-- Squircle Avatar Overlapping Banner -->
                     <div class="ofp-squircle-avatar-wrap" style="position:relative;">
-                        <img src="<?php echo esc_url( $agent_logo ); ?>" alt="<?php echo esc_attr( $agent_name ); ?>" class="ofp-squircle-avatar-img" onerror="this.src='<?php echo esc_url( OFP_URL . 'assets/images/default-avatar.png' ); ?>';">
+                        <img src="<?php echo esc_url( $agent_logo ); ?>" alt="<?php echo esc_attr( $agent_name ); ?>" class="ofp-squircle-avatar-img" onerror="this.src='<?php echo esc_url( ofp_image_url( 'default-avatar.png' ) ); ?>';">
                         <?php if ( $is_client_verified ) : ?>
                             <div class="ofp-avatar-verified-tick" title="CAC &amp; Identity Verified" style="position:absolute; bottom:6px; right:6px; width:22px; height:22px; background:#10b981; border:2px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.2);">
                                 <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -445,7 +445,7 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                                     <?php if ( has_post_thumbnail() ) : ?>
                                         <?php the_post_thumbnail( 'large', [ 'class' => 'w-full h-full object-cover group-hover:scale-105 transition-transform duration-500' ] ); ?>
                                     <?php else : ?>
-                                        <img src="<?php echo esc_url( OFP_URL . 'assets/images/dashboard-hero-banner.webp' ); ?>"
+                                        <img src="<?php echo esc_url( ofp_image_url( 'dashboard-hero-banner.webp' ) ); ?>"
                                             alt="<?php the_title_attribute(); ?>"
                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                                     <?php endif; ?>

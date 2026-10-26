@@ -1,0 +1,451 @@
+{
+    "summary": {
+        "total_files": 184,
+        "total_lines": 107081,
+        "total_code_lines": 88851,
+        "inline_style_attributes": 2824
+    },
+    "by_extension": {
+        "json": {
+            "count": 1,
+            "lines": 5,
+            "code_lines": 5
+        },
+        "html": {
+            "count": 1,
+            "lines": 432,
+            "code_lines": 414
+        },
+        "md": {
+            "count": 9,
+            "lines": 1710,
+            "code_lines": 1029
+        },
+        "php": {
+            "count": 131,
+            "lines": 70608,
+            "code_lines": 57893
+        },
+        "css": {
+            "count": 20,
+            "lines": 27924,
+            "code_lines": 24163
+        },
+        "ttf": {
+            "count": 1,
+            "lines": 117,
+            "code_lines": 106
+        },
+        "png": {
+            "count": 1,
+            "lines": 186,
+            "code_lines": 181
+        },
+        "js": {
+            "count": 17,
+            "lines": 6081,
+            "code_lines": 5045
+        },
+        "csv": {
+            "count": 3,
+            "lines": 18,
+            "code_lines": 15
+        }
+    },
+    "top_files": {
+        "assets\/css\/client-portal.css": {
+            "ext": "css",
+            "lines": 10715,
+            "code_lines": 9164,
+            "size": 274110
+        },
+        "assets\/css\/admin.css": {
+            "ext": "css",
+            "lines": 3199,
+            "code_lines": 2828,
+            "size": 77444
+        },
+        "includes\/class-ofp-property-cpt.php": {
+            "ext": "php",
+            "lines": 2462,
+            "code_lines": 1990,
+            "size": 156475
+        },
+        "public\/templates\/property-homepage.php": {
+            "ext": "php",
+            "lines": 2448,
+            "code_lines": 2316,
+            "size": 182235
+        },
+        "public\/templates\/property-single-detail.php": {
+            "ext": "php",
+            "lines": 2425,
+            "code_lines": 2268,
+            "size": 187317
+        },
+        "public\/templates\/properties.php": {
+            "ext": "php",
+            "lines": 2097,
+            "code_lines": 1867,
+            "size": 160102
+        },
+        "admin\/views\/settings.php": {
+            "ext": "php",
+            "lines": 1927,
+            "code_lines": 1703,
+            "size": 132157
+        },
+        "public\/templates\/account.php": {
+            "ext": "php",
+            "lines": 1889,
+            "code_lines": 1685,
+            "size": 129784
+        },
+        "admin\/views\/portal\/admin-portal-template.php": {
+            "ext": "php",
+            "lines": 1867,
+            "code_lines": 1700,
+            "size": 145696
+        },
+        "admin\/class-ofp-admin-menu.php": {
+            "ext": "php",
+            "lines": 1836,
+            "code_lines": 1308,
+            "size": 83741
+        },
+        "public\/templates\/tenants.php": {
+            "ext": "php",
+            "lines": 1716,
+            "code_lines": 1550,
+            "size": 113258
+        },
+        "assets\/css\/profile.css": {
+            "ext": "css",
+            "lines": 1660,
+            "code_lines": 1412,
+            "size": 42021
+        },
+        "assets\/css\/admin-property-editor.css": {
+            "ext": "css",
+            "lines": 1630,
+            "code_lines": 1400,
+            "size": 36280
+        },
+        "assets\/js\/client-portal.js": {
+            "ext": "js",
+            "lines": 1580,
+            "code_lines": 1321,
+            "size": 79574
+        },
+        "assets\/css\/property-checkout.css": {
+            "ext": "css",
+            "lines": 1578,
+            "code_lines": 1548,
+            "size": 63167
+        },
+        "public\/templates\/message-templates.php": {
+            "ext": "php",
+            "lines": 1534,
+            "code_lines": 1325,
+            "size": 91243
+        },
+        "includes\/class-ofp-subscription.php": {
+            "ext": "php",
+            "lines": 1497,
+            "code_lines": 857,
+            "size": 63823
+        },
+        "assets\/css\/admin-portal.css": {
+            "ext": "css",
+            "lines": 1492,
+            "code_lines": 1278,
+            "size": 39381
+        },
+        "assets\/css\/auth.css": {
+            "ext": "css",
+            "lines": 1455,
+            "code_lines": 1212,
+            "size": 31961
+        },
+        "public\/class-ofp-client-portal.php": {
+            "ext": "php",
+            "lines": 1307,
+            "code_lines": 1050,
+            "size": 57116
+        }
+    },
+    "inline_css": {
+        "includes\/class-ofp-brand.php": {
+            "count": 2,
+            "lines": 14
+        },
+        "includes\/class-ofp-property-my-payments.php": {
+            "count": 1,
+            "lines": 21
+        },
+        "includes\/class-ofp-property-payment-entry-ui.php": {
+            "count": 1,
+            "lines": 6
+        },
+        "includes\/class-ofp-property-payment-records.php": {
+            "count": 2,
+            "lines": 141
+        },
+        "includes\/class-ofp-property-tenant-portal.php": {
+            "count": 1,
+            "lines": 135
+        },
+        "includes\/class-ofp-watermark.php": {
+            "count": 1,
+            "lines": 110
+        },
+        "ofast-pipeline.php": {
+            "count": 1,
+            "lines": 1
+        },
+        "public\/class-ofp-client-portal.php": {
+            "count": 1,
+            "lines": 1
+        },
+        "public\/templates\/agents.php": {
+            "count": 1,
+            "lines": 23
+        },
+        "public\/templates\/investment.php": {
+            "count": 1,
+            "lines": 192
+        },
+        "public\/templates\/partials\/nav.php": {
+            "count": 1,
+            "lines": 7
+        },
+        "public\/templates\/property-homepage.php": {
+            "count": 1,
+            "lines": 7
+        },
+        "public\/templates\/property-payments.php": {
+            "count": 1,
+            "lines": 74
+        },
+        "public\/templates\/property-sales.php": {
+            "count": 1,
+            "lines": 3
+        },
+        "public\/templates\/property-single-detail.php": {
+            "count": 1,
+            "lines": 75
+        }
+    },
+    "inline_js": {
+        "admin\/class-ofp-property-commerce-actions.php": {
+            "count": 1,
+            "lines": 46
+        },
+        "admin\/class-ofp-property-commerce-admin.php": {
+            "count": 1,
+            "lines": 18
+        },
+        "admin\/class-ofp-property-purchase-admin.php": {
+            "count": 1,
+            "lines": 80
+        },
+        "admin\/views\/billing.php": {
+            "count": 1,
+            "lines": 158
+        },
+        "admin\/views\/clients-list.php": {
+            "count": 1,
+            "lines": 14
+        },
+        "admin\/views\/feedback-list.php": {
+            "count": 1,
+            "lines": 186
+        },
+        "admin\/views\/rent-oversight.php": {
+            "count": 1,
+            "lines": 43
+        },
+        "admin\/views\/settings.php": {
+            "count": 1,
+            "lines": 348
+        },
+        "includes\/class-ofp-property-admin-rules.php": {
+            "count": 1,
+            "lines": 62
+        },
+        "includes\/class-ofp-property-checkout.php": {
+            "count": 1,
+            "lines": 128
+        },
+        "includes\/class-ofp-property-commerce-repair.php": {
+            "count": 1,
+            "lines": 1
+        },
+        "includes\/class-ofp-property-cpt.php": {
+            "count": 2,
+            "lines": 32
+        },
+        "includes\/class-ofp-property-manual-payment.php": {
+            "count": 1,
+            "lines": 121
+        },
+        "includes\/class-ofp-property-my-payments.php": {
+            "count": 1,
+            "lines": 5
+        },
+        "includes\/class-ofp-property-payment-entry-ui.php": {
+            "count": 1,
+            "lines": 18
+        },
+        "includes\/class-ofp-property-payment-records.php": {
+            "count": 3,
+            "lines": 155
+        },
+        "includes\/class-ofp-property-purchase-service.php": {
+            "count": 2,
+            "lines": 85
+        },
+        "includes\/class-ofp-property-tenant-portal.php": {
+            "count": 1,
+            "lines": 6
+        },
+        "ofast-pipeline.php": {
+            "count": 1,
+            "lines": 8
+        },
+        "public\/class-ofp-client-portal.php": {
+            "count": 1,
+            "lines": 50
+        },
+        "public\/class-ofp-property-sales-client-ui.php": {
+            "count": 1,
+            "lines": 114
+        },
+        "public\/templates\/account.php": {
+            "count": 1,
+            "lines": 307
+        },
+        "public\/templates\/agent-profile.php": {
+            "count": 3,
+            "lines": 34
+        },
+        "public\/templates\/agents.php": {
+            "count": 3,
+            "lines": 78
+        },
+        "public\/templates\/api-settings.php": {
+            "count": 1,
+            "lines": 21
+        },
+        "public\/templates\/credits.php": {
+            "count": 1,
+            "lines": 10
+        },
+        "public\/templates\/customers.php": {
+            "count": 1,
+            "lines": 87
+        },
+        "public\/templates\/dashboard.php": {
+            "count": 1,
+            "lines": 150
+        },
+        "public\/templates\/funding.php": {
+            "count": 1,
+            "lines": 66
+        },
+        "public\/templates\/leads.php": {
+            "count": 2,
+            "lines": 346
+        },
+        "public\/templates\/login.php": {
+            "count": 1,
+            "lines": 115
+        },
+        "public\/templates\/message-templates.php": {
+            "count": 4,
+            "lines": 820
+        },
+        "public\/templates\/notification-settings.php": {
+            "count": 1,
+            "lines": 41
+        },
+        "public\/templates\/partials\/nav.php": {
+            "count": 3,
+            "lines": 64
+        },
+        "public\/templates\/partials\/sales-tabs.php": {
+            "count": 1,
+            "lines": 57
+        },
+        "public\/templates\/pricing.php": {
+            "count": 1,
+            "lines": 22
+        },
+        "public\/templates\/properties.php": {
+            "count": 2,
+            "lines": 606
+        },
+        "public\/templates\/property-homepage.php": {
+            "count": 3,
+            "lines": 78
+        },
+        "public\/templates\/property-marketplace.php": {
+            "count": 3,
+            "lines": 78
+        },
+        "public\/templates\/property-payments.php": {
+            "count": 1,
+            "lines": 153
+        },
+        "public\/templates\/property-purchases.php": {
+            "count": 1,
+            "lines": 80
+        },
+        "public\/templates\/property-sales.php": {
+            "count": 3,
+            "lines": 120
+        },
+        "public\/templates\/property-single-detail.php": {
+            "count": 4,
+            "lines": 293
+        },
+        "public\/templates\/reports.php": {
+            "count": 1,
+            "lines": 3
+        },
+        "public\/templates\/signup.php": {
+            "count": 1,
+            "lines": 97
+        },
+        "public\/templates\/team.php": {
+            "count": 1,
+            "lines": 139
+        },
+        "public\/templates\/tenants.php": {
+            "count": 1,
+            "lines": 214
+        }
+    },
+    "top_inline_styles": {
+        "public\/templates\/properties.php": 217,
+        "public\/templates\/account.php": 196,
+        "public\/templates\/tenants.php": 171,
+        "public\/templates\/message-templates.php": 148,
+        "public\/templates\/property-purchases.php": 138,
+        "admin\/views\/portal\/admin-portal-template.php": 137,
+        "includes\/class-ofp-property-payment-records.php": 103,
+        "admin\/views\/customers-list.php": 94,
+        "admin\/class-ofp-property-commerce-admin.php": 92,
+        "public\/templates\/property-sales.php": 88,
+        "includes\/class-ofp-mailer.php": 87,
+        "includes\/class-ofp-property-tenant-portal.php": 67,
+        "admin\/views\/investment.php": 65,
+        "public\/templates\/inspections.php": 58,
+        "public\/templates\/customers.php": 57
+    },
+    "missing_abspath": [
+        "uninstall.php"
+    ],
+    "unused_classes": [],
+    "orphan_files": []
+}

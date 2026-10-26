@@ -54,6 +54,7 @@ class OFP_Admin_Menu {
         add_action( 'admin_post_ofp_preview_client',  [ $this, 'handle_preview_client' ] );
         add_action( 'admin_post_ofp_topup_credit',    [ $this, 'handle_topup_credit' ] );
         add_action( 'admin_post_ofp_mark_subscription_paid', [ $this, 'handle_mark_subscription_paid' ] );
+        add_action( 'admin_post_ofp_wl_billing', [ $this, 'handle_wl_billing' ] );
         add_action( 'admin_init', [ $this, 'handle_save_plan_pricing' ] );
         add_action( 'admin_init', [ $this, 'handle_save_listing_plans' ] );
         add_action( 'admin_init', [ $this, 'handle_save_company_bank' ] ); // Phase 17
@@ -752,6 +753,15 @@ class OFP_Admin_Menu {
             }
             if ( ! empty( $listing_prices ) ) {
                 OFP_Property_CPT::save_plans( $listing_prices, $listing_caps );
+
+                // 3, 6 and 12 month prices (0 means monthly price x months).
+                $period_posted = [];
+                foreach ( [ 'silver', 'gold' ] as $pp_plan ) {
+                    foreach ( [ 3, 6, 12 ] as $pp_m ) {
+                        $period_posted[ $pp_plan ][ $pp_m ] = isset( $_POST[ "period_price_{$pp_plan}_{$pp_m}" ] ) ? (float) $_POST[ "period_price_{$pp_plan}_{$pp_m}" ] : 0.0;
+                    }
+                }
+                OFP_Property_CPT::save_period_prices( $period_posted );
             }
             if ( ! empty( $pricing_cards ) ) {
                 OFP_Property_CPT::save_pricing_cards( $pricing_cards );
@@ -1167,13 +1177,16 @@ class OFP_Admin_Menu {
         );
 
         if ( ! $sub || $sub->status === 'paid' ) {
-            $this->set_message( 'Subscription not found or already paid.', 'error' );
+            $this->set_message( '❌ Subscription not found or already paid.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-billing' ) );
             exit;
         }
 
-        $period_start = gmdate( 'Y-m-d' );
-        $period_end   = gmdate( 'Y-m-d', strtotime( '+30 days' ) );
+        // Use the months the client chose (1 if the row has none) and start from
+        // the later of today and the running end date, so no paid days are lost.
+        $sub_months = OFP_Property_CPT::normalize_months( (int) ( $sub->months ?? 1 ) );
+        $client_now = OFP_Client::get( (int) $sub->client_id );
+        [ $period_start, $period_end ] = OFP_Subscription::compute_period( $client_now->subscription_expires ?? null, $sub_months );
 
         // 1. Update the pending subscription row to paid
         $wpdb->update(
@@ -1194,24 +1207,63 @@ class OFP_Admin_Menu {
             $wpdb->prepare(
                 "UPDATE {$wpdb->prefix}ofp_clients
                  SET status               = 'active',
-                     subscription_expires = DATE_ADD(
-                         GREATEST( IFNULL(subscription_expires, CURDATE()), CURDATE() ),
-                         INTERVAL 30 DAY
-                     ),
+                     subscription_expires = %s,
                      updated_at = NOW()
                  WHERE id = %d",
+                $period_end,
                 $sub->client_id
             )
         );
+        if ( ! empty( $sub->plan ) && in_array( $sub->plan, [ 'silver', 'gold' ], true ) ) {
+            OFP_Subscription::sync_client_plan_columns( (int) $sub->client_id, (string) $sub->plan );
+        }
 
         // 3. Send the payment confirmation email
         $client = OFP_Client::get( (int) $sub->client_id );
         if ( $client ) {
-            OFP_Mailer::send_payment_confirmed( $client, (float) $sub->amount, $sub->type );
+            OFP_Mailer::send_payment_confirmed( $client, (float) $sub->amount, $sub->type, $sub->plan ?: null, $sub_months, $period_end );
+        }
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( 'Payment successful', (int) $sub->client_id, [
+                'amount'   => (float) $sub->amount,
+                'plan'     => $sub->plan,
+                'months'   => $sub_months,
+                'valid_to' => $period_end,
+                'method'   => 'manual',
+            ] );
         }
 
-        $this->set_message( 'Subscription manually marked as paid. Client has been granted 30 days access.', 'success' );
+        $this->set_message( '✅ Subscription manually marked as paid. Client has access until ' . gmdate( 'F j, Y', strtotime( $period_end ) ) . '.', 'success' );
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-billing' ) );
+        exit;
+    }
+
+    /**
+     * White label billing from the Edit Client page.
+     * wl_do = mark_paid (yearly or lifetime) | maintenance | clear
+     */
+    public function handle_wl_billing(): void {
+        $this->require_admin_post( 'ofp_wl_billing' );
+
+        $client_id = (int) ( $_POST['client_id'] ?? 0 );
+        $do        = sanitize_key( wp_unslash( $_POST['wl_do'] ?? '' ) );
+        $edit_url  = admin_url( 'admin.php?page=ofp-clients&client_id=' . $client_id . '&action=edit' );
+        $amount    = (float) str_replace( ',', '', (string) wp_unslash( $_POST['wl_amount'] ?? '0' ) );
+        $note      = sanitize_text_field( wp_unslash( $_POST['wl_note'] ?? '' ) );
+
+        if ( $do === 'mark_paid' ) {
+            $type   = sanitize_key( wp_unslash( $_POST['wl_type'] ?? '' ) );
+            $result = OFP_White_Label::mark_paid( $client_id, $type, $amount, ! empty( $_POST['wl_credits'] ), $note );
+        } elseif ( $do === 'maintenance' ) {
+            $result = OFP_White_Label::mark_maintenance_paid( $client_id, $amount, $note );
+        } elseif ( $do === 'clear' ) {
+            $result = OFP_White_Label::clear_billing( $client_id );
+        } else {
+            $result = [ 'ok' => false, 'message' => 'Unknown action.' ];
+        }
+
+        $this->set_message( ( $result['ok'] ? '✅ ' : '❌ ' ) . $result['message'], $result['ok'] ? 'success' : 'error' );
+        wp_safe_redirect( $edit_url );
         exit;
     }
 
@@ -1326,14 +1378,15 @@ class OFP_Admin_Menu {
                         $request->amount,
                         'manual_funding_' . $request_id
                     );
-                } elseif ( strpos( $request->channel, 'plan_' ) === 0 ) {
-                    // Plan payment — e.g. 'plan_silver' or 'plan_gold'.
-                    $plan = substr( $request->channel, strlen( 'plan_' ) );
+                } elseif ( OFP_Subscription::parse_plan_channel( (string) $request->channel ) ) {
+                    // Plan payment — e.g. 'plan_silver', 'plan_gold' or 'plan_gold_6' (6 months).
+                    $parsed_channel = OFP_Subscription::parse_plan_channel( (string) $request->channel );
                     OFP_Subscription::activate_from_manual_payment(
                         $request->client_id,
                         'listing',
                         $request->amount,
-                        $plan
+                        $parsed_channel['plan'],
+                        $parsed_channel['months']
                     );
                 }
 
@@ -1349,10 +1402,11 @@ class OFP_Admin_Menu {
                 );
 
                 // Notify the client, with wording that matches what actually happened.
-                if ( strpos( $request->channel, 'plan_' ) === 0 ) {
-                    $plan_label = ucfirst( substr( $request->channel, strlen( 'plan_' ) ) );
+                if ( OFP_Subscription::parse_plan_channel( (string) $request->channel ) ) {
+                    $client_after = OFP_Client::get( (int) $request->client_id );
                     $notify_message = 'Your manual payment of NGN ' . number_format( $request->amount, 2 ) .
-                        ' has been approved. Your ' . $plan_label . ' plan is now active.';
+                        ' has been approved. Your ' . OFP_Subscription::channel_label( (string) $request->channel )
+                        . ' is now active' . ( $client_after && $client_after->subscription_expires ? ' until ' . gmdate( 'F j, Y', strtotime( $client_after->subscription_expires ) ) : '' ) . '.';
                 } else {
                     $notify_message = 'Your manual funding of NGN ' . number_format( $request->amount, 2 ) .
                         ' has been approved and credited to your ' . ucfirst( $request->channel ) . ' balance.';
@@ -1452,7 +1506,7 @@ class OFP_Admin_Menu {
                             <small><?php echo esc_html( $req->owner_name ); ?></small>
                         </td>
                         <td>NGN <?php echo esc_html( number_format( $req->amount, 2 ) ); ?></td>
-                        <td><?php echo esc_html( ucfirst( $req->channel ) ); ?></td>
+                        <td><?php echo esc_html( OFP_Subscription::channel_label( (string) $req->channel ) ); ?></td>
                         <td>
                             <?php echo esc_html( $req->bank_name ); ?><br>
                             <small><?php echo esc_html( $req->account_name ); ?></small>

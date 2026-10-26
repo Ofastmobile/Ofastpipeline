@@ -22,9 +22,10 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 OFP_Auth::require_client_login();
 OFP_Auth::require_main_client_only();
 
-// Solo companies have no plan or funding to pay for.
+// Solo companies have no plan to pay for here (their plan is paid by hand to the admin).
+// White label clients can still use this page to top up SMS and voice credit.
 $ofp_funding_client = OFP_Auth::current_client();
-if ( $ofp_funding_client && OFP_Brand::hide_plan_prompts( $ofp_funding_client ) ) {
+if ( $ofp_funding_client && OFP_Brand::hide_plan_prompts( $ofp_funding_client ) && empty( $ofp_funding_client->is_white_label ) ) {
     wp_safe_redirect( home_url( '/dashboard' ) );
     exit;
 }
@@ -113,8 +114,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_initiate_subscr
             OFP_Security::check_rate_limit( $_SERVER['REMOTE_ADDR'] ?? '', 'sub_checkout_init', 5, 600 );
         }
 
-        $sub_type = sanitize_text_field( $_POST['sub_type'] ?? '' );
-        $sub_plan = sanitize_text_field( $_POST['sub_plan'] ?? '' );
+        $sub_type   = sanitize_text_field( $_POST['sub_type'] ?? '' );
+        $sub_plan   = sanitize_text_field( $_POST['sub_plan'] ?? '' );
+        $sub_months = OFP_Property_CPT::normalize_months( (int) ( $_POST['sub_months'] ?? 1 ) );
 
         if ( ! in_array( $sub_type, [ 'crm', 'listing' ], true ) ) {
             $error = 'Please choose a valid subscription to pay for.';
@@ -127,7 +129,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_initiate_subscr
                 $client->id,
                 $sub_type,
                 $sub_type === 'listing' ? $sub_plan : null,
-                $override_amount
+                $override_amount,
+                $sub_months
             );
 
             if ( $checkout_url ) {
@@ -169,6 +172,12 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_submit_funding'
         $note            = sanitize_textarea_field( $_POST['note'] ?? '' );
 
         $valid_payment_types = [ 'sms', 'voice', 'plan_silver', 'plan_gold' ];
+        if ( ! empty( $client->is_white_label ) ) {
+            $valid_payment_types = [ 'sms', 'voice' ]; // White label plan payments are recorded by the admin.
+        }
+
+        // A plan payment also says how many months it covers. Saved as plan_silver_3 etc. (1 month stays plan_silver).
+        $plan_months = OFP_Property_CPT::normalize_months( (int) ( $_POST['plan_months'] ?? 1 ) );
 
         if ( $amount <= 0 ) {
             $error = 'Please enter the amount you sent.';
@@ -187,6 +196,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_submit_funding'
                 'plan_gold'   => 'Gold Plan',
             ];
             $payment_label = $payment_labels[ $payment_for ];
+            if ( in_array( $payment_for, [ 'plan_silver', 'plan_gold' ], true ) && $plan_months > 1 ) {
+                $payment_label .= ' — ' . $plan_months . ' months';
+                $payment_for   .= '_' . $plan_months;
+            }
 
             global $wpdb;
             $wpdb->insert( $wpdb->prefix . 'ofp_funding_requests', [
@@ -259,6 +272,13 @@ $listing_prices = [
     'silver' => OFP_Property_CPT::get_plan_price( 'silver' ),
     'gold'   => OFP_Property_CPT::get_plan_price( 'gold' ),
 ];
+// Price of each plan for 1, 3, 6 and 12 months.
+$period_prices = [];
+foreach ( [ 'silver', 'gold' ] as $pp_plan ) {
+    foreach ( OFP_Property_CPT::PERIODS as $pp_m ) {
+        $period_prices[ $pp_plan ][ $pp_m ] = OFP_Property_CPT::get_period_price( $pp_plan, $pp_m );
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -294,6 +314,20 @@ $listing_prices = [
     </div>
 
     <div id="tab-auto" class="ofp-funding-pane active">
+
+    <?php if ( ! empty( $client->is_white_label ) ) :
+        $wl_fs = OFP_White_Label::summary( $client );
+        if ( $wl_fs['type'] !== '' ) : ?>
+    <div class="ofp-funding-card">
+        <div class="ofp-funding-card-label">Your White Label Plan</div>
+        <div class="ofp-funding-card-title"><?php echo esc_html( $wl_fs['badge'] ); ?></div>
+        <div class="ofp-funding-card-desc">
+            <?php echo esc_html( $wl_fs['note'] ); ?>.
+            Your plan and maintenance fee are paid directly to us, so there is nothing to pay on this page except credit.
+            <a href="<?php echo esc_url( home_url( '/credits' ) ); ?>">See my billing</a>
+        </div>
+    </div>
+    <?php endif; endif; ?>
 
     <?php
         $topup_credits = class_exists( 'OFP_Credit' ) ? OFP_Credit::get( $client->id ) : null;
@@ -398,7 +432,7 @@ $listing_prices = [
         <div class="ofp-funding-card-title" id="ofp-listing-card-title"><?php echo $card_context ? esc_html( $card_context ) . ' — ' : 'Pay Plan — '; ?><?php echo esc_html( ucfirst( $default_plan ) ); ?></div>
         <div class="ofp-funding-card-desc">
             <?php if ( $card_context === 'Renew or switch' ) : ?>
-                Upgrade now — you'll get a fresh 30-day cycle on the new plan immediately.
+                Upgrade now — choose how long to pay for. Your new plan starts immediately.
             <?php else : ?>
                 Pay instantly via secure checkout — your listing plan activates automatically once confirmed.
             <?php endif; ?>
@@ -422,6 +456,15 @@ $listing_prices = [
                 </select>
             </div>
             <?php endif; ?>
+
+            <div class="ofp-plan-selector-row">
+                <label for="ofp-auto-months-select">Pay for</label>
+                <select id="ofp-auto-months-select" name="sub_months" class="ofp-plan-selector">
+                    <?php foreach ( OFP_Property_CPT::PERIODS as $pp_m ) : ?>
+                    <option value="<?php echo (int) $pp_m; ?>"><?php echo esc_html( OFP_Subscription::period_label( $pp_m ) ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
 
             <button type="submit" name="ofp_initiate_subscription_checkout" value="1" class="ofp-submit-btn" id="ofp-auto-pay-btn">
                 Pay NGN <?php echo esc_html( number_format( $default_price, 0 ) ); ?> Now
@@ -449,6 +492,7 @@ $listing_prices = [
             <input type="hidden" name="sub_type" value="<?php echo esc_attr( $underpaid->type ); ?>">
             <input type="hidden" name="sub_plan" value="<?php echo esc_attr( $underpaid->plan ); ?>">
             <input type="hidden" name="sub_override_amount" value="<?php echo esc_attr( $shortfall ); ?>">
+            <input type="hidden" name="sub_months" value="<?php echo (int) ( $underpaid->months ?? 1 ); ?>">
             <button type="submit" name="ofp_initiate_subscription_checkout" value="1" class="ofp-submit-btn">
                 Pay NGN <?php echo esc_html( number_format( $shortfall, 0 ) ); ?> Remaining
             </button>
@@ -523,7 +567,9 @@ $listing_prices = [
                     $show_manual_silver = false;
                     $show_manual_gold   = false;
 
-                    if ( ! $has_active_paid_plan ) {
+                    if ( ! empty( $client->is_white_label ) ) {
+                        // White label: no plan options, credit top-up only.
+                    } elseif ( ! $has_active_paid_plan ) {
                         // Free — both available
                         $show_manual_silver = true;
                         $show_manual_gold   = true;
@@ -542,17 +588,27 @@ $listing_prices = [
                     <optgroup label="Unified Plan">
                         <?php if ( $show_manual_silver ) : ?>
                         <option value="plan_silver">
-                            Silver Plan (NGN <?php echo esc_html( number_format( $listing_prices['silver'], 0 ) ); ?>/mo)
+                            Silver Plan (NGN <?php echo esc_html( number_format( $listing_prices['silver'], 0 ) ); ?> per month)
                         </option>
                         <?php endif; ?>
                         <?php if ( $show_manual_gold ) : ?>
                         <option value="plan_gold">
-                            Gold Plan (NGN <?php echo esc_html( number_format( $listing_prices['gold'], 0 ) ); ?>/mo)
+                            Gold Plan (NGN <?php echo esc_html( number_format( $listing_prices['gold'], 0 ) ); ?> per month)
                         </option>
                         <?php endif; ?>
                     </optgroup>
                     <?php endif; ?>
                 </select>
+            </div>
+
+            <div class="ofp-form-row" id="ofp-manual-months-row" style="display:none;">
+                <label for="ofp-plan-months">How long are you paying for?</label>
+                <select id="ofp-plan-months" name="plan_months" class="ofp-form-input ofp-select">
+                    <?php foreach ( OFP_Property_CPT::PERIODS as $pp_m ) : ?>
+                    <option value="<?php echo (int) $pp_m; ?>"><?php echo esc_html( OFP_Subscription::period_label( $pp_m ) ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="ofp-hint" id="ofp-manual-price-hint" style="margin-top:6px;"></p>
             </div>
 
             <div class="ofp-form-row">
@@ -643,23 +699,68 @@ document.querySelectorAll('.ofp-copy-btn').forEach(function(btn) {
 
     if ( !planSelect || !payBtn || !hiddenPlan ) return;
 
-    var prices = <?php echo wp_json_encode( $listing_prices ); ?>;
+    var prices = <?php echo wp_json_encode( $period_prices ); ?>;
+    var monthsSelect = document.getElementById('ofp-auto-months-select');
 
     function formatNumber(n) {
         return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
-    planSelect.addEventListener('change', function() {
-        var plan  = planSelect.value;
-        var price = prices[plan] || 0;
-
-        hiddenPlan.value   = plan;
+    function refresh() {
+        var plan   = hiddenPlan.value;
+        var months = monthsSelect ? monthsSelect.value : '1';
+        var price  = ( prices[plan] && prices[plan][months] ) || 0;
         payBtn.textContent = 'Pay NGN ' + formatNumber(price) + ' Now';
-
         if ( cardTitle ) {
             cardTitle.textContent = 'Pay Plan — ' + plan.charAt(0).toUpperCase() + plan.slice(1);
         }
+    }
+
+    planSelect.addEventListener('change', function() {
+        hiddenPlan.value = planSelect.value;
+        refresh();
     });
+    if ( monthsSelect ) { monthsSelect.addEventListener('change', refresh); }
+    refresh();
+})();
+
+/* ── Auto funding: months dropdown when only one plan is offered ───────── */
+(function() {
+    var planSelect = document.getElementById('ofp-auto-plan-select');
+    var payBtn     = document.getElementById('ofp-auto-pay-btn');
+    var hiddenPlan = document.getElementById('ofp-auto-sub-plan');
+    var monthsSel  = document.getElementById('ofp-auto-months-select');
+    if ( planSelect || !payBtn || !hiddenPlan || !monthsSel ) return;
+    var prices = <?php echo wp_json_encode( $period_prices ); ?>;
+    function fmt(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+    function refresh() {
+        var p = ( prices[hiddenPlan.value] && prices[hiddenPlan.value][monthsSel.value] ) || 0;
+        payBtn.textContent = 'Pay NGN ' + fmt(p) + ' Now';
+    }
+    monthsSel.addEventListener('change', refresh);
+    refresh();
+})();
+
+/* ── Manual transfer: show months and the exact price for the chosen plan ─ */
+(function() {
+    var forSel   = document.getElementById('ofp-payment-for');
+    var monthsEl = document.getElementById('ofp-plan-months');
+    var row      = document.getElementById('ofp-manual-months-row');
+    var hint     = document.getElementById('ofp-manual-price-hint');
+    var amount   = document.getElementById('ofp-amount');
+    if ( !forSel || !monthsEl || !row ) return;
+    var prices = <?php echo wp_json_encode( $period_prices ); ?>;
+    function fmt(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+    function sync() {
+        var m = /^plan_(silver|gold)$/.exec(forSel.value);
+        row.style.display = m ? '' : 'none';
+        if ( !m ) { hint.textContent = ''; return; }
+        var p = ( prices[m[1]] && prices[m[1]][monthsEl.value] ) || 0;
+        hint.textContent = 'Amount to send: NGN ' + fmt(p);
+        if ( amount && p ) { amount.value = p; }
+    }
+    forSel.addEventListener('change', sync);
+    monthsEl.addEventListener('change', sync);
 })();
 </script>
 

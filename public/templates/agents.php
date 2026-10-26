@@ -76,7 +76,7 @@ if ( ! empty( $where_params ) ) {
 }
 
 // Pre-fetch cover images for agent cards (profile cover_image_url, first property thumbnail, or default banner)
-$default_agent_cover = OFP_URL . 'assets/images/dashboard-hero-banner.webp';
+$default_agent_cover = ofp_image_url( 'dashboard-hero-banner.webp' );
 $agent_cover_images = [];
 foreach ( $agents as $ag ) {
     if ( ! empty( $ag->cover_image_url ) ) {
@@ -105,7 +105,7 @@ foreach ( $agents as $ag ) {
 }
 
 // Hero banner image from plugin assets (partnership & real estate deal theme)
-$agents_hero_img = OFP_URL . 'assets/images/' . rawurlencode( 'Real Estate Deal Handshake.webp' );
+$agents_hero_img = ofp_image_url( 'Real Estate Deal Handshake.webp' );
 ?>
 <!DOCTYPE html>
 <html lang="en"
@@ -685,7 +685,7 @@ $agents_hero_img = OFP_URL . 'assets/images/' . rawurlencode( 'Real Estate Deal 
                         <?php
                             $card_cover = ! empty( $agent_cover_images[ $agent->id ] ) 
                                 ? $agent_cover_images[ $agent->id ] 
-                                : ( ! empty( $agent->cover_image_url ) ? $agent->cover_image_url : ( OFP_URL . 'assets/images/dashboard-hero-banner.webp' ) );
+                                : ( ! empty( $agent->cover_image_url ) ? $agent->cover_image_url : ofp_image_url( 'dashboard-hero-banner.webp' ) );
                         ?>
                         <div class="h-44 sm:h-48 relative overflow-hidden bg-slate-900">
                             <img src="<?php echo esc_url( $card_cover ); ?>" alt="<?php echo esc_attr( $agent_name ); ?> cover" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">

@@ -96,7 +96,15 @@ class OFP_Subscription {
      * Solo companies never expire.
      */
     public static function is_plan_expired( ?object $client ): bool {
-        if ( ! $client || ! empty( $client->is_white_label ) || empty( $client->subscription_expires ) ) {
+        if ( ! $client ) {
+            return false;
+        }
+        // A yearly white label that has run out counts as Free. Old white label
+        // clients (no billing set) and lifetime clients never expire.
+        if ( ! empty( $client->is_white_label ) ) {
+            return OFP_White_Label::yearly_expired( $client );
+        }
+        if ( empty( $client->subscription_expires ) ) {
             return false;
         }
         return strtotime( $client->subscription_expires ) < strtotime( current_time( 'Y-m-d' ) );
@@ -107,16 +115,11 @@ class OFP_Subscription {
             return 'free';
         }
 
-        static $plan_cache = [];
-        if ( isset( $plan_cache[ $client_id ] ) ) {
-            return $plan_cache[ $client_id ];
-        }
-
         $best = 'free';
 
         $client = OFP_Client::get( $client_id );
         if ( self::is_plan_expired( $client ) ) {
-            return $plan_cache[ $client_id ] = 'free';
+            return 'free';
         }
         if ( $client ) {
             $best = self::higher_plan( $best, $client->plan ?? null );
@@ -130,7 +133,7 @@ class OFP_Subscription {
             $best = self::higher_plan( $best, $listing );
         }
 
-        return $plan_cache[ $client_id ] = $best;
+        return $best;
     }
 
     /**
@@ -153,7 +156,8 @@ class OFP_Subscription {
         }
         if ( ! isset( $memo[ $client_id ] ) ) {
             $client = OFP_Client::get( $client_id );
-            $memo[ $client_id ] = $client && ! empty( $client->is_white_label );
+            // Unlimited while white label benefits are active. A yearly plan that ended is on Free limits.
+            $memo[ $client_id ] = $client && OFP_White_Label::has_full_benefits( $client );
         }
         return $memo[ $client_id ];
     }
@@ -387,7 +391,7 @@ class OFP_Subscription {
                 // otherwise fall back to hardcoded defaults.
                 $wpdb->insert(
                     $wpdb->prefix . 'ofp_pipeline_configs',
-                    array_merge( [
+                    [
                         'client_id'              => $client_id,
                         'instant_sms_enabled'    => 1,
                         'instant_sms_message'    => get_option( 'ofp_default_instant_sms', self::default_instant_sms() ),
@@ -395,8 +399,8 @@ class OFP_Subscription {
                         'followup_1_type'        => 'sms',
                         'followup_1_message'     => get_option( 'ofp_default_followup_1', self::default_followup_sms() ),
                         'followup_2_delay_hours' => 24,
-                        'followup_2_type'        => 'sms',
-                        'followup_2_message'     => get_option( 'ofp_default_followup_2', self::default_followup_2_sms() ),
+                        'followup_2_type'        => 'voice',
+                        'followup_2_message'     => get_option( 'ofp_default_followup_2', self::default_ivr_message() ),
                         'followup_3_delay_hours' => 72,
                         'followup_3_type'        => 'sms',
                         'followup_3_message'     => get_option( 'ofp_default_followup_3', self::default_followup_3_sms() ),
@@ -404,7 +408,7 @@ class OFP_Subscription {
                         'ivr_option_1_action'    => 'transfer',
                         'ivr_option_2_action'    => 'sms',
                         'ivr_option_3_action'    => 'schedule',
-                    ], OFP_Queue::default_new_config_fields() )
+                    ]
                 );
             }
         }
@@ -678,6 +682,9 @@ class OFP_Subscription {
             }
         }
 
+        // ── White label yearly / lifetime billing reminders and expiry ────────
+        OFP_White_Label::run_daily_billing_check();
+
         // ── Clean expired session tokens ──────────────────────────────────────
         OFP_Auth::purge_expired_sessions();
     }
@@ -745,7 +752,8 @@ class OFP_Subscription {
         string $payment_ref,
         string $method = 'virtual_account',
         ?string $plan_override = null,
-        ?float $expected_amount = null
+        ?float $expected_amount = null,
+        int $months = 1
     ): void {
         global $wpdb;
 
@@ -754,8 +762,9 @@ class OFP_Subscription {
             return;
         }
 
-        $period_start = gmdate( 'Y-m-d' );
-        $period_end   = gmdate( 'Y-m-d', strtotime( '+30 days' ) );
+        $months = OFP_Property_CPT::normalize_months( $months );
+        // The new period starts today, or when the running one ends (never lose paid days).
+        [ $period_start, $period_end ] = self::compute_period( $client->subscription_expires ?? null, $months );
 
         if ( $type === 'crm' ) {
             $plan = $plan_override ?: $client->plan;
@@ -777,23 +786,24 @@ class OFP_Subscription {
         }
 
         // Insert a new paid subscription record for this payment cycle.
-        $wpdb->insert(
-            $wpdb->prefix . 'ofp_subscriptions',
-            [
-                'client_id'       => $client_id,
-                'type'            => $type,
-                'plan'            => $plan,
-                'amount'          => $amount,
-                'expected_amount' => $expected_amount,
-                'payment_method'  => $method,
-                'payment_ref'     => sanitize_text_field( $payment_ref ),
-                'status'          => 'paid',
-                'period_start'    => $period_start,
-                'period_end'      => $period_end,
-                'paid_at'         => current_time( 'mysql' ),
-                'created_at'      => current_time( 'mysql' ),
-            ]
-        );
+        $row = [
+            'client_id'       => $client_id,
+            'type'            => $type,
+            'plan'            => $plan,
+            'amount'          => $amount,
+            'expected_amount' => $expected_amount,
+            'payment_method'  => $method,
+            'payment_ref'     => sanitize_text_field( $payment_ref ),
+            'status'          => 'paid',
+            'period_start'    => $period_start,
+            'period_end'      => $period_end,
+            'paid_at'         => current_time( 'mysql' ),
+            'created_at'      => current_time( 'mysql' ),
+        ];
+        if ( OFP_White_Label::schema_ready() ) {
+            $row['months'] = $months;
+        }
+        $wpdb->insert( $wpdb->prefix . 'ofp_subscriptions', $row );
 
         // A payment for a LOWER plan must not lower a higher plan that is still
         // running. The money is recorded above. The plan and the end date are left
@@ -824,18 +834,16 @@ class OFP_Subscription {
         }
 
         // Extend the client's subscription_expires date in ofp_clients.
-        // Uses GREATEST() so a payment processed slightly late still gives a
-        // full 30 days from today, not from the already-past expiry date.
+        // The new end date was worked out above from the later of today and the
+        // running end date, so a late payment still gets the full period.
         $wpdb->query(
             $wpdb->prepare(
                 "UPDATE {$wpdb->prefix}ofp_clients
                  SET status               = 'active',
-                     subscription_expires = DATE_ADD(
-                         GREATEST( subscription_expires, CURDATE() ),
-                         INTERVAL 30 DAY
-                     ),
+                     subscription_expires = %s,
                      updated_at = NOW()
                  WHERE id = %d",
+                $period_end,
                 $client_id
             )
         );
@@ -846,7 +854,7 @@ class OFP_Subscription {
         self::sync_client_plan_columns( $client_id, $sync_plan );
 
         // Send payment confirmation email.
-        OFP_Mailer::send_payment_confirmed( $client, $amount, $type );
+        OFP_Mailer::send_payment_confirmed( $client, $amount, $type, $sync_plan, $months, $period_end );
 
         // Clean up stale 'pending' rows for the same client+type so the
         // dashboard "Pay Now" banner no longer fires after a real payment.
@@ -862,10 +870,72 @@ class OFP_Subscription {
                 'amount'    => $amount,
                 'type'      => $type,
                 'plan'      => $plan,
+                'months'    => $months,
+                'valid_to'  => $period_end,
                 'method'    => $method,
                 'reference' => $payment_ref
             ] );
         }
+    }
+
+    /**
+     * Start and end dates of a new paid period.
+     * Starts today, or when the running period ends if that is later.
+     * One month is 30 days (as before). 3, 6 and 12 months are calendar months.
+     *
+     * @return array{0:string,1:string} [ start, end ] as Y-m-d.
+     */
+    public static function compute_period( ?string $current_expiry, int $months ): array {
+        $months = OFP_Property_CPT::normalize_months( $months );
+        $today  = current_time( 'Y-m-d' );
+        $start  = ( $current_expiry && $current_expiry > $today ) ? substr( $current_expiry, 0, 10 ) : $today;
+        $end    = $months === 1
+            ? gmdate( 'Y-m-d', strtotime( $start . ' +30 days' ) )
+            : gmdate( 'Y-m-d', strtotime( $start . ' +' . $months . ' months' ) );
+        return [ $start, $end ];
+    }
+
+    /**
+     * Reads a funding request channel such as plan_silver or plan_gold_6.
+     * @return array{plan:string,months:int}|null  null when it is not a plan payment.
+     */
+    public static function parse_plan_channel( string $channel ): ?array {
+        if ( preg_match( '/^plan_(silver|gold)(?:_(\d+))?$/', $channel, $m ) ) {
+            return [
+                'plan'   => $m[1],
+                'months' => OFP_Property_CPT::normalize_months( isset( $m[2] ) && $m[2] !== '' ? (int) $m[2] : 1 ),
+            ];
+        }
+        return null;
+    }
+
+    /** A readable name for a funding request channel. */
+    public static function channel_label( string $channel ): string {
+        $plan = self::parse_plan_channel( $channel );
+        if ( $plan ) {
+            return ucfirst( $plan['plan'] ) . ' plan, ' . self::period_label( $plan['months'] );
+        }
+        return $channel === 'sms' ? 'SMS credit' : ( $channel === 'voice' ? 'Voice credit' : ucfirst( $channel ) );
+    }
+
+    /** Type and plan words for a payment row, in plain words, for every payment list. */
+    public static function row_labels( object $sub ): array {
+        if ( ( $sub->type ?? '' ) === 'whitelabel' ) {
+            $plan = [ 'wl_yearly' => 'Yearly', 'wl_lifetime' => 'Lifetime', 'wl_maint' => 'Maintenance' ][ $sub->plan ?? '' ] ?? 'White label';
+            return [ 'type' => 'WHITE LABEL', 'plan' => strtoupper( $plan ) ];
+        }
+        $plan   = strtoupper( (string) ( $sub->plan ?: '—' ) );
+        $months = (int) ( $sub->months ?? 1 );
+        if ( $months > 1 ) {
+            $plan .= ' · ' . $months . ' MONTHS';
+        }
+        return [ 'type' => strtoupper( (string) $sub->type ), 'plan' => $plan ];
+    }
+
+    /** "1 month", "3 months" ... */
+    public static function period_label( int $months ): string {
+        $months = OFP_Property_CPT::normalize_months( $months );
+        return $months === 1 ? '1 month' : $months . ' months';
     }
 
     /**
@@ -990,7 +1060,8 @@ class OFP_Subscription {
         float $expected,
         string $payment_ref,
         string $method,
-        ?string $plan_override = null
+        ?string $plan_override = null,
+        int $months = 1
     ): void {
         global $wpdb;
 
@@ -1002,20 +1073,21 @@ class OFP_Subscription {
 
         $plan = $plan_override ? self::normalize_plan( $plan_override ) : $client->plan;
 
-        $wpdb->insert(
-            $wpdb->prefix . 'ofp_subscriptions',
-            [
-                'client_id'       => $client_id,
-                'type'            => 'listing',
-                'plan'            => $plan,
-                'amount'          => $amount_paid,
-                'expected_amount' => $expected,
-                'payment_method'  => $method,
-                'payment_ref'     => sanitize_text_field( $payment_ref ),
-                'status'          => 'underpaid',
-                'created_at'      => current_time( 'mysql' ),
-            ]
-        );
+        $under_row = [
+            'client_id'       => $client_id,
+            'type'            => 'listing',
+            'plan'            => $plan,
+            'amount'          => $amount_paid,
+            'expected_amount' => $expected,
+            'payment_method'  => $method,
+            'payment_ref'     => sanitize_text_field( $payment_ref ),
+            'status'          => 'underpaid',
+            'created_at'      => current_time( 'mysql' ),
+        ];
+        if ( OFP_White_Label::schema_ready() ) {
+            $under_row['months'] = OFP_Property_CPT::normalize_months( $months );
+        }
+        $wpdb->insert( $wpdb->prefix . 'ofp_subscriptions', $under_row );
 
         $shortfall = max( 0, $expected - $amount_paid );
 
@@ -1201,10 +1273,6 @@ class OFP_Subscription {
      *
      * @return string
      */
-    private static function default_followup_2_sms(): string {
-        return 'Hi {{name}}, this is {{business_name}}. We are still happy to help you with {{property}}. Reply to this message or call us anytime.';
-    }
-
     private static function default_ivr_message(): string {
         return 'Hello, this is a message from {{business_name}}. You recently showed interest in our services. Press 1 to speak with us now. Press 2 to receive our WhatsApp contact. Press 3 for us to call you back later.';
     }
@@ -1261,7 +1329,8 @@ class OFP_Subscription {
         int $client_id,
         string $type,
         float $amount_paid,
-        ?string $plan = null
+        ?string $plan = null,
+        int $months = 1
     ): void {
         global $wpdb;
 
@@ -1269,6 +1338,8 @@ class OFP_Subscription {
         if ( ! $client ) {
             return;
         }
+
+        $months = OFP_Property_CPT::normalize_months( $months );
 
         // Product is unified — CRM manual approvals become a listing payment too.
         $type = 'listing';
@@ -1283,32 +1354,32 @@ class OFP_Subscription {
             ORDER BY created_at DESC LIMIT 1
         ", $client_id, $type ) );
 
-        $period_end = date( 'Y-m-d', strtotime( '+30 days' ) );
+        // From the later of today and the running end date, so no paid days are lost.
+        [ $period_start, $period_end ] = self::compute_period( $client->subscription_expires ?? null, $months );
 
-        if ( $existing ) {
-            $wpdb->update(
-                $wpdb->prefix . 'ofp_subscriptions',
-                [
-                    'status'          => 'paid',
-                    'plan'            => $plan,
-                    'payment_method'  => 'manual',
-                    'amount'          => $amount_paid,
-                    'expected_amount' => null,
-                    'period_end'      => $period_end,
-                ],
-                [ 'id' => $existing->id ]
-            );
+        $paid_row = [
+            'status'          => 'paid',
+            'plan'            => $plan,
+            'payment_method'  => 'manual',
+            'amount'          => $amount_paid,
+            'expected_amount' => null,
+            'period_start'    => $period_start,
+            'period_end'      => $period_end,
+            'paid_at'         => current_time( 'mysql' ),
+        ];
+        if ( OFP_White_Label::schema_ready() ) {
+            $paid_row['months'] = $months;
+        }
+
+        if ( $existing && $existing->status !== 'paid' ) {
+            // A waiting (pending/underpaid) row becomes the paid one.
+            $wpdb->update( $wpdb->prefix . 'ofp_subscriptions', $paid_row, [ 'id' => $existing->id ] );
         } else {
-            // No row at all — create and immediately activate.
-            $wpdb->insert( $wpdb->prefix . 'ofp_subscriptions', [
-                'client_id'      => $client_id,
-                'type'           => $type,
-                'plan'           => $plan,
-                'amount'         => $amount_paid,
-                'payment_method' => 'manual',
-                'status'         => 'paid',
-                'period_end'     => $period_end,
-                'created_at'     => current_time( 'mysql' ),
+            // No row, or the last one is an older paid period: add a new row so payment history is kept.
+            $wpdb->insert( $wpdb->prefix . 'ofp_subscriptions', $paid_row + [
+                'client_id'  => $client_id,
+                'type'       => $type,
+                'created_at' => current_time( 'mysql' ),
             ] );
         }
 
@@ -1332,6 +1403,27 @@ class OFP_Subscription {
         // The fix: keep ofp_clients.plan / listing_plan in sync so client_plan(),
         // the Funding page, and every menu/feature gate all agree immediately.
         self::sync_client_plan_columns( $client_id, $plan );
+
+        // A paid plan clears any other waiting "pay now" row, so the client is never asked to pay again.
+        $wpdb->query( $wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}ofp_subscriptions
+             WHERE client_id = %d AND type = %s AND status = 'pending'",
+            $client_id,
+            $type
+        ) );
+
+        // Tell the client, the same as a gateway payment does.
+        OFP_Mailer::send_payment_confirmed( $client, $amount_paid, 'listing', $plan, $months, $period_end );
+        if ( class_exists( 'OFP_Logger' ) ) {
+            OFP_Logger::log( 'Payment successful', $client_id, [
+                'amount'   => $amount_paid,
+                'type'     => 'listing',
+                'plan'     => $plan,
+                'months'   => $months,
+                'valid_to' => $period_end,
+                'method'   => 'manual',
+            ] );
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

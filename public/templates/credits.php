@@ -72,33 +72,50 @@ $transactions = $wpdb->get_results(
 
     <?php 
     $is_solo = ! empty( $client->is_white_label ) || ( class_exists( 'OFP_Subscription' ) && OFP_Subscription::is_unlimited( (int) $client->id ) );
+    $wl_sum  = $is_solo ? OFP_White_Label::summary( $client ) : null;
+    $wl_bad  = $wl_sum && $wl_sum['tone'] === 'bad';
     ?>
+    <?php if ( $wl_sum && $wl_sum['type'] !== '' && $wl_sum['tone'] !== 'ok' ) : ?>
+        <div class="ofp-alert <?php echo $wl_bad ? 'ofp-alert-error' : 'ofp-alert-warning'; ?>">
+            <?php if ( $wl_sum['type'] === 'yearly' ) : ?>
+                <strong><?php echo $wl_bad ? 'Your yearly plan has ended.' : 'Your yearly plan ends soon.'; ?></strong>
+                <?php echo $wl_bad
+                    ? 'Your dashboard is on Free limits. Your website, domain and properties are still online. Contact us to renew.'
+                    : esc_html( $wl_sum['note'] ) . '. Contact us to renew so nothing changes on your dashboard.'; ?>
+            <?php else : ?>
+                <strong><?php echo $wl_bad ? 'Maintenance fee overdue.' : 'Maintenance fee due soon.'; ?></strong>
+                <?php echo esc_html( $wl_sum['note'] ); ?>. Your lifetime access is not switched off. Please contact us to pay.
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
     <!-- Credits & Billing 4-KPI Grid -->
     <div class="ofp-zentra-kpi-grid" style="margin-bottom: 32px;">
         <!-- 1. Plan -->
         <div class="ofp-kpi-card ofp-kpi-card-hero">
             <div class="ofp-kpi-title" style="display:flex; justify-content:space-between; align-items:center;">
                 <span>Subscription Plan</span>
-                <?php if ( $client->status === 'active' || $is_solo ) : ?>
+                <?php if ( $wl_bad && $wl_sum['type'] === 'yearly' ) : ?>
+                    <span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#f87171;">Expired</span>
+                <?php elseif ( $client->status === 'active' || $is_solo ) : ?>
                     <span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#34d399;">
                         <span class="ofp-status-dot-pulse" style="width:7px; height:7px;"></span> Active
                     </span>
                 <?php endif; ?>
             </div>
-            <div class="ofp-kpi-value"><?php echo $is_solo ? 'PREMIUM' : esc_html( strtoupper( OFP_Subscription::client_plan( $client->id ) ) ); ?></div>
+            <div class="ofp-kpi-value"><?php echo $is_solo ? esc_html( $wl_sum['title'] ) : esc_html( strtoupper( OFP_Subscription::client_plan( $client->id ) ) ); ?></div>
             <div class="ofp-kpi-badge badge-hero">
                 <span class="ofp-status-dot-pulse" style="width:6px; height:6px;"></span>
-                <span><?php echo $is_solo ? 'Lifetime Access' : esc_html( ucfirst( str_replace( '_', ' ', $client->status ) ) ) . ' Status'; ?></span>
+                <span><?php echo $is_solo ? esc_html( $wl_sum['badge'] ) : esc_html( ucfirst( str_replace( '_', ' ', $client->status ) ) ) . ' Status'; ?></span>
             </div>
         </div>
 
         <!-- 2. Expires / Validity -->
         <div class="ofp-kpi-card">
-            <div class="ofp-kpi-title"><?php echo $is_solo ? 'Subscription Validity' : 'Subscription Expires'; ?></div>
+            <div class="ofp-kpi-title"><?php echo $is_solo ? ( $wl_sum['type'] === 'yearly' ? 'Plan Valid Until' : 'Subscription Validity' ) : 'Subscription Expires'; ?></div>
             <div class="ofp-kpi-value" style="font-size: 20px;">
                 <?php 
                 if ( $is_solo ) {
-                    echo 'Unlimited';
+                    echo esc_html( $wl_sum['valid'] );
                 } else {
                     echo esc_html( $client->subscription_expires ? gmdate( 'M j, Y', strtotime( $client->subscription_expires ) ) : '—' );
                 }
@@ -108,7 +125,7 @@ $transactions = $wpdb->get_results(
                 <span>
                     <?php 
                     if ( $is_solo ) {
-                        echo 'Never Expires';
+                        echo esc_html( $wl_sum['note'] );
                     } elseif ( $client->subscription_expires ) {
                         $diff_days = round( ( strtotime( $client->subscription_expires ) - time() ) / DAY_IN_SECONDS );
                         echo $diff_days > 0 ? $diff_days . ' days remaining' : 'Renewal due';
@@ -164,8 +181,8 @@ $transactions = $wpdb->get_results(
                     <tbody>
                         <?php foreach ( $subscriptions as $sub ) : ?>
                             <tr>
-                                <td><span style="font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:4px; background:rgba(59,130,246,0.1); color:#3b82f6; letter-spacing:0.04em;"><?php echo esc_html( strtoupper( $sub->type ) ); ?></span></td>
-                                <td style="font-weight:600; color:var(--text-main);"><?php echo esc_html( strtoupper( $sub->plan ?: '—' ) ); ?></td>
+                                <td><span style="font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:4px; background:rgba(59,130,246,0.1); color:#3b82f6; letter-spacing:0.04em;"><?php echo esc_html( OFP_Subscription::row_labels( $sub )['type'] ); ?></span></td>
+                                <td style="font-weight:600; color:var(--text-main);"><?php echo esc_html( OFP_Subscription::row_labels( $sub )['plan'] ); ?></td>
                                 <td><strong style="color:var(--text-main);">NGN <?php echo esc_html( number_format( (float) $sub->amount, 2 ) ); ?></strong></td>
                                 <td>
                                     <?php 

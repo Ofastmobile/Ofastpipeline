@@ -1233,7 +1233,7 @@ class OFP_Property_CPT {
 
                         <div class="ofp-card-mockup" id="ofp-preview-card">
                             <div class="ofp-card-media-wrap">
-                                <img src="<?php echo esc_url( $featured_img_url ?: plugin_dir_url( dirname( __FILE__ ) ) . 'assets/images/placeholder-property.jpg' ); ?>" 
+                                <img src="<?php echo esc_url( $featured_img_url ?: ( function_exists( 'ofp_image_url' ) ? ofp_image_url( 'placeholder-property.jpg' ) : plugin_dir_url( dirname( __FILE__ ) ) . 'assets/images/placeholder-property.jpg' ) ); ?>" 
                                      id="ofp-preview-img" 
                                      alt="Property Preview"
                                      onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'260\' viewBox=\'0 0 400 260\' fill=\'%230f172a\'><rect width=\'400\' height=\'260\' fill=\'%231e293b\'/><text x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-family=\'sans-serif\' font-size=\'16\'>No Cover Photo Uploaded</text></svg>';">
@@ -2126,6 +2126,38 @@ class OFP_Property_CPT {
     public static function get_plan_price( ?string $plan ): float {
         if ( ! $plan || ! in_array( $plan, self::PLAN_KEYS, true ) ) return 0.0;
         return (float) get_option( "ofp_listing_price_{$plan}", self::DEFAULT_PLAN_PRICES[ $plan ] );
+    }
+
+    /** Months a client can pay for in one go. */
+    const PERIODS = [ 1, 3, 6, 12 ];
+
+    public static function normalize_months( $months ): int {
+        $months = (int) $months;
+        return in_array( $months, self::PERIODS, true ) ? $months : 1;
+    }
+
+    /**
+     * Price for a plan over N months. 1 month is the normal monthly price.
+     * 3/6/12 months use the admin's price when set, else monthly x months.
+     */
+    public static function get_period_price( ?string $plan, int $months ): float {
+        $months  = self::normalize_months( $months );
+        $monthly = self::get_plan_price( $plan );
+        if ( $months === 1 || $monthly <= 0 ) {
+            return $monthly;
+        }
+        $saved = (float) get_option( "ofp_period_price_{$plan}_{$months}", 0 );
+        return $saved > 0 ? $saved : round( $monthly * $months, 2 );
+    }
+
+    /** @param array<string,array<int,mixed>> $posted plan => [ months => price ] */
+    public static function save_period_prices( array $posted ): void {
+        foreach ( self::PLAN_KEYS as $plan ) {
+            foreach ( [ 3, 6, 12 ] as $m ) {
+                $v = isset( $posted[ $plan ][ $m ] ) ? max( 0.0, (float) $posted[ $plan ][ $m ] ) : 0.0;
+                update_option( "ofp_period_price_{$plan}_{$m}", $v );
+            }
+        }
     }
 
     public static function get_plan_cap( ?string $plan ): int {
