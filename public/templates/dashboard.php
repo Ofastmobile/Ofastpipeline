@@ -395,7 +395,13 @@ if ( ! empty( $recent_buyers_raw ) ) {
             $badge_label = 'Installment';
         }
 
-        $time_str = ! empty( $b_row->created_at ) ? human_time_diff( strtotime( $b_row->created_at ), current_time( 'timestamp' ) ) . ' ago' : 'Recent';
+        if ( ! empty( $b_row->created_at ) ) {
+            $b_dt     = DateTime::createFromFormat( 'Y-m-d H:i:s', $b_row->created_at, wp_timezone() );
+            $b_ts     = $b_dt ? $b_dt->getTimestamp() : strtotime( $b_row->created_at );
+            $time_str = human_time_diff( $b_ts, time() ) . ' ago';
+        } else {
+            $time_str = 'Recent';
+        }
 
         $recent_buyers_display[] = [
             'id'             => (int) $b_row->id,

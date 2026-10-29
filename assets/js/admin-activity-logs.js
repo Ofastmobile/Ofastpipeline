@@ -150,16 +150,18 @@ function ofpTriggerAdminResendEmail() {
                 status.textContent = '✅ ' + (resp.data.message || 'Email successfully resent via SMTP.');
             }
             setTimeout(function() {
-                if (btn) btn.disabled = false;
-                if (btnText) btnText.textContent = 'Resend Again';
-            }, 3500);
+                window.location.reload();
+            }, 1500);
         } else {
             if (btn) btn.disabled = false;
             if (btnText) btnText.textContent = 'Resend Email';
             if (status) {
                 status.style.color = '#dc2626';
-                status.textContent = '❌ ' + (resp.data || 'Failed to resend email.');
+                status.textContent = '❌ ' + (resp.data || 'Failed to resend email.') + ' Updating log table...';
             }
+            setTimeout(function() {
+                window.location.reload();
+            }, 2200);
         }
     })
     .catch(function(err) {

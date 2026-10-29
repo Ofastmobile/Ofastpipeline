@@ -5,6 +5,8 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+nocache_headers();
+
 OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
@@ -365,7 +367,8 @@ $status_badges = [
                     </thead>
                     <tbody id="ofp-leads-tbody">
                         <?php foreach ( $leads as $lead ) : 
-                            $lead_search = strtolower( ( $lead->name ?: '' ) . ' ' . $lead->phone . ' ' . ( $lead->email ?: '' ) . ' ' . ( $lead->message ?: '' ) );
+                            $lead_notes  = $lead->notes ?? ( $lead->message ?? '' );
+                            $lead_search = strtolower( ( $lead->name ?? '' ) . ' ' . ( $lead->phone ?? '' ) . ' ' . ( $lead->email ?? '' ) . ' ' . $lead_notes );
                         ?>
                             <tr class="ofp-lead-row" data-status="<?php echo esc_attr( $lead->status ); ?>" data-search="<?php echo esc_attr( $lead_search ); ?>">
                                 <td><input type="checkbox" class="ofp-sel" name="lead_ids[]" value="<?php echo (int) $lead->id; ?>" form="ofp-bulk-form" aria-label="Select <?php echo esc_attr( $lead->name ?: $lead->phone ); ?>"></td>
@@ -380,7 +383,7 @@ $status_badges = [
                                 <td>
                                     <?php if ( $lead->status !== 'converted' ) : ?>
                                         <form method="POST" action="" style="display:inline;">
-                                            <?php wp_nonce_field( 'ofp_leads_' . $client->id, 'ofp_leads_nonce' ); ?>
+                                             <?php wp_nonce_field( 'ofp_leads_' . $client->id, 'ofp_leads_nonce' ); ?>
                                             <input type="hidden" name="lead_id" value="<?php echo esc_attr( $lead->id ); ?>">
                                             <select name="new_status" onchange="this.form.submit()" style="font-size:12px;padding:6px 12px;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-body);color:var(--text-main);outline:none;cursor:pointer;">
                                                 <?php foreach ( array_keys( $status_badges ) as $s ) : ?>
@@ -396,7 +399,7 @@ $status_badges = [
                                     <?php endif; ?>
                                 </td>
                                 <td style="text-align: center;">
-                                    <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" onclick="openMessageModal(<?php echo esc_attr($lead->id); ?>, '<?php echo esc_js($lead->name); ?>', '<?php echo esc_js($lead->phone); ?>', '<?php echo esc_js($lead->email); ?>')" title="Send Message">
+                                    <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" onclick="openMessageModal(<?php echo esc_attr($lead->id); ?>, '<?php echo esc_js($lead->name ?? ''); ?>', '<?php echo esc_js($lead->phone ?? ''); ?>', '<?php echo esc_js($lead->email ?? ''); ?>')" title="Send Message">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
                                     </button>
                                 </td>
@@ -819,6 +822,12 @@ document.getElementById('send-message-form').addEventListener('submit', function
             loadLeadsAjax(e.state.url, false);
         } else {
             loadLeadsAjax(window.location.href, false);
+        }
+    });
+
+    window.addEventListener('pageshow', function(e) {
+        if (e.persisted) {
+            window.location.reload();
         }
     });
 })();

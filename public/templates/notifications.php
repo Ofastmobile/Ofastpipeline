@@ -72,7 +72,7 @@ $total_pages = ceil( $total / $per_page );
     <title><?php echo esc_html( OFP_Brand::title( 'Notifications', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
 </head>
-<body class="ofp-portal-body">
+<body class="ofp-portal-body ofp-notifications-page">
 
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
@@ -129,7 +129,11 @@ $total_pages = ceil( $total / $per_page );
                     <!-- Action / Time -->
                     <div style="text-align: right; flex-shrink: 0; padding-left: 24px;">
                         <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">
-                            <?php echo esc_html( human_time_diff( strtotime( $notif->created_at ), current_time('timestamp') ) . ' ago' ); ?>
+                            <?php
+                            $n_dt = DateTime::createFromFormat( 'Y-m-d H:i:s', $notif->created_at, wp_timezone() );
+                            $n_ts = $n_dt ? $n_dt->getTimestamp() : strtotime( $notif->created_at );
+                            echo esc_html( human_time_diff( $n_ts, time() ) . ' ago' );
+                            ?>
                         </div>
                         <?php if ( ! $notif->is_read ) : ?>
                             <form method="POST" style="margin: 0;">

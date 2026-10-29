@@ -550,7 +550,11 @@ class OFP_Communications_Log {
                             <?php endif; ?>
                         </div>
                         <div style="font-size: 12px; color: var(--text-muted);">
-                            <?php echo esc_html( human_time_diff( strtotime( $comm->sent_at ), current_time( 'timestamp' ) ) . ' ago' ); ?>
+                            <?php
+                            $comm_dt = DateTime::createFromFormat( 'Y-m-d H:i:s', $comm->sent_at, wp_timezone() );
+                            $comm_ts = $comm_dt ? $comm_dt->getTimestamp() : strtotime( $comm->sent_at );
+                            echo esc_html( human_time_diff( $comm_ts, time() ) . ' ago' );
+                            ?>
                         </div>
                     </div>
 

@@ -50,7 +50,7 @@ $logs = $wpdb->get_results( $wpdb->prepare(
      LEFT JOIN {$wpdb->prefix}ofp_clients c ON l.client_id = c.id
      LEFT JOIN {$wpdb->prefix}ofp_admins a ON l.admin_id = a.id
      {$where}
-     ORDER BY l.created_at DESC
+     ORDER BY l.created_at DESC, l.id DESC
      LIMIT %d OFFSET %d",
     $query_args
 ) );
@@ -194,10 +194,14 @@ $base_client_url = $is_portal ? home_url( '/admin-portal?tab=clients&client_id='
                                 $action_theme = 'default';
                             }
 
-                            $log_timestamp  = strtotime( $log->created_at );
+                            // Convert stored local datetime string into a true UTC timestamp in the site's timezone.
+                            // This ensures wp_date() correctly displays the local time without double-offsetting,
+                            // and human_time_diff() correctly compares against time() (UTC).
+                            $log_dt         = DateTime::createFromFormat( 'Y-m-d H:i:s', $log->created_at, wp_timezone() );
+                            $log_timestamp  = $log_dt ? $log_dt->getTimestamp() : strtotime( $log->created_at );
                             $date_full      = wp_date( 'l, F j, Y', $log_timestamp );
                             $time_exact     = wp_date( 'g:i:s A', $log_timestamp );
-                            $time_rel       = human_time_diff( $log_timestamp, current_time( 'timestamp' ) ) . ' ago';
+                            $time_rel       = human_time_diff( $log_timestamp, time() ) . ' ago';
                             $client_profile = $log->client_id ? $base_client_url . (int) $log->client_id : '';
 
                             // Payload for modal

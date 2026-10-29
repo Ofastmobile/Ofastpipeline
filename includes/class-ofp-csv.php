@@ -262,7 +262,7 @@ class OFP_CSV {
                     $inq->lead_phone ?? '',
                     $inq->lead_email ?? '',
                     $inq->property_title ?? 'General Inquiry',
-                    ( $inq->tour_type ?? '' ) === 'whatsapp_video' ? 'WhatsApp Video Tour' : 'Physical Tour',
+                    in_array( $inq->tour_type ?? '', [ 'whatsapp_video', 'video' ], true ) ? 'WhatsApp Video Tour' : 'Physical Tour',
                     $inq->preferred_viewing_date ?? '',
                     $inq->preferred_viewing_time ?? '',
                     ucfirst( $inq->status ?? 'pending' ),

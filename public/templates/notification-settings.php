@@ -59,7 +59,7 @@ $current_pref = $client->ofp_notification_pref ?? OFP_Notification::PREF_BOTH;
 	<title><?php echo esc_html( OFP_Brand::title( 'Notification Settings', $client ?? null ) ); ?></title>
 	<?php wp_head(); ?>
 </head>
-<body class="ofp-portal-body">
+<body class="ofp-portal-body ofp-notifications-page">
     <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
     <div class="ofp-container">
@@ -152,7 +152,11 @@ $current_pref = $client->ofp_notification_pref ?? OFP_Notification::PREF_BOTH;
                                     <div class="ofp-notif-item <?php echo $notif->is_read ? '' : 'unread'; ?>" style="<?php echo $idx >= 15 ? 'display: none;' : ''; ?>">
                                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
                                             <strong style="font-size:14px; color:var(--text-main); line-height:1.4; padding-right:8px;"><?php echo esc_html( $notif->title ); ?></strong>
-                                            <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;"><?php echo esc_html( human_time_diff( strtotime( $notif->created_at ), time() ) ); ?> ago</span>
+                                            <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;"><?php
+                                                $n_dt = DateTime::createFromFormat( 'Y-m-d H:i:s', $notif->created_at, wp_timezone() );
+                                                $n_ts = $n_dt ? $n_dt->getTimestamp() : strtotime( $notif->created_at );
+                                                echo esc_html( human_time_diff( $n_ts, time() ) );
+                                            ?> ago</span>
                                         </div>
                                         <div style="font-size:13px; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">
                                             <?php echo esc_html( $notif->message ); ?>

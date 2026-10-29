@@ -392,7 +392,15 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px;">
             <div style="font-size:11px; font-weight:600; text-transform:uppercase; color:#64748b; margin-bottom:4px;">Last Activity</div>
             <div style="font-size:14px; font-weight:600; color:#475569; margin-top:2px;">
-                <?php echo ! empty( $detail['last_at'] ) ? esc_html( human_time_diff( strtotime( $detail['last_at'] ), current_time( 'timestamp' ) ) . ' ago' ) : '—'; ?>
+                <?php
+                if ( ! empty( $detail['last_at'] ) ) {
+                    $c_dt = DateTime::createFromFormat( 'Y-m-d H:i:s', $detail['last_at'], wp_timezone() );
+                    $c_ts = $c_dt ? $c_dt->getTimestamp() : strtotime( $detail['last_at'] );
+                    echo esc_html( human_time_diff( $c_ts, time() ) . ' ago' );
+                } else {
+                    echo '—';
+                }
+                ?>
             </div>
         </div>
     </div>
@@ -671,7 +679,15 @@ include OFP_PATH . 'admin/views/partials/header.php';
                             <?php echo ! empty( $c['balance'] ) ? esc_html( $format_money( $c['balance'] ) ) : '—'; ?>
                         </td>
                         <td style="color:#64748b; font-size:12px;">
-                            <?php echo ! empty( $c['last_at'] ) ? esc_html( human_time_diff( strtotime( $c['last_at'] ), current_time( 'timestamp' ) ) . ' ago' ) : '—'; ?>
+                            <?php
+                            if ( ! empty( $c['last_at'] ) ) {
+                                $c_dt = DateTime::createFromFormat( 'Y-m-d H:i:s', $c['last_at'], wp_timezone() );
+                                $c_ts = $c_dt ? $c_dt->getTimestamp() : strtotime( $c['last_at'] );
+                                echo esc_html( human_time_diff( $c_ts, time() ) . ' ago' );
+                            } else {
+                                echo '—';
+                            }
+                            ?>
                         </td>
                         <td style="text-align: right;">
                             <a href="<?php echo esc_url( $view_url ); ?>" class="button button-small">View Details</a>

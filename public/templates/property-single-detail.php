@@ -223,7 +223,11 @@ if ( empty( $gallery_urls ) ) {
                 },
                 inquiryLoading: false,
                 actionLoading: '',
-                inquirySuccess: false,
+                inquirySuccess: (function() {
+                    try {
+                        return !!localStorage.getItem('ofp_inquiry_' + <?php echo (int) $post_id; ?>);
+                    } catch(e) { return false; }
+                })(),
                 inquiryError: '',
                 tourType: 'physical',
                 inquiryDate: <?php echo json_encode( gmdate( 'Y-m-d', strtotime( '+3 days' ) ) ); ?>,
@@ -360,12 +364,20 @@ if ( empty( $gallery_urls ) ) {
                         const rejected = !!(data && data.success === false);
                         if (rejected && action === 'booking') {
                             this.inquiryError = (data && data.message) || 'We could not send your request. Please try again.';
+                            if (data && data.duplicate) {
+                                try {
+                                    localStorage.setItem('ofp_inquiry_' + <?php echo (int) $post_id; ?>, '1');
+                                } catch(e) {}
+                            }
                             return;
                         }
                         // For WhatsApp and Call the visitor still reaches the agent, we
                         // just do not claim the request was logged.
                         if (!rejected) {
                             this.inquirySuccess = true;
+                            try {
+                                localStorage.setItem('ofp_inquiry_' + <?php echo (int) $post_id; ?>, '1');
+                            } catch(e) {}
                         }
 
                         if (action === 'whatsapp') {

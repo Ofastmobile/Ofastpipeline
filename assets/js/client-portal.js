@@ -20,6 +20,7 @@
     // overlay on first paint.
     function initSidebarToggle() {
         var toggle      = document.getElementById('ofp-sidebar-toggle');
+        var sidebar     = document.getElementById('ofp-sidebar');
         var collapseBtn = document.getElementById('ofp-sidebar-collapse-btn');
         var railToggle  = document.getElementById('ofp-sidebar-rail-toggle');
         var closeBtn    = document.getElementById('ofp-sidebar-close-btn');
@@ -576,31 +577,12 @@
         });
     }
 
-    // ── Global OFP Namespace: Platform Frosted Glass Preloader & Modern Toasts ──
-    var progressTrackEl = null;
-    var progressEl = null;
+    // ── Global OFP Namespace: Platform Frosted Glass Preloader Pill & Modern Toasts ──
     var glassIslandEl = null;
-    var progressTimer = null;
-    var progressVal = 0;
+    var progressSafetyTimeout = null;
 
     function getPreloaderElements() {
         var target = document.body || document.documentElement;
-        if (!progressTrackEl) {
-            progressTrackEl = document.getElementById('ofp-top-progress-track');
-            if (!progressTrackEl && target) {
-                progressTrackEl = document.createElement('div');
-                progressTrackEl.id = 'ofp-top-progress-track';
-                target.appendChild(progressTrackEl);
-            }
-        }
-        if (!progressEl) {
-            progressEl = document.getElementById('ofp-top-progress');
-            if (!progressEl && progressTrackEl) {
-                progressEl = document.createElement('div');
-                progressEl.id = 'ofp-top-progress';
-                progressTrackEl.appendChild(progressEl);
-            }
-        }
         if (!glassIslandEl) {
             glassIslandEl = document.getElementById('ofp-glass-preloader');
             if (!glassIslandEl && target) {
@@ -610,59 +592,41 @@
                 target.appendChild(glassIslandEl);
             }
         }
-        return { track: progressTrackEl, bar: progressEl, island: glassIslandEl };
+        return { island: glassIslandEl };
     }
 
     var ProgressEngine = {
         start: function (label) {
             var els = getPreloaderElements();
-            if (!els.track || !els.bar || !els.island) return;
-            clearInterval(progressTimer);
-
-            if (!progressVal || progressVal < 25) {
-                progressVal = 25;
-            }
-
-            els.track.classList.add('is-active');
-            els.island.classList.add('is-active');
-            els.bar.style.width = progressVal + '%';
+            if (!els.island) return;
+            clearTimeout(progressSafetyTimeout);
 
             var textEl = els.island.querySelector('.ofp-glass-preloader-text');
             if (textEl && label) {
                 textEl.textContent = label;
             }
 
-            progressTimer = setInterval(function () {
-                if (progressVal < 88) {
-                    progressVal += Math.random() * 6 + 3;
-                    if (progressVal > 88) progressVal = 88;
-                    els.bar.style.width = progressVal + '%';
-                }
-            }, 180);
-        },
-        set: function (pct) {
-            var els = getPreloaderElements();
-            if (!els.track || !els.bar || !els.island) return;
-            els.track.classList.add('is-active');
             els.island.classList.add('is-active');
-            progressVal = Math.min(100, Math.max(0, pct));
-            els.bar.style.width = progressVal + '%';
+
+            // Safety failsafe: if navigation never occurs, auto-dismiss after 1.6s
+            progressSafetyTimeout = setTimeout(function () {
+                ProgressEngine.done();
+            }, 1600);
+        },
+        set: function () {
+            var els = getPreloaderElements();
+            if (!els.island) return;
+            els.island.classList.add('is-active');
         },
         done: function () {
             var els = getPreloaderElements();
-            if (!els.track || !els.bar || !els.island) return;
-            clearInterval(progressTimer);
-            progressVal = 100;
-            els.bar.style.transition = 'width 0.12s ease-out';
-            els.bar.style.width = '100%';
+            if (!els.island) return;
+            clearTimeout(progressSafetyTimeout);
 
             setTimeout(function () {
-                els.track.classList.remove('is-active');
-                els.island.classList.remove('is-active');
-                setTimeout(function () {
-                    progressVal = 0;
-                    els.bar.style.width = '0%';
-                }, 120);
+                if (els.island) {
+                    els.island.classList.remove('is-active');
+                }
             }, 80);
         }
     };

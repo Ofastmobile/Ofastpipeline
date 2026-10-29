@@ -70,7 +70,7 @@ $logs = $wpdb->get_results( $wpdb->prepare(
      FROM {$wpdb->prefix}ofp_activity_logs l
      LEFT JOIN {$wpdb->prefix}ofp_admins a ON l.admin_id = a.id
      {$where}
-     ORDER BY l.created_at DESC
+     ORDER BY l.created_at DESC, l.id DESC
      LIMIT %d OFFSET %d",
     $query_args
 ) );
@@ -243,12 +243,16 @@ $logs = $wpdb->get_results( $wpdb->prepare(
                                 $act_class = 'ofp-act-pill-default';
                             }
 
-                            $log_ts     = strtotime( $log->created_at );
+                            // Convert stored local datetime string into a true UTC timestamp in the site's timezone.
+                            // This ensures wp_date() correctly displays the local time without double-offsetting,
+                            // and human_time_diff() correctly compares against time() (UTC).
+                            $log_dt     = DateTime::createFromFormat( 'Y-m-d H:i:s', $log->created_at, wp_timezone() );
+                            $log_ts     = $log_dt ? $log_dt->getTimestamp() : strtotime( $log->created_at );
                             $date_short = wp_date( 'M j, Y', $log_ts );
                             $time_clock = wp_date( 'g:i A', $log_ts );
                             $time_exact = wp_date( 'g:i:s A', $log_ts );
                             $date_full  = wp_date( 'l, F j, Y', $log_ts );
-                            $time_rel   = human_time_diff( $log_ts, current_time( 'timestamp' ) ) . ' ago';
+                            $time_rel   = human_time_diff( $log_ts, time() ) . ' ago';
 
                             // Clean message description
                             $desc = $details['message'] ?? ( $details['description'] ?? '' );

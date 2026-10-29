@@ -53,7 +53,7 @@ $transactions = $wpdb->get_results(
     <title><?php echo esc_html( OFP_Brand::title( 'Credits & Billing', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
 </head>
-<body class="ofp-portal-body">
+<body class="ofp-portal-body ofp-credits-page">
 
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
@@ -157,9 +157,9 @@ $transactions = $wpdb->get_results(
     </div>
 
     <!-- Payment History -->
-    <div class="ofp-card" style="margin-bottom: 32px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
-            <h3 style="margin:0; font-size:16px; font-weight:700;">Payment History</h3>
+    <div class="ofp-billing-section" style="margin-bottom: 36px;">
+        <div class="ofp-billing-header-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
+            <h3 style="margin:0; font-size:17px; font-weight:700; color:var(--text-main);">Payment History</h3>
             <?php if ( ! empty( $subscriptions ) ) : ?>
                 <div class="ofp-table-search" style="min-width:260px; position:relative;">
                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-muted); pointer-events:none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -168,13 +168,13 @@ $transactions = $wpdb->get_results(
             <?php endif; ?>
         </div>
         <?php if ( empty( $subscriptions ) ) : ?>
-            <div class="ofp-empty" style="padding:32px;">
+            <div class="ofp-empty" style="padding:32px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px;">
                 <h3>No payments yet</h3>
                 <p>Your payment history will appear here.</p>
             </div>
         <?php else : ?>
-            <div class="ofp-table-wrap ofp-table-responsive">
-                <table class="ofp-table" id="ofp-subscriptions-table">
+            <div class="ofp-table-responsive" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card);">
+                <table class="ofp-table ofp-billing-table" id="ofp-subscriptions-table" style="width:100%; min-width:820px; white-space:nowrap; border-collapse:collapse;">
                     <thead>
                         <tr><th>Type</th><th>Plan</th><th>Amount</th><th>Status</th><th>Period</th><th>Payment Ref</th><th>Date</th></tr>
                     </thead>
@@ -221,16 +221,16 @@ $transactions = $wpdb->get_results(
 
     <!-- Credit Transactions -->
     <?php if ( ! empty( $transactions ) ) : ?>
-        <div class="ofp-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
-                <h3 style="margin:0; font-size:16px; font-weight:700;">Credit Transaction Log</h3>
-                <div class="ofp-table-search" style="min-width:260px;">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <div class="ofp-billing-section">
+            <div class="ofp-billing-header-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
+                <h3 style="margin:0; font-size:17px; font-weight:700; color:var(--text-main);">Credit Transaction Log</h3>
+                <div class="ofp-table-search" style="min-width:260px; position:relative;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-muted); pointer-events:none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     <input type="text" id="ofp-credit-tx-search" class="ofp-input ofp-txn-search-input" placeholder="Search credit transactions..." onkeyup="ofpFilterTable('ofp-credit-tx-search', 'ofp-credit-tx-table')">
                 </div>
             </div>
-            <div class="ofp-table-wrap ofp-table-responsive">
-                <table class="ofp-table" id="ofp-credit-tx-table">
+            <div class="ofp-table-responsive" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card);">
+                <table class="ofp-table ofp-billing-table" id="ofp-credit-tx-table" style="width:100%; min-width:620px; white-space:nowrap; border-collapse:collapse;">
                     <thead>
                         <tr><th>Channel</th><th>Type</th><th>Amount</th><th>Balance After</th><th>Date</th></tr>
                     </thead>

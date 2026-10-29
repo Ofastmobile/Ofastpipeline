@@ -1657,3 +1657,17 @@ html.light .ofp-branding-card strong {
     justify-content: center;
     gap: 12px;
 }
+
+
+/* ── Mobile Responsive Layout (Matching Dashboard 16px Lateral Margin) ── */
+@media (max-width: 768px) {
+    .ofp-profile-page-wrap {
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        padding-top: 0 !important;
+        width: 100% !important;
+    }
+}

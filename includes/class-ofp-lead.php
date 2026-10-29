@@ -114,31 +114,113 @@ class OFP_Lead {
     }
 
     /**
-     * Check if a phone number already submitted a lead for this client
-     * within the given time window. Prevents duplicate submissions.
+     * Check if a lead or property inquiry already exists within the given time window.
+     * Prevents duplicate submissions matching phone, email, or IP address.
      *
-     * @param  int    $client_id
-     * @param  string $phone
-     * @param  int    $within_hours  Default 24.
+     * @param  int         $client_id
+     * @param  string      $phone
+     * @param  int         $within_hours  Default 24.
+     * @param  string|null $email         Optional prospect email.
+     * @param  string|null $ip_address    Optional visitor IP address.
+     * @param  int|null    $property_id   Optional: if provided, checks if prospect already inquired on this property.
      * @return bool
      */
     public static function is_duplicate(
         int $client_id,
         string $phone,
-        int $within_hours = 24
+        int $within_hours = 24,
+        ?string $email = null,
+        ?string $ip_address = null,
+        ?int $property_id = null
     ): bool {
         global $wpdb;
+        $p = $wpdb->prefix;
+
+        $phone = OFP_Security::sanitize_phone( $phone );
+        $email = $email ? sanitize_email( $email ) : '';
+        $ip    = $ip_address ? sanitize_text_field( $ip_address ) : '';
+
+        // Build matching OR conditions for prospect identity
+        $conds  = [ 'l.phone = %s' ];
+        $params = [ $phone ];
+
+        if ( ! empty( $email ) ) {
+            $conds[]  = 'l.email = %s';
+            $params[] = $email;
+        }
+
+        if ( ! empty( $ip ) && ! in_array( $ip, [ '0.0.0.0', '127.0.0.1', '::1' ], true ) ) {
+            $conds[]  = 'l.ip_address = %s';
+            $params[] = $ip;
+        }
+
+        $ident_sql = implode( ' OR ', $conds );
+
+        // 1. Property-specific duplicate check:
+        // Prospect already booked a tour (physical or video) on THIS property within $within_hours
+        if ( ! empty( $property_id ) ) {
+            // Check property inquiries table
+            $inq_exists = (bool) $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT i.id FROM {$p}ofp_property_inquiries i
+                     JOIN {$p}ofp_leads l ON l.id = i.lead_id
+                     WHERE i.property_id = %d
+                       AND i.created_at > DATE_SUB( NOW(), INTERVAL %d HOUR )
+                       AND ({$ident_sql})
+                     LIMIT 1",
+                    (int) $property_id,
+                    $within_hours,
+                    ...$params
+                )
+            );
+            if ( $inq_exists ) {
+                return true;
+            }
+
+            // Check leads table directly linked to this property
+            $lead_prop_exists = (bool) $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT l.id FROM {$p}ofp_leads l
+                     WHERE l.property_id = %d
+                       AND l.created_at > DATE_SUB( NOW(), INTERVAL %d HOUR )
+                       AND ({$ident_sql})
+                     LIMIT 1",
+                    (int) $property_id,
+                    $within_hours,
+                    ...$params
+                )
+            );
+            if ( $lead_prop_exists ) {
+                return true;
+            }
+
+            return false;
+        }
+
+        // 2. Client-wide lead duplicate check (general form / ingestion endpoint without property_id):
+        $general_conds  = [ 'phone = %s' ];
+        $general_params = [ (int) $client_id, $within_hours, $phone ];
+
+        if ( ! empty( $email ) ) {
+            $general_conds[]  = 'email = %s';
+            $general_params[] = $email;
+        }
+
+        if ( ! empty( $ip ) && ! in_array( $ip, [ '0.0.0.0', '127.0.0.1', '::1' ], true ) ) {
+            $general_conds[]  = 'ip_address = %s';
+            $general_params[] = $ip;
+        }
+
+        $gen_sql = implode( ' OR ', $general_conds );
 
         return (bool) $wpdb->get_var(
             $wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}ofp_leads
+                "SELECT id FROM {$p}ofp_leads
                  WHERE client_id = %d
-                   AND phone     = %s
                    AND created_at > DATE_SUB( NOW(), INTERVAL %d HOUR )
+                   AND ({$gen_sql})
                  LIMIT 1",
-                $client_id,
-                $phone,
-                $within_hours
+                ...$general_params
             )
         );
     }

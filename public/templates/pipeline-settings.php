@@ -163,31 +163,11 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
     <title><?php echo esc_html( OFP_Brand::title( 'Pipeline Settings', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
 </head>
-<body class="ofp-portal-body">
+<body class="ofp-portal-body ofp-pipeline-page">
 
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
     <div class="ofp-container">
-
-        <div class="ofp-page-header ofp-automation-header">
-            <div class="ofp-header-title">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <span class="ofp-icon-badge">⚡</span>
-                    <div>
-                        <h1 style="margin:0; font-size: 22px; font-weight: 700; color: var(--text-main);">Automation & Pipeline</h1>
-                        <p class="ofp-subtitle" style="margin:3px 0 0; font-size: 13px; color: var(--text-muted);">
-                            Customize automated instant SMS, emails, scheduled follow-ups and AI voice reminders.
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <?php if ( $config ) : ?>
-            <div class="ofp-mobile-view-toggle">
-                <button type="button" class="ofp-toggle-pill active" id="ofpBtnShowConfig" onclick="ofpSwitchTab('config')">⚙️ Setup Steps</button>
-                <button type="button" class="ofp-toggle-pill" id="ofpBtnShowPreview" onclick="ofpSwitchTab('preview')">📱 Live Preview</button>
-            </div>
-            <?php endif; ?>
-        </div>
 
         <div class="ofp-pipeline-layout">
             <div class="ofp-pipeline-main">
@@ -543,6 +523,7 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
             <?php endif; ?>
         </div>
     </div>
+</div><!-- .ofp-content-area -->
 </main>
 </div><!-- .ofp-shell -->
 

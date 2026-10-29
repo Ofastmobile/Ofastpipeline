@@ -120,15 +120,20 @@ function ofpTriggerResendEmail() {
             btnText.textContent = 'Resent Successfully!';
             status.style.color = '#059669';
             status.textContent = '✅ ' + (resp.data.message || 'Email successfully resent via SMTP.');
+            // Reload the page so the new log entry appears in the table immediately
             setTimeout(function() {
-                btn.disabled = false;
-                btnText.textContent = 'Resend Again';
-            }, 3500);
+                window.location.reload();
+            }, 1500);
         } else {
             btn.disabled = false;
             btnText.textContent = 'Resend Email';
             status.style.color = '#dc2626';
-            status.textContent = '❌ ' + (resp.data || 'Failed to resend email.');
+            status.textContent = '❌ ' + (resp.data || 'Failed to resend email.') + ' Updating log table...';
+            // Even when failed, an "Email failed" log was created in the database.
+            // Refresh table so the client sees the failed attempt log immediately.
+            setTimeout(function() {
+                window.location.reload();
+            }, 2200);
         }
     })
     .catch(function(err) {
@@ -257,5 +262,12 @@ document.addEventListener('click', function(e) {
     var menu = document.getElementById('ofpActFilterMenu');
     if (wrap && menu && !wrap.contains(e.target)) {
         menu.classList.remove('active');
+    }
+});
+
+// If the page is restored from browser back-forward cache (bfcache), reload fresh logs
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        window.location.reload();
     }
 });

@@ -236,7 +236,7 @@ class OFP_Client_Portal {
             );
         }
 
-        if ( 'leads' === $route ) {
+        if ( in_array( $route, [ 'leads', 'inspections' ], true ) ) {
             wp_enqueue_style(
                 'ofp-leads',
                 OFP_URL . 'assets/css/leads.css',

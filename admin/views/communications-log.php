@@ -145,9 +145,11 @@ include OFP_PATH . 'admin/views/partials/header.php';
                             ?>
                         </td>
                         <td><?php echo esc_html( number_format( (float) $comm->cost, 2 ) ); ?></td>
-                        <td><?php echo esc_html(
-                            human_time_diff( strtotime( $comm->sent_at ), current_time( 'timestamp' ) ) . ' ago'
-                        ); ?></td>
+                        <td><?php
+                            $c_dt = DateTime::createFromFormat( 'Y-m-d H:i:s', $comm->sent_at, wp_timezone() );
+                            $c_ts = $c_dt ? $c_dt->getTimestamp() : strtotime( $comm->sent_at );
+                            echo esc_html( human_time_diff( $c_ts, time() ) . ' ago' );
+                        ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

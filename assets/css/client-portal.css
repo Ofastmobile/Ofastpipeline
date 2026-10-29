@@ -120,40 +120,72 @@ html[data-theme="light"] .theme-toggle-sun {
     background: rgba(0, 0, 0, 0.25);
 }
 
+html {
+    overflow-x: hidden;
+    overflow-x: clip;
+    -webkit-overflow-scrolling: touch;
+}
+
 body.ofp-portal-body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background-color: var(--bg-body);
+    color: var(--text-main);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-x: clip;
+    -webkit-overflow-scrolling: touch;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    position: relative;
+}
+
+/* ── Hardware-Accelerated Ambient Gradient Background (0ms Scroll Repaint) ── */
+body.ofp-portal-body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background-image: 
         radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.10) 0px, transparent 50%),
         radial-gradient(at 100% 12%, rgba(139, 92, 246, 0.09) 0px, transparent 45%),
         radial-gradient(at 50% 90%, rgba(16, 185, 129, 0.06) 0px, transparent 55%);
-    background-attachment: fixed;
-    color: var(--text-main);
-    min-height: 100vh;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
 }
 
 [data-theme="light"] body.ofp-portal-body,
 html.light body.ofp-portal-body {
     background-color: #f8fafc;
+}
+
+[data-theme="light"] body.ofp-portal-body::before,
+html.light body.ofp-portal-body::before {
     background-image: 
         radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.07) 0px, transparent 50%),
         radial-gradient(at 100% 12%, rgba(139, 92, 246, 0.06) 0px, transparent 45%),
         radial-gradient(at 50% 90%, rgba(16, 185, 129, 0.05) 0px, transparent 55%);
-    background-attachment: fixed;
 }
 
 /* ── Shell & Layout ───────────────────────────────────────────────────────── */
 .ofp-shell {
     display: flex;
     min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-x: clip;
 }
 
 .ofp-main {
     flex: 1;
     min-width: 0;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
+    -webkit-overflow-scrolling: touch;
 }
 
 .ofp-content-area {
@@ -858,6 +890,19 @@ html.light .ofp-sidebar-collapse-btn:hover {
 
 /* ── Mobile & Tablet Topbar & Sidebar Rules (<= 1024px) ─────────────────────────────── */
 @media (max-width: 1024px) {
+    html, body {
+        overflow-x: hidden !important;
+        overflow-x: clip !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior-x: none !important;
+    }
+
+    .ofp-shell, .ofp-main, .ofp-content-area {
+        overflow-x: hidden !important;
+        overflow-x: clip !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
     /* REMOVE collapse button on mobile - mobile uses topbar hamburger and backdrop */
     .ofp-sidebar-collapse-btn {
         display: none !important;
@@ -2902,9 +2947,12 @@ input[type="date"].ofp-input,
 .ofp-form-actions .ofp-btn-primary,
 .ofp-form-actions .ofp-btn-save {
     height: auto !important;
-    min-height: 34px !important;
-    padding: 6px 40px !important;
-    font-size: 13px !important;
+    min-height: 36px !important;
+    padding: 8px 22px !important;
+    width: auto !important;
+    max-width: max-content !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -3073,33 +3121,6 @@ body.ofp-dark-mode .ofp-phone-body::-webkit-scrollbar-thumb {
     flex-shrink: 0;
 }
 
-.ofp-mobile-view-toggle {
-    display: none;
-    background: var(--bg-card, #f8fafc);
-    border: 1px solid var(--border-color, #cbd5e1);
-    padding: 4px;
-    border-radius: 10px;
-    gap: 4px;
-}
-
-.ofp-toggle-pill {
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: none;
-    background: transparent;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-muted, #64748b);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.ofp-toggle-pill.active {
-    background: var(--accent-blue, #2563eb);
-    color: #ffffff;
-    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
-}
-
 .ofp-pipeline-actions {
     margin-left: 56px;
     margin-top: 18px;
@@ -3125,19 +3146,9 @@ body.ofp-dark-mode .ofp-phone-body::-webkit-scrollbar-thumb {
 
 /* Mobile & Tablet Portrait Breakpoint (max-width: 860px) */
 @media (max-width: 860px) {
-    .ofp-mobile-view-toggle {
-        display: inline-flex;
-        width: 100%;
-    }
-
-    .ofp-toggle-pill {
-        flex: 1;
-        text-align: center;
-    }
-
     .ofp-pipeline-layout {
         flex-direction: column;
-        gap: 20px;
+        gap: 24px;
     }
 
     .ofp-pipeline-main,
@@ -3152,7 +3163,7 @@ body.ofp-dark-mode .ofp-phone-body::-webkit-scrollbar-thumb {
         display: flex;
         flex-direction: column;
         align-items: center;
-        margin-top: 8px;
+        margin-top: 16px;
     }
 
     .ofp-phone-mockup {
@@ -3160,10 +3171,6 @@ body.ofp-dark-mode .ofp-phone-body::-webkit-scrollbar-thumb {
         max-width: 360px;
         height: min(640px, 85vh);
         margin: 0 auto;
-    }
-
-    .ofp-mobile-hide {
-        display: none !important;
     }
 }
 
@@ -3246,17 +3253,20 @@ body.ofp-dark-mode .ofp-phone-body::-webkit-scrollbar-thumb {
     .ofp-pipeline-actions {
         margin-left: 0 !important;
         margin-top: 20px;
-        flex-direction: column;
-        width: 100%;
-        gap: 10px;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        width: auto;
     }
 
     .ofp-pipeline-actions button,
     .ofp-pipeline-actions a {
-        width: 100% !important;
+        width: auto !important;
+        max-width: max-content !important;
         justify-content: center !important;
-        padding: 11px 18px !important;
-        font-size: 14px !important;
+        padding: 8px 20px !important;
+        font-size: 13.5px !important;
         text-align: center;
     }
 
@@ -10054,76 +10064,7 @@ html.light .ofp-tag-chip {
     color: var(--text-main, #f8fafc);
 }
 
-/* ── Platform Frosted Glass Preloader System (VisionOS Glass Dynamic Island) ── */
-#ofp-top-progress-track {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 3.5px;
-    background: rgba(28, 34, 51, 0.88); /* Exact dark mode nav bar background color (#1c2233) */
-    backdrop-filter: blur(25px) saturate(190%);
-    -webkit-backdrop-filter: blur(25px) saturate(190%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 9999999;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-}
-
-#ofp-top-progress-track.is-active {
-    opacity: 1;
-}
-
-#ofp-top-progress {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 0;
-    height: 100%;
-    background: linear-gradient(90deg, rgba(28, 34, 51, 0.6) 0%, rgba(255, 255, 255, 0.85) 45%, #ffffff 65%, rgba(28, 34, 51, 0.7) 100%);
-    background-size: 200% 100%;
-    box-shadow: 0 0 16px rgba(255, 255, 255, 0.85), 0 0 8px rgba(28, 34, 51, 0.7), 0 1px 2px rgba(0, 0, 0, 0.4);
-    border-radius: 0 99px 99px 0;
-    transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-    animation: ofpGlassShimmer 1.8s infinite linear;
-}
-
-[data-theme="dark"] #ofp-top-progress-track,
-html.dark #ofp-top-progress-track,
-html:not(.light):not([data-theme="light"]) #ofp-top-progress-track {
-    background: rgba(28, 34, 51, 0.88);
-    backdrop-filter: blur(25px) saturate(190%);
-    -webkit-backdrop-filter: blur(25px) saturate(190%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="dark"] #ofp-top-progress,
-html.dark #ofp-top-progress,
-html:not(.light):not([data-theme="light"]) #ofp-top-progress {
-    background: linear-gradient(90deg, rgba(28, 34, 51, 0.6) 0%, rgba(255, 255, 255, 0.85) 45%, #ffffff 65%, rgba(28, 34, 51, 0.7) 100%);
-    box-shadow: 0 0 16px rgba(255, 255, 255, 0.85), 0 0 8px rgba(28, 34, 51, 0.7), 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-
-/* Light mode preserves current liquid glass styling */
-[data-theme="light"] #ofp-top-progress-track,
-html.light #ofp-top-progress-track {
-    background: rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-[data-theme="light"] #ofp-top-progress,
-html.light #ofp-top-progress {
-    background: linear-gradient(90deg, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.85) 45%, #0f172a 70%, rgba(15, 23, 42, 0.25) 100%);
-    box-shadow: 0 0 12px rgba(15, 23, 42, 0.35);
-}
-
-@keyframes ofpGlassShimmer {
-    0% { background-position: 100% 0; }
-    100% { background-position: -100% 0; }
-}
+/* ── Platform Frosted Glass Preloader Pill (VisionOS Glass Dynamic Island) ── */
 
 /* Floating Frosted Glass Dynamic Island Pill */
 #ofp-glass-preloader {
@@ -10897,17 +10838,120 @@ html.light .ofp-toast {
     }
 }
 
-/* ── Sales & Installments Mobile Table Responsiveness ──────────────────────── */
+/* ── Universal Mobile Page Margin & Full-Width Layout (Matching Dashboard Exactly) ── */
 @media (max-width: 768px) {
-    .ofp-container {
-        padding-left: 12px !important;
-        padding-right: 12px !important;
+    /* 1. Content Area: Standard 16px lateral edge gutters matching Dashboard across ALL portal pages */
+    body.ofp-portal-body .ofp-content-area,
+    .ofp-content-area {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+        padding-top: 16px !important;
+        padding-bottom: 32px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
     }
 
+    /* 2. All Page Containers: Zero out lateral margins & paddings so content spans full width of content-area */
+    body.ofp-portal-body .ofp-container,
+    body.ofp-portal-body .ofp-act-container,
+    body.ofp-portal-body .ofp-profile-page-wrap,
+    .ofp-container,
+    .ofp-act-container,
+    .ofp-profile-page-wrap {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 3. Cards, Filter bars, and Table wrappers: Full available width without extra gutters */
+    body.ofp-portal-body .ofp-card,
+    body.ofp-portal-body .ofp-table-card,
+    body.ofp-portal-body .ofp-act-card,
+    body.ofp-portal-body .ofp-txn-filter-card,
+    body.ofp-portal-body .ofp-zentra-card,
+    body.ofp-portal-body .ofp-leads-chart-card,
+    body.ofp-portal-body .ofp-profile-card,
+    body.ofp-portal-body .ofp-page-header,
+    body.ofp-portal-body .ofp-alert,
+    .ofp-card,
+    .ofp-table-card,
+    .ofp-act-card,
+    .ofp-txn-filter-card,
+    .ofp-zentra-card,
+    .ofp-leads-chart-card,
+    .ofp-profile-card,
+    .ofp-page-header,
+    .ofp-alert {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        border-radius: 14px !important;
+    }
+
+    /* 4. Filter card padding on mobile */
+    body.ofp-portal-body .ofp-txn-filter-card,
+    .ofp-txn-filter-card {
+        padding: 16px 14px !important;
+    }
+
+    /* 5. Card header padding inside tables & cards */
+    body.ofp-portal-body .ofp-card > div:first-child[style*="padding: 24px"],
+    body.ofp-portal-body .ofp-card > div:first-child[style*="padding:24px"],
+    body.ofp-portal-body .ofp-card > div:first-child[style*="padding: 20px 24px"],
+    body.ofp-portal-body .ofp-card > div:first-child[style*="padding:20px 24px"] {
+        padding: 16px 14px !important;
+    }
+
+    /* 6. Card padding for sales/offers on mobile */
     #my-sales.ofp-card,
     #create-offer.ofp-card {
-        padding: 16px 12px !important;
+        padding: 16px 14px !important;
         border-radius: 14px !important;
+    }
+
+    /* 7. KPI summary grids on mobile: Match Dashboard 2-col 10px gap */
+    body.ofp-portal-body .ofp-zentra-kpi-grid,
+    .ofp-zentra-kpi-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        margin-bottom: 20px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    body.ofp-portal-body .ofp-kpi-card,
+    .ofp-kpi-card {
+        padding: 12px 14px !important;
+        min-height: 105px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        border-radius: 14px !important;
+    }
+
+    /* 8. Segmented navigation pills */
+    body.ofp-portal-body .ofp-segmented-nav,
+    .ofp-segmented-nav {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        margin-bottom: 16px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
     }
 
     .ofp-sales-tabs-nav {
@@ -10915,6 +10959,7 @@ html.light .ofp-toast {
         -webkit-overflow-scrolling: touch !important;
         white-space: nowrap !important;
         scrollbar-width: none !important;
+        margin-bottom: 14px !important;
     }
 
     .ofp-sales-tabs-nav::-webkit-scrollbar {
@@ -10928,6 +10973,7 @@ html.light .ofp-toast {
         font-size: 13px !important;
     }
 
+    /* Table responsive wrapper spans 100% with silky momentum scroll */
     .ofp-table-responsive {
         width: 100% !important;
         max-width: 100% !important;
@@ -10935,9 +10981,91 @@ html.light .ofp-toast {
         -webkit-overflow-scrolling: touch !important;
         display: block !important;
         box-sizing: border-box !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
     }
 
     .ofp-table-responsive table {
-        min-width: 720px !important;
+        min-width: 680px !important;
     }
+
+    /* Credit & Billing Table Mobile Responsiveness */
+    .ofp-billing-section {
+        margin-bottom: 24px !important;
+        width: 100% !important;
+    }
+
+    .ofp-billing-header-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .ofp-billing-header-row .ofp-table-search {
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+
+    .ofp-billing-header-row .ofp-table-search input {
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .ofp-billing-table th,
+    .ofp-billing-table td {
+        padding: 11px 14px !important;
+        font-size: 13px !important;
+        white-space: nowrap !important;
+    }
+}
+
+/* ── Credit & Billing Tables Modern Styling (Out of Container) ── */
+.ofp-billing-section {
+    margin-bottom: 36px;
+    width: 100%;
+}
+
+.ofp-billing-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.ofp-billing-table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+.ofp-billing-table th {
+    padding: 13px 18px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(128, 128, 128, 0.03);
+    white-space: nowrap;
+}
+
+.ofp-billing-table td {
+    padding: 14px 18px;
+    font-size: 13.5px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.ofp-billing-table tbody tr:hover {
+    background: rgba(128, 128, 128, 0.03);
+}
+
+.ofp-billing-table tbody tr:last-child td {
+    border-bottom: none;
 }

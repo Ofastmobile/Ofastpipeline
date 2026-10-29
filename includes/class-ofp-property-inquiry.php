@@ -93,9 +93,12 @@ class OFP_Property_Inquiry {
             $args[]  = $filters['status'];
         }
 
-        if ( ! empty( $filters['tour_type'] ) && in_array( $filters['tour_type'], [ 'physical', 'video' ], true ) ) {
-            $where[] = 'i.tour_type = %s';
-            $args[]  = $filters['tour_type'];
+        if ( ! empty( $filters['tour_type'] ) ) {
+            if ( in_array( $filters['tour_type'], [ 'whatsapp_video', 'video' ], true ) ) {
+                $where[] = "(i.tour_type = 'whatsapp_video' OR i.tour_type = 'video')";
+            } elseif ( $filters['tour_type'] === 'physical' ) {
+                $where[] = "i.tour_type = 'physical'";
+            }
         }
 
         if ( ! empty( $filters['property_id'] ) ) {
@@ -143,9 +146,12 @@ class OFP_Property_Inquiry {
             $args[]  = $filters['status'];
         }
 
-        if ( ! empty( $filters['tour_type'] ) && in_array( $filters['tour_type'], [ 'physical', 'video' ], true ) ) {
-            $where[] = 'i.tour_type = %s';
-            $args[]  = $filters['tour_type'];
+        if ( ! empty( $filters['tour_type'] ) ) {
+            if ( in_array( $filters['tour_type'], [ 'whatsapp_video', 'video' ], true ) ) {
+                $where[] = "(i.tour_type = 'whatsapp_video' OR i.tour_type = 'video')";
+            } elseif ( $filters['tour_type'] === 'physical' ) {
+                $where[] = "i.tour_type = 'physical'";
+            }
         }
 
         $where_sql = implode( ' AND ', $where );
@@ -274,7 +280,7 @@ class OFP_Property_Inquiry {
                     <select name="tour_type">
                         <option value="">All Tour Types</option>
                         <option value="physical" <?php selected( $tour_filter, 'physical' ); ?>>Physical Tour</option>
-                        <option value="video"    <?php selected( $tour_filter, 'video' ); ?>>WhatsApp Video Call</option>
+                        <option value="whatsapp_video" <?php selected( in_array( $tour_filter, [ 'whatsapp_video', 'video' ], true ), true ); ?>>WhatsApp Video Call</option>
                     </select>
 
                     <select name="client_id">
@@ -326,7 +332,7 @@ class OFP_Property_Inquiry {
                                     <div style="font-size:12px; color:#64748b;"><?php echo esc_html( $inq->preferred_viewing_time ?: '10:00 AM' ); ?></div>
                                 </td>
                                 <td>
-                                    <?php if ( $inq->tour_type === 'video' ) : ?>
+                                    <?php if ( in_array( $inq->tour_type, [ 'whatsapp_video', 'video' ], true ) ) : ?>
                                         <span style="display:inline-block; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600; background:#dbeafe; color:#1e40af;">📱 WhatsApp Video</span>
                                     <?php else : ?>
                                         <span style="display:inline-block; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600; background:#f1f5f9; color:#475569;">📍 Physical Tour</span>

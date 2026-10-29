@@ -184,31 +184,44 @@
             typeInput.value = type;
             if ( errorAlert ) errorAlert.style.display = 'none';
 
-            if ( type === 'bug_report' ) {
-                if ( tabBug ) tabBug.classList.add('active');
-                if ( tabFeature ) tabFeature.classList.remove('active');
-                if ( modalTitle ) modalTitle.textContent = 'Report a Bug or Issue';
-                if ( titleLabel ) titleLabel.innerHTML = 'What went wrong? <span class="req">*</span>';
-                if ( titleInput ) titleInput.placeholder = 'e.g. Save button did not respond on property page';
-                if ( descLabel ) descLabel.innerHTML = 'Steps to Reproduce & Expected Behavior <span class="req">*</span>';
-                if ( descInput ) descInput.placeholder = 'What were you doing when the bug occurred? What did you expect to happen versus what actually happened?';
-                if ( videoHint ) videoHint.textContent = 'Optional: Have a video (YouTube / Loom) or screenshot showing the glitch? Paste the link here.';
-                if ( prioLabel ) prioLabel.textContent = 'Issue Severity';
-                if ( diagBox ) diagBox.style.display = 'flex';
-                if ( btnText ) btnText.textContent = 'Submit Bug Report';
-            } else {
-                if ( tabFeature ) tabFeature.classList.add('active');
-                if ( tabBug ) tabBug.classList.remove('active');
-                if ( modalTitle ) modalTitle.textContent = 'Request a Feature';
-                if ( titleLabel ) titleLabel.innerHTML = 'Feature Title <span class="req">*</span>';
-                if ( titleInput ) titleInput.placeholder = 'e.g. Bulk WhatsApp rent reminder broadcast';
-                if ( descLabel ) descLabel.innerHTML = 'Detailed Explanation <span class="req">*</span>';
-                if ( descInput ) descInput.placeholder = 'Please describe what you want to achieve, how it should work, and why it is valuable to your business...';
-                if ( videoHint ) videoHint.textContent = 'Optional: Have a YouTube or Loom video explaining your idea? Paste the link here so we can watch it!';
-                if ( prioLabel ) prioLabel.textContent = 'Business Impact / Priority';
-                if ( diagBox ) diagBox.style.display = 'none';
-                if ( btnText ) btnText.textContent = 'Submit Feature Request';
+            var formEl = document.getElementById('ofp-cfb-form');
+            if ( formEl ) {
+                formEl.classList.add('ofp-form-crossfading');
             }
+
+            setTimeout(function() {
+                if ( type === 'bug_report' ) {
+                    if ( tabBug ) tabBug.classList.add('active');
+                    if ( tabFeature ) tabFeature.classList.remove('active');
+                    if ( modalTitle ) modalTitle.textContent = 'Report a Bug or Issue';
+                    if ( titleLabel ) titleLabel.innerHTML = 'What went wrong? <span class="req">*</span>';
+                    if ( titleInput ) titleInput.placeholder = 'e.g. Save button did not respond on property page';
+                    if ( descLabel ) descLabel.innerHTML = 'Steps to Reproduce & Expected Behavior <span class="req">*</span>';
+                    if ( descInput ) descInput.placeholder = 'What were you doing when the bug occurred? What did you expect to happen versus what actually happened?';
+                    if ( videoHint ) videoHint.textContent = 'Optional: Have a video (YouTube / Loom) or screenshot showing the glitch? Paste the link here.';
+                    if ( prioLabel ) prioLabel.textContent = 'Issue Severity';
+                    if ( diagBox ) diagBox.style.display = 'flex';
+                    if ( btnText ) btnText.textContent = 'Submit Bug Report';
+                } else {
+                    if ( tabFeature ) tabFeature.classList.add('active');
+                    if ( tabBug ) tabBug.classList.remove('active');
+                    if ( modalTitle ) modalTitle.textContent = 'Request a Feature';
+                    if ( titleLabel ) titleLabel.innerHTML = 'Feature Title <span class="req">*</span>';
+                    if ( titleInput ) titleInput.placeholder = 'e.g. Bulk WhatsApp rent reminder broadcast';
+                    if ( descLabel ) descLabel.innerHTML = 'Detailed Explanation <span class="req">*</span>';
+                    if ( descInput ) descInput.placeholder = 'Please describe what you want to achieve, how it should work, and why it is valuable to your business...';
+                    if ( videoHint ) videoHint.textContent = 'Optional: Have a YouTube or Loom video explaining your idea? Paste the link here so we can watch it!';
+                    if ( prioLabel ) prioLabel.textContent = 'Business Impact / Priority';
+                    if ( diagBox ) diagBox.style.display = 'none';
+                    if ( btnText ) btnText.textContent = 'Submit Feature Request';
+                }
+
+                if ( formEl ) {
+                    requestAnimationFrame(function() {
+                        formEl.classList.remove('ofp-form-crossfading');
+                    });
+                }
+            }, 50);
         }
 
         // Attach internal tab switching

@@ -176,14 +176,19 @@ include OFP_PATH . 'admin/views/partials/header.php';
                         <?php foreach ( $comms as $comm ) : ?>
                             <?php
                             $comm_recipient = $comm->lead_name ?: ( $comm->lead_phone ?: 'Recipient' );
+                            $comm_dt  = DateTime::createFromFormat( 'Y-m-d H:i:s', $comm->sent_at, wp_timezone() );
+                            $comm_ts  = $comm_dt ? $comm_dt->getTimestamp() : strtotime( $comm->sent_at );
+                            $sent_str = wp_date( 'M j, Y g:i A', $comm_ts );
+                            $rel_str  = human_time_diff( $comm_ts, time() ) . ' ago';
+
                             $comm_payload = [
                                 'id'         => (int) $comm->id,
                                 'type'       => $comm->type,
                                 'status'     => $comm->status,
                                 'recipient'  => $comm_recipient,
                                 'client'     => $comm->business_name ?? 'Super Admin',
-                                'sent_at'    => wp_date( 'M j, Y g:i A', strtotime( $comm->sent_at ) ),
-                                'time_rel'   => human_time_diff( strtotime( $comm->sent_at ), current_time( 'timestamp' ) ) . ' ago',
+                                'sent_at'    => $sent_str,
+                                'time_rel'   => $rel_str,
                                 'message'    => $comm->message ?? '',
                             ];
                             ?>
@@ -202,9 +207,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                                     ?>
                                 </td>
                                 <td><?php echo esc_html( number_format( (float) $comm->cost, 2 ) ); ?></td>
-                                <td><?php echo esc_html(
-                                    human_time_diff( strtotime( $comm->sent_at ), current_time( 'timestamp' ) ) . ' ago'
-                                ); ?></td>
+                                <td><?php echo esc_html( $rel_str ); ?></td>
                                 <td>
                                     <?php if ( $comm->type === 'email' ) : ?>
                                         <button type="button" class="button button-small" onclick="ofpOpenCommEmailDrawer(<?php echo (int) $comm->id; ?>, <?php echo esc_attr( wp_json_encode( $comm_payload ) ); ?>)">

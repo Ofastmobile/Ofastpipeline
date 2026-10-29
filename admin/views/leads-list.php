@@ -133,9 +133,11 @@ include OFP_PATH . 'admin/views/partials/header.php';
                         <td><?php echo $status_badges[ $lead->status ] ?? esc_html( $lead->status ); ?></td>
                         <td><?php echo $lead->ivr_response ? esc_html( 'Pressed ' . $lead->ivr_response ) : '—'; ?></td>
                         <td>
-                            <?php echo esc_html(
-                                human_time_diff( strtotime( $lead->created_at ), current_time( 'timestamp' ) ) . ' ago'
-                            ); ?>
+                            <?php
+                            $lead_dt = DateTime::createFromFormat( 'Y-m-d H:i:s', $lead->created_at, wp_timezone() );
+                            $lead_ts = $lead_dt ? $lead_dt->getTimestamp() : strtotime( $lead->created_at );
+                            echo esc_html( human_time_diff( $lead_ts, time() ) . ' ago' );
+                            ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>

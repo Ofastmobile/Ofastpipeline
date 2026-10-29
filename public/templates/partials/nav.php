@@ -242,10 +242,7 @@ svg { max-width: 100%; box-sizing: border-box; }
 .ofp-topbar svg, .ofp-hero-full-header svg { max-width: 24px; max-height: 24px; }
 .ofp-kpi-badge svg { width: 14px !important; height: 14px !important; }
 </style>
-<!-- Platform Frosted Glass Preloader & Top Progress Indicator -->
-<div id="ofp-top-progress-track">
-    <div id="ofp-top-progress"></div>
-</div>
+<!-- Platform Frosted Glass Floating Preloader Pill -->
 <div id="ofp-glass-preloader">
     <div class="ofp-glass-spinner"></div>
     <span class="ofp-glass-preloader-text">Loading...</span>
@@ -256,33 +253,22 @@ svg { max-width: 100%; box-sizing: border-box; }
         var p = sessionStorage.getItem('ofp_nav_label');
         if (p) {
             sessionStorage.removeItem('ofp_nav_label');
-            var trk = document.getElementById('ofp-top-progress-track');
-            var bar = document.getElementById('ofp-top-progress');
             var isl = document.getElementById('ofp-glass-preloader');
             var txt = isl ? isl.querySelector('.ofp-glass-preloader-text') : null;
             if (txt) txt.textContent = p;
-            if (trk) trk.classList.add('is-active');
             if (isl) isl.classList.add('is-active');
-            if (bar) {
-                bar.style.transition = 'width 0.16s cubic-bezier(0.16, 1, 0.3, 1)';
-                bar.style.width = '85%';
-            }
             var autoDismiss = function() {
-                if (bar) {
-                    bar.style.transition = 'width 0.1s ease-out';
-                    bar.style.width = '100%';
-                }
                 setTimeout(function(){
-                    if (trk) trk.classList.remove('is-active');
                     if (isl) isl.classList.remove('is-active');
-                    setTimeout(function(){ if (bar) bar.style.width = '0%'; }, 120);
                 }, 80);
             };
             if (document.readyState === 'interactive' || document.readyState === 'complete') {
                 setTimeout(autoDismiss, 40);
             } else {
                 document.addEventListener('DOMContentLoaded', autoDismiss, { once: true });
+                window.addEventListener('load', autoDismiss, { once: true });
             }
+            setTimeout(autoDismiss, 600); // Strict failsafe
         }
     } catch(e) {}
 })();

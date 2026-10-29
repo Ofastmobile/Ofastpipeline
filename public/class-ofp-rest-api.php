@@ -241,34 +241,29 @@ class OFP_REST_API {
         }
 
         // ── 6. Duplicate check ────────────────────────────────────────────────
-        // Same phone number for the same client within 24 hours = duplicate.
-        if ( $client_id > 0 && OFP_Lead::is_duplicate( $client_id, $phone, 24 ) ) {
-            // Still record inquiry if this is for a property
-            if ( $property_id ) {
-                $existing_lead_id = (int) $wpdb->get_var( $wpdb->prepare(
-                    "SELECT id FROM {$wpdb->prefix}ofp_leads WHERE client_id = %d AND phone = %s ORDER BY id DESC LIMIT 1",
-                    $client_id,
-                    $phone
-                ) );
-                if ( $existing_lead_id ) {
-                    $this->record_property_inquiry( $existing_lead_id, $property_id, $client_id, $request );
-                    // Keep the lead record in step with the new inspection request.
-                    $note = $this->inspection_note( $property_id, $request );
-                    if ( $note ) {
-                        $old = (string) $wpdb->get_var( $wpdb->prepare(
-                            "SELECT notes FROM {$wpdb->prefix}ofp_leads WHERE id = %d",
-                            $existing_lead_id
-                        ) );
-                        $wpdb->update(
-                            $wpdb->prefix . 'ofp_leads',
-                            [ 'notes' => trim( $old . "\n" . $note ) ],
-                            [ 'id' => $existing_lead_id ]
-                        );
-                    }
-                }
-            }
+        // Check if this prospect already submitted by phone, email, or IP address
+        // within the last 24 hours (for this specific property, or client-wide if general).
+        $ip_address = OFP_Security::get_client_ip();
+        $is_dup     = ( $client_id > 0 || $property_id ) && OFP_Lead::is_duplicate(
+            (int) $client_id,
+            $phone,
+            24,
+            $email ?: null,
+            $ip_address,
+            $property_id
+        );
+
+        if ( $is_dup ) {
+            $msg = $property_id
+                ? 'You have already submitted an inspection request for this property. Our agent will be in touch shortly.'
+                : 'Thank you! We already have your inquiry and will be in touch shortly.';
+
             return new WP_REST_Response(
-                [ 'success' => true, 'message' => 'Thank you! We already have your details and will be in touch.' ],
+                [
+                    'success'   => false,
+                    'duplicate' => true,
+                    'message'   => $msg,
+                ],
                 200
             );
         }
