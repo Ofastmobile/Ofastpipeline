@@ -3,7 +3,7 @@
  * Plugin Name: OFast Pipeline
  * Plugin URI:  https://ofastpipeline.com
  * Description: Done-for-you lead pipeline and CRM automation engine for SMB clients in Nigeria.
- * Version:     2.2.12
+ * Version:     2.2.15
  * Author:      Olabode / Bofast World
  * Author URI:  https://bofastworld.com
  * Text Domain: ofast-pipeline
@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION', '2.2.12' );
+define( 'OFP_VERSION', '2.2.15' );
 define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
@@ -113,6 +113,9 @@ require_once OFP_PATH . 'admin/class-ofp-admin-menu.php';
 require_once OFP_PATH . 'admin/class-ofp-admin-settings.php';
 require_once OFP_PATH . 'admin/class-ofp-property-commerce-admin.php';
 require_once OFP_PATH . 'admin/class-ofp-property-commerce-actions.php';
+
+// Tie portal nonces to the client's own session (see OFP_Security).
+add_filter( 'nonce_user_logged_out', [ 'OFP_Security', 'bind_nonce_to_client_session' ], 10, 2 );
 require_once OFP_PATH . 'admin/class-ofp-property-purchase-admin.php';
 
 require_once OFP_PATH . 'admin/class-ofp-admin-portal.php';

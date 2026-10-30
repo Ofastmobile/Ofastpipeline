@@ -1767,56 +1767,6 @@ class OFP_Property_CPT {
         }
     }
 
-    /**
-     * Create a CPT post from an ofp_properties plugin table row.
-     * Called when a property is created programmatically (e.g. from admin client form).
-     *
-     * @param  array $property_data  Data matching ofp_properties columns.
-     * @param  int   $client_id      OFP client ID.
-     * @return int                   New WP post ID, or 0 on failure.
-     */
-    public static function create_from_plugin_data( array $property_data, int $client_id ): int {
-        $post_id = wp_insert_post( [
-            'post_title'   => sanitize_text_field( $property_data['title'] ?? 'New Property' ),
-            'post_content' => wp_kses_post( $property_data['description'] ?? '' ),
-            'post_status'  => ( ( $property_data['status'] ?? 'pending_upload' ) === 'live' ) ? 'publish' : 'draft',
-            'post_type'    => 'ofp_property',
-        ] );
-
-        if ( is_wp_error( $post_id ) ) {
-            error_log( '[OFP_Property_CPT] Failed to create CPT post: ' . $post_id->get_error_message() );
-            return 0;
-        }
-
-        $meta_fields = [
-            'ofp_client_id', 'ofp_listing_type', 'ofp_property_type',
-            'ofp_price', 'ofp_price_period', 'ofp_bedrooms',
-            'ofp_bathrooms', 'ofp_location_text', 'ofp_status', 'ofp_is_featured',
-        ];
-
-        // Map snake_case property data keys to post meta keys.
-        $key_map = [
-            'ofp_client_id'     => $client_id,
-            'ofp_listing_type'  => $property_data['listing_type']  ?? '',
-            'ofp_property_type' => $property_data['property_type'] ?? '',
-            'ofp_price'         => $property_data['price']         ?? '',
-            'ofp_price_period'  => $property_data['price_period']  ?? '',
-            'ofp_bedrooms'      => $property_data['bedrooms']      ?? '',
-            'ofp_bathrooms'     => $property_data['bathrooms']     ?? '',
-            'ofp_location_text' => $property_data['location_text'] ?? '',
-            'ofp_status'        => $property_data['status']        ?? 'pending_upload',
-            'ofp_is_featured'   => $property_data['is_featured']   ?? '0',
-        ];
-
-        foreach ( $key_map as $meta_key => $meta_value ) {
-            update_post_meta( $post_id, $meta_key, $meta_value );
-        }
-
-        self::sync_to_plugin_table( $post_id, $client_id );
-
-        return $post_id;
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // ADMIN COLUMNS
     // ─────────────────────────────────────────────────────────────────────────

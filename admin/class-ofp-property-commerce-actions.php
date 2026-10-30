@@ -16,6 +16,8 @@ class OFP_Property_Commerce_Actions {
         add_action( 'admin_post_ofp_create_property_offer', [ __CLASS__, 'handle_create_offer' ] );
         add_action( 'admin_post_ofp_resend_offer', [ __CLASS__, 'handle_resend_offer' ] );
         add_action( 'admin_post_ofp_client_resend_offer', [ __CLASS__, 'handle_client_resend_offer' ] );
+        // Clients are not WordPress users, so they arrive as logged out visitors.
+        add_action( 'admin_post_nopriv_ofp_client_resend_offer', [ __CLASS__, 'handle_client_resend_offer' ] );
     }
 
     public static function register_menu(): void {
@@ -326,10 +328,12 @@ class OFP_Property_Commerce_Actions {
     }
 
     public static function handle_client_resend_offer(): void {
-        if ( ! is_user_logged_in() ) wp_die( esc_html__( 'Access denied.', 'ofast-pipeline' ) );
         check_admin_referer( 'ofp_client_resend_offer' );
 
-        $client_id = (int) get_user_meta( get_current_user_id(), 'ofp_client_id', true );
+        // Clients use the portal session, not a WordPress login.
+        OFP_Auth::require_client_login();
+        $portal_client = OFP_Auth::current_client();
+        $client_id     = $portal_client ? (int) $portal_client->id : 0;
         if ( ! $client_id ) wp_die( esc_html__( 'Access denied.', 'ofast-pipeline' ) );
 
         global $wpdb;

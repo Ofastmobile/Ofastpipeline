@@ -334,6 +334,12 @@ class OFP_REST_API {
      */
     public function payment_webhook( WP_REST_Request $request ): WP_REST_Response {
 
+        // Manual bank payments are used. The webhook stays shut until a
+        // Paystack secret key is saved in Settings.
+        if ( empty( get_option( 'ofp_paystack_secret_key', '' ) ) ) {
+            return new WP_REST_Response( [ 'status' => 'disabled' ], 404 );
+        }
+
         if ( class_exists( 'OFP_Payment' ) ) {
             return OFP_Payment::handle_webhook( $request );
         }

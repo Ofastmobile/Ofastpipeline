@@ -547,19 +547,14 @@ class OFP_Admin_Menu {
         check_admin_referer( 'ofp_save_plan_pricing_action', 'ofp_plan_pricing_nonce' );
 
         $plan_prices = [];
-        $setup_fees  = [];
 
         foreach ( OFP_Subscription::PLAN_KEYS as $plan ) {
             $plan_prices[ $plan ] = isset( $_POST[ "price_{$plan}" ] )
                 ? (float) $_POST[ "price_{$plan}" ]
                 : 0.0;
-
-            $setup_fees[ $plan ] = isset( $_POST[ "setup_{$plan}" ] )
-                ? (float) $_POST[ "setup_{$plan}" ]
-                : 0.0;
         }
 
-        OFP_Subscription::save_pricing( $plan_prices, $setup_fees );
+        OFP_Subscription::save_pricing( $plan_prices );
 
         add_action( 'admin_notices', function () {
             echo '<div class="notice notice-success is-dismissible"><p>'

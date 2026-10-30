@@ -31,6 +31,22 @@ class OFP_Auth {
     /** Session lifetime in seconds (7 days). */
     const SESSION_TTL = 604800;
 
+    /**
+     * Session tokens are saved as a SHA-256 hash, so a leaked database copy
+     * cannot be used to log in. The browser cookie keeps the raw token.
+     */
+    private static function hash_token( string $token ): string {
+        return hash( 'sha256', $token );
+    }
+
+    /**
+     * Values to look up a session by: the hash first, then the raw token, so
+     * sessions created before this update keep working until they expire.
+     */
+    private static function token_match( string $token ): array {
+        return [ self::hash_token( $token ), $token ];
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // CLIENT AUTH & OTP
     // ─────────────────────────────────────────────────────────────────────────
@@ -124,6 +140,35 @@ class OFP_Auth {
     }
 
     /**
+     * Re-check that an account may still log in. Used right before a session
+     * is issued, so a login started earlier cannot outlive a suspension.
+     */
+    public static function is_login_allowed( string $user_type, int $client_id, ?int $team_member_id = null ): bool {
+        global $wpdb;
+
+        $client = $wpdb->get_row( $wpdb->prepare(
+            "SELECT status FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
+            $client_id
+        ) );
+        if ( ! $client || in_array( $client->status, [ 'suspended', 'cancelled', 'trash' ], true ) ) {
+            return false;
+        }
+
+        if ( $user_type === 'team_member' ) {
+            if ( ! $team_member_id ) {
+                return false;
+            }
+            $tm = $wpdb->get_row( $wpdb->prepare(
+                "SELECT status, client_id FROM {$wpdb->prefix}ofp_team_members WHERE id = %d LIMIT 1",
+                $team_member_id
+            ) );
+            return $tm && $tm->status === 'active' && (int) $tm->client_id === $client_id;
+        }
+
+        return $user_type === 'client';
+    }
+
+    /**
      * Generate a 7-character alphanumeric OTP, save it, and send via Email and SMS.
      *
      * @param string $email
@@ -142,6 +187,9 @@ class OFP_Auth {
         }
 
         $expires_at = gmdate( 'Y-m-d H:i:s', time() + ( 10 * MINUTE_IN_SECONDS ) );
+
+        // A new code replaces any older code for the same person and purpose.
+        $wpdb->delete( $wpdb->prefix . 'ofp_otps', [ 'user_email' => $email, 'purpose' => $purpose ] );
 
         $wpdb->insert(
             $wpdb->prefix . 'ofp_otps',
@@ -223,7 +271,7 @@ class OFP_Auth {
                 'client_id'      => $client_id,
                 'user_type'      => $user_type,
                 'team_member_id' => $team_member_id,
-                'token'          => $token,
+                'token'          => self::hash_token( $token ),
                 'ip_address'     => OFP_Security::get_client_ip(),
                 'expires_at'     => $expires_at,
                 'created_at'     => current_time( 'mysql' ),
@@ -278,9 +326,9 @@ class OFP_Auth {
         $session = $wpdb->get_row(
             $wpdb->prepare(
                 "SELECT * FROM {$wpdb->prefix}ofp_client_sessions
-                 WHERE token = %s AND expires_at > NOW()
+                 WHERE token IN (%s, %s) AND expires_at > NOW()
                  LIMIT 1",
-                $token
+                ...self::token_match( $token )
             )
         );
 
@@ -314,7 +362,7 @@ class OFP_Auth {
                 // long their session cookie still has left.
                 if ( class_exists( 'OFP_Subscription' ) ) {
                     if ( OFP_Subscription::team_limit_for_client( (int) $session->client_id ) <= 0 ) {
-                        $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'token' => $token ] );
+                        $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'id' => (int) $session->id ] );
                         self::clear_cookie();
                         return null;
                     }
@@ -386,9 +434,9 @@ class OFP_Auth {
         $session = $wpdb->get_row(
             $wpdb->prepare(
                 "SELECT * FROM {$wpdb->prefix}ofp_client_sessions
-                 WHERE token = %s AND expires_at > NOW()
+                 WHERE token IN (%s, %s) AND expires_at > NOW()
                  LIMIT 1",
-                $token
+                ...self::token_match( $token )
             )
         );
         return ( $session && isset( $session->user_type ) ) ? $session->user_type : 'client';
@@ -436,15 +484,6 @@ class OFP_Auth {
     }
 
     /**
-     * Check if a client (or team member acting for a client) is currently logged in.
-     *
-     * @return bool
-     */
-    public static function is_client_logged_in(): bool {
-        return self::current_client() !== null;
-    }
-
-    /**
      * Check if any user (client or team member) is currently logged in.
      *
      * @return bool
@@ -466,10 +505,8 @@ class OFP_Auth {
             : '';
 
         if ( $token ) {
-            $wpdb->delete(
-                $wpdb->prefix . 'ofp_client_sessions',
-                [ 'token' => $token ]
-            );
+            $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'token' => self::hash_token( $token ) ] );
+            $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'token' => $token ] );
         }
 
         self::clear_cookie();
@@ -587,13 +624,11 @@ class OFP_Auth {
         $team_member = $wpdb->get_row( $wpdb->prepare( "SELECT id, email, name FROM {$wpdb->prefix}ofp_team_members WHERE email = %s LIMIT 1", sanitize_email( $email ) ) );
         if ( $team_member ) {
             $raw_token = bin2hex( random_bytes( 32 ) );
-            // Reusing invite_token column for reset token for team members to save schema space
-            $wpdb->update(
-                $wpdb->prefix . 'ofp_team_members',
-                [
-                    'invite_token' => hash('sha256', $raw_token),
-                ],
-                [ 'id' => $team_member->id ]
+            // Saved on its own with an expiry. The invite token is not touched.
+            set_transient(
+                'ofp_tmreset_' . hash( 'sha256', $raw_token ),
+                (int) $team_member->id,
+                self::RESET_TOKEN_TTL_MINUTES * MINUTE_IN_SECONDS
             );
             $reset_url = add_query_arg( [ 'token' => $raw_token, 'tm' => 1 ], home_url( '/reset-password' ) );
             
@@ -620,7 +655,9 @@ class OFP_Auth {
         $expected_hash = hash('sha256', $raw_token);
 
         if ( $is_team_member ) {
-            $tm = $wpdb->get_row( $wpdb->prepare( "SELECT id, email, name, invite_token FROM {$wpdb->prefix}ofp_team_members WHERE invite_token = %s LIMIT 1", $expected_hash ) );
+            $tm_id = (int) get_transient( 'ofp_tmreset_' . $expected_hash );
+            if ( ! $tm_id ) return false;
+            $tm = $wpdb->get_row( $wpdb->prepare( "SELECT id, email, name FROM {$wpdb->prefix}ofp_team_members WHERE id = %d LIMIT 1", $tm_id ) );
             if ( ! $tm ) return false;
             return $tm;
         } else {
@@ -644,10 +681,11 @@ class OFP_Auth {
         if ( $is_team_member ) {
             $updated = $wpdb->update(
                 $wpdb->prefix . 'ofp_team_members',
-                [ 'password' => $new_hash, 'invite_token' => null ],
+                [ 'password' => $new_hash ],
                 [ 'id' => $row->id ]
             );
             if ( $updated ) {
+                delete_transient( 'ofp_tmreset_' . hash( 'sha256', $raw_token ) );
                 $wpdb->delete( $wpdb->prefix . 'ofp_client_sessions', [ 'team_member_id' => $row->id ] );
             }
         } else {
@@ -667,50 +705,6 @@ class OFP_Auth {
     // ─────────────────────────────────────────────────────────────────────────
     // ADMIN PREVIEW (debugging — log into a client's frontend dashboard)
     // ─────────────────────────────────────────────────────────────────────────
-
-    public static function generate_admin_preview_token( int $client_id ): string {
-        $token   = bin2hex( random_bytes( 32 ) );
-        $admin   = self::current_admin();
-
-        set_transient(
-            'ofp_preview_' . $token,
-            [
-                'client_id'   => $client_id,
-                'admin_id'    => $admin->id   ?? 0,
-                'admin_email' => $admin->email ?? 'unknown',
-                'created_at'  => time(),
-            ],
-            15 * MINUTE_IN_SECONDS
-        );
-
-        return $token;
-    }
-
-    public static function consume_admin_preview_token( string $token ): bool {
-        $data = get_transient( 'ofp_preview_' . $token );
-
-        if ( ! $data || empty( $data['client_id'] ) ) {
-            return false;
-        }
-
-        delete_transient( 'ofp_preview_' . $token );
-
-        global $wpdb;
-        $client = $wpdb->get_row(
-            $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1", $data['client_id'] )
-        );
-
-        if ( ! $client ) return false;
-
-        self::issue_session( $client->id, 'client' );
-
-        error_log( sprintf(
-            '[OFP_Auth] Admin preview: %s (admin #%d) previewed client #%d (%s) at %s',
-            $data['admin_email'], $data['admin_id'], $client->id, $client->business_name, current_time( 'mysql' )
-        ) );
-
-        return true;
-    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // ADMIN AUTH (wp-admin)

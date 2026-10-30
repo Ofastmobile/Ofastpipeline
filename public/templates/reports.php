@@ -18,6 +18,22 @@ if ( ! OFP_Auth::has_permission( 'view_reports' ) ) {
 global $wpdb;
 $p = $wpdb->prefix;
 
+// Get a new download link for a report whose link has expired.
+$regen_notice = '';
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_regen_archive'] ) ) {
+    $regen_id = (int) $_POST['ofp_regen_archive'];
+    if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ofp_regen_nonce'] ?? '' ) ), 'ofp_regen_report_' . $regen_id ) ) {
+        $regen_notice = 'error';
+    } else {
+        OFP_Security::check_rate_limit( 'client_' . (int) $client->id, 'report_regen', 10, 3600 );
+        $regen_owned = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$p}ofp_archives WHERE id = %d AND client_id = %d LIMIT 1",
+            $regen_id, $client->id
+        ) );
+        $regen_notice = ( $regen_owned && OFP_CSV::refresh_token( $regen_owned ) ) ? 'success' : 'error';
+    }
+}
+
 // ── Handle token download ────────────────────────────────────────────────────
 $token = sanitize_text_field( $_GET['token'] ?? '' );
 if ( $token ) {
@@ -252,6 +268,11 @@ $initial_kpis = $initial_data['kpis'] ?? [];
                                     Comms CSV
                                 </a>
                             <?php else : ?>
+                                <form method="post" action="<?php echo esc_url( home_url( '/reports' ) ); ?>" style="display:inline-block; margin-right:8px;">
+                                    <?php wp_nonce_field( 'ofp_regen_report_' . (int) $archive->id, 'ofp_regen_nonce', false ); ?>
+                                    <input type="hidden" name="ofp_regen_archive" value="<?php echo (int) $archive->id; ?>">
+                                    <button type="submit" style="padding: 6px 12px; background: var(--accent-blue); color: #fff; border: 0; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">Get new link</button>
+                                </form>
                                 <span style="padding: 6px 12px; background: rgba(255,255,255,0.06); color: var(--text-muted); border-radius: 6px; font-size: 12px; font-weight: 500;">
                                     Link Expired
                                 </span>

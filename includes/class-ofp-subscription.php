@@ -35,12 +35,6 @@ class OFP_Subscription {
         'pro'     => 75000.00,
     ];
 
-    const DEFAULT_SETUP_FEES = [
-        'starter' => 15000.00,
-        'growth'  => 25000.00,
-        'pro'     => 40000.00,
-    ];
-
     /** Canonical product plans. Do not add CRM aliases here. */
     const UNIFIED_PLANS = [ 'free', 'silver', 'gold' ];
 
@@ -300,38 +294,18 @@ class OFP_Subscription {
     }
 
     /**
-     * Get a single setup fee.
-     *
-     * @param string|null $plan
-     * @return float
-     */
-    public static function get_setup_fee( ?string $plan ): float {
-        if ( ! $plan || ! in_array( $plan, self::PLAN_KEYS, true ) ) {
-            return 0.0;
-        }
-
-        return (float) get_option( "ofp_plan_setup_fee_{$plan}", self::DEFAULT_SETUP_FEES[ $plan ] );
-    }
-
-    /**
      * Persist pricing values.
      *
      * @param array $plan_prices
-     * @param array $setup_fees
      * @return bool
      */
-    public static function save_pricing( array $plan_prices, array $setup_fees ): bool {
+    public static function save_pricing( array $plan_prices ): bool {
         foreach ( self::PLAN_KEYS as $plan ) {
             $price = isset( $plan_prices[ $plan ] )
                 ? max( 0.0, (float) $plan_prices[ $plan ] )
                 : self::DEFAULT_PLAN_PRICES[ $plan ];
 
-            $fee = isset( $setup_fees[ $plan ] )
-                ? max( 0.0, (float) $setup_fees[ $plan ] )
-                : self::DEFAULT_SETUP_FEES[ $plan ];
-
             update_option( "ofp_plan_price_{$plan}", $price );
-            update_option( "ofp_plan_setup_fee_{$plan}", $fee );
         }
 
         return true;

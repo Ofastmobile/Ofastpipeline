@@ -21,18 +21,6 @@ $success = '';
 $step    = 'credentials'; // 'credentials' or 'otp'
 $user_email = '';
 $user_phone = '';
-$user_data = null; // Store basic info for session creation
-
-// ── Admin preview token (debugging) ───────────────────────────────────────
-if ( isset( $_GET['admin_preview'] ) ) {
-    $preview_token = sanitize_text_field( wp_unslash( $_GET['admin_preview'] ) );
-
-    if ( OFP_Auth::consume_admin_preview_token( $preview_token ) ) {
-        wp_safe_redirect( home_url( '/dashboard?preview=1' ) );
-        exit;
-    }
-    $error = 'This preview link has expired or already been used.';
-}
 
 if ( isset( $_GET['logged_out'] ) && $_GET['logged_out'] === '1' ) {
     $success = 'You have been logged out successfully.';
@@ -43,6 +31,8 @@ if ( isset( $_GET['suspended'] ) && $_GET['suspended'] === '1' ) {
 if ( isset( $_GET['session_expired'] ) && $_GET['session_expired'] === '1' ) {
     $error = 'Your session has expired. Please log in again.';
 }
+
+$login_token = '';
 
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 
@@ -55,37 +45,60 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 
     if ( isset( $_POST['otp_step'] ) && $_POST['otp_step'] === '1' ) {
         // --- STEP 2: Verify OTP ---
-        $step = 'otp';
-        $email    = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
-        $otp      = isset( $_POST['otp'] ) ? sanitize_text_field( wp_unslash( $_POST['otp'] ) ) : '';
-        $user_id  = isset( $_POST['user_id'] ) ? (int) $_POST['user_id'] : 0;
-        $user_type = isset( $_POST['user_type'] ) ? sanitize_text_field( $_POST['user_type'] ) : 'client';
-        $client_id = isset( $_POST['client_id'] ) ? (int) $_POST['client_id'] : 0;
-        $team_member_id = isset( $_POST['team_member_id'] ) && $_POST['team_member_id'] !== '' ? (int) $_POST['team_member_id'] : null;
+        // Who is logging in comes ONLY from the details saved on the server in
+        // step 1. Nothing about the person is trusted from the browser here.
+        $step        = 'otp';
+        $login_token = preg_replace( '/[^a-zA-Z0-9]/', '', (string) wp_unslash( $_POST['login_token'] ?? '' ) );
+        $saved       = $login_token ? get_transient( 'ofp_login_' . $login_token ) : false;
+        $otp         = isset( $_POST['otp'] ) ? sanitize_text_field( wp_unslash( $_POST['otp'] ) ) : '';
 
-        if ( empty( $otp ) ) {
-            $error = 'Please enter the verification code.';
-            $user_email = $email;
+        if ( ! is_array( $saved ) ) {
+            $error       = 'Your login session has expired. Please log in again.';
+            $step        = 'credentials';
+            $login_token = '';
+        } elseif ( empty( $otp ) ) {
+            $error      = 'Please enter the verification code.';
+            $user_email = $saved['email'];
+        } elseif ( (int) $saved['attempts'] >= 5 ) {
+            delete_transient( 'ofp_login_' . $login_token );
+            $error       = 'Too many wrong codes. Please log in again.';
+            $step        = 'credentials';
+            $login_token = '';
+        } elseif ( ! OFP_Auth::verify_otp( $saved['email'], $otp, 'login' ) ) {
+            $saved['attempts'] = (int) $saved['attempts'] + 1;
+            set_transient( 'ofp_login_' . $login_token, $saved, 10 * MINUTE_IN_SECONDS );
+            $error      = 'Invalid or expired verification code.';
+            $user_email = $saved['email'];
         } else {
-            if ( OFP_Auth::verify_otp( $email, $otp, 'login' ) ) {
-                // Success! Issue session
-                OFP_Auth::issue_session( $client_id, $user_type, $team_member_id );
-                
+            // Correct code. The saved login is used once only.
+            delete_transient( 'ofp_login_' . $login_token );
+            $login_token = '';
+
+            // Check again that this person may still log in here.
+            $host_client = OFP_Host_Router::current_client_record();
+            $wrong_host  = $host_client && ! OFP_Auth::is_admin_user()
+                && (int) $saved['client_id'] !== (int) $host_client->id;
+
+            if ( $wrong_host || ! OFP_Auth::is_login_allowed( (string) $saved['user_type'], (int) $saved['client_id'], $saved['team_member_id'] ) ) {
+                $error = 'Invalid email address or password.';
+                $step  = 'credentials';
+            } else {
+                OFP_Auth::issue_session( (int) $saved['client_id'], (string) $saved['user_type'], $saved['team_member_id'] );
+
                 $redirect_to = isset( $_GET['redirect_to'] )
                     ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) )
                     : home_url( '/dashboard' );
 
                 wp_safe_redirect( $redirect_to );
                 exit;
-            } else {
-                $error = 'Invalid or expired verification code.';
-                $user_email = $email;
             }
         }
     } else {
         // --- STEP 1: Verify Credentials ---
         $email    = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
-        $password = isset( $_POST['password'] ) ? sanitize_text_field( wp_unslash( $_POST['password'] ) ) : '';
+        // The password is used exactly as typed. It must not be cleaned,
+        // or it would no longer match the one that was saved.
+        $password = isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '';
 
         if ( empty( $email ) || empty( $password ) ) {
             $error = 'Please enter your email and password.';
@@ -100,7 +113,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                 && (int) $credentials_valid['client_id'] !== (int) $host_client->id ) {
                 $credentials_valid = false;
             }
-            
+
             if ( $credentials_valid ) {
                 // Admin bypass: Skip OTP and login directly
                 if ( OFP_Auth::is_admin_user() ) {
@@ -112,13 +125,21 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                     exit;
                 }
 
-                // Generate OTP
+                // Keep who is logging in on the server. The next page only gets a random token.
+                $login_token = wp_generate_password( 32, false, false );
+                set_transient( 'ofp_login_' . $login_token, [
+                    'email'          => $email,
+                    'user_type'      => (string) $credentials_valid['user_type'],
+                    'client_id'      => (int) $credentials_valid['client_id'],
+                    'team_member_id' => $credentials_valid['team_member_id'] !== null ? (int) $credentials_valid['team_member_id'] : null,
+                    'attempts'       => 0,
+                ], 10 * MINUTE_IN_SECONDS );
+
                 OFP_Auth::generate_and_send_otp( $email, $credentials_valid['phone'], 'login' );
-                
-                $step = 'otp';
-                $success = 'A verification code has been sent to your email and phone.';
+
+                $step       = 'otp';
+                $success    = 'A verification code has been sent to your email and phone.';
                 $user_email = $email;
-                $user_data = $credentials_valid;
             } else {
                 $error = 'Invalid email address or password.';
             }
@@ -214,17 +235,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                         <form method="POST" action="<?php echo esc_url( home_url( '/login' ) ); ?>" class="ofp-auth-form" novalidate>
                             <input type="hidden" name="otp_step" value="1">
                             <input type="hidden" name="email" value="<?php echo esc_attr( $user_email ); ?>">
-                            <?php if ( $user_data ) : ?>
-                                <input type="hidden" name="user_id" value="<?php echo esc_attr( $user_data['id'] ); ?>">
-                                <input type="hidden" name="user_type" value="<?php echo esc_attr( $user_data['user_type'] ); ?>">
-                                <input type="hidden" name="client_id" value="<?php echo esc_attr( $user_data['client_id'] ); ?>">
-                                <input type="hidden" name="team_member_id" value="<?php echo esc_attr( $user_data['team_member_id'] ?? '' ); ?>">
-                            <?php elseif ( isset( $_POST['user_type'] ) ) : ?>
-                                <input type="hidden" name="user_id" value="<?php echo esc_attr( $_POST['user_id'] ); ?>">
-                                <input type="hidden" name="user_type" value="<?php echo esc_attr( $_POST['user_type'] ); ?>">
-                                <input type="hidden" name="client_id" value="<?php echo esc_attr( $_POST['client_id'] ); ?>">
-                                <input type="hidden" name="team_member_id" value="<?php echo esc_attr( $_POST['team_member_id'] ); ?>">
-                            <?php endif; ?>
+                            <input type="hidden" name="login_token" value="<?php echo esc_attr( $login_token ); ?>">
 
                             <div class="ofp-input-group">
                                 <label for="ofp-otp">7-Character Verification Code (OTP)</label>

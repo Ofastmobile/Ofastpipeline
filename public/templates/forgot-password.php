@@ -20,7 +20,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
         $error = 'Security check failed — please try again.';
     } else {
 
-        OFP_Security::check_rate_limit( $_SERVER['REMOTE_ADDR'] ?? '', 'forgot_password', 5, 600 );
+        OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'forgot_password', 5, 600 );
 
         $email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
 

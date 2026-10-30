@@ -266,21 +266,6 @@ class OFP_Property_Rent {
         return $property;
     }
 
-    public static function get_rent_options( int $property_id, int $client_id = 0, bool $active_only = false ): array {
-        global $wpdb;
-        $where = 'property_id = %d';
-        $args = [ $property_id ];
-        if ( $client_id ) {
-            $where .= ' AND client_id = %d';
-            $args[] = $client_id;
-        }
-        if ( $active_only ) $where .= ' AND is_active = 1';
-        return $wpdb->get_results( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}ofp_property_rent_options WHERE {$where} ORDER BY amount ASC, id ASC",
-            ...$args
-        ) );
-    }
-
     public static function save_rent_option( int $client_id, int $property_id, array $data, int $option_id = 0 ) {
         global $wpdb;
         $property = self::owned_property( $property_id, $client_id );
@@ -446,15 +431,6 @@ class OFP_Property_Rent {
             "SELECT id FROM {$wpdb->prefix}ofp_property_leases WHERE property_id = %d AND status = 'active' LIMIT 1",
             $property_id
         ) );
-    }
-
-    public static function wp_property_is_occupied( int $wp_post_id ): bool {
-        global $wpdb;
-        $property_id = (int) $wpdb->get_var( $wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}ofp_properties WHERE wp_post_id = %d LIMIT 1",
-            $wp_post_id
-        ) );
-        return $property_id > 0 && self::property_is_occupied( $property_id );
     }
 
     /** Used by the payment layer after the first successful payment. */

@@ -16,6 +16,9 @@ class OFP_Property_Payment_Records {
         add_action( 'admin_post_ofp_property_payment_reject', [ __CLASS__, 'admin_reject' ] );
         add_action( 'admin_post_ofp_client_payment_verify', [ __CLASS__, 'client_verify' ] );
         add_action( 'admin_post_ofp_client_payment_reject', [ __CLASS__, 'client_reject' ] );
+        // Clients are not WordPress users, so they arrive as logged out visitors.
+        add_action( 'admin_post_nopriv_ofp_client_payment_verify', [ __CLASS__, 'client_verify' ] );
+        add_action( 'admin_post_nopriv_ofp_client_payment_reject', [ __CLASS__, 'client_reject' ] );
 
         // The manual-payment engine only owns buyer receipt submission now;
         // verification lives entirely here (see class-ofp-property-manual-payment.php).

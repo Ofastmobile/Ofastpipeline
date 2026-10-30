@@ -25,10 +25,10 @@ if ( ! $team_member ) {
 }
 
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && $team_member ) {
-    $password = sanitize_text_field( wp_unslash( $_POST['password'] ?? '' ) );
+    $password = (string) wp_unslash( $_POST['password'] ?? '' );
     
-    if ( empty( $password ) || strlen( $password ) < 6 ) {
-        $error = 'Please enter a password of at least 6 characters.';
+    if ( empty( $password ) || strlen( $password ) < 8 ) {
+        $error = 'Please enter a password of at least 8 characters.';
     } else {
         $result = OFP_Team_Member::accept_invite( $token, $password );
         if ( is_wp_error( $result ) ) {

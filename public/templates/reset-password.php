@@ -25,7 +25,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && $token_valid ) {
         $error = 'Security check failed — please try again.';
     } else {
 
-        OFP_Security::check_rate_limit( $_SERVER['REMOTE_ADDR'] ?? '', 'reset_password', 5, 600 );
+        OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'reset_password', 5, 600 );
 
         $password  = wp_unslash( $_POST['password'] ?? '' );
         $password2 = wp_unslash( $_POST['password_confirm'] ?? '' );

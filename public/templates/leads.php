@@ -16,7 +16,7 @@ if ( ! OFP_Auth::has_permission( 'view_leads' ) ) {
 }
 
 // Handle status update
-$message = '';
+$message = isset( $_GET['note_saved'] ) ? 'note' : '';
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_leads_nonce'] ) ) {
     if ( ! OFP_Auth::has_permission( 'edit_leads' ) ) {
         wp_die( 'You do not have permission to edit leads.', 'Access Denied', [ 'response' => 403 ] );
@@ -26,6 +26,22 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_leads_nonce'] )
         $lead_id    = (int) ( $_POST['lead_id'] ?? 0 );
         $new_status = sanitize_text_field( wp_unslash( $_POST['new_status'] ?? '' ) );
         $allowed    = [ 'new', 'contacted', 'interested', 'converted', 'dead' ];
+
+        // Add a note to a lead.
+        if ( isset( $_POST['lead_note'] ) ) {
+            global $wpdb;
+            $note_text = trim( (string) wp_unslash( $_POST['lead_note'] ) );
+            $note_text = function_exists( 'mb_substr' ) ? mb_substr( $note_text, 0, 1000 ) : substr( $note_text, 0, 1000 );
+            $note_owns = $lead_id ? $wpdb->get_var( $wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}ofp_leads WHERE id = %d AND client_id = %d LIMIT 1",
+                $lead_id, $client->id
+            ) ) : 0;
+            if ( $note_owns && $note_text !== '' ) {
+                OFP_Lead::add_note( $lead_id, $note_text );
+                wp_safe_redirect( home_url( '/leads?note_saved=1' ) );
+                exit;
+            }
+        }
 
         if ( $lead_id && in_array( $new_status, $allowed, true ) ) {
             // Verify this lead belongs to this client.
@@ -154,6 +170,9 @@ $status_badges = [
 
 <div class="ofp-container">
 
+    <?php if ( $message === 'note' ) : ?>
+        <div class="ofp-alert ofp-alert-success">✅ Note saved.</div>
+    <?php endif; ?>
     <?php if ( $message === 'success' ) : ?>
         <div class="ofp-alert ofp-alert-success">✅ Prospect status updated.</div>
     <?php endif; ?>
@@ -402,6 +421,20 @@ $status_badges = [
                                     <button type="button" class="ofp-btn ofp-btn-sm ofp-btn-ghost" onclick="openMessageModal(<?php echo esc_attr($lead->id); ?>, '<?php echo esc_js($lead->name ?? ''); ?>', '<?php echo esc_js($lead->phone ?? ''); ?>', '<?php echo esc_js($lead->email ?? ''); ?>')" title="Send Message">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
                                     </button>
+                                    <details style="margin-top:6px; text-align:left; min-width:180px;">
+                                        <summary style="cursor:pointer; font-size:12px; color:var(--text-muted);">Notes</summary>
+                                        <?php if ( ! empty( $lead->notes ) ) : ?>
+                                            <div style="white-space:pre-wrap; font-size:12px; margin:6px 0; max-height:120px; overflow:auto;"><?php echo esc_html( $lead->notes ); ?></div>
+                                        <?php endif; ?>
+                                        <?php if ( OFP_Auth::has_permission( 'edit_leads' ) ) : ?>
+                                            <form method="POST" action="">
+                                                <?php wp_nonce_field( 'ofp_leads_' . $client->id, 'ofp_leads_nonce', false ); ?>
+                                                <input type="hidden" name="lead_id" value="<?php echo (int) $lead->id; ?>">
+                                                <textarea name="lead_note" rows="2" maxlength="1000" placeholder="Add a note" style="width:100%; font-size:12px; margin-top:4px;"></textarea>
+                                                <button type="submit" class="ofp-btn ofp-btn-sm" style="margin-top:4px;">Save note</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </details>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

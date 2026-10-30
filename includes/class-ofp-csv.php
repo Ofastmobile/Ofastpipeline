@@ -397,9 +397,9 @@ class OFP_CSV {
             "leads_{$period_label}.csv",
             "sales_installments_{$period_label}.csv",
             "rent_roll_{$period_label}.csv",
-            "inspections_{period_label}.csv",
-            "transactions_{period_label}.csv",
-            "communications_{period_label}.csv",
+            "inspections_{$period_label}.csv",
+            "transactions_{$period_label}.csv",
+            "communications_{$period_label}.csv",
         ];
         $file_path_str = implode( '|', $files_list );
 

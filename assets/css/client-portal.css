@@ -10621,14 +10621,62 @@ html.light .ofp-toast {
         margin: 0 !important;
     }
 
-    /* Mobile L&D Toggle button & Notification trigger touch responsiveness */
+    /* Mobile Topbar Elements: Hamburger, Greeting, L&D Toggle, and Notification Bell (Unified iOS Frosted Glass) */
+    body .ofp-topbar .ofp-sidebar-toggle,
+    body .ofp-topbar.ofp-topbar-transparent .ofp-sidebar-toggle,
+    body .ofp-topbar .ofp-hero-greeting-pill,
+    body .ofp-topbar #ofp-theme-toggle,
+    body .ofp-topbar #ofp-notif-trigger {
+        background: rgba(15, 23, 42, 0.5) !important;
+        backdrop-filter: blur(20px) saturate(190%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
+        color: #f8fafc !important;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    [data-theme="dark"] body .ofp-topbar .ofp-sidebar-toggle,
+    [data-theme="dark"] body .ofp-topbar .ofp-hero-greeting-pill,
+    [data-theme="dark"] body .ofp-topbar #ofp-theme-toggle,
+    [data-theme="dark"] body .ofp-topbar #ofp-notif-trigger,
+    html.dark body .ofp-topbar .ofp-sidebar-toggle,
+    html.dark body .ofp-topbar .ofp-hero-greeting-pill,
+    html.dark body .ofp-topbar #ofp-theme-toggle,
+    html.dark body .ofp-topbar #ofp-notif-trigger {
+        background: rgba(15, 23, 42, 0.5) !important;
+        backdrop-filter: blur(20px) saturate(190%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
+        color: #f8fafc !important;
+    }
+
+    [data-theme="light"] body .ofp-topbar .ofp-sidebar-toggle,
+    [data-theme="light"] body .ofp-topbar.ofp-topbar-transparent .ofp-sidebar-toggle,
+    [data-theme="light"] body .ofp-topbar .ofp-hero-greeting-pill,
+    [data-theme="light"] body .ofp-topbar #ofp-theme-toggle,
+    [data-theme="light"] body .ofp-topbar #ofp-notif-trigger,
+    html.light body .ofp-topbar .ofp-sidebar-toggle,
+    html.light body .ofp-topbar.ofp-topbar-transparent .ofp-sidebar-toggle,
+    html.light body .ofp-topbar .ofp-hero-greeting-pill,
+    html.light body .ofp-topbar #ofp-theme-toggle,
+    html.light body .ofp-topbar #ofp-notif-trigger {
+        background: rgba(255, 255, 255, 0.32) !important;
+        backdrop-filter: blur(20px) saturate(190%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.55) !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65) !important;
+        color: #0f172a !important;
+    }
+
     #ofp-theme-toggle,
     #ofp-notif-trigger {
-        width: 36px !important;
-        height: 36px !important;
-        min-width: 36px !important;
-        max-width: 36px !important;
-        border-radius: 10px !important;
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        max-width: 38px !important;
+        border-radius: 12px !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -10643,18 +10691,60 @@ html.light .ofp-toast {
         touch-action: manipulation !important;
         -webkit-tap-highlight-color: transparent !important;
         user-select: none !important;
-        background: rgba(15, 23, 42, 0.5) !important;
-        border: 1px solid rgba(255, 255, 255, 0.18) !important;
-        color: #f8fafc !important;
     }
 
-    [data-theme="light"] #ofp-theme-toggle,
-    [data-theme="light"] #ofp-notif-trigger,
-    html.light #ofp-theme-toggle,
-    html.light #ofp-notif-trigger {
-        background: rgba(255, 255, 255, 0.32) !important;
-        border: 1px solid rgba(255, 255, 255, 0.55) !important;
-        color: #0f172a !important;
+    body .ofp-topbar .ofp-sidebar-toggle,
+    body .ofp-topbar.ofp-topbar-transparent .ofp-sidebar-toggle {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        padding: 0 !important;
+        border-radius: 12px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin-right: 8px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .ofp-hero-greeting-pill {
+        display: inline-flex !important;
+        align-items: center !important;
+        padding: 5px 12px !important;
+        gap: 8px !important;
+        border-radius: 9999px !important;
+        max-width: calc(100vw - 170px) !important;
+    }
+
+    /* Active / hover state for iOS Glass Buttons */
+    body .ofp-topbar .ofp-sidebar-toggle:hover,
+    body .ofp-topbar .ofp-sidebar-toggle:active,
+    #ofp-theme-toggle:hover,
+    #ofp-theme-toggle:active,
+    #ofp-notif-trigger:hover,
+    #ofp-notif-trigger:active {
+        background: rgba(30, 41, 59, 0.65) !important;
+        border-color: rgba(255, 255, 255, 0.28) !important;
+        box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.32) !important;
+        transform: translateY(-1px) scale(1.03) !important;
+    }
+
+    [data-theme="light"] body .ofp-topbar .ofp-sidebar-toggle:hover,
+    [data-theme="light"] body .ofp-topbar .ofp-sidebar-toggle:active,
+    [data-theme="light"] #ofp-theme-toggle:hover,
+    [data-theme="light"] #ofp-theme-toggle:active,
+    [data-theme="light"] #ofp-notif-trigger:hover,
+    [data-theme="light"] #ofp-notif-trigger:active,
+    html.light body .ofp-topbar .ofp-sidebar-toggle:hover,
+    html.light body .ofp-topbar .ofp-sidebar-toggle:active,
+    html.light #ofp-theme-toggle:hover,
+    html.light #ofp-theme-toggle:active,
+    html.light #ofp-notif-trigger:hover,
+    html.light #ofp-notif-trigger:active {
+        background: rgba(255, 255, 255, 0.48) !important;
+        border-color: rgba(255, 255, 255, 0.8) !important;
+        box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.16), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85) !important;
+        transform: translateY(-1px) scale(1.03) !important;
     }
 
     #ofp-theme-toggle svg,
@@ -11068,4 +11158,62 @@ html.light .ofp-toast {
 
 .ofp-billing-table tbody tr:last-child td {
     border-bottom: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOBILE SCROLL SMOOTHNESS FIX (v2.2.13)
+   Cause: about 110 backdrop-filter blur effects (sidebar, cards, tabs, table
+   headers, inputs, modals). On phones each blur forces the GPU to copy and
+   blur whatever is behind it on every scroll frame. The screen then paints
+   in pieces: half first, the other half a moment later.
+   Fix: switch blur off on phones and tablets, and use solid backgrounds so
+   text stays readable. Desktop is not touched.
+   The :not(#a) parts raise specificity so this wins over the older
+   !important rules without editing them one by one.
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+
+    html:not(#a) body:not(#a) *:not(#a),
+    html:not(#a) body:not(#a) *:not(#a)::before,
+    html:not(#a) body:not(#a) *:not(#a)::after {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    /* Solid surfaces to replace the see through glass look */
+    html:not(#a) body:not(#a) .ofp-card:not(#a),
+    html:not(#a) body:not(#a) .ofp-profile-card:not(#a),
+    html:not(#a) body:not(#a) .ofp-team-table:not(#a) th:not(#a) {
+        background: var(--bg-card) !important;
+    }
+
+    html:not(#a) body:not(#a) .ofp-sidebar:not(#a) {
+        background: var(--bg-sidebar) !important;
+    }
+
+    html:not(#a) body:not(#a) .ofp-modal-content:not(#a),
+    html:not(#a) body:not(#a) .ofp-search-modal-box:not(#a),
+    html:not(#a) body:not(#a) .ofp-notifications-dropdown:not(#a),
+    html:not(#a) body:not(#a) .ofp-chart-inline-filters:not(#a) .ofp-custom-select-options:not(#a),
+    html:not(#a) body:not(#a) .ofp-client-modal-card:not(#a),
+    html:not(#a) body:not(#a) .ofp-cfb-select-menu:not(#a) {
+        background: var(--dropdown-bg) !important;
+    }
+
+    /* Tab switches: animate only what is needed, not every property */
+    html:not(#a) body:not(#a) .ofp-filter-tabs:not(#a) *:not(#a),
+    html:not(#a) body:not(#a) .ofp-cfb-tabs-segmented:not(#a) *:not(#a) {
+        transition-property: background-color, color, opacity !important;
+    }
+
+    /* Horizontal scroll areas: do not pass the swipe to the page */
+    html:not(#a) body:not(#a) .ofp-filter-tabs:not(#a),
+    html:not(#a) body:not(#a) .ofp-cfb-tabs-segmented:not(#a) {
+        overscroll-behavior-x: contain;
+    }
+
+    /* Fixed background layer: no extra GPU hint needed on phones */
+    body.ofp-portal-body::before {
+        will-change: auto;
+    }
 }

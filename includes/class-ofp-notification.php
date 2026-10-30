@@ -90,23 +90,6 @@ class OFP_Notification {
 	}
 
 	/**
-	 * Fetch recent notifications for the bell dropdown, newest first.
-	 *
-	 * @param int $client_id
-	 * @param int $limit     how many to return (default 10)
-	 * @return array
-	 */
-	public static function get_recent( int $client_id, int $limit = 10 ): array {
-		global $wpdb;
-		return $wpdb->get_results( $wpdb->prepare( "
-			SELECT * FROM {$wpdb->prefix}ofp_notifications
-			WHERE client_id = %d
-			ORDER BY created_at DESC
-			LIMIT %d
-		", $client_id, $limit ) );
-	}
-
-	/**
 	 * Mark one specific notification as read.
 	 *
 	 * @param int $notification_id

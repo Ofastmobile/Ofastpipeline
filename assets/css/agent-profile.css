@@ -46,7 +46,7 @@ body.ofp-agent-page-body {
     max-width: 1240px;
     width: 100%;
     margin: 0 auto;
-    padding: 24px 20px 40px;
+    padding: 0 20px 40px;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -141,24 +141,49 @@ body.ofp-agent-page-body {
     background: var(--hoomeee-card);
     border-radius: var(--hoomeee-radius-card);
     box-shadow: var(--hoomeee-shadow);
-    padding: 24px;
+    padding: 0 0 28px 0;
     margin-bottom: 28px;
+    overflow: visible;
 }
 
-/* ── Featured Cover Banner (Exact Hoomeee Style) ─────────────────────────── */
+/* ── Featured Cover Banner (Full-Width Edge-to-Edge) ─────────────────────────── */
 .ofp-cover-banner {
     position: relative;
     width: 100%;
     height: 380px;
-    border-radius: var(--hoomeee-radius-inner);
+    border-radius: 0;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 24px 28px;
-    box-shadow: inset 0 -120px 80px -20px rgba(0, 0, 0, 0.65);
+    padding: 0;
+    box-shadow: inset 0 -130px 85px -20px rgba(0, 0, 0, 0.72);
+    margin: 0;
+}
+
+.ofp-cover-banner-inner {
+    max-width: 1240px;
+    width: 100%;
+    height: 100%;
+    margin: 0 auto;
+    padding: 24px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 2;
+}
+
+@media (max-width: 860px) {
+    .ofp-cover-banner {
+        height: 320px;
+    }
+    .ofp-cover-banner-inner {
+        padding: 18px 16px;
+    }
 }
 
 .ofp-cover-badge-available {
@@ -247,13 +272,14 @@ body.ofp-agent-page-body {
     display: grid;
     grid-template-columns: 240px 1fr;
     gap: 40px;
-    padding: 0 12px 12px;
+    padding: 0 28px 12px;
 }
 
 @media (max-width: 860px) {
     .ofp-agent-content-split {
         grid-template-columns: 1fr;
         gap: 20px;
+        padding: 0 20px 12px;
     }
 }
 
@@ -265,32 +291,54 @@ body.ofp-agent-page-body {
     text-align: center;
 }
 
-/* Squircle Avatar overlapping banner (Exact reference mockup match) */
+/* Squircle Avatar / Logo overlapping banner (Maintaining original 140px size, object-fit contain so logos are never cut off) */
 .ofp-squircle-avatar-wrap {
     width: 140px;
     height: 140px;
     border-radius: 24px;
     background: #ffffff;
     border: 5px solid #ffffff;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
     overflow: hidden;
     margin-top: -65px;
     position: relative;
-    z-index: 2;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ofp-avatar-verified-tick {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    background: #10b981;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    z-index: 5;
 }
 
 .ofp-squircle-avatar-img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    padding: 8px;
     display: block;
+    background: #ffffff;
 }
 
 .ofp-agent-person-name {
     font-size: 19px;
     font-weight: 700;
     color: var(--hoomeee-text-main);
-    margin: 14px 0 3px;
+    margin: 14px 0 14px;
     line-height: 1.25;
 }
 
@@ -516,12 +564,196 @@ body.ofp-agent-page-body {
     background: #ffffff !important;
     border-radius: var(--hoomeee-radius-card);
     box-shadow: var(--hoomeee-shadow);
-    padding: 24px;
+    padding: 0 0 28px 0 !important;
     margin-bottom: 28px;
     border: 1px solid var(--hoomeee-border);
+    overflow: visible !important;
 }
 
 .ofp-properties-section-card {
     background: #ffffff !important;
     border: 1px solid var(--hoomeee-border);
+}
+
+
+/* ── Dark Mode Overrides for Agent Profile ───────────────────────────────── */
+html.dark body.ofp-agent-page-body {
+    background-color: #020617 !important;
+    color: #f1f5f9 !important;
+}
+
+html.dark .ofp-agent-showcase-card {
+    background: #0f172a !important;
+    border-color: #1e293b !important;
+    color: #f1f5f9 !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
+    padding: 0 0 28px 0 !important;
+    overflow: visible !important;
+}
+
+html.dark .ofp-properties-section-card {
+    background: #0f172a !important;
+    border-color: #1e293b !important;
+    color: #f1f5f9 !important;
+}
+
+html.dark .ofp-squircle-avatar-wrap {
+    background-color: #ffffff !important;
+    border: 5px solid #1e293b !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark .ofp-squircle-avatar-img {
+    background-color: #ffffff !important;
+}
+
+html.dark .ofp-avatar-verified-tick {
+    border-color: #ffffff !important;
+}
+
+html.dark .ofp-agent-person-name {
+    color: #ffffff !important;
+}
+
+html.dark .ofp-address-row {
+    color: #94a3b8 !important;
+}
+
+html.dark .ofp-agent-address-info {
+    border-color: #1e293b !important;
+}
+
+html.dark .ofp-desc-text,
+html.dark .ofp-desc-text p {
+    color: #ffffff !important;
+}
+
+html.dark .ofp-desc-heading span:not(.ofp-heading-bar) {
+    color: #ffffff !important;
+}
+
+html.dark .ofp-social-card-title {
+    color: #ffffff !important;
+}
+
+html.dark .ofp-social-media-section {
+    border-top-color: #1e293b !important;
+}
+
+html.dark .ofp-social-bubble {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #cbd5e1 !important;
+}
+
+html.dark .ofp-social-bubble:hover {
+    transform: translateY(-3px);
+    color: #ffffff !important;
+}
+
+html.dark .ofp-social-bubble.yt:hover {
+    background: #ff0000 !important;
+    border-color: #ff0000 !important;
+    color: #ffffff !important;
+    box-shadow: 0 6px 20px rgba(255, 0, 0, 0.45) !important;
+}
+
+html.dark .ofp-social-bubble.ig:hover {
+    background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+    box-shadow: 0 6px 20px rgba(214, 36, 159, 0.45) !important;
+}
+
+html.dark .ofp-social-bubble.tt:hover {
+    background: #000000 !important;
+    border-color: #00f2fe !important;
+    color: #ffffff !important;
+    box-shadow: -2px -2px 10px rgba(0, 242, 254, 0.6), 2px 2px 10px rgba(254, 44, 85, 0.6) !important;
+}
+
+html.dark .ofp-social-bubble.wa:hover {
+    background: #25d366 !important;
+    border-color: #25d366 !important;
+    color: #ffffff !important;
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.45) !important;
+}
+
+html.dark .ofp-social-bubble.web:hover {
+    background: #00875a !important;
+    border-color: #00875a !important;
+    color: #ffffff !important;
+    box-shadow: 0 6px 20px rgba(0, 135, 90, 0.45) !important;
+}
+
+html.dark .ofp-social-bubble:hover svg {
+    color: #ffffff !important;
+}
+
+html.dark .ofp-properties-section-card .bg-white {
+    background-color: #0b1120 !important;
+    border-color: #1e293b !important;
+    color: #f1f5f9 !important;
+}
+
+html.dark .ofp-properties-section-card a.text-slate-900,
+html.dark .ofp-properties-section-card h3.text-slate-900,
+html.dark .ofp-properties-section-card span.text-slate-900 {
+    color: #ffffff !important;
+}
+
+html.dark .ofp-properties-section-card .border-slate-100 {
+    border-color: #1e293b !important;
+}
+
+html.dark .ofp-properties-section-card .text-slate-600,
+html.dark .ofp-properties-section-card .text-slate-500 {
+    color: #94a3b8 !important;
+}
+
+/* ── Dark Mode Footer Support ────────────────────────────────────────────── */
+html.dark footer {
+    background-color: #020617 !important;
+    border-color: #1e293b !important;
+    color: #94a3b8 !important;
+}
+
+html.dark footer .border-b,
+html.dark footer .border-t {
+    border-color: #1e293b !important;
+}
+
+html.dark footer h3,
+html.dark footer h4,
+html.dark footer span.text-slate-900 {
+    color: #f8fafc !important;
+}
+
+html.dark footer p,
+html.dark footer ul,
+html.dark footer span:not(.text-slate-900):not(.text-emerald-600):not(.text-emerald-400) {
+    color: #94a3b8 !important;
+}
+
+html.dark footer a {
+    color: #94a3b8 !important;
+}
+
+html.dark footer a:hover {
+    color: #ffffff !important;
+}
+
+html.dark footer input[type="email"] {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+    color: #ffffff !important;
+}
+
+html.dark footer input[type="email"]::placeholder {
+    color: #64748b !important;
+}
+
+html.dark .ofp-clean-footer {
+    border-color: #1e293b !important;
+    color: #94a3b8 !important;
 }

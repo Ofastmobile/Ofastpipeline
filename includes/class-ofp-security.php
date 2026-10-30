@@ -57,40 +57,83 @@ class OFP_Security {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Encrypt a plaintext value using AES-256-CBC.
-     * Keys are stored in wp_options, generated once on plugin activation.
+     * Keys for the current format. They come from the saved key AND the site
+     * salts in wp-config.php, so a copy of the database alone is not enough
+     * to read the saved secrets.
      *
-     * @param  string $value Plaintext to encrypt (e.g. an API key).
-     * @return string        Base64-encoded ciphertext, or empty string on failure.
+     * @return array|null [ encryption key, signing key ] or null if no key is set yet.
+     */
+    private static function v2_keys(): ?array {
+        $base = (string) get_option( 'ofp_encryption_key', '' );
+        if ( $base === '' ) {
+            return null;
+        }
+        $root = hash_hmac( 'sha256', $base, wp_salt( 'secure_auth' ), true );
+        return [
+            hash_hmac( 'sha256', 'enc', $root, true ),
+            hash_hmac( 'sha256', 'mac', $root, true ),
+        ];
+    }
+
+    /**
+     * Encrypt a plaintext value (for example an API key).
+     * New format: AES-256-CBC with a fresh random IV for every value, plus a
+     * signature so any change to the saved text is detected.
+     *
+     * @param  string $value Plaintext to encrypt.
+     * @return string        "v2:" + base64 text, or empty string on failure.
      */
     public static function encrypt( string $value ): string {
         if ( empty( $value ) ) {
             return '';
         }
 
-        $key = get_option( 'ofp_encryption_key', '' );
-        $iv  = substr( get_option( 'ofp_encryption_iv', '' ), 0, 16 );
-
-        if ( ! $key || ! $iv ) {
-            // Keys not set yet — should never happen after activation.
+        $keys = self::v2_keys();
+        if ( ! $keys ) {
+            // Keys not set yet. This should never happen after activation.
             return $value;
         }
 
-        $encrypted = openssl_encrypt( $value, 'AES-256-CBC', $key, 0, $iv );
-        return $encrypted !== false ? base64_encode( $encrypted ) : '';
+        $iv     = random_bytes( 16 );
+        $cipher = openssl_encrypt( $value, 'AES-256-CBC', $keys[0], OPENSSL_RAW_DATA, $iv );
+        if ( $cipher === false ) {
+            return '';
+        }
+        $mac = hash_hmac( 'sha256', $iv . $cipher, $keys[1], true );
+
+        return 'v2:' . base64_encode( $iv . $mac . $cipher );
     }
 
     /**
-     * Decrypt a value previously encrypted with self::encrypt().
+     * Decrypt a value saved by encrypt(). Values saved in the older format
+     * (before this update) still decrypt, and move to the new format the next
+     * time they are saved.
      *
-     * @param  string $encrypted Base64-encoded ciphertext.
-     * @return string            Decrypted plaintext, or empty string on failure.
+     * @param  string $encrypted Saved text.
+     * @return string            Plaintext, or empty string on failure.
      */
     public static function decrypt( string $encrypted ): string {
         if ( empty( $encrypted ) ) {
             return '';
         }
 
+        if ( strncmp( $encrypted, 'v2:', 3 ) === 0 ) {
+            $keys = self::v2_keys();
+            $raw  = base64_decode( substr( $encrypted, 3 ), true );
+            if ( ! $keys || $raw === false || strlen( $raw ) < 49 ) {
+                return '';
+            }
+            $iv     = substr( $raw, 0, 16 );
+            $mac    = substr( $raw, 16, 32 );
+            $cipher = substr( $raw, 48 );
+            if ( ! hash_equals( hash_hmac( 'sha256', $iv . $cipher, $keys[1], true ), $mac ) ) {
+                return '';
+            }
+            $plain = openssl_decrypt( $cipher, 'AES-256-CBC', $keys[0], OPENSSL_RAW_DATA, $iv );
+            return $plain !== false ? $plain : '';
+        }
+
+        // Older format (fixed IV).
         $key = get_option( 'ofp_encryption_key', '' );
         $iv  = substr( get_option( 'ofp_encryption_iv', '' ), 0, 16 );
 
@@ -107,6 +150,38 @@ class OFP_Security {
         );
 
         return $decrypted !== false ? $decrypted : '';
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CLIENT SESSION NONCES
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Clients are not WordPress users, so WordPress gives every logged out
+     * visitor the same nonce. This ties portal nonces to the client's own
+     * session cookie, so one client's nonce is useless for another.
+     *
+     * Links that are sent to people WITHOUT a portal session (receipts, proofs,
+     * public offers) are left alone, because they must work for everyone.
+     *
+     * @param  int|string $uid    User id WordPress is about to use (0 when logged out).
+     * @param  string     $action Nonce action name.
+     * @return int|string
+     */
+    public static function bind_nonce_to_client_session( $uid, $action = '' ) {
+        if ( $uid ) {
+            return $uid;
+        }
+        foreach ( [ 'ofp_view_receipt_', 'ofp_my_receipt_', 'ofp_lease_proof_', 'ofp_offer_action_' ] as $open_prefix ) {
+            if ( is_string( $action ) && strpos( $action, $open_prefix ) === 0 ) {
+                return $uid;
+            }
+        }
+        $name = class_exists( 'OFP_Auth' ) ? OFP_Auth::COOKIE_NAME : 'ofp_client_session';
+        if ( empty( $_COOKIE[ $name ] ) ) {
+            return $uid;
+        }
+        return 'ofp' . substr( hash( 'sha256', (string) wp_unslash( $_COOKIE[ $name ] ) ), 0, 24 );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -418,32 +493,4 @@ class OFP_Security {
     // NONCE HELPERS (used in admin forms)
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Output a hidden nonce field for an OFP admin form.
-     *
-     * @param string $action Unique nonce action name.
-     */
-    public static function nonce_field( string $action ): void {
-        wp_nonce_field( 'ofp_' . $action, 'ofp_nonce' );
-    }
-
-    /**
-     * Verify a nonce submitted from an OFP admin form.
-     * Terminates with wp_die() on failure.
-     *
-     * @param string $action Unique nonce action name.
-     */
-    public static function verify_nonce( string $action ): void {
-        $nonce = isset( $_POST['ofp_nonce'] )
-            ? sanitize_text_field( wp_unslash( $_POST['ofp_nonce'] ) )
-            : '';
-
-        if ( ! wp_verify_nonce( $nonce, 'ofp_' . $action ) ) {
-            wp_die(
-                esc_html__( 'Security check failed. Please refresh and try again.', 'ofast-pipeline' ),
-                esc_html__( 'Security Error', 'ofast-pipeline' ),
-                [ 'response' => 403 ]
-            );
-        }
-    }
 }

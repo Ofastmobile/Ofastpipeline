@@ -649,15 +649,6 @@ function ofpCloseAdminModal(id) {
     if (modal) modal.style.display = 'none';
 }
 
-function ofpFilterAdminTable(inputId, tableId) {
-    var val = (document.getElementById(inputId) ? document.getElementById(inputId).value : '').toLowerCase().trim();
-    var rows = document.querySelectorAll('#' + tableId + ' tbody tr');
-    rows.forEach(function(r) {
-        var txt = r.textContent.toLowerCase();
-        r.style.display = (!val || txt.indexOf(val) !== -1) ? '' : 'none';
-    });
-}
-
 window.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         ofpCloseAdminModal('ofp-admin-tenant-modal');

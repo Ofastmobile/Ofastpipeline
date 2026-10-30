@@ -438,63 +438,6 @@ class OFP_Lead {
     }
 
     /**
-     * Monthly lead totals + conversions for the last N months, oldest first.
-     * Used for the Reports page "Monthly Performance" chart (raw counts,
-     * not a rate, so it can plot two bars per month).
-     *
-     * @param  int $client_id
-     * @param  int $months     Number of months to include (default 12).
-     * @return array           [ [ 'month' => 'Y-m', 'label' => 'M Y', 'total' => int, 'converted' => int ], ... ]
-     */
-    public static function get_monthly_stats( int $client_id, int $months = 12 ): array {
-        global $wpdb;
-        $p = $wpdb->prefix;
-
-        $totals = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT DATE_FORMAT(created_at, '%%Y-%%m') AS ym, COUNT(*) AS c
-                 FROM {$p}ofp_leads
-                 WHERE client_id = %d
-                   AND created_at >= DATE_SUB( DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL %d MONTH )
-                 GROUP BY ym",
-                $client_id,
-                $months - 1
-            ),
-            OBJECT_K
-        );
-
-        $converted = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT DATE_FORMAT(converted_at, '%%Y-%%m') AS ym, COUNT(*) AS c
-                 FROM {$p}ofp_leads
-                 WHERE client_id = %d
-                   AND status = 'converted'
-                   AND converted_at >= DATE_SUB( DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL %d MONTH )
-                 GROUP BY ym",
-                $client_id,
-                $months - 1
-            ),
-            OBJECT_K
-        );
-
-        $out = [];
-        for ( $i = $months - 1; $i >= 0; $i-- ) {
-            $ym    = date( 'Y-m', strtotime( "-{$i} months" ) );
-            $total = isset( $totals[ $ym ] ) ? (int) $totals[ $ym ]->c : 0;
-            $conv  = isset( $converted[ $ym ] ) ? (int) $converted[ $ym ]->c : 0;
-
-            $out[] = [
-                'month'     => $ym,
-                'label'     => date( 'M Y', strtotime( $ym . '-01' ) ),
-                'total'     => $total,
-                'converted' => $conv,
-            ];
-        }
-
-        return $out;
-    }
-
-    /**
      * Calculates growth percentage and returns formatted HTML for the UI.
      *
      * @param int $current The current period's value

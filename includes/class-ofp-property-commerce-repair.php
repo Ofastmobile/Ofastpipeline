@@ -16,7 +16,6 @@ class OFP_Property_Commerce_Repair {
         add_action( 'ofp_property_offer_created', [ __CLASS__, 'offer_created_notification' ], 10, 3 );
         add_action( 'template_redirect', [ __CLASS__, 'handle_offer_acceptance' ], 1 );
         add_action( 'wp_footer', [ __CLASS__, 'client_listing_actions' ], 998 );
-        add_action( 'admin_post_ofp_create_outright_purchase', [ __CLASS__, 'handle_outright_purchase' ] );
     }
 
     public static function reconcile_properties(): void {
@@ -123,30 +122,6 @@ class OFP_Property_Commerce_Repair {
     }
 
     // Removed render_completed_purchases() to avoid duplicate tables
-
-    public static function render_add_purchase(): void {
-        $properties = self::sale_properties( false );
-        $error = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
-        $created = absint( $_GET['created'] ?? 0 );
-        ?><div class="wrap"><h1>Add Outright Purchase</h1><p>Use this screen only when the buyer has already paid the property in full. Installment buyers must use the offer and payment-plan flow.</p><?php if($created): ?><div class="notice notice-success"><p>Completed purchase <strong>#<?php echo esc_html($created); ?></strong> recorded.</p></div><?php endif; ?><?php if($error): ?><div class="notice notice-error"><p><?php echo esc_html($error); ?></p></div><?php endif; ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><?php wp_nonce_field('ofp_create_outright_purchase'); ?><input type="hidden" name="action" value="ofp_create_outright_purchase"><table class="form-table"><tr><th>Property</th><td><select name="property_id" required style="min-width:520px"><option value="">Select live sale property</option><?php foreach($properties as $property): ?><option value="<?php echo esc_attr($property->id); ?>"><?php echo esc_html($property->title.' — ₦'.number_format((float)$property->price,0).' — '.($property->business_name ?: ( OFP_Brand::name() . ' / Admin' ))); ?></option><?php endforeach; ?></select></td></tr><tr><th>Buyer name</th><td><input class="regular-text" name="buyer_name" required></td></tr><tr><th>Buyer phone</th><td><input class="regular-text" name="buyer_phone" required></td></tr><tr><th>Buyer email</th><td><input class="regular-text" type="email" name="buyer_email"></td></tr><tr><th>Amount paid</th><td><input type="number" step="0.01" min="0.01" name="amount_paid" required></td></tr><tr><th>Payment method</th><td><select name="payment_method" required><option value="bank_transfer">Bank Transfer</option><option value="bank_deposit">Bank Deposit</option><option value="pos">POS</option><option value="cash">Cash</option><option value="other">Other</option></select></td></tr><tr><th>Payment reference</th><td><input class="regular-text" name="payment_reference"></td></tr><tr><th>Note</th><td><textarea class="large-text" rows="4" name="note"></textarea></td></tr></table><?php submit_button('Record Completed Purchase','primary'); ?></form></div><?php
-    }
-
-    public static function handle_outright_purchase(): void {
-        if ( ! current_user_can( 'manage_options' ) ) wp_die( esc_html__( 'Access denied.', 'ofast-pipeline' ) );
-        check_admin_referer( 'ofp_create_outright_purchase' );
-        global $wpdb; $p = $wpdb->prefix;
-        $property_id=absint($_POST['property_id']??0); $buyer_name=sanitize_text_field(wp_unslash($_POST['buyer_name']??'')); $buyer_phone=OFP_Security::sanitize_phone($_POST['buyer_phone']??''); $buyer_email=sanitize_email(wp_unslash($_POST['buyer_email']??'')); $amount=max(0,(float)($_POST['amount_paid']??0)); $method=sanitize_key($_POST['payment_method']??''); $reference=sanitize_text_field(wp_unslash($_POST['payment_reference']??'')); $note=sanitize_textarea_field(wp_unslash($_POST['note']??''));
-        $allowed=['bank_transfer','bank_deposit','pos','cash','other']; $property=$wpdb->get_row($wpdb->prepare("SELECT * FROM {$p}ofp_properties WHERE id=%d LIMIT 1",$property_id)); $occupied=$property?(int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$p}ofp_property_purchases WHERE property_id=%d AND status IN ('active','completed')",$property_id)):0; $error='';
-        if(!$property)$error='Property not found.'; elseif(! OFP_Property_CPT::is_sale_like( (string) $property->listing_type )||'live'!==$property->status)$error='Only live sale properties can be recorded as outright purchases.'; elseif($occupied)$error='This property already has an active or completed purchase.'; elseif(!$buyer_name||!$buyer_phone)$error='Buyer name and phone are required.'; elseif($buyer_email&&!is_email($buyer_email))$error='Buyer email is invalid.'; elseif($amount<=0)$error='Amount paid must be greater than zero.'; elseif(abs($amount-(float)$property->price)>0.01)$error='Amount paid must equal the full property price.'; elseif(!in_array($method,$allowed,true))$error='Invalid payment method.';
-        if($error){wp_safe_redirect(add_query_arg('error',rawurlencode($error),admin_url('edit.php?post_type=ofp_property&page=ofp-property-add-purchase')));exit;}
-        $owner_id=!empty($property->client_id)?(int)$property->client_id:null;
-        $ok=$wpdb->insert("{$p}ofp_property_purchases",['property_id'=>$property_id,'client_id'=>$owner_id,'buyer_name'=>$buyer_name,'buyer_phone'=>$buyer_phone,'buyer_email'=>$buyer_email?:null,'total_price'=>(float)$property->price,'amount_paid'=>$amount,'balance'=>0,'initial_payment'=>$amount,'installment_amount'=>0,'installment_count'=>0,'payment_owner_type'=>$owner_id?'client':'platform','payment_owner_id'=>$owner_id,'payment_method'=>'manual','status'=>'active','created_at'=>current_time('mysql'),'updated_at'=>current_time('mysql')]);
-        if(!$ok)wp_die(esc_html__('Could not record the completed purchase.','ofast-pipeline')); $purchase_id=(int)$wpdb->insert_id;
-        $payment=OFP_Property_Payment_Record::create(['purchase_id'=>$purchase_id,'payment_method'=>'manual','amount'=>$amount,'status'=>'successful','payer_name'=>$buyer_name,'payer_reference'=>$reference,'note'=>trim('Method: '.str_replace('_',' ',$method).($note?' — '.$note:''))]);
-        if(is_wp_error($payment)){$wpdb->delete("{$p}ofp_property_purchases",['id'=>$purchase_id]);wp_die(esc_html__('Could not create the payment record.','ofast-pipeline'));}
-        $wpdb->update("{$p}ofp_property_purchases",['amount_paid'=>$amount,'balance'=>0,'status'=>'completed','updated_at'=>current_time('mysql')],['id'=>$purchase_id]); self::mark_property_taken($property_id); do_action('ofp_property_purchase_created',$purchase_id,null,$owner_id,$property_id); do_action('ofp_property_purchase_completed',$purchase_id,$property_id,$amount,$method);
-        wp_safe_redirect(add_query_arg('created',$purchase_id,admin_url('edit.php?post_type=ofp_property&page=ofp-property-add-purchase')));exit;
-    }
 
     private static function mark_property_taken(int $property_id): void { global $wpdb; $p=$wpdb->prefix; $wpdb->update("{$p}ofp_properties",['status'=>'taken','updated_at'=>current_time('mysql')],['id'=>$property_id]); $wp_post_id=$wpdb->get_var($wpdb->prepare("SELECT wp_post_id FROM {$p}ofp_properties WHERE id=%d LIMIT 1",$property_id)); if($wp_post_id){update_post_meta((int)$wp_post_id,'ofp_status','taken'); if('publish'!==get_post_status((int)$wp_post_id))wp_update_post(['ID'=>(int)$wp_post_id,'post_status'=>'publish']);} }
 

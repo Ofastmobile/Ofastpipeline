@@ -280,7 +280,8 @@ class OFP_Prembly {
         if ( $client_id <= 0 && ! empty( $_COOKIE['ofp_client_session'] ) ) {
             $token = sanitize_text_field( wp_unslash( $_COOKIE['ofp_client_session'] ) );
             $sess = $wpdb->get_row( $wpdb->prepare(
-                "SELECT client_id FROM {$wpdb->prefix}ofp_client_sessions WHERE token = %s AND expires_at > NOW() LIMIT 1",
+                "SELECT client_id FROM {$wpdb->prefix}ofp_client_sessions WHERE token IN (%s, %s) AND expires_at > NOW() LIMIT 1",
+                hash( 'sha256', $token ),
                 $token
             ) );
             if ( $sess && ! empty( $sess->client_id ) ) {

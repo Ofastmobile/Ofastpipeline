@@ -45,6 +45,10 @@ class OFP_Client_Portal {
         'notification-settings' => 'notification-settings.php',
         'funding' => 'funding.php',
         'pricing' => 'pricing.php',
+        'plans-pricing' => 'plans-pricing.php',
+        'pricing-plans' => 'plans-pricing.php',
+        'plans' => 'plans-pricing.php',
+        'plans-and-pricing' => 'plans-pricing.php',
         'team' => 'team.php',
         'team-invite' => 'team-invite.php',
         'message-templates' => 'message-templates.php',
@@ -59,7 +63,7 @@ class OFP_Client_Portal {
         'investment' => 'investment.php',
     ];
 
-    private array $public_routes = [ 'login', 'signup', 'forgot-password', 'reset-password', 'team-invite', 'agents', 'our-agents' ];
+    private array $public_routes = [ 'login', 'signup', 'forgot-password', 'reset-password', 'team-invite', 'agents', 'our-agents', 'plans-pricing', 'pricing-plans', 'plans', 'plans-and-pricing' ];
 
     public function __construct() {
         add_action( 'init', [ $this, 'register_rewrite_rules' ] );
@@ -118,6 +122,11 @@ class OFP_Client_Portal {
         }
 
         // Check if this is a portal page via query vars, explicit route, or path
+        $public_pages = [ 'agents', 'our-agents', 'plans-pricing', 'pricing-plans', 'plans', 'plans-and-pricing' ];
+        if ( in_array( $route, $public_pages, true ) ) {
+            return;
+        }
+
         $is_portal = $this->is_portal_page();
         if ( ! $is_portal && ( empty( $route ) || ! array_key_exists( $route, $this->routes ) ) ) {
             return;
@@ -126,6 +135,10 @@ class OFP_Client_Portal {
         if ( empty( $route ) ) {
             $path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
             $route = explode( '/', $path )[0] ?? '';
+        }
+
+        if ( in_array( $route, $public_pages, true ) ) {
+            return;
         }
 
         // ── Auth pages (login / signup / forgot-password / reset-password / team-invite) ──
@@ -371,7 +384,8 @@ class OFP_Client_Portal {
         }
 
         $route = get_query_var( 'ofp_route', '' );
-        if ( in_array( $route, [ 'agents', 'our-agents' ], true ) ) {
+        $public_pages = [ 'agents', 'our-agents', 'plans-pricing', 'pricing-plans', 'plans', 'plans-and-pricing' ];
+        if ( in_array( $route, $public_pages, true ) ) {
             return false;
         }
         if ( ! empty( $route ) && array_key_exists( $route, $this->routes ) ) {
@@ -389,7 +403,7 @@ class OFP_Client_Portal {
         if ( $segments[0] === 'property' || ( $segments[0] === 'properties' && count( $segments ) > 1 ) ) {
             return false;
         }
-        if ( count( $segments ) === 1 && in_array( $segments[0], [ 'agents', 'our-agents' ], true ) ) {
+        if ( count( $segments ) === 1 && in_array( $segments[0], $public_pages, true ) ) {
             return false;
         }
         if ( count( $segments ) === 1 && ( array_key_exists( $segments[0], $this->routes ) || in_array( $segments[0], [ 'property-sales', 'property-purchases', 'property-payments', 'tenants' ], true ) ) ) {
@@ -684,10 +698,6 @@ class OFP_Client_Portal {
 
     public static function logout_url(): string {
         return add_query_arg( [ 'ofp_logout' => '1', '_wpnonce' => wp_create_nonce( 'ofp_logout' ) ], home_url( '/dashboard' ) );
-    }
-
-    public static function route_url( string $slug ): string {
-        return home_url( '/' . ltrim( $slug, '/' ) );
     }
 
     private function render_placeholder( string $route ): void {

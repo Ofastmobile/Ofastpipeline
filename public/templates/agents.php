@@ -210,10 +210,10 @@ $agents_hero_img = ofp_image_url( 'Real Estate Deal Handshake.webp' );
         .dark .theme-toggle-moon { display: none; }
         .theme-toggle-moon { display: inline-block; }
 
-        /* Custom hero background with white overlay on light mode, dark overlay on dark mode */
+        /* Custom hero background with balanced overlay on light mode, dark overlay on dark mode */
         .agents-hero-bg {
             background-image: 
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.40) 0%, rgba(255, 255, 255, 0.70) 35%, rgba(255, 255, 255, 0.95) 80%, #ffffff 100%),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.40) 40%, rgba(255, 255, 255, 0.85) 85%, #f8fafc 100%),
                 url('<?php echo esc_url( $agents_hero_img ); ?>');
             background-size: cover;
             background-position: center;
@@ -221,7 +221,7 @@ $agents_hero_img = ofp_image_url( 'Real Estate Deal Handshake.webp' );
         }
         html.dark .agents-hero-bg {
             background-image: 
-                linear-gradient(to bottom, rgba(11, 17, 32, 0.55) 0%, rgba(11, 17, 32, 0.85) 50%, rgba(2, 6, 23, 0.98) 100%),
+                linear-gradient(to bottom, rgba(11, 17, 32, 0.45) 0%, rgba(11, 17, 32, 0.75) 50%, rgba(2, 6, 23, 0.95) 100%),
                 url('<?php echo esc_url( $agents_hero_img ); ?>');
         }
     </style>
@@ -237,16 +237,7 @@ $agents_hero_img = ofp_image_url( 'Real Estate Deal Handshake.webp' );
         @click="megaMenuOpen = false"></div>
 
     <!-- ── Top Navigation Bar ─────────────────────────────────────────────── -->
-    <header x-data="{ scrolledDown: false, lastScroll: 0 }" @scroll.window="
-                if (!megaMenuOpen) {
-                    const current = window.pageYOffset;
-                    if (current > lastScroll && current > 50) scrolledDown = true;
-                    else if (current < lastScroll) scrolledDown = false;
-                    lastScroll = current;
-                }
-            "
-        class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-transform duration-300"
-        :class="scrolledDown ? '-translate-y-full' : 'translate-y-0'">
+    <header class="sticky top-0 z-50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl backdrop-saturate-150 border-b border-slate-200/50 dark:border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
             <div class="flex justify-between items-center h-16 transition-all duration-300">
                 <!-- Left: Logo & Hamburger -->
@@ -322,15 +313,15 @@ $agents_hero_img = ofp_image_url( 'Real Estate Deal Handshake.webp' );
                                 PROPERTIES</div>
                         </a>
 
-                        <!-- Card 2: Off-Plan -->
-                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                        <!-- Card 2: Plans & Pricing -->
+                        <a href="<?php echo esc_url( home_url('/plans-pricing') ); ?>"
                             class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
-                            <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=600&q=80"
-                                alt="Off-Plan"
+                            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80"
+                                alt="Plans &amp; Pricing"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
                             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                             <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
-                                OFF-PLAN</div>
+                                PLANS &amp; PRICING</div>
                         </a>
 
                         <!-- Card 3: Map -->
@@ -437,14 +428,14 @@ $agents_hero_img = ofp_image_url( 'Real Estate Deal Handshake.webp' );
                     </div>
                 </a>
 
-                <!-- Card 2: Off-Plan -->
-                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                <!-- Card 2: Plans & Pricing -->
+                <a href="<?php echo esc_url( home_url('/plans-pricing') ); ?>"
                     class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
-                    <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=400&q=80"
-                        alt="Off-Plan" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
+                    <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80"
+                        alt="Plans &amp; Pricing" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
                     <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
-                        Off-Plan
+                        Plans &amp; Pricing
                     </div>
                 </a>
 
@@ -539,10 +530,6 @@ $agents_hero_img = ofp_image_url( 'Real Estate Deal Handshake.webp' );
 
     <!-- ── Hero Banner Section ────────────────────────────────────────────── -->
     <section class="agents-hero-bg relative overflow-hidden border-b border-slate-200 dark:border-slate-800 py-16 sm:py-24 transition-colors duration-300">
-        <!-- Ambient decorative blurs -->
-        <div class="absolute -top-32 -left-32 w-96 h-96 bg-blue-500/10 dark:bg-blue-500/15 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute top-1/2 -right-32 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/15 rounded-full blur-3xl pointer-events-none"></div>
-
         <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <!-- Badge -->
             <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-slate-900/80 border border-slate-200 dark:border-white/20 backdrop-blur-md text-slate-800 dark:text-blue-300 text-xs font-bold uppercase tracking-wider mb-6 shadow-sm">

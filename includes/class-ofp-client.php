@@ -236,23 +236,6 @@ class OFP_Client {
     }
 
     /**
-     * Fetch a single client by email address.
-     *
-     * @param  string      $email  Email address.
-     * @return object|null         Full ofp_clients row, or null if not found.
-     */
-    public static function get_by_email( string $email ): ?object {
-        global $wpdb;
-
-        return $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}ofp_clients WHERE email = %s LIMIT 1",
-                sanitize_email( $email )
-            )
-        );
-    }
-
-    /**
      * Fetch all clients, ordered by most recently created.
      * Trashed clients are EXCLUDED by default — pass status='trash' explicitly
      * to retrieve them, or use get_trashed() for clarity.
@@ -303,15 +286,6 @@ class OFP_Client {
         return (int) $wpdb->get_var(
             "SELECT COUNT(*) FROM {$wpdb->prefix}ofp_clients"
         );
-    }
-
-    /**
-     * Fetch clients pending admin review (self-serve signups awaiting approval).
-     *
-     * @return array  Array of ofp_clients rows with status = 'pending_review'.
-     */
-    public static function get_pending_review(): array {
-        return self::all( 'pending_review' );
     }
 
     // ─────────────────────────────────────────────────────────────────────────

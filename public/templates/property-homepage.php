@@ -196,15 +196,15 @@
                                 PROPERTIES</div>
                         </a>
 
-                        <!-- Card 2: Off-Plan -->
-                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                        <!-- Card 2: Plans & Pricing -->
+                        <a href="<?php echo esc_url( home_url('/plans-pricing') ); ?>"
                             class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
-                            <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=600&q=80"
-                                alt="Off-Plan"
+                            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80"
+                                alt="Plans &amp; Pricing"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
                             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                             <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
-                                OFF-PLAN</div>
+                                PLANS &amp; PRICING</div>
                         </a>
 
                         <!-- Card 3: Map -->
@@ -310,14 +310,14 @@
                     </div>
                 </a>
 
-                <!-- Card 2: Off-Plan -->
-                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                <!-- Card 2: Plans & Pricing -->
+                <a href="<?php echo esc_url( home_url('/plans-pricing') ); ?>"
                     class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
-                    <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=400&q=80"
-                        alt="Off-Plan" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
+                    <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80"
+                        alt="Plans &amp; Pricing" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
                     <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
-                        Off-Plan
+                        Plans &amp; Pricing
                     </div>
                 </a>
 

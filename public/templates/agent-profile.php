@@ -46,7 +46,17 @@ $is_client_verified = ! empty( $client->is_verified );
 $agent_role = $is_client_verified ? 'Verified Agent' : 'Agent';
 $app_name = OFP_Brand::name();
 $agent_logo = ! empty( $client->logo_url ) ? $client->logo_url : ofp_image_url( 'default-avatar.png' );
-$agent_bio  = ! empty( $client->bio ) ? $client->bio : 'We provide premium real estate services, helping you discover dream homes, luxury apartments, and commercial investments with complete peace of mind and professional guidance.';
+$raw_bio    = ! empty( $client->bio ) ? (string) $client->bio : 'We provide premium real estate services, helping you discover dream homes, luxury apartments, and commercial investments with complete peace of mind and professional guidance.';
+
+// Thoroughly strip WordPress slashes (e.g. \', \", \\, \\\\) that may accumulate across database updates
+$agent_bio = wp_unslash( $raw_bio );
+for ( $i = 0; $i < 5; $i++ ) {
+    if ( strpos( $agent_bio, '\\' ) !== false ) {
+        $agent_bio = stripslashes( $agent_bio );
+    } else {
+        break;
+    }
+}
 
 // ── Social handles & extra data from client profile ─────────────────────────
 $extra = [];
@@ -153,28 +163,107 @@ if ( empty( $client->cover_image_url ) && $properties->have_posts() ) {
 $banner_title = $agent_name . ' • Official Real Estate Portfolio';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" x-data="{ megaMenuOpen: false }">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo esc_html( $agent_name ); ?> — Real Estate Agent</title>
+    <title><?php echo esc_html( OFP_Brand::public_page_title( $agent_name . ' — Real Estate Agent' ) ); ?></title>
     
-    <!-- Load Tailwind and marketplace theme overrides for pixel-perfect card rendering -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
+        (function() {
+            var theme = localStorage.getItem('ofp_theme');
+            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var isDark = theme ? (theme === 'dark') : prefersDark;
+            var html = document.documentElement;
+            if (isDark) {
+                html.classList.add('dark');
+                html.classList.remove('light');
+                html.setAttribute('data-theme', 'dark');
+            } else {
+                html.classList.remove('dark');
+                html.classList.add('light');
+                html.setAttribute('data-theme', 'light');
+            }
+        })();
+
+        function ofpToggleTheme() {
+            var html = document.documentElement;
+            var isDark = html.classList.toggle('dark');
+            if (isDark) {
+                html.classList.remove('light');
+                html.setAttribute('data-theme', 'dark');
+            } else {
+                html.classList.add('light');
+                html.classList.remove('dark');
+                html.setAttribute('data-theme', 'light');
+            }
+            try {
+                localStorage.setItem('ofp_theme', isDark ? 'dark' : 'light');
+            } catch (e) {}
+            if (typeof tailwind !== 'undefined' && tailwind.config) {
+                tailwind.config.darkMode = 'class';
+            }
+            if (window.Alpine) {
+                document.querySelectorAll('[x-data]').forEach(function(el) {
+                    try {
+                        if (el._x_dataStack) {
+                            el._x_dataStack.forEach(function(s) {
+                                if (typeof s.darkMode !== 'undefined') s.darkMode = isDark;
+                            });
+                        }
+                    } catch(err) {}
+                });
+            }
+            window.dispatchEvent(new CustomEvent('ofp-theme-changed', { detail: { dark: isDark, theme: isDark ? 'dark' : 'light' } }));
+        }
+        window.ofpToggleTheme = ofpToggleTheme;
+        window.toggleDark = ofpToggleTheme;
+
+        function ofpToggleMegaMenu(forceState) {
+            if (window.Alpine) {
+                document.querySelectorAll('[x-data]').forEach(function(el) {
+                    try {
+                        if (el._x_dataStack) {
+                            el._x_dataStack.forEach(function(s) {
+                                if (typeof s.megaMenuOpen !== 'undefined') {
+                                    s.megaMenuOpen = (typeof forceState === 'boolean') ? forceState : !s.megaMenuOpen;
+                                }
+                            });
+                        }
+                    } catch(e) {}
+                });
+            }
+        }
+        window.ofpToggleMegaMenu = ofpToggleMegaMenu;
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+    <script>
+        window.tailwind = window.tailwind || {};
+        window.tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['"Segoe UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Arial', 'sans-serif'],
-                        system: ['"Segoe UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Arial', 'sans-serif']
+                        sans: ['"Plus Jakarta Sans"', '"Segoe UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'sans-serif'],
+                        system: ['"Plus Jakarta Sans"', '"Segoe UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'sans-serif']
                     }
                 }
             }
         };
     </script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/alpine-tailwind-overrides.css' ); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/agent-profile.css?v=' . ( file_exists( OFP_PATH . 'assets/css/agent-profile.css' ) ? filemtime( OFP_PATH . 'assets/css/agent-profile.css' ) : OFP_VERSION ) ); ?>">
+    <style>
+        [x-cloak] { display: none !important; }
+        .theme-toggle-sun { display: none; }
+        .dark .theme-toggle-sun { display: inline-block; }
+        .dark .theme-toggle-moon { display: none; }
+        .theme-toggle-moon { display: inline-block; }
+    </style>
 
     <?php wp_head(); ?>
 
@@ -194,101 +283,343 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
         </script>
         <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=<?php echo esc_attr( $client->meta_pixel_id ); ?>&ev=PageView&noscript=1"/></noscript>
     <?php endif; ?>
-    <script>
-        (function() {
-            var html = document.documentElement;
-            html.classList.remove('dark');
-            html.classList.add('light');
-            html.setAttribute('data-theme', 'light');
-            try { localStorage.removeItem('ofp_theme'); } catch(e) {}
-        })();
-    </script>
 </head>
-<body class="ofp-agent-page-body bg-white text-slate-900 min-h-screen flex flex-col">
+<body class="ofp-agent-page-body bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-sans antialiased">
 
-    <!-- ── Main Application Shell ────────────────────────────────────────── -->
-    <div class="ofp-agent-page-container flex-1">
+    <!-- Mega Menu Backdrop Overlay (Desktop) -->
+    <div id="ofp-megamenu-backdrop" x-cloak x-show="megaMenuOpen" class="hidden lg:block fixed inset-0 bg-slate-900/20 backdrop-blur-md z-40"
+        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+        @click="megaMenuOpen = false"></div>
 
-        <!-- ── Top Header Navigation Bar (Clean Minimal) ─────────────────── -->
-        <header class="ofp-agent-topbar">
-            <div class="ofp-topbar-left">
-                <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ofp-topbar-back-btn" title="Back to Marketplace">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                </a>
-                <h1 class="ofp-topbar-title">Agent Profile</h1>
+    <!-- ── Top Navigation Bar ─────────────────────────────────────────────── -->
+    <header class="sticky top-0 z-50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl backdrop-saturate-150 border-b border-slate-200/50 dark:border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="flex justify-between items-center h-16 transition-all duration-300">
+                <!-- Left: Logo & Hamburger -->
+                <div class="flex items-center gap-3 sm:gap-5">
+                    <!-- Logo (Hidden on mobile so only hamburger displays, visible from sm up) -->
+                    <a href="<?php echo esc_url( home_url('/') ); ?>" class="hidden sm:flex items-center">
+                        <span class="text-[13px] sm:text-sm font-black tracking-[0.25em] text-slate-900 dark:text-white uppercase transition-colors">
+                            <?php echo OFP_Brand::public_logo_html( 'BOFAST HOMES' ); ?>
+                        </span>
+                    </a>
+
+                    <!-- Mega Menu Hamburger Button -->
+                    <button type="button" @click.stop="megaMenuOpen = !megaMenuOpen" aria-label="Toggle Navigation Menu"
+                        class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 transition-colors flex items-center justify-center cursor-pointer border border-slate-200 dark:border-slate-700">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path x-show="!megaMenuOpen" stroke-linecap="round" stroke-linejoin="round"
+                                stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"></path>
+                            <path x-show="megaMenuOpen" x-cloak stroke-linecap="round"
+                                stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Right: Action Button -->
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <button type="button" onclick="ofpToggleTheme()" aria-label="Toggle Dark Mode"
+                        class="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all cursor-pointer">
+                        <svg class="w-4 h-4 theme-toggle-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                            </path>
+                        </svg>
+                        <svg class="w-4 h-4 text-amber-400 theme-toggle-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                            </path>
+                        </svg>
+                    </button>
+                    <!-- List Property Button -->
+                    <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 sm:px-7 py-2 sm:py-2.5 rounded-[7px] text-[11px] sm:text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap uppercase inline-flex items-center justify-center">
+                        List Property
+                    </a>
+                </div>
             </div>
 
-            <div class="ofp-topbar-right">
-                <div class="ofp-topbar-user-badge">
-                    <img src="<?php echo esc_url( $agent_logo ); ?>" alt="<?php echo esc_attr( $agent_name ); ?>" class="ofp-topbar-avatar" onerror="this.src='<?php echo esc_url( ofp_image_url( 'default-avatar.png' ) ); ?>';">
-                    <div class="ofp-topbar-user-info">
-                        <span class="ofp-topbar-user-name"><?php echo esc_html( $agent_name ); ?></span>
-                        <span class="ofp-topbar-user-role"><?php echo esc_html( $agent_role ); ?></span>
+            <?php $ofp_header_social = OFP_Brand::social_links(); ?>
+
+            <!-- Desktop Mega Menu Dropdown (hidden lg:block) -->
+            <div id="ofp-desktop-megamenu" x-cloak x-show="megaMenuOpen" @click.outside="megaMenuOpen = false"
+                class="hidden lg:block absolute top-full left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 mt-2 z-[100] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden font-sans"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 -translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-4">
+
+                <!-- Main Content Area -->
+                <div class="p-8 grid grid-cols-4 gap-8">
+                    <!-- Image Cards Area (Takes 3 columns) -->
+                    <div class="col-span-3 grid grid-cols-4 gap-4">
+
+                        <!-- Card 1: Properties -->
+                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                            class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
+                            <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80"
+                                alt="Properties"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors">
+                                PROPERTIES</div>
+                        </a>
+
+                        <!-- Card 2: Plans & Pricing -->
+                        <a href="<?php echo esc_url( home_url('/plans-pricing') ); ?>"
+                            class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-slate-100 dark:bg-slate-800">
+                            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80"
+                                alt="Plans &amp; Pricing"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
+                                PLANS &amp; PRICING</div>
+                        </a>
+
+                        <!-- Card 3: Map -->
+                        <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                            class="group relative rounded-2xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors bg-blue-50 dark:bg-blue-900/20">
+                            <div class="absolute inset-0 bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors z-10"
+                                style="background-image: radial-gradient(circle, #3B82F6 1px, transparent 1px); background-size: 20px 20px;"></div>
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20"></div>
+                            <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide group-hover:text-blue-400 transition-colors z-30">
+                                MAP SEARCH</div>
+                        </a>
+
+                        <!-- Card 4: Agents (Active) -->
+                        <a href="<?php echo esc_url( home_url('/agents') ); ?>"
+                            class="group relative rounded-2xl overflow-hidden aspect-square border-2 border-blue-500 bg-slate-100 dark:bg-slate-800 shadow-lg shadow-blue-500/20">
+                            <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80"
+                                alt="Agents"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
+                            <div class="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider">Active</div>
+                            <div class="absolute bottom-4 left-4 text-white font-black text-lg uppercase tracking-wide text-blue-400">
+                                OUR AGENTS</div>
+                        </a>
+                    </div>
+
+                    <!-- Side Links (Takes 1 column) -->
+                    <div class="flex flex-col justify-between h-full pl-8 border-l border-slate-200 dark:border-slate-800">
+                        <div class="space-y-6">
+                            <ul class="space-y-4">
+                                <li><a href="<?php echo esc_url( home_url('/login') ); ?>"
+                                        class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs tracking-widest transition-colors uppercase flex items-center gap-2"><span
+                                            class="w-2 h-2 rounded-full bg-blue-500"></span> BECOME A PARTNER</a></li>
+                                <li><a href="<?php echo esc_url( home_url('/login') ); ?>"
+                                        class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs tracking-widest transition-colors uppercase flex items-center gap-2"><span
+                                            class="w-2 h-2 rounded-full bg-blue-500"></span> DEVELOPERS HUB</a></li>
+                                <li><a href="<?php echo esc_url( home_url('/careers') ); ?>"
+                                        class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs tracking-widest transition-colors uppercase flex items-center gap-2"><span
+                                            class="w-2 h-2 rounded-full bg-blue-500"></span> CAREERS</a></li>
+                            </ul>
+
+                            <!-- Under Careers, Above Privacy Policy: Social Media -->
+                            <?php if ( ! empty( $ofp_header_social ) ) : ?>
+                                <div class="pt-4 border-t border-slate-200 dark:border-slate-800">
+                                    <div class="flex items-center gap-3 flex-wrap">
+                                        <?php foreach ( $ofp_header_social as $sm ) : ?>
+                                            <a href="<?php echo esc_url( $sm['url'] ); ?>" target="_blank" rel="noopener noreferrer"
+                                               aria-label="<?php echo esc_attr( $sm['label'] ); ?>" title="<?php echo esc_attr( $sm['label'] ); ?>"
+                                               class="p-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                                <?php echo $sm['svg']; ?>
+                                            </a>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Privacy Policy (Below Social Media) -->
+                        <div class="pt-4 border-t border-slate-200 dark:border-slate-800">
+                            <a href="<?php echo esc_url( home_url('/privacy-policy/') ); ?>"
+                                class="text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 text-xs font-bold tracking-widest transition-colors uppercase whitespace-nowrap">PRIVACY POLICY</a>
+                        </div>
                     </div>
                 </div>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <!-- ── Main Showcase Card (Matching Hoomeee Reference) ─────────────── -->
-        <article class="ofp-agent-showcase-card bg-white text-slate-900 border border-slate-200">
+    <!-- Mobile Full-Page Navigation Screen (lg:hidden, placed outside <header> so transform doesn't clip/break fixed inset-0) -->
+    <div id="ofp-mobile-megamenu" x-cloak x-show="megaMenuOpen"
+        class="lg:hidden fixed inset-0 z-[100] bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-6 font-sans overflow-y-auto"
+        x-transition:enter="transform transition-transform ease-in-out duration-500"
+        x-transition:enter-start="-translate-y-full"
+        x-transition:enter-end="translate-y-0"
+        x-transition:leave="transform transition-transform ease-in-out duration-500"
+        x-transition:leave-start="translate-y-0"
+        x-transition:leave-end="-translate-y-full">
 
-            <!-- ── Featured Property Cover Banner ──────────────────────────── -->
-            <div class="ofp-cover-banner" style="background-image: url('<?php echo esc_url( $featured_cover ); ?>');">
-                <!-- Status Badge -->
+        <!-- Mobile Top Bar: Brand Logo & Close Button -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
+            <a href="<?php echo esc_url( home_url('/') ); ?>" class="flex items-center">
+                <span class="text-xs sm:text-sm font-black tracking-[0.25em] text-slate-900 dark:text-white uppercase">
+                    <?php echo OFP_Brand::public_logo_html( 'BOFAST HOMES' ); ?>
+                </span>
+            </a>
+            <button type="button" @click="megaMenuOpen = false" aria-label="Close Navigation Menu"
+                class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Mobile Mid: 2x2 Visual Cards Grid -->
+        <div class="my-auto py-2 space-y-3">
+            <div class="grid grid-cols-2 gap-2.5">
+                <!-- Card 1: Properties -->
+                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                    class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
+                    <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80"
+                        alt="Properties" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
+                        Properties
+                    </div>
+                </a>
+
+                <!-- Card 2: Plans & Pricing -->
+                <a href="<?php echo esc_url( home_url('/plans-pricing') ); ?>"
+                    class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
+                    <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80"
+                        alt="Plans &amp; Pricing" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
+                        Plans &amp; Pricing
+                    </div>
+                </a>
+
+                <!-- Card 3: Map Search -->
+                <a href="<?php echo esc_url( home_url('/marketplace/') ); ?>"
+                    class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-blue-950">
+                    <div class="absolute inset-0 bg-blue-500/10" style="background-image: radial-gradient(circle, #3B82F6 1px, transparent 1px); background-size: 16px 16px;"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
+                        Map Search
+                    </div>
+                </a>
+
+                <!-- Card 4: Our Agents -->
+                <a href="<?php echo esc_url( home_url('/agents') ); ?>"
+                    class="group relative h-20 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900">
+                    <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80"
+                        alt="Agents" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div class="absolute bottom-2.5 left-2.5 text-white font-black text-xs sm:text-sm uppercase tracking-wider group-hover:text-blue-400 transition-colors">
+                        Our Agents
+                    </div>
+                </a>
+            </div>
+
+            <!-- Secondary List Links -->
+            <div class="py-1 divide-y divide-slate-100 dark:divide-slate-800/80">
+                <a href="<?php echo esc_url( home_url('/login') ); ?>"
+                    class="py-3 sm:py-3.5 flex items-center text-slate-800 dark:text-slate-200 font-bold text-xs uppercase tracking-wider hover:text-blue-600 transition-colors">
+                    <span class="flex items-center gap-2.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Become a Partner
+                    </span>
+                </a>
+                <a href="<?php echo esc_url( home_url('/login') ); ?>"
+                    class="py-3 sm:py-3.5 flex items-center text-slate-800 dark:text-slate-200 font-bold text-xs uppercase tracking-wider hover:text-blue-600 transition-colors">
+                    <span class="flex items-center gap-2.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Developers Hub
+                    </span>
+                </a>
+                <a href="<?php echo esc_url( home_url('/careers') ); ?>"
+                    class="py-3 sm:py-3.5 flex items-center text-slate-800 dark:text-slate-200 font-bold text-xs uppercase tracking-wider hover:text-blue-600 transition-colors">
+                    <span class="flex items-center gap-2.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Careers
+                    </span>
+                </a>
+            </div>
+
+            <!-- Under Careers: Social Media channels (above Privacy Policy) -->
+            <?php if ( ! empty( $ofp_header_social ) ) : ?>
+                <div class="pt-3 pb-1 border-t border-slate-100 dark:border-slate-800/80">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <?php foreach ( $ofp_header_social as $sm ) : ?>
+                            <a href="<?php echo esc_url( $sm['url'] ); ?>" target="_blank" rel="noopener noreferrer"
+                               aria-label="<?php echo esc_attr( $sm['label'] ); ?>" title="<?php echo esc_attr( $sm['label'] ); ?>"
+                               class="p-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                <?php echo $sm['svg']; ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Privacy Policy (Below Social Media) -->
+            <div class="pt-2">
+                <a href="<?php echo esc_url( home_url('/privacy-policy/') ); ?>"
+                    class="text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-bold tracking-widest uppercase transition-colors inline-block">
+                    Privacy Policy
+                </a>
+            </div>
+        </div>
+
+        <!-- Mobile Bottom Action Row -->
+        <div class="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-3 shrink-0">
+            <button type="button" onclick="ofpToggleTheme()" aria-label="Toggle Dark Mode"
+                class="p-3 rounded-[7px] border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all cursor-pointer">
+                <svg class="w-5 h-5 theme-toggle-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                </svg>
+                <svg class="w-5 h-5 text-amber-400 theme-toggle-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+            </button>
+            <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-[7px] text-center text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all uppercase">
+                List Property
+            </a>
+        </div>
+    </div>
+
+    <!-- ── Featured Property Cover Banner (Full Width Edge-to-Edge) ────────── -->
+    <div class="ofp-cover-banner ofp-cover-banner-full" style="background-image: url('<?php echo esc_url( $featured_cover ); ?>');">
+        <!-- Inner overlay container matching page width -->
+        <div class="ofp-cover-banner-inner max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Top Right Status Badge -->
+            <div class="flex justify-end">
                 <?php if ( $is_client_verified ) : ?>
                     <span class="ofp-cover-badge-available" style="background:#10b981; color:#ffffff; font-weight:700;">Verified Agency</span>
                 <?php else : ?>
                     <span class="ofp-cover-badge-available" style="background:#0f172a; color:#ffffff; font-weight:700;">Official Partner</span>
                 <?php endif; ?>
+            </div>
 
-                <!-- Bottom Image Overlay: Starts AFTER the profile image -->
-                <div class="ofp-cover-overlay-bottom">
-                    <div class="ofp-cover-meta-info">
-                        <h2 class="ofp-cover-property-title"><?php echo esc_html( $banner_title ); ?></h2>
-                        <div class="ofp-cover-specs">
-                            <!-- Verified Listings Pill -->
-                            <span class="ofp-spec-item" title="Properties listed by this agency">
-                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                                <?php if ( $verified_listings_count > 0 ) : ?>
-                                    <?php echo (int) $verified_listings_count; ?> Verified Listings
-                                <?php else : ?>
-                                    <?php echo (int) $properties->found_posts; ?> Property Listings
-                                <?php endif; ?>
-                            </span>
-
-                            <!-- Verified Bank Details Pill -->
-                            <?php if ( $has_verified_bank ) : ?>
-                                <span class="ofp-spec-item text-emerald-300" style="border-color: rgba(16,185,129,0.4);" title="Bank details verified for direct transfers">
-                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                                    Verified Bank Details
-                                </span>
-                            <?php else : ?>
-                                <span class="ofp-spec-item" title="Direct contact verified">
-                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                                    Direct Contact Verified
-                                </span>
-                            <?php endif; ?>
-
-                            <!-- Business / Identity Verification Pill -->
-                            <?php if ( $is_client_verified ) : ?>
-                                <span class="ofp-spec-item text-emerald-300" style="border-color: rgba(16,185,129,0.4);" title="Business registry &amp; identity verified">
-                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                                    CAC &amp; Identity Verified
-                                </span>
-                            <?php else : ?>
-                                <span class="ofp-spec-item" title="Registered Real Estate Partner">
-                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                                    Registered Partner
-                                </span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <div class="ofp-cover-tools">
-                        <span class="ofp-pagination-pill"><?php echo (int) $properties->found_posts; ?> <?php echo ( (int) $properties->found_posts === 1 ) ? 'Property' : 'Properties'; ?></span>
+            <!-- Bottom Image Overlay: Starts AFTER the profile image on desktop -->
+            <div class="ofp-cover-overlay-bottom">
+                <div class="ofp-cover-meta-info">
+                    <h2 class="ofp-cover-property-title"><?php echo esc_html( $banner_title ); ?></h2>
+                    <div class="ofp-cover-specs">
+                        <!-- Single Verified Partner Pill -->
+                        <span class="ofp-spec-item text-emerald-300" style="border-color: rgba(16,185,129,0.4);" title="<?php echo $is_client_verified ? 'Verified Real Estate Partner' : 'Registered Real Estate Partner'; ?>">
+                            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                            <?php echo $is_client_verified ? 'Verified Partner' : 'Registered Partner'; ?>
+                        </span>
                     </div>
                 </div>
+
+                <div class="ofp-cover-tools">
+                    <span class="ofp-pagination-pill"><?php echo (int) $properties->found_posts; ?> <?php echo ( (int) $properties->found_posts === 1 ) ? 'Property' : 'Properties'; ?></span>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ── Main Application Shell ────────────────────────────────────────── -->
+    <div class="ofp-agent-page-container flex-1">
+
+        <!-- ── Main Showcase Card (Matching Hoomeee Reference) ─────────────── -->
+        <article class="ofp-agent-showcase-card bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800">
 
             <!-- ── Agent Content Split Row ──────────────────────────────────── -->
             <div class="ofp-agent-content-split">
@@ -300,19 +631,14 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                     <div class="ofp-squircle-avatar-wrap" style="position:relative;">
                         <img src="<?php echo esc_url( $agent_logo ); ?>" alt="<?php echo esc_attr( $agent_name ); ?>" class="ofp-squircle-avatar-img" onerror="this.src='<?php echo esc_url( ofp_image_url( 'default-avatar.png' ) ); ?>';">
                         <?php if ( $is_client_verified ) : ?>
-                            <div class="ofp-avatar-verified-tick" title="CAC &amp; Identity Verified" style="position:absolute; bottom:6px; right:6px; width:22px; height:22px; background:#10b981; border:2px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.2);">
+                            <div class="ofp-avatar-verified-tick" title="CAC &amp; Identity Verified">
                                 <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                             </div>
                         <?php endif; ?>
                     </div>
 
-                    <!-- Agent Name & Owner Badge -->
+                    <!-- Agent Name -->
                     <h3 class="ofp-agent-person-name"><?php echo esc_html( $agent_name ); ?></h3>
-                    <?php if ( $is_client_verified ) : ?>
-                        <div class="ofp-agent-owner-badge" style="background:#10b981; color:#fff; font-weight:700;">VERIFIED PARTNER</div>
-                    <?php else : ?>
-                        <div class="ofp-agent-owner-badge">AGENT</div>
-                    <?php endif; ?>
 
                     <!-- WhatsApp and Call buttons DIRECTLY UNDER the profile image -->
                     <div class="ofp-avatar-contact-buttons">
@@ -348,15 +674,15 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                 <div class="ofp-agent-right-col">
                     <h2 class="ofp-desc-heading text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-4 flex items-center gap-2.5">
                         <span class="w-1.5 h-5 bg-[#00875A] rounded-full inline-block shrink-0 ofp-heading-bar"></span>
-                        <span class="text-slate-900 dark:text-white" style="color:#0f172a;">About <?php echo esc_html( $agent_name ); ?></span>
+                        <span class="text-slate-900 dark:text-white">About <?php echo esc_html( $agent_name ); ?></span>
                     </h2>
-                    <div class="ofp-desc-text text-slate-900 dark:text-slate-100 font-medium text-[16px] leading-[1.85] space-y-4 text-justify">
-                        <?php echo wpautop( esc_html( $agent_bio ) ); ?>
+                    <div class="ofp-desc-text text-slate-900 dark:text-white font-medium text-[16px] leading-[1.85] space-y-4 text-justify">
+                        <?php echo wpautop( esc_html( wp_unslash( stripslashes( $agent_bio ) ) ) ); ?>
                     </div>
 
                     <!-- Social Media from Client Account (Replaces previous 3 grid cards) -->
                     <div class="ofp-social-media-section">
-                        <h4 class="ofp-social-card-title">Social Media</h4>
+                        <h4 class="ofp-social-card-title text-slate-900 dark:text-white">Social Media</h4>
                         <div class="ofp-social-icons-list">
                             <!-- YouTube -->
                             <a href="<?php echo esc_url( $youtube_url ?: 'https://youtube.com' ); ?>" target="_blank" rel="noopener" class="ofp-social-bubble yt" title="YouTube">
@@ -375,7 +701,7 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
 
                             <!-- WhatsApp -->
                             <a href="<?php echo esc_url( $whatsapp_url ?: '#' ); ?>" target="_blank" rel="noopener" class="ofp-social-bubble wa" title="WhatsApp">
-                                <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z"/><path d="M17.84 16.03c-.24.68-1.2 1.26-1.98 1.42-.53.11-1.22.2-3.56-.76-2.99-1.24-4.91-4.28-5.06-4.48-.15-.2-1.2-1.6-1.2-3.05s.76-2.16 1.03-2.46c.27-.3.59-.37.78-.37.2 0 .39 0 .56.01.18.01.42-.07.66.5.24.58.83 2.03.9 2.18.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.18-.32.4-.45.53-.15.15-.31.31-.13.61.18.3.8 1.32 1.72 2.14 1.18 1.05 2.18 1.38 2.48 1.53.3.15.48.13.66-.08.18-.2.76-.89.96-1.19.2-.3.4-.25.66-.15.27.1 1.72.81 2.01.96.3.15.49.22.56.35.07.13.07.73-.17 1.41z" fill="#ffffff"/></svg>
+                                <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z"/><path d="M17.84 16.03c-.24.68-1.2 1.26-1.98 1.42-.53.11-1.22.2-3.56-.76-2.99-1.24-4.91-4.28-5.06-4.48-.15-.2-1.2-1.6-1.2-3.05s.76-2.16 1.03-2.46c.27-.3.59-.37.78-.37.2 0 .39 0 .56.01.18.01.42-.07.66.5.24.58.83 2.03.9 2.18.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.18-.32.4-.45.53-.15.15-.31.31-.13.61.18.3.8 1.32 1.72 2.14 1.18 1.05 2.18 1.38 2.48 1.53.3.15.48.13.66-.08.18-.2.76-.89.96-1.19.2-.3.4-.25.66-.15.27.1 1.72.81 2.01.96.3.15.49.22.56.35.07.13.07.73-.17 1.41z"/></svg>
                             </a>
 
                             <!-- Public Profile / Website -->
@@ -600,10 +926,10 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                     <?php endwhile; wp_reset_postdata(); ?>
                 </div>
             <?php else : ?>
-                <div class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                    <svg class="w-10 h-10 mx-auto text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                    <h4 class="text-base font-bold text-slate-800 mb-1">No Listings Available Right Now</h4>
-                    <p class="text-xs text-slate-500 m-0">Please contact the agent directly using the Call or WhatsApp buttons above.</p>
+                <div class="text-center py-12 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                    <svg class="w-10 h-10 mx-auto text-slate-400 dark:text-slate-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                    <h4 class="text-base font-bold text-slate-800 dark:text-slate-200 mb-1">No Listings Available Right Now</h4>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 m-0">Please contact the agent directly using the Call or WhatsApp buttons above.</p>
                 </div>
             <?php endif; ?>
         </section>
@@ -611,18 +937,18 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
     </div> <!-- /.ofp-agent-page-container -->
 
     <!-- ── Comprehensive Official Site Footer (Resting Solidly at Viewport Bottom) ── -->
-    <footer class="w-full bg-slate-50 text-slate-600 mt-auto border-t border-slate-200"
+    <footer class="w-full bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 mt-auto border-t border-slate-200 dark:border-slate-800 transition-colors duration-300"
         style="font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,'Helvetica Neue','Noto Sans',Arial,sans-serif;font-size:12px;font-weight:400">
         <!-- Top Subscription Area -->
-        <div class="border-b border-slate-200 py-12">
+        <div class="border-b border-slate-200 dark:border-slate-800 py-12">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
                 <div>
-                    <h3 style="font-size:16px;font-weight:700" class="text-slate-900 mb-2">Get Off-Market Real Estate Alerts &amp; Price Drops</h3>
-                    <p class="text-slate-500">Join over 24,000 verified investors and homebuyers receiving weekly curated deals in Nigeria.</p>
+                    <h3 style="font-size:16px;font-weight:700" class="text-slate-900 dark:text-white mb-2">Get Off-Market Real Estate Alerts &amp; Price Drops</h3>
+                    <p class="text-slate-500 dark:text-slate-400">Join over 24,000 verified investors and homebuyers receiving weekly curated deals in Nigeria.</p>
                 </div>
                 <form class="flex w-full md:w-auto gap-4" onsubmit="event.preventDefault(); alert('Subscribed to alerts!');">
                     <input type="email" placeholder="Enter your email address"
-                        class="w-full md:w-72 bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:border-blue-500"
+                        class="w-full md:w-72 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-3 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500"
                         style="font-size:12px" required>
                     <button type="submit"
                         class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-lg transition-colors cursor-pointer whitespace-nowrap flex items-center gap-2">
@@ -642,14 +968,14 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                             <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-sm">
                                 <?php echo esc_html( strtoupper( substr( OFP_Brand::public_name_text( 'Bofast Homes' ), 0, 1 ) ) ); ?>
                             </div>
-                            <span style="font-size:16px;font-weight:700" class="tracking-tight text-slate-900">
+                            <span style="font-size:16px;font-weight:700" class="tracking-tight text-slate-900 dark:text-white">
                                 <?php echo esc_html( OFP_Brand::public_name_text( 'Bofast Homes' ) ); ?>
                             </span>
                         </a>
-                        <p class="text-slate-500 leading-relaxed mb-6">
+                        <p class="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
                             Nigeria's leading verified real estate marketplace and integrated broker CRM portal. Fast, transparent property acquisitions.
                         </p>
-                        <div class="space-y-3 text-slate-500 text-[12px]">
+                        <div class="space-y-3 text-slate-500 dark:text-slate-400 text-[12px]">
                             <div class="flex items-start gap-3">
                                 <svg class="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
                                 <span>Plot 14 Admiralty Way, Lekki Phase 1, Lagos</span>
@@ -667,37 +993,37 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
 
                     <!-- Column 2: Top Locations -->
                     <div>
-                        <h4 style="font-weight:700" class="text-slate-900 mb-6 uppercase tracking-wider">Top Locations</h4>
-                        <ul class="space-y-3 text-slate-500 text-[12px]">
-                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Properties in Lekki Phase 1</a></li>
-                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Properties in Ikoyi</a></li>
-                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Properties in Victoria Island</a></li>
-                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Properties in Maitama Abuja</a></li>
-                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Properties in Ikeja GRA</a></li>
+                        <h4 style="font-weight:700" class="text-slate-900 dark:text-white mb-6 uppercase tracking-wider">Top Locations</h4>
+                        <ul class="space-y-3 text-slate-500 dark:text-slate-400 text-[12px]">
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 dark:hover:text-white transition-colors">Properties in Lekki Phase 1</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 dark:hover:text-white transition-colors">Properties in Ikoyi</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 dark:hover:text-white transition-colors">Properties in Victoria Island</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 dark:hover:text-white transition-colors">Properties in Maitama Abuja</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 dark:hover:text-white transition-colors">Properties in Ikeja GRA</a></li>
                         </ul>
                     </div>
 
                     <!-- Column 3: Categories -->
                     <div>
-                        <h4 style="font-weight:700" class="text-slate-900 mb-6 uppercase tracking-wider">Popular Categories</h4>
-                        <ul class="space-y-3 text-slate-500 text-[12px]">
-                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Houses for Sale in Lagos</a></li>
-                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Flats &amp; Apartments for Rent</a></li>
-                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Serviced Luxury Short Lets</a></li>
-                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Prime Residential Lands (C of O)</a></li>
-                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Grade-A Commercial Offices</a></li>
+                        <h4 style="font-weight:700" class="text-slate-900 dark:text-white mb-6 uppercase tracking-wider">Popular Categories</h4>
+                        <ul class="space-y-3 text-slate-500 dark:text-slate-400 text-[12px]">
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 dark:hover:text-white transition-colors">Houses for Sale in Lagos</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 dark:hover:text-white transition-colors">Flats &amp; Apartments for Rent</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 dark:hover:text-white transition-colors">Serviced Luxury Short Lets</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 dark:hover:text-white transition-colors">Prime Residential Lands (C of O)</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 dark:hover:text-white transition-colors">Grade-A Commercial Offices</a></li>
                         </ul>
                     </div>
 
                     <!-- Column 4: Quick Links -->
                     <div>
-                        <h4 style="font-weight:700" class="text-slate-900 mb-6 uppercase tracking-wider">Portals &amp; Verification</h4>
-                        <ul class="space-y-3 text-slate-500 text-[12px]">
-                            <li><a href="<?php echo esc_url( home_url('/login') ); ?>" class="hover:text-slate-900 transition-colors">Agent &amp; Host Portal Login</a></li>
-                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 transition-colors">Marketplace Catalog</a></li>
-                            <li><a href="#" class="hover:text-slate-900 transition-colors">Title Due Diligence Service</a></li>
-                            <li><a href="#" class="hover:text-slate-900 transition-colors">Inspection Scheduling Policy</a></li>
-                            <li><a href="#" class="hover:text-slate-900 transition-colors">Privacy Policy &amp; Terms</a></li>
+                        <h4 style="font-weight:700" class="text-slate-900 dark:text-white mb-6 uppercase tracking-wider">Portals &amp; Verification</h4>
+                        <ul class="space-y-3 text-slate-500 dark:text-slate-400 text-[12px]">
+                            <li><a href="<?php echo esc_url( home_url('/login') ); ?>" class="hover:text-slate-900 dark:hover:text-white transition-colors">Agent &amp; Host Portal Login</a></li>
+                            <li><a href="<?php echo esc_url( home_url('/marketplace/') ); ?>" class="hover:text-slate-900 dark:hover:text-white transition-colors">Marketplace Catalog</a></li>
+                            <li><a href="#" class="hover:text-slate-900 dark:hover:text-white transition-colors">Title Due Diligence Service</a></li>
+                            <li><a href="#" class="hover:text-slate-900 dark:hover:text-white transition-colors">Inspection Scheduling Policy</a></li>
+                            <li><a href="#" class="hover:text-slate-900 dark:hover:text-white transition-colors">Privacy Policy &amp; Terms</a></li>
                         </ul>
                     </div>
                 </div>
@@ -705,9 +1031,9 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
         </div>
 
         <!-- Bottom Bar -->
-        <div class="border-t border-slate-200 py-6">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-slate-500 text-xs">
-                <div class="flex items-center gap-2 text-emerald-600">
+        <div class="border-t border-slate-200 dark:border-slate-800 py-6">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-slate-500 dark:text-slate-400 text-xs">
+                <div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <span>All listings verified against state land registry archives.</span>
                 </div>
