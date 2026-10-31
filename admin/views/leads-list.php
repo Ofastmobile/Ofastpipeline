@@ -110,7 +110,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
                     <th>Client</th>
                     <th>Source</th>
                     <th>Status</th>
-                    <th>IVR</th>
                     <th>Created</th>
                 </tr>
             </thead>
@@ -131,7 +130,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
                             ?>
                         </td>
                         <td><?php echo $status_badges[ $lead->status ] ?? esc_html( $lead->status ); ?></td>
-                        <td><?php echo $lead->ivr_response ? esc_html( 'Pressed ' . $lead->ivr_response ) : '—'; ?></td>
                         <td>
                             <?php
                             $lead_dt = DateTime::createFromFormat( 'Y-m-d H:i:s', $lead->created_at, wp_timezone() );

@@ -636,11 +636,12 @@ class OFP_Property_Receipt_Generator {
 
         // .htaccess protection against direct directory listing
         $htaccess = $dir . '/.htaccess';
-        if ( ! file_exists( $htaccess ) ) {
-            file_put_contents( $htaccess, "Options -Indexes\n" );
+        if ( ! file_exists( $htaccess ) || strpos( (string) @file_get_contents( $htaccess ), 'Require all denied' ) === false ) {
+            // Receipts are given out by the plugin only, never directly.
+            file_put_contents( $htaccess, "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nOrder deny,allow\nDeny from all\n</IfModule>\nOptions -Indexes\n" );
         }
 
-        $filename = $type . '-receipt-' . $payment_id . '-' . wp_generate_password( 8, false ) . '.html';
+        $filename = $type . '-receipt-' . $payment_id . '-' . wp_generate_password( 24, false ) . '.html';
         $filepath = $dir . '/' . $filename;
         $bytes = file_put_contents( $filepath, $html );
 

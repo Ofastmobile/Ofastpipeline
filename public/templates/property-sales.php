@@ -425,7 +425,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 </div>
                 <div style="margin-bottom:16px;">
                     <h3 style="margin:0 0 4px;font-size:18px;font-weight:700;color:var(--text-main);">Create Offer</h3>
-                    <p class="ofp-hint" style="margin:0;">Create a full-payment or installment offer. A secure offer link is generated for the buyer. No virtual account is charged until they accept.</p>
+                    <p class="ofp-hint" style="margin:0;">Create a full-payment or installment offer. A secure offer link is generated for the buyer. The buyer is not charged until they accept.</p>
                 </div>
 
                 <?php if ( ! $can_create_installments ) : ?>

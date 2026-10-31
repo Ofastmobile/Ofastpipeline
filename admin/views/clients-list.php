@@ -59,7 +59,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 <input type="tel" name="phone" required placeholder="08012345678">
             </div>
             <div class="ofp-field">
-                <label>Business Phone (for IVR transfer)</label>
+                <label>Business Phone</label>
                 <input type="tel" name="business_phone" placeholder="Same as primary if blank">
             </div>
             <div class="ofp-field">
@@ -501,7 +501,7 @@ $wl_post = esc_url( admin_url( 'admin-post.php' ) );
                     <label>Credit Channel <span class="required">*</span></label>
                     <select name="channel" required>
                         <option value="sms">SMS Credit</option>
-                        <option value="voice">Voice / IVR Credit</option>
+                        <option value="voice">Voice Credit</option>
                     </select>
                 </div>
                 <div class="ofp-field">
@@ -513,7 +513,7 @@ $wl_post = esc_url( admin_url( 'admin-post.php' ) );
                 <div class="ofp-field ofp-field-full">
                     <label>Payment Reference (optional)</label>
                     <input type="text" name="reference"
-                           placeholder="e.g. Monnify/Paystack transaction reference">
+                           placeholder="e.g. bank transfer reference">
                     <p class="ofp-hint">Stored in the transaction log for auditing.</p>
                 </div>
             </div>

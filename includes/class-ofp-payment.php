@@ -21,18 +21,6 @@
  *  4. Add its credentials to the Settings page
  *  That is all. No other file needs to change.
  *
- * VIRTUAL ACCOUNT STANDARD:
- *  create_virtual_account( array $customer_data, array $metadata = [] )
- *  always returns a stdClass with:
- *   ->account_number  (string)
- *   ->bank_name       (string)
- *   ->bank_code       (string)
- *   ->customer_code   (string) — used to match incoming DVA deposits back
- *                                 to whatever this VA was created for.
- *  Or null on failure. All gateway adapters normalise to this format.
- *  Used exclusively for buyer property-purchase payments (one DVA per
- *  purchase); not used for client subscription funding.
- *
  * Depends on: gateway adapter classes, wp_options for provider config.
  */
 
@@ -556,22 +544,6 @@ class OFP_Payment {
      */
     public static function get_active_provider(): string {
         return 'paystack';
-    }
-
-    /**
-     * Create a dedicated virtual account for a property buyer, tied to one
-     * purchase. Used so a buyer can pay any installment (or the full
-     * balance) via bank transfer, with deposits auto-matched back to their
-     * purchase by the gateway webhook.
-     *
-     * @param  array $customer_data  [ 'name', 'email', 'phone' ]
-     * @param  array $metadata       e.g. [ 'ofp_purchase_id' => 12 ]
-     * @return object|null           stdClass { account_number, bank_name, bank_code, customer_code } or null.
-     */
-    public static function create_buyer_virtual_account( array $customer_data, array $metadata = [] ): ?object {
-        $gateway = self::get_gateway();
-        if ( ! $gateway || ! $gateway->is_configured() ) return null;
-        return $gateway->create_virtual_account( $customer_data, $metadata );
     }
 
     /**

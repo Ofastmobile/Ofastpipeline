@@ -15,7 +15,6 @@
  *  3.  ofp_leads
  *  4.  ofp_trigger_queue
  *  5.  ofp_communications_log
- *  6.  ofp_ivr_responses
  *  7.  ofp_credits
  *  8.  ofp_credit_transactions
  *  9.  ofp_subscriptions          ← v2.1: includes `type` column
@@ -133,15 +132,6 @@ class OFP_Activator {
         );
         if ( empty( $expected_col_exists ) ) {
             $wpdb->query( "ALTER TABLE {$p}ofp_subscriptions ADD COLUMN expected_amount DECIMAL(10,2) DEFAULT NULL AFTER amount" );
-        }
-
-        // voice_audio_url column on ofp_pipeline_configs (Phase 22 — custom IVR audio).
-        // Lets clients upload an MP3 instead of relying on text-to-speech.
-        $audio_col_exists = $wpdb->get_results(
-            "SHOW COLUMNS FROM {$p}ofp_pipeline_configs LIKE 'voice_audio_url'"
-        );
-        if ( empty( $audio_col_exists ) ) {
-            $wpdb->query( "ALTER TABLE {$p}ofp_pipeline_configs ADD COLUMN voice_audio_url VARCHAR(255) DEFAULT NULL AFTER followup_2_message" );
         }
 
         // profile_slug, bio, and meta_pixel_id columns on ofp_clients (Phase 23).
@@ -337,21 +327,6 @@ class OFP_Activator {
             KEY lead_id   (lead_id)
         ) {$charset_collate};" );
 
-        // ── 6. ofp_ivr_responses ─────────────────────────────────────────────
-        // Digit presses from IVR calls, linked back to the lead.
-        dbDelta( "CREATE TABLE {$p}ofp_ivr_responses (
-            id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            client_id       BIGINT UNSIGNED NOT NULL,
-            lead_id         BIGINT UNSIGNED NOT NULL,
-            call_session_id VARCHAR(100)             DEFAULT NULL,
-            digit_pressed   VARCHAR(5)               DEFAULT NULL,
-            action_taken    VARCHAR(100)             DEFAULT NULL,
-            responded_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            KEY client_id (client_id),
-            KEY lead_id   (lead_id)
-        ) {$charset_collate};" );
-
         // ── 7. ofp_credits ───────────────────────────────────────────────────
         // One row per client. Tracks SMS and voice credit balances.
         // paused = 1 means automation has been halted due to zero balance.
@@ -410,7 +385,7 @@ class OFP_Activator {
         ) {$charset_collate};" );
 
         // ── 10. ofp_pipeline_configs ──────────────────────────────────────────
-        // One row per CRM client. Stores their personalised SMS/Voice/IVR sequence.
+        // One row per CRM client. Stores their personalised SMS/Voice sequence.
         // Only created when the client has a CRM subscription (not listing-only).
         dbDelta( "CREATE TABLE {$p}ofp_pipeline_configs (
             id                     BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -423,14 +398,10 @@ class OFP_Activator {
             followup_2_delay_hours INT             NOT NULL DEFAULT 24,
             followup_2_type        VARCHAR(10)     NOT NULL DEFAULT 'voice',
             followup_2_message     TEXT                     DEFAULT NULL,
-            voice_audio_url        VARCHAR(255)             DEFAULT NULL,
             followup_3_delay_hours INT             NOT NULL DEFAULT 72,
             followup_3_type        VARCHAR(10)     NOT NULL DEFAULT 'sms',
             followup_3_message     TEXT                     DEFAULT NULL,
             max_followups          INT             NOT NULL DEFAULT 3,
-            ivr_option_1_action    VARCHAR(20)     NOT NULL DEFAULT 'transfer',
-            ivr_option_2_action    VARCHAR(20)     NOT NULL DEFAULT 'sms',
-            ivr_option_3_action    VARCHAR(20)     NOT NULL DEFAULT 'schedule',
             transfer_phone         VARCHAR(20)              DEFAULT NULL,
             whatsapp_link          VARCHAR(255)             DEFAULT NULL,
             updated_at             DATETIME                 DEFAULT NULL,

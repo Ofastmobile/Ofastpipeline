@@ -193,8 +193,6 @@ class OFP_Property_Manual_Payment {
         }
         if ( ! $initials ) $initials = 'OF';
 
-        $online_enabled = OFP_Bank_Account::online_payments_enabled();
-        $online_checkout_url = ( $online_enabled && $token ) ? add_query_arg( [ 'token' => rawurlencode( $token ) ], home_url( '/property-checkout/' ) ) : '';
         $my_payments_url = class_exists( 'OFP_Property_My_Payments' ) ? OFP_Property_My_Payments::url() : home_url( '/my-payments/' );
         ?>
         <!doctype html>
@@ -324,14 +322,6 @@ class OFP_Property_Manual_Payment {
                         <?php endif; ?>
 
                         <?php if ( $purchase ) : ?>
-                            <!-- ONLINE OPTION PROMO (if enabled) -->
-                            <?php if ( $online_enabled && $online_checkout_url ) : ?>
-                                <div class="ofp-online-banner">
-                                    <p>💳 Prefer instant checkout with Debit Card, USSD or Apple Pay?</p>
-                                    <a href="<?php echo esc_url( $online_checkout_url ); ?>">Pay Online via Paystack &rarr;</a>
-                                </div>
-                            <?php endif; ?>
-
                             <!-- FINANCIAL STATS -->
                             <div class="ofp-fin-grid">
                                 <div class="ofp-fin-box">

@@ -21,21 +21,11 @@ class OFP_Property_Comms_Bridge {
 
         $payment_link = class_exists( 'OFP_Property_Checkout' ) ? OFP_Property_Checkout::payment_link( $purchase_id ) : '';
 
-        // Give the buyer a dedicated account number for this purchase, so
-        // any installment (or the full balance) can be paid by bank
-        // transfer, matched back automatically via webhook.
-        $va = ( class_exists( 'OFP_Property_Commerce' ) && OFP_Bank_Account::online_payments_enabled() ) ? OFP_Property_Commerce::ensure_virtual_account( $purchase_id ) : null;
-
-        $va_html = $va ? sprintf( '<p>Or pay by bank transfer, anytime, any installment:<br>Account Number: <strong>%s</strong><br>Bank: <strong>%s</strong></p>', esc_html( $va->account_number ), esc_html( $va->bank_name ) ) : '';
-        $va_sms  = $va ? sprintf( ' Or transfer to %s (%s), any installment.', $va->account_number, $va->bank_name ) : '';
-
-        // Online payments are off: show the owner's own bank account instead.
-        if ( ! OFP_Bank_Account::online_payments_enabled() ) {
-            $acct = OFP_Bank_Account::for_purchase( $row );
-            $ref  = OFP_Bank_Account::purchase_reference( $purchase_id );
-            $va_html = $acct ? OFP_Bank_Account::email_block( $acct, $ref ) : '';
-            $va_sms  = $acct ? sprintf( ' Transfer to %s %s (%s). Note: %s.', $acct->bank_name, $acct->account_number, $acct->account_name, $ref ) : '';
-        }
+        // The buyer pays the owner's own bank account.
+        $acct = OFP_Bank_Account::for_purchase( $row );
+        $ref  = OFP_Bank_Account::purchase_reference( $purchase_id );
+        $va_html = $acct ? OFP_Bank_Account::email_block( $acct, $ref ) : '';
+        $va_sms  = $acct ? sprintf( ' Transfer to %s %s (%s). Note: %s.', $acct->bank_name, $acct->account_number, $acct->account_name, $ref ) : '';
 
         if ( ! empty( $row->buyer_email ) ) {
             OFP_Mailer::send(

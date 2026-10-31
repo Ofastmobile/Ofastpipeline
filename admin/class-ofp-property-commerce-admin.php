@@ -13,32 +13,6 @@ class OFP_Property_Commerce_Admin {
     public function __construct() {
         add_action( 'admin_menu', [ $this, 'register_menu' ] );
         add_action( 'admin_post_ofp_admin_log_manual_payment', [ $this, 'handle_log_manual_payment' ] );
-        add_action( 'admin_post_ofp_backfill_virtual_accounts', [ $this, 'handle_backfill_virtual_accounts' ] );
-    }
-
-    /**
-     * One-time (repeatable/safe) tool: creates a dedicated virtual account
-     * for every existing, non-completed purchase that doesn't have one yet.
-     * Needed because VA creation only auto-fires for purchases created after
-     * this feature shipped — older purchases wouldn't otherwise get one.
-     */
-    public function handle_backfill_virtual_accounts(): void {
-        if ( ! current_user_can( 'manage_options' ) ) wp_die( esc_html__( 'Access denied.', 'ofast-pipeline' ) );
-        check_admin_referer( 'ofp_backfill_virtual_accounts' );
-
-        global $wpdb;
-        $p = $wpdb->prefix;
-        $ids = $wpdb->get_col( "SELECT id FROM {$p}ofp_property_purchases WHERE (va_customer_code IS NULL OR va_customer_code = '') AND status != 'completed'" );
-
-        $created = 0;
-        $skipped = 0;
-        foreach ( $ids as $id ) {
-            $va = OFP_Property_Commerce::ensure_virtual_account( (int) $id );
-            if ( $va ) $created++; else $skipped++;
-        }
-
-        wp_safe_redirect( add_query_arg( [ 'va_backfill_created' => $created, 'va_backfill_skipped' => $skipped ], admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-purchases' ) ) );
-        exit;
     }
 
     /**
@@ -281,9 +255,6 @@ class OFP_Property_Commerce_Admin {
             <h1>Property Sales</h1>
             <p>Every buyer deal in one place — pending offers awaiting a decision, and active or completed purchases with their paid amount and balance.</p>
 
-            <?php if ( isset( $_GET['va_backfill_created'] ) ) : ?>
-                <div class="notice notice-success is-dismissible"><p>Virtual accounts created: <?php echo (int) $_GET['va_backfill_created']; ?>. Skipped (no email or gateway not configured): <?php echo (int) $_GET['va_backfill_skipped']; ?>.</p></div>
-            <?php endif; ?>
             <?php if ( $created && $offer_url ) : ?>
                 <div class="notice notice-success is-dismissible">
                     <p><strong>Offer created.</strong> Send the secure buyer link below.</p>
@@ -301,11 +272,6 @@ class OFP_Property_Commerce_Admin {
             <p>
                 <a class="button button-primary" href="<?php echo esc_url( admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-add-purchase' ) ); ?>">Add Purchase</a>
                 <a class="button" href="<?php echo esc_url( admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-create-offer' ) ); ?>">Create Offer</a>
-                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;">
-                    <?php wp_nonce_field( 'ofp_backfill_virtual_accounts' ); ?>
-                    <input type="hidden" name="action" value="ofp_backfill_virtual_accounts">
-                    <button type="submit" class="button" onclick="return confirm('Create a bank transfer account for every existing purchase that doesn\'t have one yet?');">Backfill Virtual Accounts</button>
-                </form>
             </p>
 
             <?php if ( empty( $purchases ) && empty( $offers ) ) : ?>

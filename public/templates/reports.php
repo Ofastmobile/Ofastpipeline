@@ -52,7 +52,7 @@ if ( $token ) {
         $which = sanitize_key( $_GET['file'] ?? 'leads' );
         $file  = '';
         $upload_dir  = wp_upload_dir();
-        $archive_dir = trailingslashit( $upload_dir['basedir'] ) . 'ofp-archives/' . $client->id . '/';
+        $archive_dir = OFP_CSV::archive_dir( (int) $client->id );
 
         $filename_map = [
             'leads'        => "leads_{$archive->period}.csv",

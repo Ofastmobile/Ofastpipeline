@@ -374,14 +374,11 @@ class OFP_Subscription {
                         'followup_1_message'     => get_option( 'ofp_default_followup_1', self::default_followup_sms() ),
                         'followup_2_delay_hours' => 24,
                         'followup_2_type'        => 'voice',
-                        'followup_2_message'     => get_option( 'ofp_default_followup_2', self::default_ivr_message() ),
+                        'followup_2_message'     => get_option( 'ofp_default_followup_2', '' ),
                         'followup_3_delay_hours' => 72,
                         'followup_3_type'        => 'sms',
                         'followup_3_message'     => get_option( 'ofp_default_followup_3', self::default_followup_3_sms() ),
                         'max_followups'          => 3,
-                        'ivr_option_1_action'    => 'transfer',
-                        'ivr_option_2_action'    => 'sms',
-                        'ivr_option_3_action'    => 'schedule',
                     ]
                 );
             }
@@ -1240,15 +1237,6 @@ class OFP_Subscription {
      */
     private static function default_followup_sms(): string {
         return 'Hi {{name}}, just checking in — did you get our earlier message? We would love to help. Reply to this SMS or call us directly. - {{business_name}}';
-    }
-
-    /**
-     * Default 24-hour IVR voice call script.
-     *
-     * @return string
-     */
-    private static function default_ivr_message(): string {
-        return 'Hello, this is a message from {{business_name}}. You recently showed interest in our services. Press 1 to speak with us now. Press 2 to receive our WhatsApp contact. Press 3 for us to call you back later.';
     }
 
     /**

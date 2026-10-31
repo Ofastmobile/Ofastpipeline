@@ -7,7 +7,7 @@
  * ENDPOINTS:
  *  POST /wp-json/ofp/v1/capture-lead       Lead submission from landing pages
  *  POST /wp-json/ofp/v1/webhook/payment    Payment gateway webhook (provider-agnostic)
- *  POST /wp-json/ofp/v1/webhook/voice-ivr  Africa's Talking IVR callback
+ *  POST /wp-json/ofp/v1/webhook/voice-ivr  Africa's Talking voice call webhook
  *  POST /wp-json/ofp/v1/webhook/sms-dlr    SMS delivery receipt
  *
  * SECURITY ON capture-lead:
@@ -21,7 +21,7 @@
  *  All endpoints allow cross-origin requests so client landing pages on
  *  separate domains/subdomains can POST to this site's REST API.
  *
- * Depends on: OFP_Security, OFP_Lead, OFP_Queue, OFP_IVR, OFP_Voice.
+ * Depends on: OFP_Security, OFP_Lead, OFP_Queue, OFP_Voice.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -100,10 +100,11 @@ class OFP_REST_API {
             'permission_callback' => '__return_true',
         ] );
 
-        // Africa's Talking IVR callback.
+        // Africa's Talking voice call webhook. The address keeps its old name so calls
+        // that are already queued still work.
         register_rest_route( 'ofp/v1', '/webhook/voice-ivr', [
             'methods'             => [ 'POST', 'GET' ],
-            'callback'            => [ $this, 'voice_ivr_webhook' ],
+            'callback'            => [ $this, 'voice_webhook' ],
             'permission_callback' => '__return_true',
         ] );
 
@@ -350,15 +351,15 @@ class OFP_REST_API {
     }
 
     /**
-     * Africa's Talking IVR callback — handled by OFP_IVR.
+     * Africa's Talking voice call webhook. Handled by OFP_Voice.
      *
      * @param  WP_REST_Request $request
      * @return WP_REST_Response
      */
-    public function voice_ivr_webhook( WP_REST_Request $request ): WP_REST_Response {
+    public function voice_webhook( WP_REST_Request $request ): WP_REST_Response {
 
-        if ( class_exists( 'OFP_IVR' ) && method_exists( 'OFP_IVR', 'handle_callback' ) ) {
-            return OFP_IVR::handle_callback( $request );
+        if ( class_exists( 'OFP_Voice' ) ) {
+            return OFP_Voice::handle_callback( $request );
         }
 
         return new WP_REST_Response( [ 'status' => 'received' ], 200 );
@@ -374,6 +375,7 @@ class OFP_REST_API {
 
         $message_id = sanitize_text_field( $request->get_param( 'id' ) ?? '' );
         $status     = sanitize_text_field( $request->get_param( 'status' ) ?? '' );
+        $status     = substr( preg_replace( '/[^A-Za-z0-9 _\-]/', '', $status ), 0, 32 );
 
         if ( $message_id && $status ) {
             global $wpdb;

@@ -294,18 +294,20 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
         @click="megaMenuOpen = false"></div>
 
     <!-- ── Top Navigation Bar ─────────────────────────────────────────────── -->
+    <?php $ofp_wl_rec = class_exists( 'OFP_Host_Router' ) ? OFP_Host_Router::current_client_record() : null; $ofp_wl = $ofp_wl_rec && ! empty( $ofp_wl_rec->is_white_label ); ?>
     <header class="sticky top-0 z-50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl backdrop-saturate-150 border-b border-slate-200/50 dark:border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
             <div class="flex justify-between items-center h-16 transition-all duration-300">
                 <!-- Left: Logo & Hamburger -->
                 <div class="flex items-center gap-3 sm:gap-5">
                     <!-- Logo (Hidden on mobile so only hamburger displays, visible from sm up) -->
-                    <a href="<?php echo esc_url( home_url('/') ); ?>" class="hidden sm:flex items-center">
+                    <a href="<?php echo esc_url( home_url('/') ); ?>" class="<?php echo $ofp_wl ? 'flex' : 'hidden sm:flex'; ?> items-center">
                         <span class="text-[13px] sm:text-sm font-black tracking-[0.25em] text-slate-900 dark:text-white uppercase transition-colors">
                             <?php echo OFP_Brand::public_logo_html( 'BOFAST HOMES' ); ?>
                         </span>
                     </a>
 
+                    <?php if ( ! $ofp_wl ) : ?>
                     <!-- Mega Menu Hamburger Button -->
                     <button type="button" @click.stop="megaMenuOpen = !megaMenuOpen" aria-label="Toggle Navigation Menu"
                         class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 transition-colors flex items-center justify-center cursor-pointer border border-slate-200 dark:border-slate-700">
@@ -316,6 +318,7 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                                 stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Right: Action Button -->
@@ -333,16 +336,19 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                             </path>
                         </svg>
                     </button>
+                    <?php if ( ! $ofp_wl ) : ?>
                     <!-- List Property Button -->
                     <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"
                         class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 sm:px-7 py-2 sm:py-2.5 rounded-[7px] text-[11px] sm:text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap uppercase inline-flex items-center justify-center">
                         List Property
                     </a>
+                    <?php endif; ?>
                 </div>
             </div>
 
             <?php $ofp_header_social = OFP_Brand::social_links(); ?>
 
+            <?php if ( ! $ofp_wl ) : ?>
             <!-- Desktop Mega Menu Dropdown (hidden lg:block) -->
             <div id="ofp-desktop-megamenu" x-cloak x-show="megaMenuOpen" @click.outside="megaMenuOpen = false"
                 class="hidden lg:block absolute top-full left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 mt-2 z-[100] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden font-sans"
@@ -440,9 +446,11 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
     </header>
 
+    <?php if ( ! $ofp_wl ) : ?>
     <!-- Mobile Full-Page Navigation Screen (lg:hidden, placed outside <header> so transform doesn't clip/break fixed inset-0) -->
     <div id="ofp-mobile-megamenu" x-cloak x-show="megaMenuOpen"
         class="lg:hidden fixed inset-0 z-[100] bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-6 font-sans overflow-y-auto"
@@ -581,6 +589,7 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
             </a>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- ── Featured Property Cover Banner (Full Width Edge-to-Edge) ────────── -->
     <div class="ofp-cover-banner ofp-cover-banner-full" style="background-image: url('<?php echo esc_url( $featured_cover ); ?>');">

@@ -2,17 +2,17 @@
 /**
  * OFP_Voice
  *
- * Initiates outbound voice calls via Africa's Talking Voice API.
+ * Starts outbound voice calls through Africa's Talking and answers the call
+ * webhook. Every call is a one way notice: the saved text is read out and the
+ * call ends. There are no key presses and no menu.
  *
  * HOW IT WORKS:
- *  1. make_call() sends a POST to Africa's Talking to initiate the call.
- *  2. Africa's Talking calls the lead's phone number.
- *  3. When the lead answers, AT fetches our IVR XML from the voice-ivr webhook.
- *  4. OFP_IVR::handle_callback() serves the XML and handles digit responses.
+ *  1. make_call() asks Africa's Talking to call the person.
+ *  2. When the person answers, Africa's Talking opens our webhook with the
+ *     notice token.
+ *  3. handle_callback() reads out the text that belongs to that token.
  *
- * The callback URL is built dynamically using home_url() so it works on any domain.
- *
- * Depends on: wp_remote_post(), OFP_Security (for API key decryption).
+ * Depends on: wp_remote_post(), OFP_Security, OFP_Voice_Notice.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -25,9 +25,9 @@ class OFP_Voice {
      * Initiate an outbound voice call to a lead.
      *
      * @param  string $phone      Lead phone number to call.
-     * @param  string $message    IVR script/message (passed to OFP_IVR via callback).
-     * @param  int    $client_id  Client ID (passed to callback URL for context).
-     * @param  int    $lead_id    Lead ID (passed to callback URL for context).
+     * @param  string $message    The text that is read out (also saved in the communications log).
+     * @param  int    $client_id  Client ID (for the communications log).
+     * @param  int    $lead_id    Lead ID (for the communications log).
      * @return array {
      *     @type bool   $success     True if call was queued successfully.
      *     @type string $session_id  Africa's Talking session ID for tracking.
@@ -45,12 +45,8 @@ class OFP_Voice {
 
         $phone = $this->normalise_phone( $phone );
 
-        // Build the IVR callback URL — AT will POST digit responses here.
-        $callback_args = [
-            'client_id' => $client_id,
-            'lead_id'   => $lead_id,
-        ];
-        // One way notice calls carry a token. The webhook uses it to read out the saved text.
+        // The callback carries only the notice token. The webhook uses it to read out the saved text.
+        $callback_args = [];
         if ( $notice_token !== '' ) {
             $callback_args['notice'] = $notice_token;
         }
@@ -142,6 +138,37 @@ class OFP_Voice {
             'provider_ref' => $provider_ref,
             'error'        => $entry && $entry->status !== 'Queued' ? $entry->status : '',
         ];
+    }
+
+    /**
+     * XML that makes Africa's Talking read a message and hang up.
+     */
+    public static function say_and_hangup( string $message ): string {
+        return '<?xml version="1.0" encoding="UTF-8"?>' .
+            '<Response>' .
+                '<Say>' . esc_html( $message ) . '</Say>' .
+            '</Response>';
+    }
+
+    /**
+     * Webhook Africa's Talking opens when a call is answered. It reads out the
+     * saved notice text and ends the call. Nothing else can happen here: no
+     * key presses, no SMS, no changes to any lead.
+     */
+    public static function handle_callback( WP_REST_Request $request ): WP_REST_Response {
+        header( 'Content-Type: text/xml; charset=utf-8' );
+
+        // Africa's Talking also calls back when the call ends. Nothing to say then.
+        if ( '0' === (string) ( $request->get_param( 'isActive' ) ?? '' ) ) {
+            echo '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
+            exit;
+        }
+
+        $token  = sanitize_text_field( (string) ( $request->get_param( 'notice' ) ?? '' ) );
+        $notice = ( $token !== '' && class_exists( 'OFP_Voice_Notice' ) ) ? OFP_Voice_Notice::get_notice( $token ) : null;
+
+        echo self::say_and_hangup( $notice ? $notice['text'] : 'Hello. This is an automated message. Thank you. Goodbye.' );
+        exit;
     }
 
     /**

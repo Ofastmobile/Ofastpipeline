@@ -7,7 +7,7 @@
  * LEAD STATUSES:
  *  new        → just captured, no contact made yet
  *  contacted  → at least one SMS or call has been sent
- *  interested → lead responded to IVR (pressed a digit)
+ *  interested → lead showed interest
  *  converted  → business owner marked as won
  *  dead       → no response after full sequence, manually closed
  *
@@ -248,27 +248,6 @@ class OFP_Lead {
         if ( in_array( $status, [ 'converted', 'dead', 'lost' ], true ) && class_exists( 'OFP_Queue' ) ) {
             OFP_Queue::cancel_for_lead( $id );
         }
-    }
-
-    /**
-     * Store the IVR digit response on the lead.
-     * Called by OFP_IVR::handle_callback().
-     *
-     * @param  int    $id
-     * @param  string $digit
-     * @return void
-     */
-    public static function record_ivr_response( int $id, string $digit ): void {
-        global $wpdb;
-
-        $wpdb->update(
-            $wpdb->prefix . 'ofp_leads',
-            [
-                'ivr_response' => sanitize_text_field( $digit ),
-                'status'       => 'interested',
-            ],
-            [ 'id' => $id ]
-        );
     }
 
     /**

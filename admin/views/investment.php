@@ -53,8 +53,8 @@ $total_waitlist_count = count( $waitlist_users );
             </div>
             <div style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 14px 18px;">
                 <div style="font-size: 11px; color: #cbd5e1; text-transform: uppercase; font-weight: 500; letter-spacing: 0.05em; margin-bottom: 4px;">Disbursement Engine</div>
-                <div style="font-size: 22px; font-weight: 700; color: #ffffff;">Paystack & Escrow</div>
-                <div style="font-size: 11px; color: #34d399; font-weight: 500; margin-top: 2px;">Automated bank payouts</div>
+                <div style="font-size: 22px; font-weight: 700; color: #ffffff;">Bank Transfer</div>
+                <div style="font-size: 11px; color: #34d399; font-weight: 500; margin-top: 2px;">Paid from your own account</div>
             </div>
         </div>
     </div>

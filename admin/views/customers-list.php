@@ -153,9 +153,9 @@ if ( ! empty( $_GET['export'] ) ) {
     header( 'Content-Type: text/csv; charset=UTF-8' );
     header( 'Content-Disposition: attachment; filename="admin-customers-' . gmdate( 'Y-m-d' ) . '.csv"' );
     $out = fopen( 'php://output', 'w' );
-    fputcsv( $out, [ 'Customer Name', 'Phone', 'Email', 'Client / Business', 'Type', 'Purchases Count', 'Total Purchases (NGN)', 'Amount Paid (NGN)', 'Balance (NGN)', 'Leases Count', 'Last Activity' ] );
+    OFP_CSV::put( $out, [ 'Customer Name', 'Phone', 'Email', 'Client / Business', 'Type', 'Purchases Count', 'Total Purchases (NGN)', 'Amount Paid (NGN)', 'Balance (NGN)', 'Leases Count', 'Last Activity' ] );
     foreach ( $filtered as $row ) {
-        fputcsv( $out, [
+        OFP_CSV::put( $out, [
             $row['name'] ?: 'Unnamed Customer',
             $row['phone'] ?? '',
             $row['email'] ?? '',

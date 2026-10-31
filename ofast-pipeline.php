@@ -3,7 +3,7 @@
  * Plugin Name: OFast Pipeline
  * Plugin URI:  https://ofastpipeline.com
  * Description: Done-for-you lead pipeline and CRM automation engine for SMB clients in Nigeria.
- * Version:     2.2.15
+ * Version:     2.2.20
  * Author:      Olabode / Bofast World
  * Author URI:  https://bofastworld.com
  * Text Domain: ofast-pipeline
@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION', '2.2.15' );
+define( 'OFP_VERSION', '2.2.20' );
 define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
@@ -62,7 +62,6 @@ require_once OFP_PATH . 'includes/class-ofp-lead.php';
 require_once OFP_PATH . 'includes/class-ofp-queue.php';
 require_once OFP_PATH . 'includes/class-ofp-sms.php';
 require_once OFP_PATH . 'includes/class-ofp-voice.php';
-require_once OFP_PATH . 'includes/class-ofp-ivr.php';
 require_once OFP_PATH . 'includes/class-ofp-voice-notice.php';
 require_once OFP_PATH . 'includes/class-ofp-contacts.php';
 require_once OFP_PATH . 'includes/class-ofp-import.php';
@@ -77,7 +76,6 @@ require_once OFP_PATH . 'includes/class-ofp-communications-log.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce-migration.php';
 require_once OFP_PATH . 'includes/class-ofp-property-admin-rules.php';
-require_once OFP_PATH . 'includes/class-ofp-property-payment-context.php';
 require_once OFP_PATH . 'includes/class-ofp-property-payment-record.php';
 require_once OFP_PATH . 'includes/class-ofp-property-contact.php';
 require_once OFP_PATH . 'includes/class-ofp-property-purchase-service.php';
@@ -85,7 +83,6 @@ require_once OFP_PATH . 'includes/class-ofp-property-comms-bridge.php';
 require_once OFP_PATH . 'includes/class-ofp-property-manual-payment.php';
 require_once OFP_PATH . 'includes/class-ofp-property-payment-records.php';
 require_once OFP_PATH . 'includes/class-ofp-property-checkout.php';
-require_once OFP_PATH . 'includes/class-ofp-property-payment-entry-ui.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce-repair.php';
 require_once OFP_PATH . 'includes/class-ofp-property-rent.php';
 require_once OFP_PATH . 'includes/class-ofp-property-rent-visibility.php';
@@ -184,7 +181,6 @@ OFP_Prembly::init();
     OFP_Contacts::init();
     OFP_Property_Checkout::init();
     OFP_Property_Payment_Records::init();
-    OFP_Property_Payment_Entry_UI::init();
     OFP_Property_Commerce_Repair::init();
     OFP_Property_Rent::init();
     OFP_Property_Rent_Visibility::init();

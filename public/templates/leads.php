@@ -349,7 +349,6 @@ $status_badges = [
                             <th>Phone</th>
                             <th>Email</th>
                             <th>Status</th>
-                            <th>IVR</th>
                             <th>Date</th>
                             <th>Status Action</th>
                             <th>Message</th>
@@ -357,7 +356,7 @@ $status_badges = [
                     </thead>
                     <tbody id="ofp-leads-tbody">
                         <tr>
-                            <td colspan="8" style="text-align:center; padding: 48px;">
+                            <td colspan="7" style="text-align:center; padding: 48px;">
                                 <div class="ofp-empty" style="padding:0;">
                                     <div class="ofp-empty-icon" style="font-size:24px;margin-bottom:12px;">📭</div>
                                     <h3 style="font-size:16px;font-weight:600;margin:0 0 4px;color:var(--text-main);">No prospects found</h3>
@@ -378,7 +377,6 @@ $status_badges = [
                             <th>Phone</th>
                             <th>Email</th>
                             <th>Status</th>
-                            <th>IVR</th>
                             <th>Date</th>
                             <th>Status Action</th>
                             <th>Message</th>
@@ -395,7 +393,6 @@ $status_badges = [
                                 <td><strong><?php echo esc_html( $lead->phone ); ?></strong></td>
                                 <td><?php echo esc_html( $lead->email ?: '—' ); ?></td>
                                 <td class="ofp-lead-status-cell"><?php echo $status_badges[ $lead->status ] ?? esc_html( $lead->status ); ?></td>
-                                <td style="color: var(--text-muted);"><?php echo $lead->ivr_response ? esc_html( 'Pressed ' . $lead->ivr_response ) : '—'; ?></td>
                                 <td style="white-space:nowrap;font-size:12px;color:var(--text-muted);">
                                     <?php echo esc_html( gmdate( 'M j, Y', strtotime( $lead->created_at ) ) ); ?>
                                 </td>

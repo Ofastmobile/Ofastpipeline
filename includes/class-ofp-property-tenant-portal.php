@@ -55,8 +55,6 @@ class OFP_Property_Tenant_Portal {
             $error = 'This property has already been leased to another tenant and is no longer available. This offer has expired.';
         }
 
-        $online = OFP_Bank_Account::online_payments_enabled();
-
         if ( $lease && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_accept_lease'] ) ) {
             if ( ! wp_verify_nonce( $_POST['ofp_tenant_lease_nonce'] ?? '', 'ofp_tenant_lease_' . $lease->id ) ) {
                 $error = 'Security check failed. Please refresh the page and try again.';
@@ -81,7 +79,7 @@ class OFP_Property_Tenant_Portal {
             }
         }
 
-        if ( $lease && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_tenant_transfer'] ) && $lease->accepted_at && ! $online ) {
+        if ( $lease && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_tenant_transfer'] ) && $lease->accepted_at ) {
             if ( ! wp_verify_nonce( $_POST['ofp_tenant_transfer_nonce'] ?? '', 'ofp_tenant_transfer_' . $lease->id ) ) {
                 $error = 'Security check failed. Please refresh the page and try again.';
             } else {
@@ -93,22 +91,6 @@ class OFP_Property_Tenant_Portal {
                 }
             }
         }
-
-        if ( $lease && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_tenant_checkout'] ) && $lease->accepted_at && $online ) {
-            if ( ! wp_verify_nonce( $_POST['ofp_tenant_checkout_nonce'] ?? '', 'ofp_tenant_checkout_' . $lease->id ) ) {
-                $error = 'Security check failed. Please refresh the page and try again.';
-            } else {
-                $checkout = OFP_Property_Lease_Payment::initiate_checkout( (int) $lease->id, (float) ( $_POST['amount'] ?? 0 ) );
-                if ( is_wp_error( $checkout ) ) {
-                    $error = $checkout->get_error_message();
-                } else {
-                    wp_redirect( $checkout );
-                    exit;
-                }
-            }
-        }
-
-        $va = ( $lease && $lease->accepted_at && $online ) ? OFP_Property_Lease_Payment::ensure_virtual_account( (int) $lease->id ) : null;
 
         // Fetch payments made on this lease
         $payments = [];
@@ -395,20 +377,6 @@ class OFP_Property_Tenant_Portal {
                         </div>
 
                         <?php if ( (float) $lease->balance > 0 ) : ?>
-                            <?php if ( $online ) : ?>
-<div style="margin:24px 0;">
-                                <h3 style="font-size:16px; margin: 0 0 12px;">Make Rent Payment</h3>
-                                <form method="post" style="display:flex; gap:10px; flex-wrap:wrap;">
-                                    <div class="field" style="margin:0; flex:1; min-width:200px;">
-                                        <input type="number" name="amount" min="0.01" max="<?php echo esc_attr( $lease->balance ); ?>" step="0.01" value="<?php echo esc_attr( $lease->balance ); ?>" required placeholder="Amount in NGN">
-                                    </div>
-                                    <?php wp_nonce_field( 'ofp_tenant_checkout_' . $lease->id, 'ofp_tenant_checkout_nonce' ); ?>
-                                    <button class="btn" name="ofp_tenant_checkout" value="1">
-                                        Pay Online with Paystack
-                                    </button>
-                                </form>
-                            </div>
-                        <?php else : ?>
                             <?php
                             $acct     = OFP_Bank_Account::for_purchase( $lease );
                             $rent_ref = OFP_Property_Tenant_Transfer::reference_for( (int) $lease->id );
@@ -448,20 +416,6 @@ class OFP_Property_Tenant_Portal {
                                     <?php wp_nonce_field( 'ofp_tenant_transfer_' . $lease->id, 'ofp_tenant_transfer_nonce' ); ?>
                                     <button class="btn" name="ofp_tenant_transfer" value="1" style="width:100%;">I have made the transfer</button>
                                 </form>
-                            </div>
-                        <?php endif; ?>
-                        <?php endif; ?>
-
-                        <?php if ( $va ) : ?>
-                            <div class="bank">
-                                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                                    <div>
-                                        <strong style="font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:var(--accent-blue);">Dedicated Bank Transfer Account</strong>
-                                        <div style="font-size:14px; margin-top:4px; font-weight:600;"><?php echo esc_html( $va->bank_name ); ?></div>
-                                        <div style="font-size:24px; font-weight:800; letter-spacing:0.03em; margin:6px 0;"><?php echo esc_html( $va->account_number ); ?></div>
-                                        <small style="color:var(--text-muted); display:block;">Transfers made to this account are verified automatically and credited to this lease instantly.</small>
-                                    </div>
-                                </div>
                             </div>
                         <?php endif; ?>
 

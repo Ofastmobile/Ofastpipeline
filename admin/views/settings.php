@@ -22,7 +22,6 @@ $smtp_mode          = get_option( 'ofp_smtp_mode', 'default' );
 $crm_domain         = get_option( 'ofp_crm_base_domain', '' );
 $app_name           = get_option( 'ofp_app_name', '' );
 $use_app_host       = get_option( 'ofp_use_app_host', '1' );
-$online_payments    = get_option( 'ofp_online_buyer_payments', '0' );
 $hide_admin_bar     = get_option( 'ofp_hide_admin_bar', '1' );
 $watermark_enabled  = get_option( 'ofp_watermark_enabled', '1' );
 $watermark_text     = get_option( 'ofp_watermark_text', '' );
@@ -350,18 +349,6 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                 </div>
                                 <label class="ofp-switch">
                                     <input type="checkbox" name="ofp_use_app_host" value="1" <?php checked( $use_app_host, '1' ); ?>>
-                                    <span class="ofp-slider"></span>
-                                </label>
-                            </div>
-
-                            <!-- Switch 2: Paystack card payments for buyers/tenants -->
-                            <div class="ofp-switch-row">
-                                <div class="ofp-switch-info">
-                                    <span class="ofp-switch-title">Direct Card Payments for Buyers & Tenants (Paystack)</span>
-                                    <p class="ofp-switch-desc">Allows end-user buyers and tenants to complete payments directly via online card checkout. When disabled, customers must pay via bank transfer to the property owner's account with manual approval.</p>
-                                </div>
-                                <label class="ofp-switch">
-                                    <input type="checkbox" name="ofp_online_buyer_payments" value="1" <?php checked( $online_payments, '1' ); ?>>
                                     <span class="ofp-slider"></span>
                                 </label>
                             </div>
@@ -980,7 +967,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                     </svg>
                                 </div>
                                 <div class="ofp-card-title-group">
-                                    <h3>Africa's Talking (SMS and Voice IVR)</h3>
+                                    <h3>Africa's Talking (SMS and Voice)</h3>
                                     <p>High-volume pan-African gateway handling primary outbound SMS and automated voice calls.</p>
                                 </div>
                             </div>

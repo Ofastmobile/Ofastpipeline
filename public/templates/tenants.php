@@ -7,7 +7,7 @@
  * - Multi-period rent rate options per rental property
  * - Tenant directory with full lease & payment history
  * - Secure lease offers with shareable token links (no tenant login required)
- * - Flexible rent payment tracking (Online Paystack, Virtual Account, Cash)
+ * - Flexible rent payment tracking (Bank Transfer, Cash)
  * - Automated occupied property status & marketplace visibility integration
  *
  * @package OFast_Pipeline
@@ -510,7 +510,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                     Rent &amp; Tenant Management is a Gold Feature
                 </h2>
                 <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6; max-width: 580px; margin: 0 auto 28px;">
-                    Take full control of your rental portfolio. Gold plan members can manage tenants, configure flexible rent cycles (Monthly, Quarterly, Biannual, Yearly, Shortlets), issue digital lease agreements, and automate Paystack rent collections.
+                    Take full control of your rental portfolio. Gold plan members can manage tenants, configure flexible rent cycles (Monthly, Quarterly, Biannual, Yearly, Shortlets), issue digital lease agreements, and collect rent straight into your own bank account with proof of transfer and receipts.
                 </p>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; text-align: left; margin-bottom: 32px;">
@@ -519,8 +519,8 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                         <span style="color: var(--text-muted); font-size: 12px;">Active leases automatically flag properties as "Occupied" and hide them from the public marketplace.</span>
                     </div>
                     <div style="padding: 14px; background: var(--bg-body); border-radius: 10px; border: 1px solid var(--border-color);">
-                        <strong style="color: var(--text-main); font-size: 13px; display: block; margin-bottom: 4px;">Paystack Virtual Accounts</strong>
-                        <span style="color: var(--text-muted); font-size: 12px;">Tenants receive dedicated bank transfer details and online checkout links for instant reconciliation.</span>
+                        <strong style="color: var(--text-main); font-size: 13px; display: block; margin-bottom: 4px;">Pay Into Your Own Account</strong>
+                        <span style="color: var(--text-muted); font-size: 12px;">Tenants see your bank details, send the money, and upload proof. You approve it and they get a receipt.</span>
                     </div>
                     <div style="padding: 14px; background: var(--bg-body); border-radius: 10px; border: 1px solid var(--border-color);">
                         <strong style="color: var(--text-main); font-size: 13px; display: block; margin-bottom: 4px;">Direct Tenant Portal</strong>
@@ -894,7 +894,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                     <?php if ( empty( $payments ) ) : ?>
                         <div style="text-align:center; padding:48px 16px; color:var(--text-muted);">
                             <p style="font-size:15px; font-weight:500; color:var(--text-main); margin-bottom:4px;">No rent transactions logged yet</p>
-                            <p style="font-size:13px;">Payments from Paystack Virtual Accounts, checkout links, and cash receipts appear here.</p>
+                            <p style="font-size:13px;">Approved bank transfers and cash receipts appear here.</p>
                         </div>
                     <?php else : ?>
                         <div class="ofp-table-responsive">

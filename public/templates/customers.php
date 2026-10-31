@@ -120,18 +120,18 @@ if ( ! empty( $_GET['export'] ) ) {
 
     $mem = fopen( 'php://temp', 'r+' );
     fwrite( $mem, "\xEF\xBB\xBF" ); // UTF-8 BOM for Excel
-    fputcsv( $mem, [ 'Name', 'Phone', 'Email', 'Type', 'Purchases', 'Leases', 'Total price', 'Paid', 'Balance', 'Last activity' ] );
+    OFP_CSV::put( $mem, [ 'Name', 'Phone', 'Email', 'Type', 'Purchases', 'Leases', 'Total price', 'Paid', 'Balance', 'Last activity' ] );
 
     $safe = static fn( $v ) => ( is_string( $v ) && preg_match( '/^[=+\-@]/', $v ) ) ? "'" . $v : $v;
 
     if ( empty( $list ) ) {
         // Output realistic sample rows covering every customer category so the exported file is never empty
-        fputcsv( $mem, [ 'Ade Okafor (Sample Buyer)', '08031234567', 'ade.okafor@example.com', 'Buyer', 1, 0, 45000000, 15000000, 30000000, gmdate( 'Y-m-d' ) ] );
-        fputcsv( $mem, [ 'Tolu Bello (Sample Tenant)', '08099887766', 'tolu.bello@example.com', 'Tenant', 0, 1, 0, 0, 0, gmdate( 'Y-m-d' ) ] );
-        fputcsv( $mem, [ 'Chidi Eze (Sample Converted)', '08055512345', 'chidi.eze@example.com', 'Converted lead', 0, 0, 0, 0, 0, gmdate( 'Y-m-d' ) ] );
+        OFP_CSV::put( $mem, [ 'Ade Okafor (Sample Buyer)', '08031234567', 'ade.okafor@example.com', 'Buyer', 1, 0, 45000000, 15000000, 30000000, gmdate( 'Y-m-d' ) ] );
+        OFP_CSV::put( $mem, [ 'Tolu Bello (Sample Tenant)', '08099887766', 'tolu.bello@example.com', 'Tenant', 0, 1, 0, 0, 0, gmdate( 'Y-m-d' ) ] );
+        OFP_CSV::put( $mem, [ 'Chidi Eze (Sample Converted)', '08055512345', 'chidi.eze@example.com', 'Converted lead', 0, 0, 0, 0, 0, gmdate( 'Y-m-d' ) ] );
     } else {
         foreach ( $list as $c ) {
-            fputcsv( $mem, [
+            OFP_CSV::put( $mem, [
                 $safe( $c['name'] ),
                 $safe( $c['phone'] ),
                 $safe( $c['email'] ),

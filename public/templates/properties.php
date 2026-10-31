@@ -365,7 +365,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_delete_property
 if ( isset($_GET['success']) ) {
     if ( $_GET['success'] === 'saved' ) $success = 'Property saved successfully.';
     if ( $_GET['success'] === 'deleted' ) $success = 'Property deleted.';
-    if ( $_GET['success'] === 'plan' ) $success = 'Listing plan selected! Please transfer the plan amount to your virtual account to activate it.';
+    if ( $_GET['success'] === 'plan' ) $success = 'Listing plan selected! Please pay the plan amount to activate it.';
     if ( $_GET['success'] === 'plan_free' ) $success = 'Your free listing plan is active — you can add properties now.';
 }
 

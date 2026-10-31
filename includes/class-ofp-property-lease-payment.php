@@ -1,5 +1,5 @@
 <?php
-/** Payment recording and Paystack hand-off for rent cycles. */
+/** Payment recording for rent cycles. Tenants pay the owner's own bank account. */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Property_Lease_Payment {
@@ -95,74 +95,4 @@ class OFP_Property_Lease_Payment {
         ] );
     }
 
-    public static function reference( int $lease_id ): string {
-        return 'ofpl-' . $lease_id . '-' . wp_generate_password( 12, false, false );
-    }
-
-    public static function is_reference( string $reference ): bool {
-        return (bool) preg_match( '/^ofpl-\d+-[A-Za-z0-9]+$/', $reference );
-    }
-
-    public static function initiate_checkout( int $lease_id, float $amount ) {
-        global $wpdb;
-        $p = $wpdb->prefix;
-        $lease = $wpdb->get_row( $wpdb->prepare( "SELECT l.*, t.full_name, t.email FROM {$p}ofp_property_leases l INNER JOIN {$p}ofp_property_tenants t ON t.id = l.tenant_id WHERE l.id = %d LIMIT 1", $lease_id ) );
-        if ( ! $lease || ! $lease->email ) return new WP_Error( 'lease_checkout_email_required', 'The tenant needs an email address for online checkout.' );
-        $reference = self::reference( $lease_id );
-        $payment_id = self::create( [ 'lease_id' => $lease_id, 'payment_method' => 'checkout', 'gateway' => 'paystack', 'gateway_reference' => $reference, 'amount' => $amount, 'payer_name' => $lease->full_name ] );
-        if ( is_wp_error( $payment_id ) ) return $payment_id;
-        $gateway = new OFP_Gateway_Paystack();
-        if ( ! $gateway->is_configured() ) return new WP_Error( 'paystack_not_configured', 'Online payments are not configured.' );
-        $url = $gateway->initiate_transaction( [
-            'email' => $lease->email, 'amount' => $amount, 'reference' => $reference, 'client_id' => (int) $lease->client_id,
-            'description' => 'Rent payment for lease #' . $lease_id, 'redirect_url' => home_url( '/tenant-pay/' ),
-        ] );
-        return $url ?: new WP_Error( 'lease_checkout_start_failed', 'Unable to start online checkout.' );
-    }
-
-    public static function process_verified_checkout( string $reference, float $amount, string $gateway, string $provider_reference ): bool {
-        global $wpdb;
-        $payment = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}ofp_property_lease_payments WHERE gateway_reference = %s AND gateway = %s LIMIT 1", $reference, $gateway ) );
-        if ( ! $payment || abs( (float) $payment->amount - $amount ) > 0.01 ) return false;
-        if ( $payment->status === 'successful' ) return true;
-        $wpdb->update( "{$wpdb->prefix}ofp_property_lease_payments", [ 'payer_reference' => $provider_reference ?: $reference, 'updated_at' => current_time( 'mysql' ) ], [ 'id' => $payment->id ] );
-        return ! empty( self::success( (int) $payment->id )['success'] );
-    }
-
-    /** Creates one reusable Paystack dedicated account for a lease cycle. */
-    public static function ensure_virtual_account( int $lease_id ): ?object {
-        global $wpdb;
-        $p = $wpdb->prefix;
-        $lease = $wpdb->get_row( $wpdb->prepare( "SELECT l.*, t.full_name, t.email, t.phone FROM {$p}ofp_property_leases l INNER JOIN {$p}ofp_property_tenants t ON t.id = l.tenant_id WHERE l.id = %d LIMIT 1", $lease_id ) );
-        if ( ! $lease || ! $lease->email ) return null;
-        if ( $lease->va_customer_code && $lease->va_account_number ) {
-            return (object) [ 'account_number' => $lease->va_account_number, 'bank_name' => $lease->va_bank_name, 'bank_code' => $lease->va_bank_code, 'customer_code' => $lease->va_customer_code ];
-        }
-        $gateway = new OFP_Gateway_Paystack();
-        if ( ! $gateway->is_configured() ) return null;
-        $parts = preg_split( '/\s+/', trim( $lease->full_name ), 2 );
-        $account = $gateway->create_virtual_account( [
-            'email' => $lease->email, 'name' => $lease->full_name, 'first_name' => $parts[0] ?? '', 'last_name' => $parts[1] ?? '', 'phone' => $lease->phone,
-        ], [ 'ofp_lease_id' => $lease_id ] );
-        if ( ! $account ) return null;
-        $wpdb->update( "{$p}ofp_property_leases", [
-            'va_account_number' => $account->account_number, 'va_bank_name' => $account->bank_name, 'va_bank_code' => $account->bank_code,
-            'va_customer_code' => $account->customer_code, 'updated_at' => current_time( 'mysql' ),
-        ], [ 'id' => $lease_id ] );
-        return $account;
-    }
-
-    public static function process_verified_virtual_account_payment( string $customer_code, float $amount, string $gateway, string $provider_reference ): bool {
-        global $wpdb;
-        $lease = $wpdb->get_row( $wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}ofp_property_leases WHERE va_customer_code = %s AND status IN ('pending_offer','active') AND accepted_at IS NOT NULL LIMIT 1",
-            $customer_code
-        ) );
-        if ( ! $lease ) return false;
-        $payment_id = self::create( [
-            'lease_id' => (int) $lease->id, 'payment_method' => 'virtual_account', 'gateway' => $gateway,
-            'gateway_reference' => $provider_reference, 'amount' => $amount, 'status' => 'successful', 'payer_reference' => $provider_reference,
-        ] );
-        return ! is_wp_error( $payment_id );
-    }
 }

@@ -42,7 +42,7 @@ class OFP_Client {
      *     @type string   $phone              Primary phone number.
      *
      *     Optional keys:
-     *     @type string   $business_phone     Phone for IVR call transfer (defaults to $phone).
+     *     @type string   $business_phone     Business phone number (defaults to $phone).
      *     @type string   $whatsapp_number    WhatsApp number (defaults to $phone).
      *     @type string   $subdomain          Requested subdomain slug.
      *     @type string   $plan               Plan tier: 'free'|'silver'|'gold'. Default 'free'.
@@ -67,7 +67,7 @@ class OFP_Client {
 
         $email = sanitize_email( $data['email'] );
         if ( ! is_email( $email ) ) {
-            error_log( "[OFP_Client::create] Invalid email: {$data['email']}" );
+            error_log( "[OFP_Client::create] Invalid email (address not logged)." );
             return false;
         }
 
@@ -79,7 +79,7 @@ class OFP_Client {
             )
         );
         if ( $exists ) {
-            error_log( "[OFP_Client::create] Duplicate email: {$email}" );
+            error_log( "[OFP_Client::create] Duplicate email (address not logged)." );
             return false;
         }
 
@@ -181,9 +181,6 @@ class OFP_Client {
                     'followup_3_type'        => 'sms',
                     'followup_3_message'     => get_option( 'ofp_default_followup_3', '' ),
                     'max_followups'          => 3,
-                    'ivr_option_1_action'    => 'transfer',
-                    'ivr_option_2_action'    => 'sms',
-                    'ivr_option_3_action'    => 'schedule',
                 ], OFP_Queue::default_new_config_fields() )
             );
         }
@@ -487,7 +484,7 @@ class OFP_Client {
      * ⚠️  This is irreversible. Only available to super_admin, and only
      * callable from the Trash tab (clients must be trashed first).
      * Deletes: client row, leads, trigger queue, communications log,
-     * IVR responses, credits, credit transactions, subscriptions,
+     * credits, credit transactions, subscriptions,
      * pipeline config, archives, sessions, properties.
      *
      * @param  int  $id  Client ID.
@@ -497,11 +494,15 @@ class OFP_Client {
         global $wpdb;
         $p = $wpdb->prefix;
 
+        // Report files are removed too, not only their database rows.
+        if ( class_exists( 'OFP_CSV' ) ) {
+            OFP_CSV::delete_archive_dir( $id );
+        }
+
         $related_tables = [
             "DELETE FROM {$p}ofp_leads WHERE client_id = %d",
             "DELETE FROM {$p}ofp_trigger_queue WHERE client_id = %d",
             "DELETE FROM {$p}ofp_communications_log WHERE client_id = %d",
-            "DELETE FROM {$p}ofp_ivr_responses WHERE client_id = %d",
             "DELETE FROM {$p}ofp_credits WHERE client_id = %d",
             "DELETE FROM {$p}ofp_credit_transactions WHERE client_id = %d",
             "DELETE FROM {$p}ofp_subscriptions WHERE client_id = %d",

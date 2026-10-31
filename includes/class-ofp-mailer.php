@@ -136,7 +136,7 @@ class OFP_Mailer {
     ): bool {
 
         if ( empty( $to ) || ! is_email( $to ) ) {
-            error_log( "[OFP_Mailer] Invalid recipient email: {$to}" );
+            error_log( "[OFP_Mailer] Invalid recipient email (address not logged)." );
             return false;
         }
 
@@ -160,7 +160,7 @@ class OFP_Mailer {
         $sent = wp_mail( $to, $subject, $full_html, $headers );
 
         if ( ! $sent ) {
-            error_log( "[OFP_Mailer] wp_mail() failed for: {$to} | Subject: {$subject}" );
+            error_log( "[OFP_Mailer] wp_mail() failed | Subject: {$subject}" );
         }
 
         global $wpdb;
@@ -297,7 +297,7 @@ class OFP_Mailer {
         $sent = wp_mail( $to, $subject, $full_html, $headers );
 
         if ( ! $sent ) {
-            error_log( "[OFP_Mailer] send_client_email failed for client #{$client_id} to {$to}" );
+            error_log( "[OFP_Mailer] send_client_email failed for client #{$client_id}" );
         }
 
         if ( class_exists( 'OFP_Logger' ) ) {
@@ -510,7 +510,7 @@ class OFP_Mailer {
      * Send a welcome email to a newly onboarded client.
      *
      * Sent immediately after OFP_Client::create() completes.
-     * Contains login credentials and Monnify virtual account details.
+     * Contains the login details.
      *
      * @param  int    $client_id     Client ID in wp_ofp_clients.
      * @param  string $temp_password Plaintext temporary password — emailed once,
@@ -723,8 +723,8 @@ class OFP_Mailer {
     /**
      * Send a payment confirmed / subscription renewed email.
      *
-     * Called by OFP_Subscription::record_payment() after Monnify webhook
-     * verifies a successful transaction.
+     * Called by OFP_Subscription::record_payment() after a successful
+     * payment is confirmed.
      *
      * @param  object      $client    Full wp_ofp_clients row.
      * @param  float       $amount    Amount paid in NGN.

@@ -750,7 +750,6 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                                 <option value="bank_transfer">Bank Transfer</option>
                                 <option value="bank_deposit">Bank Deposit</option>
                                 <option value="cash">Cash</option>
-                                <option value="virtual_account">Virtual Account</option>
                                 <option value="checkout">Checkout</option>
                                 <option value="other">Other</option>
                             </select>

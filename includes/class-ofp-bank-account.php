@@ -6,8 +6,7 @@
  * pay by transfer. An owner can keep up to 5 accounts, one is the default, and
  * each property can pick which account it uses.
  *
- * Also holds the switch for online (Paystack) card payments by buyers and
- * tenants. That switch is OFF by default: money goes to the owner's account.
+ * Buyers and tenants always pay into the owner's own account.
  *
  * @package OFast_Pipeline
  */
@@ -26,11 +25,6 @@ class OFP_Bank_Account {
 		add_action( 'wp_ajax_nopriv_ofp_resolve_bank_account', [ __CLASS__, 'ajax_resolve_account' ] );
 		add_action( 'wp_ajax_ofp_get_bank_list', [ __CLASS__, 'ajax_get_bank_list' ] );
 		add_action( 'wp_ajax_nopriv_ofp_get_bank_list', [ __CLASS__, 'ajax_get_bank_list' ] );
-	}
-
-	/** True only when the admin has switched online card payments on for buyers and tenants. */
-	public static function online_payments_enabled(): bool {
-		return get_option( 'ofp_online_buyer_payments', '0' ) === '1';
 	}
 
 	private static function table(): string {

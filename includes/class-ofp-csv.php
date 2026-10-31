@@ -33,6 +33,118 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OFP_CSV {
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // PRIVATE REPORT FOLDER
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Rules that stop a web server from serving files in a private folder.
+     * Works on Apache 2.4 and 2.2 and on LiteSpeed. Nginx ignores .htaccess,
+     * so the folder name below is also impossible to guess.
+     */
+    private static function protect_dir( string $dir ): void {
+        $rules = "# Private files. They are only given out by the plugin, never directly.\n"
+               . "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n"
+               . "<IfModule !mod_authz_core.c>\nOrder deny,allow\nDeny from all\n</IfModule>\n"
+               . "Options -Indexes\n";
+        $ht = $dir . '.htaccess';
+        if ( ! file_exists( $ht ) || strpos( (string) @file_get_contents( $ht ), 'Require all denied' ) === false ) {
+            @file_put_contents( $ht, $rules );
+        }
+        if ( ! file_exists( $dir . 'index.php' ) ) {
+            @file_put_contents( $dir . 'index.php', "<?php // Silence is golden.\n" );
+        }
+    }
+
+    /**
+     * The private folder for one client's report files. The folder name has a
+     * secret part, so nobody can guess the address of a file. Old folders
+     * named only with the client number are renamed the first time they are used.
+     */
+    public static function archive_dir( int $client_id ): string {
+        static $cache = [];
+        if ( isset( $cache[ $client_id ] ) ) {
+            return $cache[ $client_id ];
+        }
+
+        $upload = wp_upload_dir();
+        $base   = trailingslashit( $upload['basedir'] ) . 'ofp-archives/';
+        wp_mkdir_p( $base );
+        self::protect_dir( $base );
+
+        $secret = (string) get_option( 'ofp_archive_secret', '' );
+        if ( $secret === '' ) {
+            $secret = wp_generate_password( 40, true, true );
+            add_option( 'ofp_archive_secret', $secret, '', false );
+            $secret = (string) get_option( 'ofp_archive_secret', $secret );
+        }
+
+        $new    = $base . $client_id . '-' . substr( hash_hmac( 'sha256', 'archive|' . $client_id, $secret ), 0, 20 ) . '/';
+        $legacy = $base . $client_id . '/';
+
+        if ( ! is_dir( $new ) && is_dir( $legacy ) ) {
+            if ( @rename( $legacy, $new ) ) {
+                // Saved file paths point at the old folder name. Update them.
+                global $wpdb;
+                $wpdb->query( $wpdb->prepare(
+                    "UPDATE {$wpdb->prefix}ofp_archives SET file_path = REPLACE(file_path, %s, %s) WHERE client_id = %d",
+                    $legacy, $new, $client_id
+                ) );
+            } else {
+                // Could not rename. Keep using the old folder, but keep it locked.
+                self::protect_dir( $legacy );
+                return $cache[ $client_id ] = $legacy;
+            }
+        }
+
+        wp_mkdir_p( $new );
+        self::protect_dir( $new );
+        return $cache[ $client_id ] = $new;
+    }
+
+    /** Remove all report files of a client (used when a client is deleted for good). */
+    public static function delete_archive_dir( int $client_id ): void {
+        $upload = wp_upload_dir();
+        $base   = realpath( trailingslashit( $upload['basedir'] ) . 'ofp-archives' );
+        if ( ! $base ) {
+            return;
+        }
+        $upload_base = trailingslashit( $upload['basedir'] ) . 'ofp-archives/';
+        foreach ( [ $upload_base . $client_id . '/', self::archive_dir( $client_id ) ] as $dir ) {
+            $real = realpath( $dir );
+            if ( ! $real || strpos( $real, $base . DIRECTORY_SEPARATOR ) !== 0 ) {
+                continue; // never touch anything outside the archive folder
+            }
+            foreach ( (array) glob( $real . '/{,.}*', GLOB_BRACE ) as $f ) {
+                if ( is_file( $f ) ) {
+                    @unlink( $f );
+                }
+            }
+            @rmdir( $real );
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SAFE CSV ROWS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Text that starts with = + - or @ can run as a formula when the file is
+     * opened in Excel or Sheets. Names and messages come from public forms,
+     * so a quote mark is put in front of such text. Real numbers are left alone.
+     */
+    public static function safe_cell( $value ) {
+        if ( is_string( $value ) && $value !== '' && ! is_numeric( $value ) && preg_match( '/^[=+\-@\t\r]/', $value ) ) {
+            return "'" . $value;
+        }
+        return $value;
+    }
+
+    /** Write one CSV row with every cell made safe. */
+    public static function put( $handle, array $row ) {
+        return fputcsv( $handle, array_map( [ __CLASS__, 'safe_cell' ], $row ), ',', '"', '\\' );
+    }
+
     /**
      * Generate comprehensive monthly CSV reports for a client.
      *
@@ -65,15 +177,8 @@ class OFP_CSV {
             return false;
         }
 
-        // ── Create archive directory ──────────────────────────────────────────
-        $upload_dir  = wp_upload_dir();
-        $archive_dir = trailingslashit( $upload_dir['basedir'] ) . 'ofp-archives/' . $client_id . '/';
-
-        if ( ! file_exists( $archive_dir ) ) {
-            wp_mkdir_p( $archive_dir );
-            file_put_contents( $archive_dir . '.htaccess', "deny from all\n" );
-            file_put_contents( $archive_dir . 'index.php', "<?php // Silence is golden.\n" );
-        }
+        // Private archive directory (secret folder name, always locked).
+        $archive_dir = self::archive_dir( (int) $client_id );
 
         $month_padded = str_pad( (string) $month, 2, '0', STR_PAD_LEFT );
         $period_label = $month_padded . '_' . $year;
@@ -95,16 +200,16 @@ class OFP_CSV {
             return false;
         }
 
-        fputcsv( $leads_fh, [
+        OFP_CSV::put( $leads_fh, [
             'Name', 'Phone', 'Email', 'Source',
-            'Date Submitted', 'Status', 'IVR Response',
+            'Date Submitted', 'Status',
             'Converted At', 'Notes',
         ] );
 
         $leads = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT name, phone, email, source, created_at, status,
-                        ivr_response, converted_at, notes
+                        converted_at, notes
                  FROM {$p}ofp_leads
                  WHERE client_id   = %d
                    AND MONTH(created_at) = %d
@@ -115,14 +220,13 @@ class OFP_CSV {
         );
 
         foreach ( $leads as $lead ) {
-            fputcsv( $leads_fh, [
+            OFP_CSV::put( $leads_fh, [
                 $lead->name         ?? '',
                 $lead->phone        ?? '',
                 $lead->email        ?? '',
                 $lead->source       ?? '',
                 $lead->created_at   ?? '',
                 $lead->status       ?? '',
-                $lead->ivr_response ?? '',
                 $lead->converted_at ?? '',
                 $lead->notes        ?? '',
             ] );
@@ -132,7 +236,7 @@ class OFP_CSV {
         // ── 2. Property Sales & Installments CSV ──────────────────────────────
         [ $sales_fh, $sales_file ] = $open_csv( "sales_installments_{$period_label}.csv" );
         if ( $sales_fh ) {
-            fputcsv( $sales_fh, [
+            OFP_CSV::put( $sales_fh, [
                 'Buyer Name', 'Buyer Phone', 'Buyer Email', 'Property Title',
                 'Plan Type', 'Total Price (NGN)', 'Initial Deposit (NGN)',
                 'Amount Paid (NGN)', 'Balance Due (NGN)', 'Installment Count',
@@ -162,7 +266,7 @@ class OFP_CSV {
                     $sale->id
                 ) );
 
-                fputcsv( $sales_fh, [
+                OFP_CSV::put( $sales_fh, [
                     $sale->buyer_name ?? '',
                     $sale->buyer_phone ?? '',
                     $sale->buyer_email ?? '',
@@ -185,7 +289,7 @@ class OFP_CSV {
         // ── 3. Rent Roll & Tenant Directory CSV ───────────────────────────────
         [ $rent_fh, $rent_file ] = $open_csv( "rent_roll_{$period_label}.csv" );
         if ( $rent_fh ) {
-            fputcsv( $rent_fh, [
+            OFP_CSV::put( $rent_fh, [
                 'Tenant Name', 'Tenant Phone', 'Tenant Email', 'Property Title',
                 'Billing Period', 'Cycle #', 'Rent Rate (NGN)', 'Service Charge (NGN)',
                 'Caution Deposit (NGN)', 'Legal Fee (NGN)', 'Agency Fee (NGN)',
@@ -209,7 +313,7 @@ class OFP_CSV {
             );
 
             foreach ( $leases as $lease ) {
-                fputcsv( $rent_fh, [
+                OFP_CSV::put( $rent_fh, [
                     $lease->tenant_name ?? '',
                     $lease->tenant_phone ?? '',
                     $lease->tenant_email ?? '',
@@ -235,7 +339,7 @@ class OFP_CSV {
         // ── 4. Property Inspections CSV ───────────────────────────────────────
         [ $insp_fh, $insp_file ] = $open_csv( "inspections_{$period_label}.csv" );
         if ( $insp_fh ) {
-            fputcsv( $insp_fh, [
+            OFP_CSV::put( $insp_fh, [
                 'Prospect Name', 'Prospect Phone', 'Prospect Email', 'Property Title',
                 'Tour Type', 'Preferred Date', 'Preferred Time', 'Status',
                 'Prospect Notes', 'Booked At',
@@ -257,7 +361,7 @@ class OFP_CSV {
             );
 
             foreach ( $inspections as $inq ) {
-                fputcsv( $insp_fh, [
+                OFP_CSV::put( $insp_fh, [
                     $inq->lead_name ?? '',
                     $inq->lead_phone ?? '',
                     $inq->lead_email ?? '',
@@ -276,7 +380,7 @@ class OFP_CSV {
         // ── 5. Unified Financial Transactions CSV ────────────────────────────
         [ $trx_fh, $trx_file ] = $open_csv( "transactions_{$period_label}.csv" );
         if ( $trx_fh ) {
-            fputcsv( $trx_fh, [
+            OFP_CSV::put( $trx_fh, [
                 'Transaction ID', 'Category', 'Customer / Payer', 'Property / Item Reference',
                 'Amount (NGN)', 'Payment Method', 'Gateway Reference', 'Status', 'Date',
             ] );
@@ -335,7 +439,7 @@ class OFP_CSV {
             } );
 
             foreach ( $all_trxs as $trx ) {
-                fputcsv( $trx_fh, [
+                OFP_CSV::put( $trx_fh, [
                     $trx->id ?? '',
                     $trx->category ?? '',
                     $trx->payer_name ?? 'N/A',
@@ -353,7 +457,7 @@ class OFP_CSV {
         // ── 6. Communications Log CSV ─────────────────────────────────────────
         [ $comms_fh, $comms_file ] = $open_csv( "communications_{$period_label}.csv" );
         if ( $comms_fh ) {
-            fputcsv( $comms_fh, [
+            OFP_CSV::put( $comms_fh, [
                 'Recipient / Lead', 'Phone / Email', 'Channel', 'Message Content',
                 'Status', 'Provider', 'Reference', 'Cost (NGN)', 'Sent At',
             ] );
@@ -374,7 +478,7 @@ class OFP_CSV {
             );
 
             foreach ( $comms as $comm ) {
-                fputcsv( $comms_fh, [
+                OFP_CSV::put( $comms_fh, [
                     $comm->lead_name ?: ( $comm->recipient ?: 'Direct' ),
                     $comm->lead_phone ?: $comm->recipient,
                     strtoupper( $comm->type ?? 'SMS' ),
