@@ -696,6 +696,18 @@ class OFP_Admin_Menu {
             'ofp_social_tiktok'      => self::clean_social_url( $_POST['ofp_social_tiktok'] ?? '' ),
             'ofp_social_whatsapp'    => self::clean_social_url( $_POST['ofp_social_whatsapp'] ?? '', true ),
             'ofp_social_telegram'    => self::clean_social_url( $_POST['ofp_social_telegram'] ?? '' ),
+            // AI assistant & live support
+            'ofp_chat_enabled'               => empty( $_POST['ofp_chat_enabled'] ) ? '0' : '1',
+            'ofp_chat_guest_enabled'         => empty( $_POST['ofp_chat_guest_enabled'] ) ? '0' : '1',
+            'ofp_chat_guest_human'           => empty( $_POST['ofp_chat_guest_human'] ) ? '0' : '1',
+            'ofp_chat_ai_provider'           => in_array( $_POST['ofp_chat_ai_provider'] ?? '', [ 'gemini', 'groq' ], true ) ? sanitize_key( $_POST['ofp_chat_ai_provider'] ) : 'gemini',
+            'ofp_chat_gemini_model'          => sanitize_text_field( wp_unslash( $_POST['ofp_chat_gemini_model'] ?? '' ) ),
+            'ofp_chat_gemini_fallback_model' => sanitize_text_field( wp_unslash( $_POST['ofp_chat_gemini_fallback_model'] ?? '' ) ),
+            'ofp_chat_groq_model'            => sanitize_text_field( wp_unslash( $_POST['ofp_chat_groq_model'] ?? '' ) ),
+            'ofp_chat_telegram_chat_id'      => sanitize_text_field( wp_unslash( $_POST['ofp_chat_telegram_chat_id'] ?? '' ) ),
+            'ofp_chat_handoff_message'       => sanitize_textarea_field( wp_unslash( $_POST['ofp_chat_handoff_message'] ?? '' ) ),
+            'ofp_chat_guest_prompt'          => sanitize_textarea_field( wp_unslash( $_POST['ofp_chat_guest_prompt'] ?? '' ) ),
+            'ofp_chat_user_prompt'           => sanitize_textarea_field( wp_unslash( $_POST['ofp_chat_user_prompt'] ?? '' ) ),
         ];
 
         // Encrypted fields — only update if a new value was submitted.
@@ -709,6 +721,9 @@ class OFP_Admin_Menu {
             'ofp_paystack_secret_key'     => [ 'raw' => $_POST['ofp_paystack_secret_key']     ?? '', 'label' => 'Paystack Secret Key' ],
             'ofp_turnstile_secret'        => [ 'raw' => $_POST['ofp_turnstile_secret']        ?? '', 'label' => 'Turnstile Secret' ],
             'ofp_prembly_secret_key'      => [ 'raw' => $_POST['ofp_prembly_secret_key']      ?? '', 'label' => 'Prembly API Key' ],
+            'ofp_chat_gemini_api_key'     => [ 'raw' => $_POST['ofp_chat_gemini_api_key']     ?? '', 'label' => 'Gemini API Key' ],
+            'ofp_chat_groq_api_key'       => [ 'raw' => $_POST['ofp_chat_groq_api_key']       ?? '', 'label' => 'Groq API Key' ],
+            'ofp_chat_telegram_bot_token' => [ 'raw' => $_POST['ofp_chat_telegram_bot_token'] ?? '', 'label' => 'Telegram Bot Token' ],
         ];
 
         foreach ( $settings as $key => $value ) {

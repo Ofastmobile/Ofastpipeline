@@ -80,6 +80,25 @@ $social_tiktok      = get_option( 'ofp_social_tiktok', '' );
 $social_whatsapp    = get_option( 'ofp_social_whatsapp', '' );
 $social_telegram    = get_option( 'ofp_social_telegram', '' );
 
+// AI & Live Chat Bridge
+$chat_config        = class_exists( 'OFP_Chat_Service' ) ? OFP_Chat_Service::get_config() : [];
+$chat_enabled       = $chat_config['enabled'] ?? '1';
+$chat_guest_enabled = $chat_config['guest_enabled'] ?? '1';
+$chat_guest_human   = $chat_config['guest_human'] ?? '0';
+$chat_ai_provider   = $chat_config['ai_provider'] ?? 'gemini';
+$chat_gemini_model  = $chat_config['gemini_model'] ?? 'gemini-3.5-flash-lite';
+$chat_gemini_fallback = $chat_config['gemini_fallback_model'] ?? 'gemini-3.1-flash-lite';
+$chat_groq_model    = $chat_config['groq_model'] ?? 'llama-3.3-70b-versatile';
+$chat_tg_chat_id    = $chat_config['telegram_chat_id'] ?? '';
+$chat_handoff_msg   = $chat_config['handoff_message'] ?? '';
+$chat_tg_bot_user   = class_exists( 'OFP_Chat_Telegram' ) ? OFP_Chat_Telegram::bot_username() : '';
+$has_gemini_key     = ! empty( $chat_config['has_gemini_key'] );
+$has_groq_key       = ! empty( $chat_config['has_groq_key'] );
+$has_tg_bot_token   = ! empty( $chat_config['has_telegram_token'] );
+$chat_guest_prompt  = $chat_config['guest_prompt'] ?? '';
+$chat_user_prompt   = $chat_config['user_prompt'] ?? '';
+$chat_last_ai_error = class_exists( 'OFP_Chat_AI' ) ? OFP_Chat_AI::last_error() : [];
+
 // Plans & Pricing
 $listing_prices     = OFP_Property_CPT::get_plan_prices();
 $listing_caps       = OFP_Property_CPT::get_plan_caps();
@@ -270,6 +289,14 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                     </span>
                     <span class="ofp-tab-label">Security &amp; Vault</span>
                     <span class="ofp-nav-pill">AES-256</span>
+                </button>
+
+                <button type="button" class="ofp-settings-tab-btn" data-tab="tab-ai-chat">
+                    <span class="ofp-icon-box ofp-icon-xs icon-indigo">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path><rect x="4" y="8" width="16" height="12" rx="4"></rect><circle cx="9" cy="13" r="1.5" fill="currentColor"></circle><circle cx="15" cy="13" r="1.5" fill="currentColor"></circle><path d="M9 17h6"></path></svg>
+                    </span>
+                    <span class="ofp-tab-label">AI &amp; Live Chat</span>
+                    <span class="ofp-nav-pill">Telegram</span>
                 </button>
             </div>
         </div>
@@ -1552,6 +1579,218 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                 </section>
 
+                            <!-- ════════ TAB 9: AI ASSISTANT & LIVE SUPPORT ════════ -->
+                <section id="tab-ai-chat" class="ofp-tab-pane">
+
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-indigo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path><rect x="4" y="8" width="16" height="12" rx="4"></rect><circle cx="9" cy="13" r="1.5" fill="currentColor"></circle><circle cx="15" cy="13" r="1.5" fill="currentColor"></circle><path d="M9 17h6"></path></svg></div>
+                                <div class="ofp-card-title-group">
+                                    <h3>AI Assistant &amp; Live Support</h3>
+                                    <p>A floating chat that answers questions with AI and hands over to your team when a person is needed.</p>
+                                </div>
+                            </div>
+                            <?php if ( '1' === $chat_enabled && ( $has_gemini_key || $has_groq_key ) ) : ?>
+                                <span class="ofp-pill ofp-pill-ready">AI ready<?php echo $has_tg_bot_token ? ' · Live support ready' : ''; ?></span>
+                            <?php else : ?>
+                                <span class="ofp-pill ofp-pill-missing">Setup incomplete</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-field-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Enable chat widget</label>
+                                    <label class="ofp-toggle-switch">
+                                        <input type="checkbox" name="ofp_chat_enabled" value="1" <?php checked( '1', $chat_enabled ); ?>>
+                                        <span class="ofp-toggle-slider"></span>
+                                        <span class="ofp-toggle-text">Show the chat on the dashboard, portal and public pages</span>
+                                    </label>
+                                </div>
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Show to public visitors</label>
+                                    <label class="ofp-toggle-switch">
+                                        <input type="checkbox" name="ofp_chat_guest_enabled" value="1" <?php checked( '1', $chat_guest_enabled ); ?>>
+                                        <span class="ofp-toggle-slider"></span>
+                                        <span class="ofp-toggle-text">Lets guests ask general questions (AI only)</span>
+                                    </label>
+                                </div>
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Let guests talk to a human agent</label>
+                                    <label class="ofp-toggle-switch">
+                                        <input type="checkbox" name="ofp_chat_guest_human" value="1" <?php checked( '1', $chat_guest_human ); ?>>
+                                        <span class="ofp-toggle-slider"></span>
+                                        <span class="ofp-toggle-text">Guests give a name first, then can message your team. Logged-in users can always do this.</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg></div>
+                                <div class="ofp-card-title-group">
+                                    <h3>AI engine</h3>
+                                    <p>Add a Gemini key (and optionally Groq). The chat falls back between models automatically so it keeps answering when one hits a free-tier limit.</p>
+                                </div>
+                            </div><div style="display:flex;gap:8px;"><button type="button" class="ofp-btn-test-action" onclick="window.location.href='<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_test_chat_ai' ), 'ofp_test_chat_ai' ) ); ?>'">⚡ Test AI</button></div>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-field-grid">
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Preferred AI provider</label>
+                                    <div class="ofp-input-box">
+                                        <select name="ofp_chat_ai_provider" class="ofp-select" style="width:100%;height:42px;border:none;background:transparent;padding:0 12px;font-size:14px;outline:none;">
+                                            <option value="gemini" <?php selected( 'gemini', $chat_ai_provider ); ?>>Google Gemini</option>
+                                            <option value="groq" <?php selected( 'groq', $chat_ai_provider ); ?>>Groq Cloud</option>
+                                        </select>
+                                    </div>
+                                    <p class="ofp-field-hint">If this provider is busy or out of quota, the chat automatically tries the other models below, then the other provider if you saved a key for it.</p>
+                                </div>
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Gemini model (first choice)</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_chat_gemini_model" value="<?php echo esc_attr( $chat_gemini_model ); ?>" placeholder="gemini-3.5-flash-lite" list="ofp-gemini-models" autocomplete="off">
+                                    </div>
+                                    <p class="ofp-field-hint">Free-tier quotas are counted <strong>per model</strong>. Flash-Lite models have far higher daily limits than the full Flash models. Check yours at <a href="https://aistudio.google.com/rate-limit" target="_blank" rel="noopener">AI Studio</a>.</p>
+                                </div>
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Gemini fallback model</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_chat_gemini_fallback_model" value="<?php echo esc_attr( $chat_gemini_fallback ); ?>" placeholder="gemini-3.1-flash-lite" list="ofp-gemini-models" autocomplete="off">
+                                    </div>
+                                    <p class="ofp-field-hint">Used when the first model hits its limit. A different model has its own separate quota.</p>
+                                </div>
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Groq model</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_chat_groq_model" value="<?php echo esc_attr( $chat_groq_model ); ?>" placeholder="llama-3.3-70b-versatile" autocomplete="off">
+                                    </div>
+                                    <p class="ofp-field-hint">Only used if a Groq key is saved. If Test AI reports the model is not found, pick a current one from the Groq console.</p>
+                                </div>
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">Google Gemini API key</label>
+                                        <?php if ( $has_gemini_key ) : ?><span class="ofp-badge-encrypted">✓ Encrypted</span><?php endif; ?>
+                                    </div>
+                                    <div class="ofp-input-box has-action">
+                                        <input type="password" name="ofp_chat_gemini_api_key" class="ofp-secret-input" autocomplete="new-password"
+                                               placeholder="<?php echo $has_gemini_key ? '••••••••••••••••••••••••' : 'Enter Gemini API key...'; ?>">
+                                        <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                                    </div>
+                                    <p class="ofp-field-hint">Free key from <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>. Leave blank to keep the saved key.</p>
+                                </div>
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">Groq API key (optional backup)</label>
+                                        <?php if ( $has_groq_key ) : ?><span class="ofp-badge-encrypted">✓ Encrypted</span><?php endif; ?>
+                                    </div>
+                                    <div class="ofp-input-box has-action">
+                                        <input type="password" name="ofp_chat_groq_api_key" class="ofp-secret-input" autocomplete="new-password"
+                                               placeholder="<?php echo $has_groq_key ? '••••••••••••••••••••••••' : 'gsk_...'; ?>">
+                                        <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                                    </div>
+                                    <p class="ofp-field-hint">Free key from <a href="https://console.groq.com/" target="_blank" rel="noopener">Groq Console</a>. Adds a second provider as a safety net.</p>
+                                </div>
+                            </div>
+                            <datalist id="ofp-gemini-models">
+                                <option value="gemini-3.5-flash-lite"></option>
+                                <option value="gemini-3.1-flash-lite"></option>
+                                <option value="gemini-3.6-flash"></option>
+                                <option value="gemini-3.8-flash"></option>
+                            </datalist>
+                            <?php if ( ! empty( $chat_last_ai_error ) ) : ?>
+                            <div style="margin-top:14px;padding:10px 12px;border:1px solid #fecdd3;background:#fff1f2;border-radius:8px;font-size:12.5px;color:#9f1239;">
+                                <strong>Last AI problem</strong> (<?php echo esc_html( wp_date( 'M j, g:i a', (int) ( $chat_last_ai_error['time'] ?? 0 ) ) ); ?>):
+                                <code><?php echo esc_html( ( $chat_last_ai_error['provider'] ?? '' ) . '/' . ( $chat_last_ai_error['model'] ?? '' ) ); ?></code>
+                                <?php echo esc_html( $chat_last_ai_error['code'] ?? '' ); ?> &mdash; <?php echo esc_html( $chat_last_ai_error['message'] ?? '' ); ?>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Human agent (via Telegram, private)</h3>
+                                    <p>Visitor messages reach your Telegram and your replies appear in their chat. This is only visible here, never on the website.</p>
+                                </div>
+                            </div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="ofp-btn-test-action" onclick="window.location.href='<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_test_chat_telegram' ), 'ofp_test_chat_telegram' ) ); ?>'">📱 Send test</button><button type="button" class="ofp-btn-test-action" onclick="window.location.href='<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_set_telegram_webhook' ), 'ofp_set_telegram_webhook' ) ); ?>'">🔗 Connect Webhook</button><button type="button" class="ofp-btn-test-action" onclick="window.location.href='<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_set_telegram_pull' ), 'ofp_set_telegram_pull' ) ); ?>'">☁️ Use pull mode (Cloudflare-safe)</button><button type="button" class="ofp-btn-test-action" onclick="window.location.href='<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ofp_check_telegram_webhook' ), 'ofp_check_telegram_webhook' ) ); ?>'">🩺 Check Webhook</button></div>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-field-grid">
+                                <div class="ofp-field-group">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">Bot token</label>
+                                        <?php if ( $has_tg_bot_token ) : ?><span class="ofp-badge-encrypted">✓ Encrypted</span><?php endif; ?>
+                                    </div>
+                                    <div class="ofp-input-box has-action">
+                                        <input type="password" name="ofp_chat_telegram_bot_token" class="ofp-secret-input" autocomplete="new-password"
+                                               placeholder="<?php echo $has_tg_bot_token ? '••••••••••••••••••••••••' : 'Enter token from @BotFather'; ?>">
+                                        <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                                    </div>
+                                    <p class="ofp-field-hint">Create a bot with Telegram&#39;s <code>@BotFather</code> and paste its token. Leave blank to keep the saved token.</p>
+                                </div>
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Your chat ID (or staff group ID)</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_chat_telegram_chat_id" value="<?php echo esc_attr( $chat_tg_chat_id ); ?>" placeholder="e.g. 123456789" autocomplete="off">
+                                    </div>
+                                    <p class="ofp-field-hint">Only messages from this chat can answer visitors. Message <code>@userinfobot</code> on Telegram to find your ID. Start your bot once (press Start) so it can message you.</p>
+                                </div>
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Message shown when a chat is handed to your team</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" name="ofp_chat_handoff_message" value="<?php echo esc_attr( $chat_handoff_msg ); ?>" placeholder="" autocomplete="off">
+                                    </div>
+                                    <p class="ofp-field-hint">Visitors see this once, when they first message a human agent.</p>
+                                </div>
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Webhook address</label>
+                                    <div class="ofp-input-box">
+                                        <input type="text" readonly value="<?php echo esc_url( rest_url( 'ofast/v1/chat/telegram-webhook' ) ); ?>" style="background:#f1f5f9;color:#64748b;">
+                                    </div>
+                                    <p class="ofp-field-hint">Behind Cloudflare, or unsure? Click <strong>Use pull mode</strong>: your site fetches replies from Telegram, so nothing has to pass Cloudflare. Otherwise click <strong>Connect Webhook</strong>. Use <strong>Check</strong> any time replies stop arriving. Current mode: <strong><?php echo esc_html( class_exists( 'OFP_Chat_Telegram' ) ? OFP_Chat_Telegram::mode() : 'webhook' ); ?></strong>.<?php if ( $chat_tg_bot_user ) : ?> Connected bot: <code>@<?php echo esc_html( $chat_tg_bot_user ); ?></code>.<?php endif; ?></p>
+                                </div>
+                            </div>
+                            <p class="ofp-field-hint" style="margin-top:12px;">How to answer: every visitor message arrives in Telegram tagged like <code>#C12</code>. <strong>Swipe-reply</strong> to it, or type <code>/r 12 your reply</code>. <code>/list</code> shows open chats and <code>/close 12</code> ends one. Visitors never see Telegram.</p>
+                        </div>
+                    </div>
+
+
+                    <div class="ofp-card">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg></div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Instructions for the assistant</h3>
+                                    <p>Tell the AI how to talk to public visitors and to logged-in clients.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ofp-card-body">
+                            <div class="ofp-field-grid" style="grid-template-columns: 1fr;">
+                                <div class="ofp-field-group">
+                                    <label class="ofp-field-label">Public visitor instructions</label>
+                                    <textarea name="ofp_chat_guest_prompt" rows="5" class="ofp-textarea" style="width:100%;font-size:13px;line-height:1.5;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-family:monospace;"><?php echo esc_textarea( $chat_guest_prompt ); ?></textarea>
+                                    <p class="ofp-field-hint">Instructions for anonymous visitors on your homepage or marketing pages.</p>
+                                </div>
+                                <div class="ofp-field-group" style="margin-top:14px;">
+                                    <label class="ofp-field-label">Logged-in dashboard copilot instructions</label>
+                                    <textarea name="ofp_chat_user_prompt" rows="6" class="ofp-textarea" style="width:100%;font-size:13px;line-height:1.5;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-family:monospace;"><?php echo esc_textarea( $chat_user_prompt ); ?></textarea>
+                                    <p class="ofp-field-hint">Instructions for logged-in clients. Tags: <code>{user_name}</code>, <code>{user_role}</code>. The assistant is always told never to mention Telegram.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
             </main>
         </div>
 

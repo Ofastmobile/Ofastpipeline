@@ -3,7 +3,7 @@
  * Plugin Name: OFast Pipeline
  * Plugin URI:  https://ofastpipeline.com
  * Description: Done-for-you lead pipeline and CRM automation engine for SMB clients in Nigeria.
- * Version:     2.2.20
+ * Version:     2.2.23
  * Author:      Olabode / Bofast World
  * Author URI:  https://bofastworld.com
  * Text Domain: ofast-pipeline
@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION', '2.2.20' );
+define( 'OFP_VERSION', '2.2.23' );
 define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
@@ -102,6 +102,9 @@ require_once OFP_PATH . 'includes/class-ofp-property-land.php';
 require_once OFP_PATH . 'includes/class-ofp-property-amenities.php';
 require_once OFP_PATH . 'includes/class-ofp-watermark.php';
 require_once OFP_PATH . 'includes/class-ofp-feedback.php';
+require_once OFP_PATH . 'includes/class-ofp-chat-ai.php';
+require_once OFP_PATH . 'includes/class-ofp-chat-telegram.php';
+require_once OFP_PATH . 'includes/class-ofp-chat-service.php';
 
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
 require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-paystack.php';
@@ -192,6 +195,7 @@ OFP_Prembly::init();
     OFP_Property_Inquiry::init();
     OFP_Watermark::init();
     OFP_Feedback::init();
+    OFP_Chat_Service::init();
 } );
 
 // ── Frontend Admin Bar Control ─────────────────────────────────────────────
