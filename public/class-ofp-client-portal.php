@@ -104,6 +104,9 @@ class OFP_Client_Portal {
         // Communications Log Feed AJAX
         add_action( 'wp_ajax_ofp_fetch_communications', [ $this, 'ajax_fetch_communications' ] );
         add_action( 'wp_ajax_nopriv_ofp_fetch_communications', [ $this, 'ajax_fetch_communications' ] );
+
+        // Dashboard Tour Completion AJAX
+        add_action( 'wp_ajax_ofp_save_tour_status', [ $this, 'ajax_save_tour_status' ] );
     }
 
     public function enqueue_assets(): void {
@@ -267,6 +270,16 @@ class OFP_Client_Portal {
             );
         }
 
+        // Dashboard guided tour assets
+        if ( in_array( $route, [ 'dashboard', '' ], true ) ) {
+            wp_enqueue_style(
+                'ofp-dashboard-tour',
+                OFP_URL . 'assets/css/dashboard-tour.css',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION
+            );
+        }
+
         $js_deps = [];
         if ( in_array( $route, [ 'dashboard', 'leads', 'reports' ], true ) ) {
             wp_enqueue_script(
@@ -298,6 +311,17 @@ class OFP_Client_Portal {
             'nonce'   => wp_create_nonce( 'ofp_client_ajax' ),
             'siteUrl' => home_url(),
         ] );
+
+        // Dashboard guided tour script
+        if ( in_array( $route, [ 'dashboard', '' ], true ) ) {
+            wp_enqueue_script(
+                'ofp-dashboard-tour',
+                OFP_URL . 'assets/js/dashboard-tour.js',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION,
+                true
+            );
+        }
 
         if ( in_array( $route, [ 'communications', 'message-templates' ], true ) ) {
             wp_enqueue_script(
@@ -395,6 +419,10 @@ class OFP_Client_Portal {
             return true;
         }
         $path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+        $site_path = trim( (string) parse_url( home_url(), PHP_URL_PATH ), '/' );
+        if ( ! empty( $site_path ) && str_starts_with( $path, $site_path ) ) {
+            $path = trim( substr( $path, strlen( $site_path ) ), '/' );
+        }
         $segments = array_values( array_filter( explode( '/', $path ) ) );
         if ( empty( $segments ) ) {
             return false;
@@ -448,11 +476,10 @@ class OFP_Client_Portal {
         })();
 
         (function() {
-            var isToggling = false;
             window.ofpToggleTheme = function() {
-                if (isToggling) return;
-                isToggling = true;
-                setTimeout(function() { isToggling = false; }, 200);
+                if (window._ofpThemeToggling) return;
+                window._ofpThemeToggling = true;
+                setTimeout(function() { window._ofpThemeToggling = false; }, 250);
 
                 var PORTAL_KEY = 'ofp_portal_theme';
                 var html = document.documentElement;
@@ -1310,6 +1337,37 @@ class OFP_Client_Portal {
         } else {
             wp_send_json_error( 'Failed to send email. Please check your SMTP settings and server status.' );
         }
+    }
+
+    /**
+     * AJAX: Persist dashboard onboarding tour completion status
+     */
+    public function ajax_save_tour_status(): void {
+        check_ajax_referer( 'ofp_client_ajax', 'nonce' );
+
+        $client = OFP_Auth::current_client();
+        if ( ! $client ) {
+            wp_send_json_error( 'Unauthenticated' );
+        }
+
+        $extra = ! empty( $client->profile_extra ) ? json_decode( $client->profile_extra, true ) : [];
+        if ( ! is_array( $extra ) ) {
+            $extra = [];
+        }
+
+        $extra['tour_completed']    = 1;
+        $extra['tour_completed_at'] = current_time( 'mysql' );
+
+        global $wpdb;
+        $wpdb->update(
+            $wpdb->prefix . 'ofp_clients',
+            [ 'profile_extra' => json_encode( $extra ) ],
+            [ 'id' => (int) $client->id ],
+            [ '%s' ],
+            [ '%d' ]
+        );
+
+        wp_send_json_success( [ 'saved' => true ] );
     }
 }
 

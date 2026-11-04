@@ -388,6 +388,10 @@ svg { max-width: 100%; box-sizing: border-box; }
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             Activity Log
                         </a>
+                        <a href="javascript:void(0)" class="ofp-dropdown-item" onclick="if(window.ofpStartDashboardTour){window.ofpStartDashboardTour();}return false;">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689A1.125 1.125 0 003 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>
+                            Take Dashboard Tour
+                        </a>
                         <a href="javascript:void(0)" class="ofp-dropdown-item ofp-open-feedback-trigger" data-type="feature_request" onclick="if(window.ofpOpenFeedbackModal){window.ofpOpenFeedbackModal('feature_request');}return false;">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m2.25 8.25l-3.75-3.75H5.25a2.25 2.25 0 01-2.25-2.25V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25v9a2.25 2.25 0 01-2.25 2.25h-2.25l-4.5 4.5z" /></svg>
                             Feedback & Bug Report
@@ -610,7 +614,11 @@ svg { max-width: 100%; box-sizing: border-box; }
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 Activity Log
                             </a>
-                            <a href="javascript:void(0)" class="ofp-dropdown-item ofp-open-feedback-trigger" data-type="feature_request" onclick="if(window.ofpOpenFeedbackModal){window.ofpOpenFeedbackModal('feature_request');}return false;">
+                            <a href="javascript:void(0)" class="ofp-dropdown-item" onclick="if(window.ofpStartDashboardTour){window.ofpStartDashboardTour();}return false;">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689A1.125 1.125 0 003 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>
+                            Take Dashboard Tour
+                        </a>
+                        <a href="javascript:void(0)" class="ofp-dropdown-item ofp-open-feedback-trigger" data-type="feature_request" onclick="if(window.ofpOpenFeedbackModal){window.ofpOpenFeedbackModal('feature_request');}return false;">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m2.25 8.25l-3.75-3.75H5.25a2.25 2.25 0 01-2.25-2.25V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25v9a2.25 2.25 0 01-2.25 2.25h-2.25l-4.5 4.5z" /></svg>
                                 Feedback & Bug Report
                             </a>

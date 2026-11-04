@@ -134,7 +134,6 @@ $total_matching_amount = array_reduce( $payments, static fn( $acc, $it ) => $acc
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?php echo esc_html( OFP_Brand::title( 'Transactions', $client ?? null ) ); ?></title>
 <?php wp_head(); ?>
-<link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
 <style>
 /* Exact Match Row Highlighting */
 .ofp-row-matched {
@@ -209,7 +208,6 @@ html.light .ofp-filter-toggle-bar {
     .ofp-txn-filter-pills { padding: 10px 14px !important; }
 }
 </style>
-<script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
 </head>
 <body class="ofp-portal-body">
 <?php 

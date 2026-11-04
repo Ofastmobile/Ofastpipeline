@@ -345,7 +345,7 @@ class OFP_Admin_Menu {
         $client_id = (int) ( $_POST['client_id'] ?? 0 );
         $status    = sanitize_text_field( wp_unslash( $_POST['status'] ?? '' ) );
 
-        $allowed = [ 'active', 'suspended', 'cancelled', 'grace' ];
+        $allowed = [ 'active', 'suspended', 'cancelled', 'grace', 'deactivated' ];
         if ( ! $client_id || ! in_array( $status, $allowed, true ) ) {
             $this->set_message( 'Invalid request.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients' ) );
@@ -353,6 +353,23 @@ class OFP_Admin_Menu {
         }
 
         OFP_Subscription::manual_toggle( $client_id, $status );
+
+        // If reactivating back to active, restore any properties drafted upon deactivation
+        if ( $status === 'active' ) {
+            global $wpdb;
+            $client_prop_ids = $wpdb->get_col( $wpdb->prepare(
+                "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = 'ofp_client_id' AND meta_value = %d",
+                $client_id
+            ) );
+            if ( ! empty( $client_prop_ids ) ) {
+                foreach ( $client_prop_ids as $pid ) {
+                    if ( get_post_meta( $pid, '_ofp_pre_deactivate_status', true ) === 'publish' ) {
+                        delete_post_meta( $pid, '_ofp_pre_deactivate_status' );
+                        wp_update_post( [ 'ID' => (int) $pid, 'post_status' => 'publish' ] );
+                    }
+                }
+            }
+        }
         $this->set_message( 'Client status updated to ' . $status . '.', 'success' );
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients&client_id=' . $client_id ) );
         exit;

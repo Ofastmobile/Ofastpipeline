@@ -73,7 +73,7 @@ class OFP_Auth {
         );
 
         if ( $client ) {
-            if ( in_array( $client->status, [ 'suspended', 'cancelled', 'trash' ], true ) ) {
+            if ( in_array( $client->status, [ 'suspended', 'cancelled', 'trash', 'deactivated' ], true ) ) {
                 return false;
             }
             if ( password_verify( $password, $client->password ) ) {
@@ -108,7 +108,7 @@ class OFP_Auth {
                         $team_member->client_id
                     )
                 );
-                if ( ! $parent_client || in_array( $parent_client->status, [ 'suspended', 'cancelled', 'trash' ], true ) ) {
+                if ( ! $parent_client || in_array( $parent_client->status, [ 'suspended', 'cancelled', 'trash', 'deactivated' ], true ) ) {
                     return false;
                 }
 
@@ -150,7 +150,7 @@ class OFP_Auth {
             "SELECT status FROM {$wpdb->prefix}ofp_clients WHERE id = %d LIMIT 1",
             $client_id
         ) );
-        if ( ! $client || in_array( $client->status, [ 'suspended', 'cancelled', 'trash' ], true ) ) {
+        if ( ! $client || in_array( $client->status, [ 'suspended', 'cancelled', 'trash', 'deactivated' ], true ) ) {
             return false;
         }
 
@@ -542,9 +542,10 @@ class OFP_Auth {
     }
 
     public static function require_active_subscription( object $client ): void {
-        $blocked = [ 'suspended', 'cancelled', 'trash' ];
+        $blocked = [ 'suspended', 'cancelled', 'trash', 'deactivated' ];
         if ( in_array( $client->status, $blocked, true ) ) {
-            wp_safe_redirect( home_url( '/login?suspended=1' ) );
+            $param = ( $client->status === 'deactivated' ) ? 'deactivated=1' : 'suspended=1';
+            wp_safe_redirect( home_url( '/login?' . $param ) );
             exit;
         }
     }

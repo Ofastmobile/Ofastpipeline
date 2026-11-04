@@ -2260,7 +2260,7 @@ html.dark .ofp-hero-btn-export {
     background-color: var(--accent-blue);
 }
 
-.ofp-field input,
+.ofp-field input:not([type="checkbox"]):not([type="radio"]),
 .ofp-field select,
 .ofp-field textarea {
     width: 100%;
@@ -2272,6 +2272,16 @@ html.dark .ofp-hero-btn-export {
     font-size: 14px;
     outline: none;
     transition: border-color 0.15s;
+}
+
+.ofp-field input[type="checkbox"],
+.ofp-field input[type="radio"] {
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: inline-block !important;
+    flex: 0 0 auto !important;
 }
 
 .ofp-field textarea {
@@ -3464,8 +3474,26 @@ body.ofp-dark-mode .ofp-chat-bubble.call-bubble strong {
     width: 100%;
 }
 
-.ofp-custom-select-wrapper select {
+.ofp-custom-select-wrapper.open {
+    z-index: 100;
+}
+
+.ofp-modal .ofp-custom-select-options,
+.ofp-modal-content .ofp-custom-select-options {
+    z-index: 1050;
+}
+
+.ofp-custom-select-wrapper select,
+.ofp-custom-select-wrapper select.ofp-select,
+.ofp-field .ofp-custom-select-wrapper select,
+.ofp-form-grid .ofp-custom-select-wrapper select {
     display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 .ofp-custom-select-trigger {
@@ -5382,11 +5410,13 @@ html.light .ofp-back-link-left:active {
     border: 1px solid var(--border-color);
     border-radius: 16px;
     width: 100%;
-    max-width: 540px;
+    max-width: 560px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.5);
-    padding: 24px 28px;
+    box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.55);
+    padding: 0 !important;
+    position: relative;
+    box-sizing: border-box;
     animation: ofpModalPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -5403,12 +5433,31 @@ html.light .ofp-back-link-left:active {
 }
 
 .ofp-modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--bg-card, #1e2638);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 14px;
+    padding: 20px 28px 16px;
+    margin: 0;
     border-bottom: 1px solid var(--border-color);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .ofp-modal-header,
+html.light .ofp-modal-header {
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.ofp-modal-content > form,
+.ofp-modal-content > .ofp-modal-body {
+    padding: 24px 28px;
+    box-sizing: border-box;
 }
 
 .ofp-modal-title {
@@ -7871,6 +7920,20 @@ html.dark .ofp-search-hint-kbd kbd {
    SPECIFICATIONS & FEATURES STUDIO (SECTION 3 REDESIGN)
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* 2-Column Section 3 Studio Layout */
+.ofp-specs-2col-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    align-items: start;
+    margin-bottom: 20px;
+}
+@media (max-width: 768px) {
+    .ofp-specs-2col-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Grid of Counter Cards (Bedrooms, Bathrooms, Parking) */
 .ofp-specs-card-grid {
     display: grid;
@@ -7896,6 +7959,66 @@ html.dark .ofp-search-hint-kbd kbd {
 .ofp-spec-counter-card:hover {
     border-color: var(--border-highlight);
     box-shadow: var(--shadow-md);
+}
+
+/* Combined Container for Bedrooms, Bathrooms & Parking */
+.ofp-room-specs-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    margin-bottom: 0;
+}
+
+.ofp-room-specs-card:hover {
+    border-color: var(--border-highlight);
+    box-shadow: var(--shadow-md);
+}
+
+.ofp-room-spec-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ofp-room-spec-item:not(:last-child) {
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ofp-room-spec-item .ofp-label {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.ofp-room-spec-item:has(.ofp-custom-select-wrapper.open),
+.ofp-room-spec-item:focus-within {
+    position: relative;
+    z-index: 50;
+}
+
+.ofp-room-spec-item input[type="number"] {
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 8px;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ofp-room-spec-item input[type="number"]:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 /* Header inside counter card */
@@ -8188,37 +8311,26 @@ html.dark .ofp-input-unit-tag {
 }
 
 .ofp-sqm-preset-btn {
-    background: var(--bg-body);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-main);
+    text-decoration: none !important;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
     user-select: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ofp-sqm-preset-btn:hover {
-    border-color: var(--accent-green);
-    color: var(--accent-green);
-    background: rgba(16, 185, 129, 0.08);
-    transform: translateY(-1px);
+    text-decoration: none !important;
+    color: var(--primary, #3b82f6) !important;
 }
 
-.ofp-sqm-preset-btn:active {
-    transform: translateY(0);
+.ofp-sqm-preset-btn:active,
+.ofp-sqm-preset-btn:focus {
+    text-decoration: none !important;
 }
 
 .ofp-sqm-preset-btn.is-active {
-    background: rgba(16, 185, 129, 0.15);
-    border-color: var(--accent-green);
-    color: var(--accent-green);
     font-weight: 700;
+    color: var(--primary, #3b82f6) !important;
+    text-decoration: none !important;
 }
 
 /* ── Condition & Furnishing Grid ─────────────────────────────────────────── */
@@ -8682,6 +8794,7 @@ html.light .ofp-btn-outline:hover {
 .ofp-kpi-card:not(.ofp-kpi-card-hero),
 .ofp-table-card,
 .ofp-spec-counter-card,
+.ofp-room-specs-card,
 .ofp-sizing-card,
 .ofp-meta-picker-card,
 .ofp-land-studio-box,
@@ -8705,6 +8818,7 @@ html.light .ofp-btn-outline:hover {
 .ofp-zentra-card:hover,
 .ofp-kpi-card:not(.ofp-kpi-card-hero):hover,
 .ofp-spec-counter-card:hover,
+.ofp-room-specs-card:hover,
 .ofp-pricing-card:hover,
 .ofp-property-card:hover,
 .ofp-profile-card:hover {
@@ -8718,6 +8832,7 @@ html.light .ofp-btn-outline:hover {
 [data-theme="light"] .ofp-kpi-card:not(.ofp-kpi-card-hero),
 [data-theme="light"] .ofp-table-card,
 [data-theme="light"] .ofp-spec-counter-card,
+[data-theme="light"] .ofp-room-specs-card,
 [data-theme="light"] .ofp-sizing-card,
 [data-theme="light"] .ofp-meta-picker-card,
 [data-theme="light"] .ofp-land-studio-box,
@@ -8734,6 +8849,7 @@ html.light .ofp-zentra-card,
 html.light .ofp-kpi-card:not(.ofp-kpi-card-hero),
 html.light .ofp-table-card,
 html.light .ofp-spec-counter-card,
+html.light .ofp-room-specs-card,
 html.light .ofp-sizing-card,
 html.light .ofp-meta-picker-card,
 html.light .ofp-land-studio-box,
@@ -8756,6 +8872,7 @@ html.light .ofp-profile-card {
 [data-theme="light"] .ofp-zentra-card:hover,
 [data-theme="light"] .ofp-kpi-card:not(.ofp-kpi-card-hero):hover,
 [data-theme="light"] .ofp-spec-counter-card:hover,
+[data-theme="light"] .ofp-room-specs-card:hover,
 [data-theme="light"] .ofp-pricing-card:hover,
 [data-theme="light"] .ofp-property-card:hover,
 [data-theme="light"] .ofp-profile-card:hover,
@@ -8763,6 +8880,7 @@ html.light .ofp-card:hover,
 html.light .ofp-zentra-card:hover,
 html.light .ofp-kpi-card:not(.ofp-kpi-card-hero):hover,
 html.light .ofp-spec-counter-card:hover,
+html.light .ofp-room-specs-card:hover,
 html.light .ofp-pricing-card:hover,
 html.light .ofp-property-card:hover,
 html.light .ofp-profile-card:hover {
@@ -9420,6 +9538,37 @@ html.light .ofp-txn-select option,
 html.light .ofp-filter-select option {
     background: #ffffff;
     color: #0f172a;
+}
+
+/* Modal and Form Field Dropdown Full-Width & Sizing Standard */
+.ofp-field select:not(.ofp-custom-select-wrapper select),
+.ofp-field .ofp-select:not(.ofp-custom-select-wrapper select),
+.ofp-modal select:not(.ofp-custom-select-wrapper select),
+.ofp-modal .ofp-select:not(.ofp-custom-select-wrapper select),
+.ofp-modal-content select:not(.ofp-custom-select-wrapper select),
+.ofp-modal-content .ofp-select:not(.ofp-custom-select-wrapper select) {
+    width: 100% !important;
+    display: block;
+    min-height: 44px !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+}
+
+.ofp-custom-select-wrapper select,
+.ofp-field .ofp-custom-select-wrapper select,
+.ofp-modal .ofp-custom-select-wrapper select,
+.ofp-modal-content .ofp-custom-select-wrapper select,
+.ofp-custom-select-wrapper select.ofp-select,
+.ofp-field .ofp-custom-select-wrapper select.ofp-select,
+.ofp-modal .ofp-custom-select-wrapper select.ofp-select,
+.ofp-modal-content .ofp-custom-select-wrapper select.ofp-select {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 /* ── Platform Universal Search Bar Styling ── */

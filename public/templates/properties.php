@@ -125,7 +125,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
             }
             $location_text = sanitize_text_field( $_POST['location_text'] ?? '' );
             $status        = in_array( $_POST['status'] ?? '', [ 'live', 'pending_upload', 'taken', 'expired' ], true )
-                ? $_POST['status'] : 'pending_upload';
+                ? $_POST['status'] : ( ! $is_new && $editing_id ? ( get_post_meta( $editing_id, 'ofp_status', true ) ?: 'live' ) : 'pending_upload' );
 
             $can_feature = $active_plan !== 'free';
             $is_featured = ( $can_feature && isset( $_POST['is_featured'] ) ) ? '1' : '0';
@@ -412,8 +412,18 @@ $prop_tabs = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'My Properties', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
-    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/client-portal.css?v=' . OFP_VERSION ); ?>">
-    <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
+    <style>
+        .ofp-custom-select-wrapper select,
+        .ofp-custom-select-wrapper select.ofp-select {
+            display: none !important;
+            visibility: hidden !important;
+            position: absolute !important;
+            width: 0 !important;
+            height: 0 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+    </style>
 </head>
 <body class="ofp-portal-body">
     <?php 
@@ -760,13 +770,7 @@ $prop_tabs = [
                         <!-- 1. Basic Information -->
                         <div class="ofp-form-card-section">
                             <div class="ofp-form-section-header">
-                                <div class="ofp-form-section-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
-                                </div>
-                                <div>
-                                    <h4 class="ofp-form-section-title">1. Basic Information</h4>
-                                    <p class="ofp-form-section-desc">Primary title, detailed description, and real estate categorization.</p>
-                                </div>
+                                <h4 class="ofp-form-section-title">1. Basic Information</h4>
                             </div>
 
                             <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
@@ -814,13 +818,7 @@ $prop_tabs = [
                         <!-- 2. Pricing & Commerce -->
                         <div class="ofp-form-card-section">
                             <div class="ofp-form-section-header">
-                                <div class="ofp-form-section-icon" style="background:rgba(16,185,129,0.1); color:#10b981;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                </div>
-                                <div>
-                                    <h4 class="ofp-form-section-title">2. Pricing &amp; Commerce</h4>
-                                    <p class="ofp-form-section-desc">Valuation, billing period, title documentation, and receiving bank details.</p>
-                                </div>
+                                <h4 class="ofp-form-section-title">2. Pricing &amp; Commerce</h4>
                             </div>
 
                             <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
@@ -860,12 +858,19 @@ $prop_tabs = [
                                     <span class="ofp-hint" style="font-size:11.5px; margin-top:4px; display:block;">In Nigeria, rent is listed separately while total package includes agency, legal, and caution fees.</span>
                                 </div>
 
-                                <div class="ofp-field" style="margin-bottom:8px;">
-                                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600; color:var(--text-main);">
-                                        <input type="checkbox" name="allow_installment" value="1" <?php checked( $editing_post ? (string) get_post_meta( $editing_post->ID, 'ofp_allow_installment', true ) : '0', '1' ); ?>>
-                                        Allow Installment / Mortgage Financing Plan
+                                <div class="ofp-field" style="grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; margin-bottom:8px; gap:16px;">
+                                    <div>
+                                        <label for="ofp_allow_installment_toggle" style="font-size:13.5px; font-weight:600; color:var(--text-main); margin-bottom:3px; display:block; cursor:pointer;">
+                                            Allow Installment / Mortgage Financing Plan
+                                        </label>
+                                        <span class="ofp-hint" style="font-size:11.5px; margin:0; display:block;">
+                                            Enable to activate the interactive Installment &amp; Mortgage Estimator on the single property page.
+                                        </span>
+                                    </div>
+                                    <label class="ofp-toggle" style="margin:0; cursor:pointer; flex-shrink:0;">
+                                        <input type="checkbox" id="ofp_allow_installment_toggle" name="allow_installment" value="1" <?php checked( $editing_post ? (string) get_post_meta( $editing_post->ID, 'ofp_allow_installment', true ) : '0', '1' ); ?>>
+                                        <span class="ofp-toggle-slider"></span>
                                     </label>
-                                    <span class="ofp-hint" style="font-size:11.5px; margin-top:2px; display:block;">Enable to activate the Installment &amp; Mortgage Estimator on the single property page.</span>
                                 </div>
 
                                 <div class="ofp-field">
@@ -904,218 +909,119 @@ $prop_tabs = [
                         <!-- 3. Specifications & Condition -->
                         <div class="ofp-form-card-section">
                             <div class="ofp-form-section-header">
-                                <div class="ofp-form-section-icon" style="background:rgba(139,92,246,0.1); color:#8b5cf6;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.32l-3.27 3.287a1.5 1.5 0 01-2.122-2.122l3.287-3.27a4.5 4.5 0 00-6.32 4.486c.048.58.024 1.193-.14 1.743" /></svg>
-                                </div>
-                                <div>
-                                    <h4 class="ofp-form-section-title">3. Specifications &amp; Features</h4>
-                                    <p class="ofp-form-section-desc">Room counts, land sizing, construction condition, and furnishing grade.</p>
-                                </div>
+                                <h4 class="ofp-form-section-title">3. Specifications &amp; Features</h4>
                             </div>
 
-                            <!-- Spec Counter Cards: Bedrooms, Bathrooms, Parking -->
-                            <div class="ofp-specs-card-grid">
-                                <div class="ofp-field ofp-spec-counter-card">
-                                    <div class="ofp-spec-card-head">
-                                        <div class="ofp-spec-card-icon is-blue">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/>
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <h5 class="ofp-spec-card-title">Bedrooms</h5>
-                                            <p class="ofp-spec-card-sub">En-suite or standard</p>
-                                        </div>
+                            <!-- 2-Column Section 3 Layout matching wireframe (Left: Bedrooms, Bathrooms, Parking | Right: Total Area, Condition, Furnishing) -->
+                            <div class="ofp-specs-2col-layout" style="display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start;">
+                                <!-- Left Column: Bedrooms, Bathrooms, Parking Spaces, Construction & Furnishing in One Minimal Container Card -->
+                                <div class="ofp-field ofp-room-specs-card" id="ofp-rooms-spec-container">
+                                    <!-- Bedrooms -->
+                                    <div class="ofp-room-spec-item">
+                                        <label class="ofp-label" for="ofp_bedrooms_input"><?php _e( 'Bedrooms', 'ofast-pipeline' ); ?></label>
+                                        <input type="number" id="ofp_bedrooms_input" name="bedrooms" min="0" placeholder="0" class="ofp-input"
+                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_bedrooms', true ) : '' ); ?>"
+                                               style="width:100%; padding:11px 14px; border-radius:8px;">
                                     </div>
-                                    <div class="ofp-spec-stepper-wrap">
-                                        <button type="button" class="ofp-spec-stepper-btn ofp-stepper-minus" aria-label="Decrease bedrooms">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" /></svg>
-                                        </button>
-                                        <input type="number" name="bedrooms" min="0" placeholder="0" class="ofp-spec-number-input"
-                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_bedrooms', true ) : '' ); ?>">
-                                        <button type="button" class="ofp-spec-stepper-btn ofp-stepper-plus" aria-label="Increase bedrooms">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                        </button>
+
+                                    <!-- Bathrooms -->
+                                    <div class="ofp-room-spec-item">
+                                        <label class="ofp-label" for="ofp_bathrooms_input"><?php _e( 'Bathrooms', 'ofast-pipeline' ); ?></label>
+                                        <input type="number" id="ofp_bathrooms_input" name="bathrooms" min="0" placeholder="0" class="ofp-input"
+                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_bathrooms', true ) : '' ); ?>"
+                                               style="width:100%; padding:11px 14px; border-radius:8px;">
                                     </div>
-                                    <div class="ofp-spec-chips-row">
-                                        <button type="button" class="ofp-spec-chip" data-val="1">1</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="2">2</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="3">3</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="4">4</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="5">5</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="6+">6+</button>
+
+                                    <!-- Parking Spaces -->
+                                    <div class="ofp-room-spec-item">
+                                        <label class="ofp-label" for="ofp_parking_input"><?php _e( 'Parking Spaces', 'ofast-pipeline' ); ?></label>
+                                        <input type="number" id="ofp_parking_input" name="parking" min="0" placeholder="0" class="ofp-input"
+                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_parking', true ) : '' ); ?>"
+                                               style="width:100%; padding:11px 14px; border-radius:8px;">
+                                    </div>
+
+                                    <!-- Construction Condition (Under Parking) -->
+                                    <div class="ofp-room-spec-item">
+                                        <label class="ofp-label" for="ofp_condition_select"><?php _e( 'Construction Condition', 'ofast-pipeline' ); ?></label>
+                                        <?php $current_condition = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_condition', true ) : ''; ?>
+                                        <select id="ofp_condition_select" name="condition" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
+                                            <option value="">-- Select Condition --</option>
+                                            <option value="Newly Built" <?php selected( $current_condition, 'Newly Built' ); ?>>Newly Built (Turnkey / Mint)</option>
+                                            <option value="Fairly Used" <?php selected( $current_condition, 'Fairly Used' ); ?>>Fairly Used (Move-in Ready)</option>
+                                            <option value="Renovation Needed" <?php selected( $current_condition, 'Renovation Needed' ); ?>>Renovation Needed (Distressed / TLC)</option>
+                                            <option value="Under Construction" <?php selected( $current_condition, 'Under Construction' ); ?>>Under Construction (Ongoing Build)</option>
+                                            <option value="Off-Plan" <?php selected( $current_condition, 'Off-Plan' ); ?>>Off-Plan (Pre-construction)</option>
+                                        </select>
                                     </div>
                                 </div>
 
-                                <div class="ofp-field ofp-spec-counter-card">
-                                    <div class="ofp-spec-card-head">
-                                        <div class="ofp-spec-card-icon is-purple">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M9 6 6.5 3.5a1.5 1.5 0 0 0-2.1 2.1l2.5 2.5"/><path d="M2 12h20"/><path d="M4 12v5a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-5"/><path d="M6 20v2"/><path d="M18 20v2"/>
-                                            </svg>
+                                <!-- Right Column: Total Area, Construction Condition, Furniture Grade stacked -->
+                                <div style="display:flex; flex-direction:column; gap:18px;">
+                                    <!-- Sizing & Land Footprint Card -->
+                                    <div class="ofp-field ofp-sizing-card" style="margin:0;">
+                                        <div class="ofp-sizing-card-header">
+                                            <div class="ofp-sizing-card-title-group">
+                                                <div class="ofp-spec-card-icon is-green">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="12" y1="7" x2="12" y2="17"/>
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h5 class="ofp-spec-card-title">Total Area &amp; Land Footprint</h5>
+                                                    <p class="ofp-spec-card-sub">Gross built area or land footprint in square meters</p>
+                                                </div>
+                                            </div>
+                                            
+                                            <?php
+                                            $curr_sqm   = $editing_post ? (float) get_post_meta( $editing_post->ID, 'ofp_area_sqm', true ) : 0;
+                                            $curr_plots = $editing_post ? (float) get_post_meta( $editing_post->ID, 'ofp_plots_count', true ) : 0;
+                                            $init_label = 'Standard Lagos Plot = 600 SQM (60ft × 120ft)';
+                                            if ( $curr_sqm > 0 || $curr_plots > 0 ) {
+                                                $bk = class_exists( 'OFP_Property_Land' ) ? OFP_Property_Land::calculate( $curr_sqm, 0, $curr_plots ) : [];
+                                                if ( ! empty( $bk['plot_label'] ) ) {
+                                                    $init_label = $bk['plot_label'];
+                                                }
+                                            }
+                                            ?>
+                                            <!-- Live Nigerian Plot Benchmark Badge -->
+                                            <div id="ofp-sqm-live-badge" class="ofp-benchmark-live-badge">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                                                </svg>
+                                                <span id="ofp-sqm-live-text"><?php echo esc_html( $init_label ); ?></span>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h5 class="ofp-spec-card-title">Bathrooms</h5>
-                                            <p class="ofp-spec-card-sub">Baths &amp; guest toilets</p>
-                                        </div>
-                                    </div>
-                                    <div class="ofp-spec-stepper-wrap">
-                                        <button type="button" class="ofp-spec-stepper-btn ofp-stepper-minus" aria-label="Decrease bathrooms">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" /></svg>
-                                        </button>
-                                        <input type="number" name="bathrooms" min="0" placeholder="0" class="ofp-spec-number-input"
-                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_bathrooms', true ) : '' ); ?>">
-                                        <button type="button" class="ofp-spec-stepper-btn ofp-stepper-plus" aria-label="Increase bathrooms">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                        </button>
-                                    </div>
-                                    <div class="ofp-spec-chips-row">
-                                        <button type="button" class="ofp-spec-chip" data-val="1">1</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="2">2</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="3">3</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="4">4</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="5">5</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="6+">6+</button>
-                                    </div>
-                                </div>
 
-                                <div class="ofp-field ofp-spec-counter-card">
-                                    <div class="ofp-spec-card-head">
-                                        <div class="ofp-spec-card-icon is-orange">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <rect x="3" y="11" width="18" height="9" rx="2"/><circle cx="7.5" cy="16.5" r="1.5"/><circle cx="16.5" cy="16.5" r="1.5"/><path d="M5 11l2-5h10l2 5"/>
-                                            </svg>
+                                        <div class="ofp-input-unit-wrap">
+                                            <input type="number" id="ofp_area_sqm_input" name="area_sqm" min="0" placeholder="e.g. 600"
+                                                   value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_area_sqm', true ) : '' ); ?>">
+                                            <div class="ofp-input-unit-tag">SQM (m²)</div>
                                         </div>
-                                        <div>
-                                            <h5 class="ofp-spec-card-title">Parking Spaces</h5>
-                                            <p class="ofp-spec-card-sub">Secured bays / garage</p>
-                                        </div>
+                                        <span class="ofp-hint" style="font-size:11.5px; margin-top:6px; display:block; color:var(--text-muted); line-height:1.5;">
+                                            Plot Presets: 
+                                            <button type="button" class="ofp-sqm-preset-btn" data-sqm="300" data-plots="0.5" style="background:none; border:none; padding:0; margin:0 2px; color:var(--text-muted); text-decoration:none; font-size:11.5px; cursor:pointer;">Half Plot (300m²)</button> &bull; 
+                                            <button type="button" class="ofp-sqm-preset-btn" data-sqm="600" data-plots="1" style="background:none; border:none; padding:0; margin:0 2px; color:var(--text-muted); text-decoration:none; font-size:11.5px; cursor:pointer;">1 Plot (600m²)</button> &bull; 
+                                            <button type="button" class="ofp-sqm-preset-btn" data-sqm="1200" data-plots="2" style="background:none; border:none; padding:0; margin:0 2px; color:var(--text-muted); text-decoration:none; font-size:11.5px; cursor:pointer;">2 Plots (1,200m²)</button> &bull; 
+                                            <button type="button" class="ofp-sqm-preset-btn" data-sqm="4047" data-plots="6.7" style="background:none; border:none; padding:0; margin:0 2px; color:var(--text-muted); text-decoration:none; font-size:11.5px; cursor:pointer;">1 Acre (4,047m²)</button>
+                                        </span>
                                     </div>
-                                    <div class="ofp-spec-stepper-wrap">
-                                        <button type="button" class="ofp-spec-stepper-btn ofp-stepper-minus" aria-label="Decrease parking spaces">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" /></svg>
-                                        </button>
-                                        <input type="number" name="parking" min="0" placeholder="0" class="ofp-spec-number-input"
-                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_parking', true ) : '' ); ?>">
-                                        <button type="button" class="ofp-spec-stepper-btn ofp-stepper-plus" aria-label="Increase parking spaces">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                        </button>
-                                    </div>
-                                    <div class="ofp-spec-chips-row">
-                                        <button type="button" class="ofp-spec-chip" data-val="1">1</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="2">2</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="3">3</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="4">4</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="5">5</button>
-                                        <button type="button" class="ofp-spec-chip" data-val="6+">6+</button>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <!-- Sizing & Land Footprint Card -->
-                            <div class="ofp-field ofp-sizing-card">
-                                <div class="ofp-sizing-card-header">
-                                    <div class="ofp-sizing-card-title-group">
-                                        <div class="ofp-spec-card-icon is-green">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="12" y1="7" x2="12" y2="17"/>
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <h5 class="ofp-spec-card-title">Total Area &amp; Land Footprint</h5>
-                                            <p class="ofp-spec-card-sub">Gross built area or land footprint in square meters</p>
+                                    <!-- Furnishing Grade Card (Under Total Area) -->
+                                    <div class="ofp-field ofp-room-specs-card" style="margin:0; padding:16px 20px;">
+                                        <div class="ofp-room-spec-item" style="border:none; padding:0;">
+                                            <label class="ofp-label" for="ofp_furnishing_select"><?php _e( 'Furnishing Grade', 'ofast-pipeline' ); ?></label>
+                                            <?php $current_furnishing = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_furnishing', true ) : ''; ?>
+                                            <select id="ofp_furnishing_select" name="furnishing" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
+                                                <option value="">-- Select Furnishing --</option>
+                                                <option value="Furnished" <?php selected( $current_furnishing, 'Furnished' ); ?>>Fully Furnished (Turnkey)</option>
+                                                <option value="Semi-Furnished" <?php selected( $current_furnishing, 'Semi-Furnished' ); ?>>Semi-Furnished (Kitchen / Wardrobes / ACs)</option>
+                                                <option value="Unfurnished" <?php selected( $current_furnishing, 'Unfurnished' ); ?>>Unfurnished (Bare Shell)</option>
+                                            </select>
                                         </div>
                                     </div>
-                                    
-                                    <?php
-                                    $curr_sqm   = $editing_post ? (float) get_post_meta( $editing_post->ID, 'ofp_area_sqm', true ) : 0;
-                                    $curr_plots = $editing_post ? (float) get_post_meta( $editing_post->ID, 'ofp_plots_count', true ) : 0;
-                                    $init_label = 'Standard Lagos Plot = 600 SQM (60ft × 120ft)';
-                                    if ( $curr_sqm > 0 || $curr_plots > 0 ) {
-                                        $bk = class_exists( 'OFP_Property_Land' ) ? OFP_Property_Land::calculate( $curr_sqm, 0, $curr_plots ) : [];
-                                        if ( ! empty( $bk['plot_label'] ) ) {
-                                            $init_label = $bk['plot_label'];
-                                        }
-                                    }
-                                    ?>
-                                    <!-- Live Nigerian Plot Benchmark Badge -->
-                                    <div id="ofp-sqm-live-badge" class="ofp-benchmark-live-badge">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                                        </svg>
-                                        <span id="ofp-sqm-live-text"><?php echo esc_html( $init_label ); ?></span>
-                                    </div>
-                                </div>
-
-                                <div class="ofp-input-unit-wrap">
-                                    <input type="number" name="area_sqm" min="0" placeholder="e.g. 600"
-                                           value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_area_sqm', true ) : '' ); ?>">
-                                    <div class="ofp-input-unit-tag">SQM (m²)</div>
-                                </div>
-
-                                <!-- Quick Plot Preset Clickers -->
-                                <div class="ofp-preset-clickers-row">
-                                    <span class="ofp-preset-label">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                        Plot Presets:
-                                    </span>
-                                    <button type="button" class="ofp-sqm-preset-btn" data-sqm="300" data-plots="0.5">Half Plot (300m²)</button>
-                                    <button type="button" class="ofp-sqm-preset-btn" data-sqm="600" data-plots="1">1 Plot (600m²)</button>
-                                    <button type="button" class="ofp-sqm-preset-btn" data-sqm="1200" data-plots="2">2 Plots (1,200m²)</button>
-                                    <button type="button" class="ofp-sqm-preset-btn" data-sqm="1800" data-plots="3">3 Plots (1,800m²)</button>
-                                    <button type="button" class="ofp-sqm-preset-btn" data-sqm="4047" data-plots="6.7">1 Acre (4,047m²)</button>
-                                    <button type="button" class="ofp-sqm-preset-btn" data-sqm="10000" data-plots="16.7">1 Hectare (10,000m²)</button>
                                 </div>
                             </div>
-
-                            <!-- Condition & Furnishing Grid -->
-                            <div class="ofp-condition-furnishing-grid">
-                                <div class="ofp-field ofp-meta-picker-card">
-                                    <div class="ofp-spec-card-head">
-                                        <div class="ofp-spec-card-icon is-blue">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <h5 class="ofp-spec-card-title">Construction Condition</h5>
-                                            <p class="ofp-spec-card-sub">State of build and finishes</p>
-                                        </div>
-                                    </div>
-                                    <?php $current_condition = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_condition', true ) : ''; ?>
-                                    <select name="condition" class="ofp-select-custom">
-                                        <option value="">-- Select Condition --</option>
-                                        <option value="Newly Built" <?php selected( $current_condition, 'Newly Built' ); ?>>Newly Built (Turnkey / Mint)</option>
-                                        <option value="Fairly Used" <?php selected( $current_condition, 'Fairly Used' ); ?>>Fairly Used (Move-in Ready)</option>
-                                        <option value="Renovation Needed" <?php selected( $current_condition, 'Renovation Needed' ); ?>>Renovation Needed (Distressed / TLC)</option>
-                                        <option value="Under Construction" <?php selected( $current_condition, 'Under Construction' ); ?>>Under Construction (Ongoing Build)</option>
-                                        <option value="Off-Plan" <?php selected( $current_condition, 'Off-Plan' ); ?>>Off-Plan (Pre-construction)</option>
-                                    </select>
-                                </div>
-
-                                <div class="ofp-field ofp-meta-picker-card">
-                                    <div class="ofp-spec-card-head">
-                                        <div class="ofp-spec-card-icon is-purple">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 11v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H7v-2a2 2 0 0 0-4 0Z"/><path d="M5 18v2"/><path d="M19 18v2"/>
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <h5 class="ofp-spec-card-title">Furnishing Grade</h5>
-                                            <p class="ofp-spec-card-sub">Fixtures, appliances &amp; interiors</p>
-                                        </div>
-                                    </div>
-                                    <?php $current_furnishing = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_furnishing', true ) : ''; ?>
-                                    <select name="furnishing" class="ofp-select-custom">
-                                        <option value="">-- Select Furnishing --</option>
-                                        <option value="Furnished" <?php selected( $current_furnishing, 'Furnished' ); ?>>Fully Furnished (Turnkey)</option>
-                                        <option value="Semi-Furnished" <?php selected( $current_furnishing, 'Semi-Furnished' ); ?>>Semi-Furnished (Kitchen / Wardrobes / ACs)</option>
-                                        <option value="Unfurnished" <?php selected( $current_furnishing, 'Unfurnished' ); ?>>Unfurnished (Bare Shell)</option>
-                                    </select>
-                                </div>
-                            </div>
-
                             <!-- Dedicated Nigerian Land Breakdown Fields (visible when Land is selected) -->
                             <?php
                             $current_plots   = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_plots_count', true ) : '';
@@ -1209,24 +1115,18 @@ $prop_tabs = [
                         <!-- 4. Location & Media -->
                         <div class="ofp-form-card-section">
                             <div class="ofp-form-section-header">
-                                <div class="ofp-form-section-icon" style="background:rgba(217,119,6,0.1); color:#d97706;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
-                                </div>
-                                <div>
-                                    <h4 class="ofp-form-section-title">4. Location &amp; Media</h4>
-                                    <p class="ofp-form-section-desc">Physical address, video tour link, and high-resolution photo uploads.</p>
-                                </div>
+                                <h4 class="ofp-form-section-title">4. Location &amp; Media</h4>
                             </div>
 
                             <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
-                                <div class="ofp-field" style="grid-column:1/-1;">
+                                <div class="ofp-field">
                                     <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Location / Address <span style="color:#ef4444;">*</span></label>
                                     <input type="text" name="location_text" required placeholder="e.g. Lekki Phase 1, off Admiralty Way, Lagos"
                                            value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_location_text', true ) : '' ); ?>"
                                            style="width:100%; padding:11px 14px; border-radius:8px;">
                                 </div>
 
-                                <div class="ofp-field" style="grid-column:1/-1;">
+                                <div class="ofp-field">
                                     <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Video Tour URL <span class="ofp-hint" style="display:inline;margin:0;">(Optional)</span></label>
                                     <input type="url" name="video_url" placeholder="https://www.youtube.com/watch?v=... or Vimeo"
                                            value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_video_url', true ) : '' ); ?>"
@@ -1311,18 +1211,12 @@ $prop_tabs = [
                             <!-- 5. Features & Amenities (Scrollable + Add Custom) -->
                             <div class="ofp-form-card-section" style="display:flex; flex-direction:column;">
                                 <div class="ofp-form-section-header" style="margin-bottom:14px; padding-bottom:12px;">
-                                    <div class="ofp-form-section-icon" style="background:rgba(236,72,153,0.1); color:#ec4899;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" /></svg>
-                                    </div>
-                                    <div style="flex:1;">
-                                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-                                            <h4 class="ofp-form-section-title">5. Features &amp; Amenities</h4>
-                                            <div style="display:flex; gap:6px;">
-                                                <button type="button" class="ofp-mini-chip-btn" id="ofp-btn-amenities-select-all" title="Select All">+ All</button>
-                                                <button type="button" class="ofp-mini-chip-btn" id="ofp-btn-amenities-clear-all" title="Clear All">&times; Clear</button>
-                                            </div>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; width:100%;">
+                                        <h4 class="ofp-form-section-title">5. Features &amp; Amenities</h4>
+                                        <div style="display:flex; gap:6px;">
+                                            <button type="button" class="ofp-mini-chip-btn" id="ofp-btn-amenities-select-all" title="Select All">+ All</button>
+                                            <button type="button" class="ofp-mini-chip-btn" id="ofp-btn-amenities-clear-all" title="Clear All">&times; Clear</button>
                                         </div>
-                                        <p class="ofp-form-section-desc" style="font-size:12px;">Select on-site features or type below to add custom amenities.</p>
                                     </div>
                                 </div>
 
@@ -1369,13 +1263,7 @@ $prop_tabs = [
                             <!-- 6. Inspection & Viewing Schedule -->
                             <div class="ofp-form-card-section" style="display:flex; flex-direction:column;">
                                 <div class="ofp-form-section-header" style="margin-bottom:14px; padding-bottom:12px;">
-                                    <div class="ofp-form-section-icon" style="background:rgba(16,185,129,0.1); color:#10b981;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>
-                                    </div>
-                                    <div>
-                                        <h4 class="ofp-form-section-title">6. Inspection &amp; Viewing Schedule</h4>
-                                        <p class="ofp-form-section-desc" style="font-size:12px;">Set showing days, hours, and gate clearance notice.</p>
-                                    </div>
+                                    <h4 class="ofp-form-section-title">6. Inspection &amp; Viewing Schedule</h4>
                                 </div>
 
                                 <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr; gap:14px; flex:1;">
@@ -1406,48 +1294,25 @@ $prop_tabs = [
                             </div>
                         </div>
 
-                        <!-- 7. Status & Publishing Settings -->
-                        <div class="ofp-form-card-section">
-                            <div class="ofp-form-section-header">
-                                <div class="ofp-form-section-icon" style="background:rgba(59,130,246,0.1); color:var(--accent-blue);">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" /></svg>
-                                </div>
-                                <div>
-                                    <h4 class="ofp-form-section-title">7. Status &amp; Visibility</h4>
-                                    <p class="ofp-form-section-desc">Manage public visibility, availability status, and featured promotion.</p>
-                                </div>
-                            </div>
+                        <!-- Featured Property Checkbox (T&C style) -->
+                        <?php if ( $editing_post ) : ?>
+                            <input type="hidden" name="status" value="<?php echo esc_attr( get_post_meta( $editing_post->ID, 'ofp_status', true ) ?: 'live' ); ?>">
+                        <?php endif; ?>
 
-                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
-                                <?php if ( $editing_post ) : ?>
-                                    <div class="ofp-field">
-                                        <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Listing Status</label>
-                                        <?php $current_status = get_post_meta( $editing_post->ID, 'ofp_status', true ); ?>
-                                        <select name="status" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
-                                            <option value="pending_upload" <?php selected( $current_status, 'pending_upload' ); ?>>Pending Upload / Draft</option>
-                                            <option value="live" <?php selected( $current_status, 'live' ); ?>>Live (Publicly visible)</option>
-                                            <option value="taken" <?php selected( $current_status, 'taken' ); ?>>Taken / Sold / Rented</option>
-                                            <option value="expired" <?php selected( $current_status, 'expired' ); ?>>Expired</option>
-                                        </select>
-                                    </div>
-                                <?php endif; ?>
-
-                                <?php
-                                $can_feature = $active_plan !== 'free';
-                                $is_featured = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_is_featured', true ) : '0';
-                                ?>
-                                <div class="ofp-field" style="<?php echo $editing_post ? '' : 'grid-column:1/-1;'; ?> display:flex; flex-direction:column; justify-content:center;">
-                                    <label class="ofp-amenity-card" style="margin-top:<?php echo $editing_post ? '24px' : '0'; ?>;">
-                                        <input type="checkbox" name="is_featured" value="1"
-                                            <?php checked( $is_featured, '1' ); ?>
-                                            <?php disabled( ! $can_feature, true ); ?>>
-                                        <span style="font-weight:600;">Featured Property (Highlight at the top of directory results)</span>
-                                    </label>
-                                    <?php if ( ! $can_feature ) : ?>
-                                        <span style="color:#ef4444; font-size:12px; margin-top:4px;">(Featured promotion requires Silver or Gold plan)</span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
+                        <?php
+                        $can_feature = $active_plan !== 'free';
+                        $is_featured = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_is_featured', true ) : '0';
+                        ?>
+                        <div style="margin:20px 0 24px 0; display:flex; align-items:center; gap:8px;">
+                            <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px; font-weight:500; color:var(--text-main); user-select:none; margin:0;">
+                                <input type="checkbox" name="is_featured" value="1" style="width:16px !important; min-width:16px !important; height:16px !important; margin:0 !important; padding:0 !important; flex:0 0 16px !important; cursor:pointer; accent-color:var(--accent-blue);"
+                                    <?php checked( $is_featured, '1' ); ?>
+                                    <?php disabled( ! $can_feature, true ); ?>>
+                                <span style="line-height:1;">Featured Property</span>
+                            </label>
+                            <?php if ( ! $can_feature ) : ?>
+                                <span style="color:#ef4444; font-size:11.5px; margin-left:4px; display:inline-block;">(Requires Silver or Gold plan)</span>
+                            <?php endif; ?>
                         </div>
 
                         <!-- 7. Actions Bar -->
@@ -1545,6 +1410,8 @@ $prop_tabs = [
 
     function sync(){
         var land = form.value === 'land';
+        var roomBox = document.getElementById('ofp-rooms-spec-container');
+        if (roomBox) roomBox.style.display = land ? 'none' : '';
         ['bedrooms','bathrooms','parking','furnishing','condition'].forEach(function(n){
             var f = field(n); if (f) f.style.display = land ? 'none' : '';
         });
@@ -1610,20 +1477,41 @@ $prop_tabs = [
     }
 
     // Quick Plot Preset clickers
+    function applySqmPreset(btn, e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        var s = parseFloat(btn.dataset.sqm) || 0;
+        var p = parseFloat(btn.dataset.plots) || 0;
+        var targetSqm = document.getElementById('ofp_area_sqm_input') || sqmInput || document.querySelector('input[name="area_sqm"]');
+        if (targetSqm) {
+            targetSqm.value = s;
+            targetSqm.dataset.autoCalc = '1';
+            targetSqm.dispatchEvent(new Event('input', { bubbles: true }));
+            targetSqm.dispatchEvent(new Event('change', { bubbles: true }));
+            try { targetSqm.focus(); } catch(err){}
+        }
+        if (plotsInput) {
+            plotsInput.value = p;
+            plotsInput.dataset.autoCalc = '1';
+            plotsInput.dispatchEvent(new Event('input', { bubbles: true }));
+            plotsInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        updatePlotHint(p, s);
+    }
+
     document.querySelectorAll('.ofp-sqm-preset-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var s = parseFloat(btn.dataset.sqm) || 0;
-            var p = parseFloat(btn.dataset.plots) || 0;
-            if (sqmInput) {
-                sqmInput.value = s;
-                sqmInput.dataset.autoCalc = '1';
-            }
-            if (plotsInput) {
-                plotsInput.value = p;
-                plotsInput.dataset.autoCalc = '1';
-            }
-            updatePlotHint(p, s);
+        btn.addEventListener('click', function(e) {
+            applySqmPreset(btn, e);
         });
+    });
+
+    document.addEventListener('click', function(e) {
+        var btn = e.target && e.target.closest ? e.target.closest('.ofp-sqm-preset-btn') : null;
+        if (btn) {
+            applySqmPreset(btn, e);
+        }
     });
 
     if (plotsInput && sqmInput) {
@@ -1661,7 +1549,7 @@ $prop_tabs = [
 
 // ── Room Spec Steppers & Quick Chips Synchronizer ──
 (function(){
-    document.querySelectorAll('.ofp-spec-counter-card').forEach(function(card) {
+    document.querySelectorAll('.ofp-spec-counter-card, .ofp-room-spec-item').forEach(function(card) {
         var input = card.querySelector('.ofp-spec-number-input');
         var minusBtn = card.querySelector('.ofp-stepper-minus');
         var plusBtn = card.querySelector('.ofp-stepper-plus');
@@ -1669,6 +1557,7 @@ $prop_tabs = [
         if (!input) return;
 
         function syncChips(val) {
+            if (!chips || !chips.length) return;
             var num = parseInt(val, 10);
             chips.forEach(function(chip) {
                 var cVal = chip.dataset.val;

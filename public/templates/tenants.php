@@ -428,7 +428,20 @@ if ( $can_rent ) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Tenants & Leases', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
-    <script src="<?php echo esc_url( OFP_URL . 'assets/js/client-portal.js' ); ?>" defer></script>
+    <style>
+        .ofp-custom-select-wrapper select,
+        .ofp-custom-select-wrapper select.ofp-select,
+        .ofp-modal .ofp-custom-select-wrapper select,
+        .ofp-modal-content .ofp-custom-select-wrapper select {
+            display: none !important;
+            visibility: hidden !important;
+            position: absolute !important;
+            width: 0 !important;
+            height: 0 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+    </style>
 </head>
 <body class="ofp-portal-body">
 <?php
@@ -1108,7 +1121,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 
             <div class="ofp-field">
                 <label for="ofp-offer-prop-id"><span>Select Rental Property <span class="req">*</span></span></label>
-                <select name="property_id" id="ofp-offer-prop-id" required class="ofp-select ofp-native-select" onchange="ofpUpdateRateOptionsForProperty(this.value)">
+                <select name="property_id" id="ofp-offer-prop-id" required class="ofp-select" onchange="ofpUpdateRateOptionsForProperty(this.value)">
                     <option value="">— Choose property —</option>
                     <?php foreach ( $rental_properties as $rp ) : 
                         $is_occ = class_exists( 'OFP_Property_Rent' ) && OFP_Property_Rent::property_is_occupied( (int) $rp->id );
@@ -1125,7 +1138,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 
             <div class="ofp-field">
                 <label for="ofp-offer-rate-id"><span>Select Rent Rate Option <span class="req">*</span></span></label>
-                <select name="rent_option_id" id="ofp-offer-rate-id" required class="ofp-select ofp-native-select" onchange="ofpCalcOfferTotal()">
+                <select name="rent_option_id" id="ofp-offer-rate-id" required class="ofp-select" onchange="ofpCalcOfferTotal()">
                     <option value="" data-amount="0">— Select property first —</option>
                     <?php foreach ( $rent_options as $ro ) : ?>
                         <?php if ( ! $ro->is_active ) continue; ?>
@@ -1249,7 +1262,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 
             <div class="ofp-field">
                 <label for="ofp-rate-prop-id"><span>Rental Property <span class="req">*</span></span></label>
-                <select name="property_id" id="ofp-rate-prop-id" required class="ofp-select ofp-native-select">
+                <select name="property_id" id="ofp-rate-prop-id" required class="ofp-select">
                     <option value="">— Select property —</option>
                     <?php foreach ( $rental_properties as $rp ) : ?>
                         <option value="<?php echo esc_attr( $rp->id ); ?>"><?php echo esc_html( $rp->title ); ?></option>
@@ -1260,7 +1273,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
             <div class="ofp-field-row">
                 <div class="ofp-field">
                     <label for="ofp-rate-period-select"><span>Billing Period <span class="req">*</span></span></label>
-                    <select name="period" id="ofp-rate-period-select" class="ofp-select ofp-native-select" onchange="ofpToggleCustomDays(this.value)">
+                    <select name="period" id="ofp-rate-period-select" class="ofp-select" onchange="ofpToggleCustomDays(this.value)">
                         <option value="monthly">Monthly</option>
                         <option value="quarterly">Quarterly</option>
                         <option value="biannual">Biannual (6 Months)</option>
@@ -1310,7 +1323,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 
             <div class="ofp-field">
                 <label for="ofp-pay-lease-id"><span>Select Lease <span class="req">*</span></span></label>
-                <select name="lease_id" id="ofp-pay-lease-id" required class="ofp-select ofp-native-select" onchange="ofpUpdatePaymentMax(this)">
+                <select name="lease_id" id="ofp-pay-lease-id" required class="ofp-select" onchange="ofpUpdatePaymentMax(this)">
                     <option value="">— Select accepted lease —</option>
                     <?php foreach ( $leases as $l ) : ?>
                         <?php if ( (float) $l->balance <= 0 || ! $l->accepted_at ) continue; ?>
@@ -1498,7 +1511,16 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 <script>
 function ofpOpenModal(id) {
     var m = document.getElementById(id);
-    if (m) m.style.display = 'flex';
+    if (m) {
+        m.style.display = 'flex';
+        if (typeof initOfpCustomSelects === 'function') {
+            initOfpCustomSelects(m);
+        }
+        var propSelect = document.getElementById('ofp-offer-prop-id');
+        var rateSelect = document.getElementById('ofp-offer-rate-id');
+        if (propSelect && typeof ofpSyncCustomSelect === 'function') ofpSyncCustomSelect(propSelect);
+        if (rateSelect && typeof ofpSyncCustomSelect === 'function') ofpSyncCustomSelect(rateSelect);
+    }
 }
 
 function ofpCloseModal(id) {
@@ -1542,6 +1564,10 @@ function ofpUpdateRateOptionsForProperty(propertyId) {
         }
     });
     if (!foundFirst) select.value = '';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    if (typeof ofpSyncCustomSelect === 'function') {
+        ofpSyncCustomSelect(select);
+    }
     ofpCalcOfferTotal();
 }
 
@@ -1671,6 +1697,10 @@ function ofpRenewLease(propertyId, tenantName, tenantPhone, tenantEmail) {
     var propSelect = document.getElementById('ofp-offer-prop-id');
     if (propSelect && propertyId) {
         propSelect.value = propertyId;
+        propSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        if (typeof ofpSyncCustomSelect === 'function') {
+            ofpSyncCustomSelect(propSelect);
+        }
         ofpUpdateRateOptionsForProperty(propertyId);
     }
     var nameInput = document.getElementById('ofp-offer-tname');

@@ -510,6 +510,17 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                 <a href="<?php echo esc_url( home_url('/login') ); ?>" class="hover:text-blue-600 dark:hover:text-blue-400 py-1">Become a Partner</a>
                 <a href="<?php echo esc_url( home_url('/login') ); ?>" class="hover:text-blue-600 dark:hover:text-blue-400 py-1">Developers Hub</a>
                 <a href="<?php echo esc_url( home_url('/careers') ); ?>" class="hover:text-blue-600 dark:hover:text-blue-400 py-1">Careers</a>
+                <?php if ( ! empty( $ofp_header_social ) ) : ?>
+                    <div class="pt-2 pb-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-center gap-3 flex-wrap">
+                        <?php foreach ( $ofp_header_social as $sm ) : ?>
+                            <a href="<?php echo esc_url( $sm['url'] ); ?>" target="_blank" rel="noopener noreferrer"
+                               aria-label="<?php echo esc_attr( $sm['label'] ); ?>" title="<?php echo esc_attr( $sm['label'] ); ?>"
+                               class="p-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                <?php echo $sm['svg']; ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
                 <a href="<?php echo esc_url( home_url('/privacy-policy/') ); ?>" class="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 py-1">Privacy Policy</a>
             </div>
         </div>

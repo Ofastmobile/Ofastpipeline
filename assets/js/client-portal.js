@@ -333,12 +333,10 @@
     }
 
     // ── Theme Toggle ─────────────────────────────────────────────────────────
-    var isThemeToggling = false;
-
     function togglePortalTheme() {
-        if ( isThemeToggling ) return;
-        isThemeToggling = true;
-        setTimeout(function () { isThemeToggling = false; }, 200);
+        if ( window._ofpThemeToggling ) return;
+        window._ofpThemeToggling = true;
+        setTimeout(function () { window._ofpThemeToggling = false; }, 250);
 
         var PORTAL_KEY = 'ofp_portal_theme';
         var html = document.documentElement;
@@ -388,10 +386,12 @@
             }
         });
 
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            togglePortalTheme();
-        });
+        if ( ! btn.getAttribute('onclick') ) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                togglePortalTheme();
+            });
+        }
     }
 
     // ── User & Notification Dropdown Toggle ─────────────────────────────────
@@ -454,15 +454,19 @@
     }
 
     // ── Custom Dropdown Component ────────────────────────────────────────────
-    function initOfpCustomSelects() {
-        var selects = document.querySelectorAll('.ofp-select');
+    function initOfpCustomSelects(root) {
+        var base = root || document;
+        var selects = base.querySelectorAll('.ofp-select');
         selects.forEach(function(select) {
-            if (select.closest('.ofp-custom-select-wrapper') || select.closest('.ofp-modal') || select.closest('.ofp-modal-backdrop') || select.classList.contains('ofp-native-select')) return;
+            if (select.closest('.ofp-custom-select-wrapper') || select.classList.contains('ofp-native-select')) return;
 
             var wrapper = document.createElement('div');
             wrapper.className = 'ofp-custom-select-wrapper';
             select.parentNode.insertBefore(wrapper, select);
             wrapper.appendChild(select);
+            select.style.setProperty('display', 'none', 'important');
+            select.setAttribute('aria-hidden', 'true');
+            select.tabIndex = -1;
 
             var trigger = document.createElement('div');
             trigger.className = 'ofp-custom-select-trigger';
@@ -479,6 +483,7 @@
                 var optDiv = document.createElement('div');
                 optDiv.className = 'ofp-custom-select-option';
                 if (option.selected) optDiv.classList.add('selected');
+                if (option.style.display === 'none') optDiv.style.display = 'none';
                 optDiv.textContent = option.text;
                 optDiv.dataset.value = option.value;
                 optDiv.dataset.index = index;
@@ -510,19 +515,49 @@
                 var newSelected = select.options[select.selectedIndex];
                 if (newSelected) {
                     trigger.textContent = newSelected.text;
-                    optionsContainer.querySelectorAll('.ofp-custom-select-option').forEach(function(el) {
-                        el.classList.toggle('selected', el.dataset.index == select.selectedIndex);
-                    });
                 }
+                optionsContainer.querySelectorAll('.ofp-custom-select-option').forEach(function(el) {
+                    var idx = parseInt(el.dataset.index, 10);
+                    var opt = select.options[idx];
+                    if (opt) {
+                        el.style.display = (opt.style.display === 'none' || opt.hidden) ? 'none' : '';
+                        el.classList.toggle('selected', idx == select.selectedIndex);
+                    }
+                });
             });
         });
 
-        document.addEventListener('click', function() {
-            document.querySelectorAll('.ofp-custom-select-wrapper.open').forEach(function(el) {
-                el.classList.remove('open');
+        if (!window.__ofpCustomSelectClickBound) {
+            window.__ofpCustomSelectClickBound = true;
+            document.addEventListener('click', function() {
+                document.querySelectorAll('.ofp-custom-select-wrapper.open').forEach(function(el) {
+                    el.classList.remove('open');
+                });
             });
-        });
+        }
     }
+
+    window.ofpSyncCustomSelect = function(select) {
+        if (!select) return;
+        var wrapper = select.closest('.ofp-custom-select-wrapper');
+        if (!wrapper) return;
+        var trigger = wrapper.querySelector('.ofp-custom-select-trigger');
+        var optionsContainer = wrapper.querySelector('.ofp-custom-select-options');
+        var selectedOpt = select.options[select.selectedIndex];
+        if (trigger) {
+            trigger.textContent = selectedOpt ? selectedOpt.text : 'Select an option';
+        }
+        if (optionsContainer) {
+            optionsContainer.querySelectorAll('.ofp-custom-select-option').forEach(function(el) {
+                var idx = parseInt(el.dataset.index, 10);
+                var opt = select.options[idx];
+                if (opt) {
+                    el.style.display = (opt.style.display === 'none' || opt.hidden) ? 'none' : '';
+                    el.classList.toggle('selected', idx == select.selectedIndex);
+                }
+            });
+        }
+    };
 
     window.initOfpCustomSelects = initOfpCustomSelects;
 

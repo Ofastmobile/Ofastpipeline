@@ -17,12 +17,14 @@ $clients = $filter === 'trash'
     : ( $filter ? OFP_Client::all( $filter ) : OFP_Client::all() );
 
 $trash_count = count( OFP_Client::get_trashed() );
+$deactivated_count = OFP_Client::count( 'deactivated' );
 
 $status_labels = [
     'active'         => '<span class="ofp-badge ofp-badge-green">Active</span>',
     'pending_review' => '<span class="ofp-badge ofp-badge-yellow">Pending Review</span>',
     'grace'          => '<span class="ofp-badge ofp-badge-orange">Grace Period</span>',
     'suspended'      => '<span class="ofp-badge ofp-badge-red">Suspended</span>',
+    'deactivated'    => '<span class="ofp-badge ofp-badge-red" style="background:#fee2e2;color:#991b1b;border:1px solid #f87171;">⚠️ Deactivated</span>',
     'cancelled'      => '<span class="ofp-badge ofp-badge-grey">Cancelled</span>',
     'trash'          => '<span class="ofp-badge ofp-badge-grey">🗑 Trash</span>',
 ];
@@ -320,6 +322,31 @@ $wl_post = esc_url( admin_url( 'admin-post.php' ) );
         </div>
     <?php endif; ?>
 
+    <?php
+    $extra_data = ! empty( $client->profile_extra ) ? json_decode( $client->profile_extra, true ) : [];
+    if ( $client->status === 'deactivated' ) :
+        $deact_time   = $extra_data['deactivated_at'] ?? '';
+        $deact_reason = $extra_data['deactivated_reason'] ?? 'Not specified';
+    ?>
+        <div class="ofp-alert ofp-alert-warning" style="margin-bottom:16px; background:#fff1f2; border:1px solid #fecdd3; color:#9f1239; border-left:4px solid #e11d48; border-radius:6px; padding:14px 18px;">
+            <strong style="font-size:14px; display:flex; align-items:center; gap:6px;">⚠️ Account Self-Deactivated by Agent</strong>
+            <p style="margin:6px 0 0; font-size:13px; color:#881337; line-height:1.5;">
+                This agent voluntarily deactivated their account<?php echo $deact_time ? ' on <strong>' . esc_html( wp_date( 'M j, Y g:i a', strtotime( $deact_time ) ) ) . '</strong>' : ''; ?>.
+                <br><strong>Reason provided:</strong> <em><?php echo esc_html( $deact_reason ); ?></em>
+                <br>Public agent profile and property listings are currently hidden from buyers. Click <strong>Reactivate</strong> below to restore active access.
+            </p>
+        </div>
+    <?php elseif ( $client->status === 'trash' && ! empty( $extra_data['trash_reason'] ) && $extra_data['trash_reason'] === 'client_self_deleted' ) : ?>
+        <div class="ofp-alert ofp-alert-warning" style="margin-bottom:16px; background:#fff1f2; border:1px solid #fecdd3; color:#9f1239; border-left:4px solid #e11d48; border-radius:6px; padding:14px 18px;">
+            <strong style="font-size:14px; display:flex; align-items:center; gap:6px;">🗑 Account Deletion Initiated by Agent</strong>
+            <p style="margin:6px 0 0; font-size:13px; color:#881337; line-height:1.5;">
+                The agent requested account deletion<?php echo ! empty( $extra_data['deleted_at'] ) ? ' on <strong>' . esc_html( wp_date( 'M j, Y g:i a', strtotime( $extra_data['deleted_at'] ) ) ) . '</strong>' : ''; ?>.
+                <br><strong>Reason provided:</strong> <em><?php echo esc_html( $extra_data['deletion_reason'] ?? 'Not specified' ); ?></em>
+                <br>This account is currently in Trash. It will be permanently auto-purged after 30 days unless restored.
+            </p>
+        </div>
+    <?php endif; ?>
+
     <div class="ofp-detail-grid">
         <div><strong>Client ID:</strong> <code><?php echo esc_html( $client->id ); ?></code></div>
         <div style="grid-column:1/-1;"><strong>Lead Capture Endpoint (API):</strong> <code><?php echo esc_html( home_url( '/wp-json/ofp/v1/capture-lead' ) ); ?></code></div>
@@ -430,7 +457,7 @@ $wl_post = esc_url( admin_url( 'admin-post.php' ) );
                 <input type="hidden" name="status" value="suspended">
                 <button type="submit" class="button" onclick="return confirm('Suspend this client?')">Suspend</button>
             </form>
-        <?php elseif ( in_array( $client->status, ['suspended','grace','cancelled'], true ) ) : ?>
+        <?php elseif ( in_array( $client->status, ['suspended','grace','cancelled','deactivated'], true ) ) : ?>
             <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;">
                 <?php wp_nonce_field( 'ofp_toggle_client' ); ?>
                 <input type="hidden" name="action" value="ofp_toggle_client">
@@ -651,6 +678,38 @@ $wl_post = esc_url( admin_url( 'admin-post.php' ) );
            class="button button-primary">+ Add New Client</a>
     </div>
 
+    <?php
+    global $wpdb;
+    $self_deact_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}ofp_clients WHERE status = 'deactivated'" );
+    $self_del_count   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}ofp_clients WHERE status = 'trash' AND profile_extra LIKE '%client_self_deleted%'" );
+    if ( $self_deact_count > 0 || $self_del_count > 0 ) :
+    ?>
+        <div class="notice notice-warning" style="display:flex; align-items:center; justify-content:space-between; padding:12px 18px; margin:16px 0; border-left:4px solid #e11d48; background:#fff1f2; border-radius:6px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:20px;">⚠️</span>
+                <div>
+                    <strong style="color:#9f1239; font-size:13.5px;">Agent Attention Alerts:</strong>
+                    <span style="color:#881337; font-size:13px; margin-left:6px;">
+                        <?php if ( $self_deact_count > 0 ) : ?>
+                            <strong><?php echo esc_html( $self_deact_count ); ?></strong> agent account(s) self-deactivated.
+                        <?php endif; ?>
+                        <?php if ( $self_del_count > 0 ) : ?>
+                            <strong><?php echo esc_html( $self_del_count ); ?></strong> agent account(s) requested deletion (in Trash).
+                        <?php endif; ?>
+                    </span>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <?php if ( $self_deact_count > 0 ) : ?>
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-clients&filter=deactivated' ) ); ?>" class="button button-small" style="color:#9f1239; border-color:#fecdd3;">View Deactivated</a>
+                <?php endif; ?>
+                <?php if ( $self_del_count > 0 ) : ?>
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-clients&filter=trash' ) ); ?>" class="button button-small" style="color:#9f1239; border-color:#fecdd3;">View Trash</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <div class="ofp-filter-tabs">
         <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-clients' ) ); ?>"
            class="<?php echo ! $filter ? 'active' : ''; ?>">All</a>
@@ -660,9 +719,17 @@ $wl_post = esc_url( admin_url( 'admin-post.php' ) );
            class="<?php echo $filter === 'pending_review' ? 'active' : ''; ?>">Pending Review</a>
         <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-clients&filter=suspended' ) ); ?>"
            class="<?php echo $filter === 'suspended' ? 'active' : ''; ?>">Suspended</a>
+        <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-clients&filter=deactivated' ) ); ?>"
+           class="<?php echo $filter === 'deactivated' ? 'active' : ''; ?>">⚠️ Deactivated<?php echo $deactivated_count ? ' (' . esc_html( $deactivated_count ) . ')' : ''; ?></a>
         <a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-clients&filter=trash' ) ); ?>"
            class="<?php echo $filter === 'trash' ? 'active' : ''; ?>">🗑 Trash<?php echo $trash_count ? ' (' . esc_html( $trash_count ) . ')' : ''; ?></a>
     </div>
+
+    <?php if ( $filter === 'deactivated' ) : ?>
+        <div class="ofp-info-box" style="background:#fff1f2; border:1px solid #fecdd3; color:#881337;">
+            These agent accounts were voluntarily deactivated from their profile Danger Zone. Public agent profiles and listings are paused. You can view any client record below and click <strong>Reactivate</strong> to restore full access.
+        </div>
+    <?php endif; ?>
 
     <?php if ( $filter === 'trash' && $trash_count > 0 ) : ?>
         <div class="ofp-info-box">
@@ -695,6 +762,14 @@ $wl_post = esc_url( admin_url( 'admin-post.php' ) );
                             </a>
                             <?php if ( ! empty( $c->is_verified ) ) : ?>
                                 <span style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-size:10.5px; padding:2px 7px; border-radius:4px; font-weight:600; margin-left:6px; display:inline-flex; align-items:center; gap:3px;" title="CAC &amp; Identity Verified">✓ Verified</span>
+                            <?php endif; ?>
+                            <?php 
+                            $c_extra = ! empty( $c->profile_extra ) ? json_decode( $c->profile_extra, true ) : [];
+                            if ( $filter === 'trash' && ! empty( $c_extra['trash_reason'] ) && $c_extra['trash_reason'] === 'client_self_deleted' ) : 
+                            ?>
+                                <span style="background:#fee2e2; color:#991b1b; border:1px solid #fecdd3; font-size:10.5px; padding:2px 7px; border-radius:4px; font-weight:600; margin-left:6px; display:inline-flex; align-items:center; gap:3px;" title="Deleted by agent from profile">🗑 Self-Deleted</span>
+                            <?php elseif ( $c->status === 'deactivated' ) : ?>
+                                <span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-size:10.5px; padding:2px 7px; border-radius:4px; font-weight:600; margin-left:6px; display:inline-flex; align-items:center; gap:3px;" title="Deactivated by agent">⚠️ Self-Deactivated</span>
                             <?php endif; ?>
                             <br>
                             <small><?php echo esc_html( $c->email ); ?></small>

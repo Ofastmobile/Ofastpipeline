@@ -1,0 +1,373 @@
+/**
+ * OFast Pipeline — Dashboard Guided Onboarding Tour
+ * Sleek, modern, dark & light theme compatible spotlight tour.
+ */
+
+/* ── Tour Spotlight Overlay ────────────────────────────────────────────── */
+.ofp-tour-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99990;
+    pointer-events: auto;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
+}
+
+.ofp-tour-overlay.is-active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Semi-transparent backdrop with cut-out */
+.ofp-tour-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 15, 29, 0.78);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    transition: clip-path 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="light"] .ofp-tour-backdrop,
+html[data-theme="light"] .ofp-tour-backdrop {
+    background: rgba(15, 23, 42, 0.65);
+}
+
+/* Active Highlight Ring on Target Element */
+.ofp-tour-highlight {
+    position: fixed;
+    z-index: 99992;
+    border-radius: 12px;
+    box-shadow: 0 0 0 3px #3b82f6, 0 0 25px rgba(59, 130, 246, 0.55), 0 0 0 99999px rgba(10, 15, 29, 0.78);
+    pointer-events: none;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="light"] .ofp-tour-highlight,
+html[data-theme="light"] .ofp-tour-highlight {
+    box-shadow: 0 0 0 3px #2563eb, 0 0 25px rgba(37, 99, 235, 0.45), 0 0 0 99999px rgba(15, 23, 42, 0.65);
+}
+
+/* ── Tour Tooltip Popover Card ─────────────────────────────────────────── */
+.ofp-tour-card {
+    position: fixed;
+    z-index: 99995;
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    background: #111827;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 22px 24px;
+    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    color: #f3f4f6;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+    transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: auto;
+}
+
+[data-theme="light"] .ofp-tour-card,
+html[data-theme="light"] .ofp-tour-card {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    color: #111827;
+}
+
+.ofp-tour-card.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* Modal variant (centered, no target highlight) */
+.ofp-tour-card.is-modal {
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) scale(0.96);
+    width: 440px;
+}
+
+.ofp-tour-card.is-modal.is-visible {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* Card Header */
+.ofp-tour-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.ofp-tour-step-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+[data-theme="light"] .ofp-tour-step-pill,
+html[data-theme="light"] .ofp-tour-step-pill {
+    background: rgba(37, 99, 235, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.25);
+    color: #2563eb;
+}
+
+.ofp-tour-close-btn {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: all 0.2s ease;
+}
+
+.ofp-tour-close-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] .ofp-tour-close-btn:hover,
+html[data-theme="light"] .ofp-tour-close-btn:hover {
+    color: #111827;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+/* Title & Description */
+.ofp-tour-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+    line-height: 1.35;
+}
+
+[data-theme="light"] .ofp-tour-title,
+html[data-theme="light"] .ofp-tour-title {
+    color: #0f172a;
+}
+
+.ofp-tour-desc {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #9ca3af;
+    margin: 0 0 20px 0;
+}
+
+[data-theme="light"] .ofp-tour-desc,
+html[data-theme="light"] .ofp-tour-desc {
+    color: #4b5563;
+}
+
+/* Progress Dots & Navigation Footer */
+.ofp-tour-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .ofp-tour-footer,
+html[data-theme="light"] .ofp-tour-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.ofp-tour-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ofp-tour-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.2);
+    transition: all 0.25s ease;
+}
+
+[data-theme="light"] .ofp-tour-dot,
+html[data-theme="light"] .ofp-tour-dot {
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.ofp-tour-dot.is-active {
+    width: 18px;
+    background: #3b82f6;
+}
+
+.ofp-tour-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ofp-tour-btn-skip {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.ofp-tour-btn-skip:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+[data-theme="light"] .ofp-tour-btn-skip:hover,
+html[data-theme="light"] .ofp-tour-btn-skip:hover {
+    color: #111827;
+}
+
+.ofp-tour-btn-prev {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #d1d5db;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ofp-tour-btn-prev:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+[data-theme="light"] .ofp-tour-btn-prev,
+html[data-theme="light"] .ofp-tour-btn-prev {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+}
+
+[data-theme="light"] .ofp-tour-btn-prev:hover,
+html[data-theme="light"] .ofp-tour-btn-prev:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.ofp-tour-btn-next {
+    background: #3b82f6;
+    border: 1px solid #2563eb;
+    color: #ffffff;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.ofp-tour-btn-next:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.45);
+}
+
+.ofp-tour-btn-finish {
+    background: #10b981;
+    border: 1px solid #059669;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.ofp-tour-btn-finish:hover {
+    background: #059669;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.45);
+}
+
+/* ── Tour Trigger Button in Header / Dashboard ─────────────────────────── */
+.ofp-tour-trigger-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+    padding: 6px 13px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.ofp-tour-trigger-btn:hover {
+    background: rgba(59, 130, 246, 0.22);
+    border-color: #3b82f6;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+[data-theme="light"] .ofp-tour-trigger-btn,
+html[data-theme="light"] .ofp-tour-trigger-btn {
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.25);
+    color: #2563eb;
+}
+
+[data-theme="light"] .ofp-tour-trigger-btn:hover,
+html[data-theme="light"] .ofp-tour-trigger-btn:hover {
+    background: rgba(37, 99, 235, 0.15);
+    color: #1d4ed8;
+}
+
+/* ── Mobile responsiveness ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .ofp-tour-card {
+        width: calc(100vw - 24px) !important;
+        left: 12px !important;
+        right: 12px !important;
+        bottom: 16px !important;
+        top: auto !important;
+        transform: translateY(10px) !important;
+        border-radius: 14px;
+        padding: 18px 20px;
+    }
+
+    .ofp-tour-card.is-visible {
+        transform: translateY(0) !important;
+    }
+
+    .ofp-tour-card.is-modal {
+        top: auto !important;
+        bottom: 16px !important;
+        left: 12px !important;
+        transform: translateY(10px) !important;
+    }
+
+    .ofp-tour-card.is-modal.is-visible {
+        transform: translateY(0) !important;
+    }
+}
+

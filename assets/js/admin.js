@@ -41,6 +41,7 @@
             var $wrapper = $('<div class="ofp-custom-select-wrapper"></div>');
             $select.wrap($wrapper);
             $wrapper = $select.parent(); // Get the actual wrapper in DOM
+            $select.css('display', 'none').attr('aria-hidden', 'true');
 
             var selectedOption = $select.find('option:selected');
             var triggerText = selectedOption.length ? selectedOption.text() : 'Select an option';

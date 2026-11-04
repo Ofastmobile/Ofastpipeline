@@ -28,6 +28,12 @@ if ( isset( $_GET['logged_out'] ) && $_GET['logged_out'] === '1' ) {
 if ( isset( $_GET['suspended'] ) && $_GET['suspended'] === '1' ) {
     $error = 'Your account has been suspended. Please contact support.';
 }
+if ( isset( $_GET['deactivated'] ) && $_GET['deactivated'] === '1' ) {
+    $error = 'Your account has been deactivated. Please contact an administrator if you wish to reactivate.';
+}
+if ( isset( $_GET['deleted'] ) && $_GET['deleted'] === '1' ) {
+    $error = 'Your account has been moved to Trash and scheduled for deletion.';
+}
 if ( isset( $_GET['session_expired'] ) && $_GET['session_expired'] === '1' ) {
     $error = 'Your session has expired. Please log in again.';
 }

@@ -491,6 +491,20 @@ include OFP_PATH . 'public/templates/partials/nav.php';
         </div>
     <?php endif; endif; ?>
 
+    <!-- ── Dashboard Quick Toolbar ────────────────────────────────────── -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <h2 style="font-size:16px; font-weight:700; color:var(--text-main); margin:0;">Agency Overview</h2>
+            <span style="font-size:12px; color:var(--text-muted);">&bull; Real-time Performance</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <button type="button" class="ofp-tour-trigger-btn" onclick="if(window.ofpStartDashboardTour){window.ofpStartDashboardTour();}return false;" title="Take Guided Dashboard Tour">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689A1.125 1.125 0 003 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/></svg>
+                <span>Take Dashboard Tour</span>
+            </button>
+        </div>
+    </div>
+
     <!-- ── 1. ZENTRA KPI STATS ROW ────────────────────────────────────── -->
     <div class="ofp-zentra-kpi-grid">
         <!-- Card 1: Portfolio Value (Dark Gradient Hero) -->

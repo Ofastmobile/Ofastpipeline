@@ -899,6 +899,142 @@ class OFP_Mailer {
     }
 
     /**
+     * Send an urgent alert to the platform administrator when a client deactivates their account.
+     *
+     * @param object $client Full wp_ofp_clients row.
+     * @param string $reason Optional reason specified by the client.
+     * @return bool
+     */
+    public static function send_admin_deactivation_alert( object $client, string $reason = '' ): bool {
+        $admin_email = get_option( 'admin_email' );
+        if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
+            return false;
+        }
+
+        $admin_client_url = admin_url( 'admin.php?page=ofp-clients&client_id=' . $client->id );
+        $time_str         = wp_date( 'M j, Y g:i a' );
+        $reason_text      = ! empty( $reason ) ? $reason : 'No reason provided';
+
+        $body = '
+            <h2 style="color:#d97706;margin-top:0;">⚠️ Agent Account Deactivated</h2>
+            <p>An agent has self-deactivated their account from their profile page. Their public showcase page and marketplace listings have been suspended.</p>
+
+            <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px 0;color:#6b7280;width:140px;"><strong>Business Name:</strong></td>
+                    <td style="padding:8px 0;color:#111827;"><strong>' . esc_html( $client->business_name ) . '</strong></td>
+                </tr>
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px 0;color:#6b7280;"><strong>Owner Name:</strong></td>
+                    <td style="padding:8px 0;color:#111827;">' . esc_html( $client->owner_name ) . '</td>
+                </tr>
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px 0;color:#6b7280;"><strong>Email:</strong></td>
+                    <td style="padding:8px 0;color:#111827;">' . esc_html( $client->email ) . '</td>
+                </tr>
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px 0;color:#6b7280;"><strong>Phone:</strong></td>
+                    <td style="padding:8px 0;color:#111827;">' . esc_html( $client->phone ) . '</td>
+                </tr>
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px 0;color:#6b7280;"><strong>Deactivation Time:</strong></td>
+                    <td style="padding:8px 0;color:#111827;">' . esc_html( $time_str ) . '</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px 0;color:#6b7280;"><strong>Reason:</strong></td>
+                    <td style="padding:8px 0;color:#d97706;font-weight:600;">' . esc_html( $reason_text ) . '</td>
+                </tr>
+            </table>
+
+            <p style="margin-top:24px;">
+                <a href="' . esc_url( $admin_client_url ) . '"
+                   style="display:inline-block;background:#d97706;color:#ffffff;
+                          padding:12px 24px;border-radius:6px;text-decoration:none;
+                          font-weight:600;">
+                    Manage / Reactivate Client in WP Admin &rarr;
+                </a>
+            </p>
+        ';
+
+        return self::send(
+            $admin_email,
+            'Platform Administrator',
+            '⚠️ [Alert] Agent Account Deactivated: ' . $client->business_name,
+            $body
+        );
+    }
+
+    /**
+     * Send a critical alert to the platform administrator when a client deletes their account.
+     *
+     * @param object $client Full wp_ofp_clients row.
+     * @param string $reason Optional reason specified by the client.
+     * @return bool
+     */
+    public static function send_admin_deletion_alert( object $client, string $reason = '' ): bool {
+        $admin_email = get_option( 'admin_email' );
+        if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
+            return false;
+        }
+
+        $admin_trash_url = admin_url( 'admin.php?page=ofp-clients&filter=trash' );
+        $time_str        = wp_date( 'M j, Y g:i a' );
+        $reason_text     = ! empty( $reason ) ? $reason : 'No reason provided';
+
+        $body = '
+            <h2 style="color:#dc2626;margin-top:0;">🗑 Agent Account Deleted by User (Moved to Trash)</h2>
+            <p>An agent has initiated permanent account deletion from their profile Danger Zone. The account has been moved to <strong>Trash</strong>, active trigger queues were cancelled, and all public listings unpublished.</p>
+
+            <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px 0;color:#6b7280;width:140px;"><strong>Business Name:</strong></td>
+                    <td style="padding:8px 0;color:#111827;"><strong>' . esc_html( $client->business_name ) . '</strong></td>
+                </tr>
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px 0;color:#6b7280;"><strong>Owner Name:</strong></td>
+                    <td style="padding:8px 0;color:#111827;">' . esc_html( $client->owner_name ) . '</td>
+                </tr>
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px 0;color:#6b7280;"><strong>Email:</strong></td>
+                    <td style="padding:8px 0;color:#111827;">' . esc_html( $client->email ) . '</td>
+                </tr>
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px 0;color:#6b7280;"><strong>Phone:</strong></td>
+                    <td style="padding:8px 0;color:#111827;">' . esc_html( $client->phone ) . '</td>
+                </tr>
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px 0;color:#6b7280;"><strong>Deletion Time:</strong></td>
+                    <td style="padding:8px 0;color:#111827;">' . esc_html( $time_str ) . '</td>
+                </tr>
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px 0;color:#6b7280;"><strong>Retention Policy:</strong></td>
+                    <td style="padding:8px 0;color:#111827;">Kept in Trash for 30 days before permanent auto-purge.</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px 0;color:#6b7280;"><strong>Reason:</strong></td>
+                    <td style="padding:8px 0;color:#dc2626;font-weight:600;">' . esc_html( $reason_text ) . '</td>
+                </tr>
+            </table>
+
+            <p style="margin-top:24px;">
+                <a href="' . esc_url( $admin_trash_url ) . '"
+                   style="display:inline-block;background:#dc2626;color:#ffffff;
+                          padding:12px 24px;border-radius:6px;text-decoration:none;
+                          font-weight:600;">
+                    Review Trashed Clients in WP Admin &rarr;
+                </a>
+            </p>
+        ';
+
+        return self::send(
+            $admin_email,
+            'Platform Administrator',
+            '🚨 [Action Notice] Agent Account Deleted by User: ' . $client->business_name,
+            $body
+        );
+    }
+
+    /**
      * Send a monthly report download link to a client.
      *
      * Called by OFP_CSV::generate_monthly_report() after CSVs are generated.

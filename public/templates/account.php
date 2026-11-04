@@ -75,6 +75,125 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
             wp_safe_redirect( home_url( '/login?session_expired=1' ) );
             exit;
         }
+    } elseif ( isset( $_POST['deactivate_account'] ) ) {
+        $deact_pw = (string) wp_unslash( $_POST['deactivate_password'] ?? '' );
+        $reason   = sanitize_text_field( wp_unslash( $_POST['deactivation_reason'] ?? '' ) );
+
+        if ( empty( $deact_pw ) || ! password_verify( $deact_pw, $client->password ) ) {
+            $error = 'Your current password is incorrect. Account was not deactivated.';
+        } else {
+            // 1. Update client status to 'deactivated'
+            $current_extra = ! empty( $client->profile_extra ) ? ( json_decode( $client->profile_extra, true ) ?: [] ) : [];
+            $current_extra['deactivated_at']     = current_time( 'mysql' );
+            $current_extra['deactivated_reason'] = $reason ?: 'Voluntary agent pause';
+            $current_extra['deactivated_by']     = 'client';
+
+            $wpdb->update(
+                $wpdb->prefix . 'ofp_clients',
+                [
+                    'status'        => 'deactivated',
+                    'profile_extra' => wp_json_encode( $current_extra ),
+                    'updated_at'    => current_time( 'mysql' ),
+                ],
+                [ 'id' => $client->id ]
+            );
+
+            // 2. Draft active properties & save pre-deactivation status
+            $client_prop_ids = $wpdb->get_col( $wpdb->prepare(
+                "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = 'ofp_client_id' AND meta_value = %d",
+                $client->id
+            ) );
+            if ( ! empty( $client_prop_ids ) ) {
+                foreach ( $client_prop_ids as $pid ) {
+                    if ( get_post_status( $pid ) === 'publish' ) {
+                        update_post_meta( $pid, '_ofp_pre_deactivate_status', 'publish' );
+                        wp_update_post( [ 'ID' => (int) $pid, 'post_status' => 'draft' ] );
+                    }
+                }
+            }
+
+            // 3. Cancel queued trigger automation
+            if ( class_exists( 'OFP_Queue' ) ) {
+                OFP_Queue::cancel_for_client( (int) $client->id );
+            }
+
+            // 4. Log the activity for admin audit
+            if ( class_exists( 'OFP_Logger' ) ) {
+                OFP_Logger::log( 'Client self-deactivated account', (int) $client->id, [
+                    'reason'        => $reason,
+                    'business_name' => $client->business_name,
+                    'email'         => $client->email,
+                ] );
+            }
+
+            // 5. Send high-priority alert email to platform administrator
+            if ( class_exists( 'OFP_Mailer' ) ) {
+                OFP_Mailer::send_admin_deactivation_alert( $client, $reason );
+            }
+
+            // 6. Terminate session & redirect to login with deactivated banner
+            OFP_Auth::logout();
+            wp_safe_redirect( home_url( '/login?deactivated=1' ) );
+            exit;
+        }
+    } elseif ( isset( $_POST['delete_account'] ) ) {
+        $del_pw      = (string) wp_unslash( $_POST['delete_password'] ?? '' );
+        $confirm_txt = strtoupper( trim( (string) wp_unslash( $_POST['delete_confirm_text'] ?? '' ) ) );
+        $reason      = sanitize_text_field( wp_unslash( $_POST['deletion_reason'] ?? '' ) );
+
+        if ( $confirm_txt !== 'DELETE' ) {
+            $error = 'Please type DELETE in capital letters to confirm account deletion.';
+        } elseif ( empty( $del_pw ) || ! password_verify( $del_pw, $client->password ) ) {
+            $error = 'Your current password is incorrect. Account deletion aborted.';
+        } else {
+            // 1. Stamp profile_extra with deletion reason before moving to trash
+            $current_extra = ! empty( $client->profile_extra ) ? ( json_decode( $client->profile_extra, true ) ?: [] ) : [];
+            $current_extra['trash_reason']    = 'client_self_deleted';
+            $current_extra['deleted_at']      = current_time( 'mysql' );
+            $current_extra['deletion_reason'] = $reason ?: 'Agent requested permanent closure';
+            $current_extra['deleted_by']      = 'client';
+
+            $wpdb->update(
+                $wpdb->prefix . 'ofp_clients',
+                [
+                    'profile_extra' => wp_json_encode( $current_extra ),
+                ],
+                [ 'id' => $client->id ]
+            );
+
+            // 2. Draft all client properties
+            $client_prop_ids = $wpdb->get_col( $wpdb->prepare(
+                "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = 'ofp_client_id' AND meta_value = %d",
+                $client->id
+            ) );
+            if ( ! empty( $client_prop_ids ) ) {
+                foreach ( $client_prop_ids as $pid ) {
+                    wp_update_post( [ 'ID' => (int) $pid, 'post_status' => 'draft' ] );
+                }
+            }
+
+            // 3. Move client to trash (cancels queue triggers, sets status='trash', trashed_at=now)
+            OFP_Client::trash( (int) $client->id );
+
+            // 4. Log the deletion event for admin audit
+            if ( class_exists( 'OFP_Logger' ) ) {
+                OFP_Logger::log( 'Client self-deleted account (moved to trash)', (int) $client->id, [
+                    'reason'        => $reason,
+                    'business_name' => $client->business_name,
+                    'email'         => $client->email,
+                ] );
+            }
+
+            // 5. Send critical alert email to platform administrator
+            if ( class_exists( 'OFP_Mailer' ) ) {
+                OFP_Mailer::send_admin_deletion_alert( $client, $reason );
+            }
+
+            // 6. Terminate session & redirect to login with deleted banner
+            OFP_Auth::logout();
+            wp_safe_redirect( home_url( '/login?deleted=1' ) );
+            exit;
+        }
     } elseif ( isset( $_POST['update_profile'] ) ) {
         $slug          = sanitize_title( $_POST['profile_slug'] ?? '' );
         $bio           = sanitize_textarea_field( $_POST['bio'] ?? '' );
@@ -1031,6 +1150,62 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
         </div> <!-- /.ofp-bank-card-section -->
     </div> <!-- /.ofp-branding-bank-split-grid -->
 
+    <!-- ── Danger Zone: 2-Column Split (Deactivate & Delete) ───────────── -->
+    <div class="ofp-danger-zone-wrap">
+        <div class="ofp-danger-zone-header">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div class="ofp-danger-icon-badge">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                </div>
+                <div>
+                    <h3 class="ofp-danger-title">Danger Zone</h3>
+                    <p class="ofp-danger-subtitle">Manage high-impact account controls and lifecycle state</p>
+                </div>
+            </div>
+            <span class="ofp-danger-pill">Restricted Actions</span>
+        </div>
+
+        <div class="ofp-danger-grid">
+            <!-- Column 1: Deactivate Account -->
+            <div class="ofp-profile-card ofp-danger-card ofp-danger-card-deactivate">
+                <div class="ofp-danger-card-minimal-left">
+                    <div class="ofp-danger-action-icon amber">
+                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <div>
+                        <h4 class="ofp-danger-action-title">Deactivate Account</h4>
+                        <p class="ofp-danger-minimal-sub">Temporarily pause public profile &amp; property listings</p>
+                    </div>
+                </div>
+                <div class="ofp-danger-card-minimal-right">
+                    <button type="button" class="ofp-danger-btn ofp-danger-btn-deactivate" onclick="openDeactivateModal()">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span>Deactivate</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Column 2: Delete Account -->
+            <div class="ofp-profile-card ofp-danger-card ofp-danger-card-delete">
+                <div class="ofp-danger-card-minimal-left">
+                    <div class="ofp-danger-action-icon red">
+                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </div>
+                    <div>
+                        <h4 class="ofp-danger-action-title">Delete Account</h4>
+                        <p class="ofp-danger-minimal-sub">Permanently close agency records &amp; move to trash</p>
+                    </div>
+                </div>
+                <div class="ofp-danger-card-minimal-right">
+                    <button type="button" class="ofp-danger-btn ofp-danger-btn-delete" onclick="openDeleteModal()">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span>Delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div> <!-- /.ofp-profile-page-wrap -->
 
 <!-- ── Hidden form for Instant Logo/Avatar upload ────────────────────────── -->
@@ -1584,6 +1759,183 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
     </div> <!-- /.ofp-modal-window -->
 </div> <!-- /.ofp-modal-backdrop -->
 
+<!-- ── Deactivate Account Modal ─────────────────────────────────────────── -->
+<div class="ofp-modal-backdrop" id="ofp-deactivate-modal-backdrop" aria-hidden="true" style="display:none;">
+    <div class="ofp-modal-window ofp-danger-modal-window" style="max-width: 540px;" role="dialog" aria-modal="true" aria-labelledby="ofp-deactivate-modal-title">
+        <div class="ofp-modal-header" style="border-bottom: 1px solid rgba(245, 158, 11, 0.25); padding: 18px 24px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:36px; height:36px; border-radius:10px; background:rgba(245, 158, 11, 0.12); color:#f59e0b; display:flex; align-items:center; justify-content:center; border:1px solid rgba(245, 158, 11, 0.25); flex-shrink:0;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                    <h3 class="ofp-modal-title" id="ofp-deactivate-modal-title" style="margin:0; font-size:16px;">Deactivate Agency Account</h3>
+                    <p style="margin:2px 0 0; font-size:12px; color:var(--prof-text-sub);">Temporarily pause your agency profile &amp; listings</p>
+                </div>
+            </div>
+            <button type="button" class="ofp-modal-close-btn" onclick="closeDeactivateModal()" aria-label="Close">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+
+        <form method="POST" action="" onsubmit="return handleDeactivateSubmit(this);">
+            <?php wp_nonce_field( 'ofp_account_' . $client->id, 'ofp_account_nonce' ); ?>
+            <input type="hidden" name="deactivate_account" value="1">
+
+            <div class="ofp-modal-body" style="padding: 22px 24px;">
+                <div class="ofp-caution-alert amber" style="background:rgba(245, 158, 11, 0.08); border:1px solid rgba(245, 158, 11, 0.28); border-radius:12px; padding:16px 18px; margin-bottom:18px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                        <svg width="18" height="18" fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        <strong style="color:#fbbf24; font-size:13.5px;">Caution: What Happens When You Deactivate</strong>
+                    </div>
+                    <p style="margin:0; font-size:12.5px; color:#fde68a; line-height:1.55;">
+                        Temporarily suspend your agency profile and access. Your public agent showcase page and property listings will immediately be hidden from buyers and tenants. Your contacts, leads, and transaction records will remain safely preserved until reactivated by an administrator.
+                    </p>
+
+                    <!-- FAQ-style Expandable List of Consequences -->
+                    <details class="ofp-caution-accordion amber">
+                        <summary>
+                            <span class="ofp-caution-accordion-title">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>View exact consequences &amp; details (4 items)</span>
+                            </span>
+                            <svg class="ofp-caution-accordion-arrow" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                        </summary>
+                        <ul class="ofp-danger-checklist">
+                            <li>Public agent profile returns 404 / paused status</li>
+                            <li>All active property listings hidden from marketplace</li>
+                            <li>Client leads, contacts, and receipts safely preserved</li>
+                            <li>Administrator is alerted with direct reactivation option</li>
+                        </ul>
+                    </details>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:12px; font-weight:600; color:var(--prof-text-sub); margin-bottom:6px;">Reason for Deactivation (Optional)</label>
+                    <select name="deactivation_reason" class="ofp-modal-input" style="width:100%; height:40px;">
+                        <option value="Temporary break">Taking a temporary break</option>
+                        <option value="Seasonal hiatus">Seasonal / business hiatus</option>
+                        <option value="Agency restructuring">Agency restructuring</option>
+                        <option value="Switching business focus">Switching business focus</option>
+                        <option value="Technical or platform issue">Technical or platform issue</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom:18px;">
+                    <label style="display:block; font-size:12px; font-weight:600; color:var(--prof-text-sub); margin-bottom:6px;">
+                        Confirm with Your Password <span style="color:#ef4444;">*</span>
+                    </label>
+                    <input type="password" name="deactivate_password" required class="ofp-modal-input" placeholder="Enter your current password" style="width:100%; height:40px;">
+                </div>
+
+                <label style="display:flex; align-items:flex-start; gap:9px; font-size:12px; color:var(--prof-text-sub); cursor:pointer;">
+                    <input type="checkbox" required style="margin-top:2px;">
+                    <span>I understand my active listings will be drafted, my public profile paused, and my session logged out.</span>
+                </label>
+            </div>
+
+            <div class="ofp-modal-footer" style="padding:16px 24px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--prof-border);">
+                <button type="button" class="ofp-modal-btn-cancel" onclick="closeDeactivateModal()">Cancel</button>
+                <button type="submit" id="ofp-btn-submit-deactivate" class="ofp-danger-btn ofp-danger-btn-deactivate" style="padding:9px 20px;">
+                    <span>Confirm &amp; Deactivate</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Delete Account Modal ─────────────────────────────────────────────── -->
+<div class="ofp-modal-backdrop" id="ofp-delete-modal-backdrop" aria-hidden="true" style="display:none;">
+    <div class="ofp-modal-window ofp-danger-modal-window" style="max-width: 540px;" role="dialog" aria-modal="true" aria-labelledby="ofp-delete-modal-title">
+        <div class="ofp-modal-header" style="border-bottom: 1px solid rgba(239, 68, 68, 0.25); padding: 18px 24px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:36px; height:36px; border-radius:10px; background:rgba(239, 68, 68, 0.12); color:#ef4444; display:flex; align-items:center; justify-content:center; border:1px solid rgba(239, 68, 68, 0.28); flex-shrink:0;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </div>
+                <div>
+                    <h3 class="ofp-modal-title" id="ofp-delete-modal-title" style="margin:0; font-size:16px; color:#f87171;">Delete Agency Account</h3>
+                    <p style="margin:2px 0 0; font-size:12px; color:var(--prof-text-sub);">Permanent closure &amp; move to Trash</p>
+                </div>
+            </div>
+            <button type="button" class="ofp-modal-close-btn" onclick="closeDeleteModal()" aria-label="Close">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+
+        <form method="POST" action="" onsubmit="return handleDeleteSubmit(this);">
+            <?php wp_nonce_field( 'ofp_account_' . $client->id, 'ofp_account_nonce' ); ?>
+            <input type="hidden" name="delete_account" value="1">
+
+            <div class="ofp-modal-body" style="padding: 22px 24px;">
+                <div class="ofp-caution-alert red" style="background:rgba(239, 68, 68, 0.08); border:1px solid rgba(239, 68, 68, 0.28); border-radius:12px; padding:16px 18px; margin-bottom:18px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                        <svg width="18" height="18" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        <strong style="color:#f87171; font-size:13.5px;">Critical Caution: Permanent Account Removal</strong>
+                    </div>
+                    <p style="margin:0; font-size:12.5px; color:#fca5a5; line-height:1.55;">
+                        Permanently close your agency account and remove your brand. Your account is immediately moved to Trash, all automated trigger queues are cancelled, and public listings unlinked. Data is held in trash for 30 days before permanent automatic purge.
+                    </p>
+
+                    <!-- FAQ-style Expandable List of Consequences -->
+                    <details class="ofp-caution-accordion red">
+                        <summary>
+                            <span class="ofp-caution-accordion-title">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>View consequence breakdown (4 items)</span>
+                            </span>
+                            <svg class="ofp-caution-accordion-arrow" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                        </summary>
+                        <ul class="ofp-danger-checklist red">
+                            <li>All active sessions immediately revoked &amp; signed out</li>
+                            <li>Automated trigger queues and scheduled follow-ups cancelled</li>
+                            <li>Platform administrator alerted immediately in backend</li>
+                            <li>Auto-purged permanently after 30-day compliance window</li>
+                        </ul>
+                    </details>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:12px; font-weight:600; color:var(--prof-text-sub); margin-bottom:6px;">Reason for Leaving (Optional)</label>
+                    <select name="deletion_reason" class="ofp-modal-input" style="width:100%; height:40px;">
+                        <option value="Closing agency business">Closing agency business</option>
+                        <option value="Switching to another software">Switching to another software</option>
+                        <option value="Cost or pricing considerations">Cost or pricing considerations</option>
+                        <option value="Missing specific features">Missing specific features</option>
+                        <option value="Dissatisfied with service">Dissatisfied with service</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:12px; font-weight:600; color:var(--prof-text-sub); margin-bottom:6px;">
+                        Confirm with Your Password <span style="color:#ef4444;">*</span>
+                    </label>
+                    <input type="password" name="delete_password" required class="ofp-modal-input" placeholder="Enter your current password" style="width:100%; height:40px;">
+                </div>
+
+                <div style="margin-bottom:18px;">
+                    <label style="display:block; font-size:12px; font-weight:600; color:var(--prof-text-sub); margin-bottom:6px;">
+                        To confirm, type <strong style="color:#f87171; letter-spacing:1px;">DELETE</strong> below <span style="color:#ef4444;">*</span>
+                    </label>
+                    <input type="text" name="delete_confirm_text" id="ofp-delete-confirm-input" required class="ofp-modal-input" placeholder="Type DELETE to confirm" style="width:100%; height:40px; text-transform:uppercase;">
+                </div>
+
+                <label style="display:flex; align-items:flex-start; gap:9px; font-size:12px; color:var(--prof-text-sub); cursor:pointer;">
+                    <input type="checkbox" required style="margin-top:2px;">
+                    <span>I understand this action is destructive and cannot be directly reversed by me.</span>
+                </label>
+            </div>
+
+            <div class="ofp-modal-footer" style="padding:16px 24px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--prof-border);">
+                <button type="button" class="ofp-modal-btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+                <button type="submit" id="ofp-btn-submit-delete" class="ofp-danger-btn ofp-danger-btn-delete" style="padding:9px 20px;">
+                    <span>Permanently Delete My Account</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Modal Drawer and Avatar Script -->
 <script>
 (function() {
@@ -1692,7 +2044,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
     });
 
     // Auto-open modal on error or success if returning from an action
-    <?php if ( ! empty( $error ) || ( ! empty( $success ) && ( isset($_POST['update_profile']) || isset($_POST['bank_do']) || isset($_POST['change_password']) || isset($_POST['update_branding']) ) ) ) : ?>
+    <?php if ( ! empty( $error ) || ( ! empty( $success ) && ( isset($_POST['update_profile']) || isset($_POST['bank_do']) || isset($_POST['change_password']) || isset($_POST['update_branding']) || isset($_POST['deactivate_account']) || isset($_POST['delete_account']) ) ) ) : ?>
         // If bank action/error, open bank tab in modal
         <?php if ( isset($_POST['bank_do']) ) : ?>
             if (typeof openEditModal === 'function') openEditModal('tab-banking');
@@ -1700,8 +2052,95 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
             if (typeof openEditModal === 'function') openEditModal('tab-security');
         <?php elseif ( isset($_POST['update_branding']) ) : ?>
             if (typeof openEditModal === 'function') openEditModal('tab-branding');
+        <?php elseif ( isset($_POST['deactivate_account']) ) : ?>
+            if (typeof openDeactivateModal === 'function') openDeactivateModal();
+        <?php elseif ( isset($_POST['delete_account']) ) : ?>
+            if (typeof openDeleteModal === 'function') openDeleteModal();
         <?php endif; ?>
     <?php endif; ?>
+
+    // Danger Zone Modals: Deactivate & Delete
+    const deactBackdrop = document.getElementById('ofp-deactivate-modal-backdrop');
+    const deleteBackdrop = document.getElementById('ofp-delete-modal-backdrop');
+
+    window.openDeactivateModal = function() {
+        if (deactBackdrop) {
+            deactBackdrop.style.display = 'flex';
+            deactBackdrop.classList.add('active');
+            deactBackdrop.scrollTop = 0;
+            const bodyEl = deactBackdrop.querySelector('.ofp-modal-body');
+            if (bodyEl) bodyEl.scrollTop = 0;
+            document.body.style.overflow = 'hidden';
+        }
+    };
+
+    window.closeDeactivateModal = function() {
+        if (deactBackdrop) {
+            deactBackdrop.style.display = 'none';
+            deactBackdrop.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    };
+
+    window.openDeleteModal = function() {
+        if (deleteBackdrop) {
+            deleteBackdrop.style.display = 'flex';
+            deleteBackdrop.classList.add('active');
+            deleteBackdrop.scrollTop = 0;
+            const bodyEl = deleteBackdrop.querySelector('.ofp-modal-body');
+            if (bodyEl) bodyEl.scrollTop = 0;
+            document.body.style.overflow = 'hidden';
+            const confirmInput = document.getElementById('ofp-delete-confirm-input');
+            if (confirmInput) setTimeout(() => confirmInput.focus(), 100);
+        }
+    };
+
+    window.closeDeleteModal = function() {
+        if (deleteBackdrop) {
+            deleteBackdrop.style.display = 'none';
+            deleteBackdrop.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    };
+
+    if (deactBackdrop) {
+        deactBackdrop.addEventListener('click', function(e) {
+            if (e.target === deactBackdrop) closeDeactivateModal();
+        });
+    }
+
+    if (deleteBackdrop) {
+        deleteBackdrop.addEventListener('click', function(e) {
+            if (e.target === deleteBackdrop) closeDeleteModal();
+        });
+    }
+
+    window.handleDeactivateSubmit = function(form) {
+        const btn = document.getElementById('ofp-btn-submit-deactivate');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span>Processing Deactivation...</span>';
+        }
+        return true;
+    };
+
+    window.handleDeleteSubmit = function(form) {
+        const confirmInput = document.getElementById('ofp-delete-confirm-input');
+        if (!confirmInput || confirmInput.value.trim().toUpperCase() !== 'DELETE') {
+            alert('Please type DELETE in capital letters to confirm account deletion.');
+            if (confirmInput) confirmInput.focus();
+            return false;
+        }
+        if (!confirm('Are you ABSOLUTELY certain you wish to delete your agency account? This action moves your account to trash.')) {
+            return false;
+        }
+        const btn = document.getElementById('ofp-btn-submit-delete');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span>Deleting Account...</span>';
+        }
+        return true;
+    };
 
     // Check URL hash to auto-open specific tab (e.g. #tab-verification, #tab-banking)
     if (window.location.hash) {
