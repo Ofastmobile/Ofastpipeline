@@ -151,7 +151,8 @@ class OFP_Subscription {
         if ( ! isset( $memo[ $client_id ] ) ) {
             $client = OFP_Client::get( $client_id );
             // Unlimited while white label benefits are active. A yearly plan that ended is on Free limits.
-            $memo[ $client_id ] = $client && OFP_White_Label::has_full_benefits( $client );
+            // The platform's own account is always unlimited (no plan, no billing).
+            $memo[ $client_id ] = $client && ( OFP_White_Label::has_full_benefits( $client ) || OFP_Platform::is_platform( $client ) );
         }
         return $memo[ $client_id ];
     }
@@ -677,7 +678,7 @@ class OFP_Subscription {
 
         $free_clients = $wpdb->get_results(
             "SELECT * FROM {$wpdb->prefix}ofp_clients
-             WHERE status = 'active' AND plan = 'free'" . OFP_White_Label::not_solo_sql()
+             WHERE status = 'active' AND plan = 'free'" . OFP_White_Label::not_solo_sql() . OFP_Platform::not_platform_sql()
         );
 
         foreach ( $free_clients as $client ) {

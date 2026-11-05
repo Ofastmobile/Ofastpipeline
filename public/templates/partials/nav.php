@@ -174,6 +174,8 @@ if ( $current_user ) {
         $can_view_team = true; // Main Client
     } elseif ( isset( $current_user->role_name ) && $current_user->role_name === 'Manager' ) {
         $can_view_team = true; // Manager
+    } elseif ( OFP_Platform::team_view_only() ) {
+        $can_view_team = true; // Platform account: everyone on the team can view the team list (read-only)
     }
 }
 
@@ -187,6 +189,7 @@ if ( $can_view_team ) {
     ];
 }
 
+if ( ! OFP_Platform::is_platform( $client ) ) { // The platform's own account has no credits or billing
 $nav_sections['workspace']['items'][] = [
     'label'  => 'Credits & Billing',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>',
@@ -194,6 +197,7 @@ $nav_sections['workspace']['items'][] = [
     'slug'   => 'credits',
     'locked' => false,
 ];
+}
 
 // Funding — main client only, team members can't pay or manage billing
 if ( $current_user && empty( $current_user->is_team_member ) && ! OFP_Brand::hide_plan_prompts( $client ) ) {
@@ -206,6 +210,7 @@ if ( $current_user && empty( $current_user->is_team_member ) && ! OFP_Brand::hid
     ];
 }
 
+if ( ! OFP_Platform::team_view_only() ) { // Hidden from team members of the platform account
 $nav_sections['workspace']['items'][] = [
     'label'  => 'Integrations & API',
     'icon'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 9.75L16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" /></svg>',
@@ -213,6 +218,7 @@ $nav_sections['workspace']['items'][] = [
     'slug'   => 'api-settings',
     'locked' => false,
 ];
+}
 
 // Plans & Pricing: hidden for solo companies, they have no plan to choose
 if ( ! OFP_Brand::hide_plan_prompts( $client ) ) {

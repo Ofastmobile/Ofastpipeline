@@ -84,6 +84,13 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 </label>
                 <input type="hidden" name="ofp_wl_fields" value="1">
             </div>
+            <div class="ofp-field" id="ofp-platform-field">
+                <label>Platform Account (our own company)</label>
+                <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start;">
+                    <input type="checkbox" name="is_platform" id="ofp-platform-checkbox" value="1" style="margin-top:3px;">
+                    <span>Use this for the platform's own listings. No limits, no credits or billing. Its properties show on the main marketplace. Its team members cannot invite people, open Integrations &amp; API, or edit the profile. Only one allowed.</span>
+                </label>
+            </div>
             <div class="ofp-field" id="ofp-domain-field" style="display:none;">
                 <label>Custom Domain (optional)</label>
                 <input type="text" name="custom_domain" placeholder="crm.supremehomes.com">
@@ -110,6 +117,20 @@ include OFP_PATH . 'admin/views/partials/header.php';
             }
             box.addEventListener('change', sync);
             sync();
+
+            // Platform account: no subdomain needed (made from the business name), and it is never a white label.
+            var plat = document.getElementById('ofp-platform-checkbox');
+            if (!plat) return;
+            function syncPlatform() {
+                var on = plat.checked;
+                var sub = document.querySelector('input[name="subdomain"]');
+                if (sub) { sub.required = !on; sub.placeholder = on ? 'optional (made from the business name)' : 'supremehomes'; }
+                box.disabled = on;
+                if (on) { box.checked = false; sync(); document.getElementById('ofp-plan-field').style.display = 'none'; }
+                else { sync(); }
+            }
+            plat.addEventListener('change', syncPlatform);
+            syncPlatform();
         })();
         </script>
 

@@ -1079,6 +1079,8 @@
                     $featured_query->the_post();
                     $p_id = get_the_ID();
                     $raw_price = get_post_meta( $p_id, 'ofp_price', true );
+                    $ofp_pkg   = OFP_Property_Package::get( $p_id );
+                    if ( $ofp_pkg ) { $raw_price = $ofp_pkg['total']; }
                     $price_num = floatval( preg_replace( '/[^\d.]/', '', (string) $raw_price ) );
                     if ( $price_num >= 1000000 ) {
                         $formatted_price = '₦' . rtrim( rtrim( number_format( $price_num / 1000000, 1 ), '0' ), '.' ) . ' Million';
@@ -1123,6 +1125,7 @@
                         'link'          => get_permalink(),
                         'image'         => has_post_thumbnail() ? get_the_post_thumbnail_url( $p_id, 'large' ) : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80',
                         'price'         => $formatted_price,
+                        'price_note'    => OFP_Property_Package::note( $ofp_pkg ),
                         'location'      => get_post_meta( $p_id, 'ofp_location_text', true ) ?: 'Lekki Phase 1, Lagos',
                         'listing_type'  => get_post_meta( $p_id, 'ofp_listing_type', true ) ?: 'sale',
                         'prop_type'     => get_post_meta( $p_id, 'ofp_property_type', true ) ?: 'Detached Duplex',
@@ -1239,6 +1242,7 @@
                     <div class="absolute bottom-3.5 left-3.5 right-3.5 flex justify-between items-end pointer-events-none">
                         <div class="text-white font-black text-2xl sm:text-[26px] tracking-tight drop-shadow-md">
                             <?php echo esc_html( $card['price'] ); ?>
+                            <?php if ( ! empty( $card['price_note'] ) ) : ?><span class="block text-[11px] font-semibold text-white/90 tracking-normal"><?php echo esc_html( $card['price_note'] ); ?></span><?php endif; ?>
                         </div>
                         <div class="bg-slate-950/75 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-1 rounded-md border border-white/10 capitalize">
                             <?php echo esc_html( str_replace('-', ' ', $card['prop_type']) ); ?>

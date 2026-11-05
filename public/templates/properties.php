@@ -166,7 +166,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                 // Additional property detail fields
                 $parking       = (int) ( $_POST['parking'] ?? 0 );
                 $area_sqm      = (int) ( $_POST['area_sqm'] ?? 0 );
-                $title_doc     = sanitize_text_field( $_POST['title_document'] ?? '' );
+                if ( isset( $_POST['title_document'] ) && is_array( $_POST['title_document'] ) ) {
+                    $title_doc = implode( ', ', array_filter( array_map( 'sanitize_text_field', $_POST['title_document'] ) ) );
+                } else {
+                    $title_doc = sanitize_text_field( $_POST['title_document'] ?? '' );
+                }
                 $condition_val = sanitize_text_field( $_POST['condition'] ?? '' );
                 $furnishing    = sanitize_text_field( $_POST['furnishing'] ?? '' );
                 if ( $listing_type === 'land' ) {
@@ -214,6 +218,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                 $inspection_notice = sanitize_text_field( $_POST['inspection_notice'] ?? '' );
 
                 update_post_meta( $post_id, 'ofp_total_package', $total_package );
+                OFP_Property_Package::save( $post_id, $_POST ); // fee breakdown, recalculates the total
                 update_post_meta( $post_id, 'ofp_allow_installment', $allow_installment );
                 update_post_meta( $post_id, 'ofp_inspection_days', $inspection_days ?: 'Mondays - Saturdays' );
                 update_post_meta( $post_id, 'ofp_inspection_hours', $inspection_hours ?: '10:00 AM - 5:00 PM' );
@@ -422,6 +427,83 @@ $prop_tabs = [
             height: 0 !important;
             opacity: 0 !important;
             pointer-events: none !important;
+        }
+
+        /* Multi-select Title Document Dropdown Items */
+        .ofp-multiselect-item {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            gap: 10px !important;
+            padding: 9px 14px !important;
+            margin: 0 !important;
+            cursor: pointer !important;
+            font-size: 13.5px !important;
+            font-weight: 500 !important;
+            color: var(--text-main) !important;
+            transition: background 0.15s ease !important;
+            user-select: none !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            text-align: left !important;
+        }
+        .ofp-multiselect-item:hover {
+            background: rgba(59, 130, 246, 0.08) !important;
+        }
+        .ofp-multiselect-item input[type="checkbox"] {
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            width: 17px !important;
+            min-width: 17px !important;
+            height: 17px !important;
+            min-height: 17px !important;
+            border: 1.5px solid var(--border-color, #cbd5e1) !important;
+            border-radius: 5px !important;
+            outline: none !important;
+            cursor: pointer !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: inline-grid !important;
+            place-content: center !important;
+            background: var(--bg-body, #fff) !important;
+            transition: all 0.15s ease-in-out !important;
+            flex: 0 0 17px !important;
+        }
+        .ofp-multiselect-item input[type="checkbox"]:checked {
+            background-color: var(--accent-blue, #1a73e8) !important;
+            border-color: var(--accent-blue, #1a73e8) !important;
+        }
+        .ofp-multiselect-item input[type="checkbox"]:checked::before {
+            content: "";
+            width: 9px;
+            height: 5px;
+            border-left: 2px solid #fff;
+            border-bottom: 2px solid #fff;
+            transform: rotate(-45deg) translate(1px, -1px);
+        }
+        .ofp-multiselect-item span {
+            flex: 1 1 auto !important;
+            text-align: left !important;
+            line-height: 1.3 !important;
+            color: var(--text-main) !important;
+        }
+
+        .ofp-multiselect-menu {
+            max-height: 128px !important;
+            overflow-y: auto !important;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) transparent;
+        }
+        .ofp-multiselect-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+        .ofp-multiselect-menu::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .ofp-multiselect-menu::-webkit-scrollbar-thumb {
+            background: var(--border-color, #cbd5e1);
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -855,10 +937,11 @@ $prop_tabs = [
                                                value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_total_package', true ) : '' ); ?>"
                                                style="width:100%; padding:11px 14px 11px 32px; border-radius:8px;">
                                     </div>
-                                    <span class="ofp-hint" style="font-size:11.5px; margin-top:4px; display:block;">In Nigeria, rent is listed separately while total package includes agency, legal, and caution fees.</span>
+                                    <span class="ofp-hint" style="font-size:11.5px; margin-top:4px; display:block;">This becomes the price tenants see everywhere. Fill in the fees below and it is calculated for you, or type a total only.</span>
+<?php OFP_Property_Package::render_fields( $editing_post ? (int) $editing_post->ID : 0, 'input[name="price"]', 'input[name="total_package"]' ); ?>
                                 </div>
 
-                                <div class="ofp-field" style="grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; margin-bottom:8px; gap:16px;">
+                                <div class="ofp-field" style="display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; gap:16px; align-self:start;">
                                     <div>
                                         <label for="ofp_allow_installment_toggle" style="font-size:13.5px; font-weight:600; color:var(--text-main); margin-bottom:3px; display:block; cursor:pointer;">
                                             Allow Installment / Mortgage Financing Plan
@@ -874,18 +957,52 @@ $prop_tabs = [
                                 </div>
 
                                 <div class="ofp-field">
-                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Title Document</label>
-                                    <?php $current_title_doc = $editing_post ? get_post_meta( $editing_post->ID, 'ofp_title_document', true ) : ''; ?>
-                                    <select name="title_document" class="ofp-select" style="width:100%; padding:11px 14px; border-radius:8px;">
-                                        <option value="">-- Select Title Document --</option>
-                                        <option value="C of O" <?php selected( $current_title_doc, 'C of O' ); ?>>Certificate of Occupancy (C of O)</option>
-                                        <option value="Governor's Consent" <?php selected( $current_title_doc, "Governor's Consent" ); ?>>Governor's Consent</option>
-                                        <option value="Gazette" <?php selected( $current_title_doc, 'Gazette' ); ?>>Government Gazette</option>
-                                        <option value="Deed of Assignment" <?php selected( $current_title_doc, 'Deed of Assignment' ); ?>>Deed of Assignment</option>
-                                        <option value="R of O" <?php selected( $current_title_doc, 'R of O' ); ?>>Right of Occupancy (R of O)</option>
-                                        <option value="Excision" <?php selected( $current_title_doc, 'Excision' ); ?>>Excision</option>
-                                        <option value="Other" <?php selected( $current_title_doc, 'Other' ); ?>>Other</option>
-                                    </select>
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Title Document(s)</label>
+                                    <?php
+                                    $raw_current_doc = $editing_post ? (string) get_post_meta( $editing_post->ID, 'ofp_title_document', true ) : '';
+                                    $current_title_docs = array_filter( array_map( 'trim', explode( ',', $raw_current_doc ) ) );
+                                    $all_title_options = [
+                                        'C of O'               => 'Certificate of Occupancy (C of O)',
+                                        "Governor's Consent"   => "Governor's Consent",
+                                        'Gazette'              => 'Government Gazette',
+                                        'Deed of Assignment'   => 'Deed of Assignment',
+                                        'R of O'               => 'Right of Occupancy (R of O)',
+                                        'Excision'             => 'Excision',
+                                        'Registered Survey'    => 'Registered Survey',
+                                        'Other'                => 'Other',
+                                    ];
+                                    ?>
+                                    <div class="ofp-multiselect-dropdown" id="ofp-title-doc-multiselect" style="position:relative; width:100%;">
+                                        <div class="ofp-multiselect-trigger" id="ofp-title-doc-trigger" tabindex="0"
+                                             style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:11px 14px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-body, #fff); color:var(--text-main); font-size:14px; cursor:pointer; user-select:none; box-sizing:border-box;">
+                                            <span class="ofp-multiselect-label" id="ofp-title-doc-label" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px; font-weight:500;">
+                                                <?php
+                                                if ( ! empty( $current_title_docs ) ) {
+                                                    $first_lbl = $all_title_options[ $current_title_docs[0] ] ?? $current_title_docs[0];
+                                                    $more = count( $current_title_docs ) - 1;
+                                                    echo esc_html( $more > 0 ? $first_lbl . ' (+' . $more . ' more)' : $first_lbl );
+                                                } else {
+                                                    echo '-- Select Title Document(s) --';
+                                                }
+                                                ?>
+                                            </span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; color:var(--text-muted); transition:transform 0.2s ease;">
+                                                <path d="M6 9l6 6 6-6"/>
+                                            </svg>
+                                        </div>
+                                        
+                                        <div class="ofp-multiselect-menu" id="ofp-title-doc-menu"
+                                             style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:128px; overflow-y:auto; background:var(--bg-card, #fff); border:1px solid var(--border-color); border-radius:8px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.25); z-index:100; padding:6px 0;">
+                                            <?php foreach ( $all_title_options as $val => $label ) : 
+                                                $is_chk = in_array( $val, $current_title_docs, true ) || in_array( $label, $current_title_docs, true );
+                                            ?>
+                                                <label class="ofp-multiselect-item">
+                                                    <input type="checkbox" name="title_document[]" value="<?php echo esc_attr( $val ); ?>" <?php checked( $is_chk ); ?>>
+                                                    <span><?php echo esc_html( $label ); ?></span>
+                                                </label>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="ofp-field">
@@ -1870,6 +1987,9 @@ function ofpSetExistingMain(id) {
                 tb.textContent = 'Main Cover (On Save)';
             }
         }
+    }
+}
+
 // Amenities selection & Custom addition handlers
 (function() {
     var btnAll = document.getElementById('ofp-btn-amenities-select-all');
@@ -1978,6 +2098,55 @@ function ofpSetExistingMain(id) {
             }
         });
     }
+})();
+
+// ── Title Document Multi-Select Checkbox Dropdown ──
+(function() {
+    var wrap = document.getElementById('ofp-title-doc-multiselect');
+    if (!wrap) return;
+    var trigger = document.getElementById('ofp-title-doc-trigger');
+    var menu = document.getElementById('ofp-title-doc-menu');
+    var label = document.getElementById('ofp-title-doc-label');
+    var arrow = trigger ? trigger.querySelector('svg') : null;
+    var checkboxes = wrap.querySelectorAll('input[type="checkbox"]');
+
+    function updateLabel() {
+        var checked = Array.from(checkboxes).filter(function(cb) { return cb.checked; });
+        if (checked.length === 0) {
+            label.textContent = '-- Select Title Document(s) --';
+            label.style.color = 'var(--text-muted)';
+        } else {
+            label.style.color = 'var(--text-main)';
+            var firstText = checked[0].closest('label').querySelector('span').textContent.trim();
+            if (checked.length === 1) {
+                label.textContent = firstText;
+            } else {
+                label.textContent = firstText + ' (+' + (checked.length - 1) + ' more)';
+            }
+        }
+    }
+
+    trigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var isOpen = menu.style.display === 'block';
+        menu.style.display = isOpen ? 'none' : 'block';
+        if (arrow) arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        trigger.style.borderColor = isOpen ? 'var(--border-color)' : 'var(--accent-blue, #1a73e8)';
+    });
+
+    checkboxes.forEach(function(cb) {
+        cb.addEventListener('change', updateLabel);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!wrap.contains(e.target)) {
+            menu.style.display = 'none';
+            if (arrow) arrow.style.transform = 'rotate(0deg)';
+            trigger.style.borderColor = 'var(--border-color)';
+        }
+    });
+
+    updateLabel();
 })();
 </script>
 <?php wp_footer(); ?>

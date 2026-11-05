@@ -205,6 +205,7 @@ foreach ( $admins as $a ) {
                 'Approve pending_review signups'               => [ true,  true  ],
                 'View billing and payments'                     => [ true,  true  ],
                 'Reset client password'                        => [ true,  true  ],
+                'Access WordPress Plugins'                     => [ true,  false ],
                 'Access Settings page'                         => [ true,  false ],
                 'Access Manage Admins page'                    => [ true,  false ],
                 'Add a co-admin'                               => [ true,  false ],

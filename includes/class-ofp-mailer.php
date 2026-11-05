@@ -157,6 +157,9 @@ class OFP_Mailer {
 
         $full_html = self::wrap_in_template( $to_name, $subject, $body_html, $solo_client ? $brand_name : null );
 
+        // Platform account: operational mail to the owner is also copied to the team (never security mail).
+        $headers = OFP_Platform::add_team_bcc( $headers, $recipient_client, $to, $subject, (string) $body_html );
+
         $sent = wp_mail( $to, $subject, $full_html, $headers );
 
         if ( ! $sent ) {

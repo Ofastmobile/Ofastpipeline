@@ -64,6 +64,7 @@ class OFP_Admin_Menu {
         add_action( 'admin_post_ofp_save_universal_template',  [ $this, 'handle_save_universal_template' ] );
         add_action( 'wp_ajax_ofp_admin_get_email_preview',     [ $this, 'ajax_get_email_preview' ] );
         add_action( 'wp_ajax_ofp_admin_resend_activity_email', [ $this, 'ajax_resend_activity_email' ] );
+        add_action( 'admin_init',                              [ $this, 'restrict_co_admin_access' ] );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -124,6 +125,9 @@ class OFP_Admin_Menu {
         if ( $is_super ) {
             add_submenu_page( 'ofp-overview', 'Settings',      'Settings',      'read', 'ofp-settings',  [ $this, 'render_settings' ] );
             add_submenu_page( 'ofp-overview', 'Manage Admins', 'Manage Admins', 'read', 'ofp-admins',    [ $this, 'render_admins' ] );
+        } else {
+            // Hide WordPress plugins management from co-admins
+            remove_menu_page( 'plugins.php' );
         }
     }
 
@@ -258,9 +262,24 @@ class OFP_Admin_Menu {
 
         $this->require_admin_post( 'ofp_add_client' );
 
-        $add_url   = admin_url( 'admin.php?page=ofp-clients&action=add' );
-        $subdomain = sanitize_title( wp_unslash( $_POST['subdomain'] ?? '' ) );
-        $is_solo   = ! empty( $_POST['is_white_label'] );
+        $add_url     = admin_url( 'admin.php?page=ofp-clients&action=add' );
+        $subdomain   = sanitize_title( wp_unslash( $_POST['subdomain'] ?? '' ) );
+        $is_platform = ! empty( $_POST['is_platform'] );
+        // The platform account is never a white label (white labels hide their listings from the marketplace).
+        $is_solo     = ! $is_platform && ! empty( $_POST['is_white_label'] );
+
+        if ( $is_platform ) {
+            OFP_Platform::ensure_schema();
+            if ( OFP_Platform::platform_client_id() > 0 ) {
+                $this->set_message( 'A platform account already exists. Only one is allowed.', 'error' );
+                wp_safe_redirect( $add_url );
+                exit;
+            }
+            // No subdomain typed: build one from the business name.
+            if ( '' === $subdomain ) {
+                $subdomain = sanitize_title( wp_unslash( $_POST['business_name'] ?? '' ) );
+            }
+        }
 
         // Subdomain: required, and checked the same way as on the signup page.
         $sub_error = '';
@@ -296,7 +315,7 @@ class OFP_Admin_Menu {
             }
         }
 
-        $plan = $is_solo ? 'free' : sanitize_text_field( wp_unslash( $_POST['plan'] ?? 'free' ) );
+        $plan = ( $is_solo || $is_platform ) ? 'free' : sanitize_text_field( wp_unslash( $_POST['plan'] ?? 'free' ) );
 
         $client_id = OFP_Client::create( [
             'business_name'     => sanitize_text_field( wp_unslash( $_POST['business_name']     ?? '' ) ),
@@ -308,7 +327,7 @@ class OFP_Admin_Menu {
             'subdomain'         => $subdomain,
             'business_category' => 'property',
             'plan'              => $plan,
-            'listing_plan'      => $is_solo ? 'free' : sanitize_text_field( wp_unslash( $_POST['listing_plan'] ?? 'free' ) ),
+            'listing_plan'      => ( $is_solo || $is_platform ) ? 'free' : sanitize_text_field( wp_unslash( $_POST['listing_plan'] ?? 'free' ) ),
             'subscriptions'     => [ 'crm', 'listing' ],
             'onboarding_source' => 'manual',
         ] );
@@ -320,6 +339,11 @@ class OFP_Admin_Menu {
                 [ 'is_white_label' => 1, 'custom_domain' => $custom_domain !== '' ? $custom_domain : null ],
                 [ 'id' => $client_id ]
             );
+        }
+
+        if ( $client_id && $is_platform ) {
+            global $wpdb;
+            $wpdb->update( $wpdb->prefix . 'ofp_clients', [ 'is_platform' => 1 ], [ 'id' => $client_id ] );
         }
 
         if ( $client_id ) {
@@ -659,6 +683,7 @@ class OFP_Admin_Menu {
             // Domain routing (Phase 16)
             'ofp_crm_base_domain'     => sanitize_text_field( wp_unslash( $_POST['ofp_crm_base_domain']     ?? '' ) ),
             'ofp_use_app_host'        => empty( $_POST['ofp_use_app_host'] ) ? '0' : '1',
+            'ofp_portal_default_dashboard' => empty( $_POST['ofp_portal_default_dashboard'] ) ? '0' : '1',
             'ofp_hide_admin_bar'      => empty( $_POST['ofp_hide_admin_bar'] ) ? '0' : '1',
             'ofp_watermark_enabled'   => empty( $_POST['ofp_watermark_enabled'] ) ? '0' : '1',
             'ofp_watermark_text'      => sanitize_text_field( wp_unslash( $_POST['ofp_watermark_text'] ?? '' ) ),
@@ -794,7 +819,51 @@ class OFP_Admin_Menu {
             }
         }
 
+        // ── Custom Admin URL & Brute-Force Shield ─────────────────────────
+        if ( isset( $_POST['ofp_admin_url_settings_present'] ) ) {
+            $admin_url_enabled = empty( $_POST['ofp_admin_url_enabled'] ) ? 0 : 1;
+            update_option( 'ofp_admin_url_enabled', $admin_url_enabled );
 
+            $old_slug = (string) get_option( 'ofp_admin_custom_slug', '' );
+            $raw_slug = isset( $_POST['ofp_admin_custom_slug'] ) ? sanitize_title( wp_unslash( $_POST['ofp_admin_custom_slug'] ) ) : '';
+
+            $reserved = [ 'wp-admin', 'wp-login', 'wp-login.php', 'admin', 'login', 'dashboard', 'wp-content', 'wp-includes', 'crm', 'portal', 'account', 'properties', 'property' ];
+
+            if ( ! empty( $raw_slug ) && in_array( $raw_slug, $reserved, true ) ) {
+                $this->set_message( 'That URL slug is reserved for WordPress or OFast Pipeline. Please choose a different slug.', 'error' );
+            } elseif ( ! empty( $raw_slug ) && ( get_page_by_path( $raw_slug ) || get_page_by_path( $raw_slug, OBJECT, 'post' ) ) ) {
+                $this->set_message( 'That URL slug already exists as a page or post. Please choose a unique slug.', 'error' );
+            } else {
+                $emergency_key = (string) get_option( 'ofp_admin_emergency_key', '' );
+                if ( empty( $emergency_key ) ) {
+                    $emergency_key = wp_generate_password( 32, false );
+                    update_option( 'ofp_admin_emergency_key', $emergency_key );
+                }
+
+                if ( ! empty( $raw_slug ) ) {
+                    update_option( 'ofp_admin_custom_slug', $raw_slug );
+
+                    // Send email immediately if slug changed, protection was enabled, or explicitly requested
+                    $should_send = ( $raw_slug !== $old_slug )
+                        || ( $admin_url_enabled && empty( $old_slug ) )
+                        || ! empty( $_POST['ofp_resend_email_on_save'] );
+
+                    if ( $should_send && class_exists( 'OFP_Admin_Url' ) ) {
+                        OFP_Admin_Url::send_admin_notification( $raw_slug, $emergency_key );
+                    }
+                } elseif ( empty( $raw_slug ) && ! empty( $old_slug ) ) {
+                    delete_option( 'ofp_admin_custom_slug' );
+                }
+            }
+
+            $max_attempts     = isset( $_POST['ofp_security_max_attempts'] ) ? max( 1, min( 20, absint( $_POST['ofp_security_max_attempts'] ) ) ) : 5;
+            $lockout_duration = isset( $_POST['ofp_security_lockout_duration'] ) ? max( 1, min( 1440, absint( $_POST['ofp_security_lockout_duration'] ) ) ) : 15;
+            $ip_whitelist     = isset( $_POST['ofp_security_ip_whitelist'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ofp_security_ip_whitelist'] ) ) : '';
+
+            update_option( 'ofp_security_max_attempts', $max_attempts );
+            update_option( 'ofp_security_lockout_duration', $lockout_duration );
+            update_option( 'ofp_security_ip_whitelist', $ip_whitelist );
+        }
 
         $updated_keys = [];
 
@@ -1910,6 +1979,29 @@ class OFP_Admin_Menu {
             ] );
         } else {
             wp_send_json_error( 'Failed to send email. Please check your SMTP settings and server status.' );
+        }
+    }
+
+    /**
+     * Block co-admins from accessing WordPress plugin management.
+     *
+     * @return void
+     */
+    public function restrict_co_admin_access(): void {
+        if ( ! is_user_logged_in() || ! OFP_Auth::is_admin_user() ) {
+            return;
+        }
+
+        if ( ! OFP_Auth::is_super_admin() ) {
+            global $pagenow;
+            $restricted = [ 'plugins.php', 'plugin-install.php', 'plugin-editor.php' ];
+            if ( in_array( $pagenow, $restricted, true ) ) {
+                wp_die(
+                    esc_html__( 'Access denied. Co-admins do not have permission to manage WordPress plugins.', 'ofast-pipeline' ),
+                    esc_html__( 'Access Denied', 'ofast-pipeline' ),
+                    [ 'response' => 403 ]
+                );
+            }
         }
     }
 }

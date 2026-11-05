@@ -20,7 +20,7 @@ $user_type = OFP_Auth::get_user_type();
 $current_user = OFP_Auth::current_user();
 $is_manager = ( $user_type === 'team_member' && isset( $current_user->role_name ) && $current_user->role_name === 'Manager' );
 
-if ( $user_type !== 'client' && ! $is_manager ) {
+if ( $user_type !== 'client' && ! $is_manager && ! OFP_Platform::team_view_only() ) {
     wp_die( 'Only the main account owner or Managers can manage team members.', 'Unauthorized', [ 'response' => 403 ] );
 }
 
@@ -30,10 +30,15 @@ $plan          = OFP_Subscription::feature_plan( $client->id );
 $max_members   = OFP_Subscription::team_limit_for_client( $client->id );
 $current_count = count( $team_members );
 $can_invite    = ( $max_members > 0 && $current_count < $max_members );
+// Platform account: team members may look at the list but never change it.
+$ofp_team_readonly = OFP_Platform::team_view_only();
+if ( $ofp_team_readonly ) { $can_invite = false; }
 $free_plan     = ( $plan === 'free' );
 
 // Pass hero banner button configuration to nav.php
-if ( $free_plan ) {
+if ( $ofp_team_readonly ) {
+    $ofp_banner_btn = [ 'label' => 'View only', 'url' => '#', 'onclick' => 'return false;', 'icon' => 'none' ];
+} elseif ( $free_plan ) {
     $ofp_banner_btn = [
         'label'   => 'Upgrade to Add Team',
         'url'     => home_url( '/pricing' ),
@@ -170,8 +175,10 @@ $avatar_gradients = [
                                     <?php endif; ?>
                                 </td>
                                 <td style="text-align:right;">
-                                    <button class="ofp-btn ofp-btn-outline" style="font-size:12px; padding:5px 12px; border-radius:7px;" onclick="openEditModal(<?php echo esc_attr( wp_json_encode( $member ) ); ?>)">Edit</button>
+                                    <?php if ( ! $ofp_team_readonly ) : ?>
+                                    <button class="ofp-btn ofp-btn-outline" style="font-size:12px; padding:5px 12px; border-radius:7px;" onclick="openEditModal(<?php echo esc_attr( wp_json_encode( [ 'id' => (int) $member->id, 'role_name' => $member->role_name, 'permissions' => $member->permissions ] ) ); ?>)">Edit</button>
                                     <button class="ofp-btn ofp-btn-outline" style="font-size:12px; padding:5px 12px; border-radius:7px; color:#ef4444; border-color:rgba(239, 68, 68, 0.35); margin-left:6px;" onclick="deleteMember(<?php echo (int) $member->id; ?>)">Delete</button>
+                                    <?php else : ?><span style="color:#94a3b8;font-size:12px;">View only</span><?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

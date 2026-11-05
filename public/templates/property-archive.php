@@ -164,6 +164,8 @@ $query = new WP_Query( [
                     <?php while ( $query->have_posts() ) : $query->the_post();
                         $post_id       = get_the_ID();
                         $price         = (float) get_post_meta( $post_id, 'ofp_price', true );
+                        $ofp_pkg       = OFP_Property_Package::get( $post_id );
+                        if ( $ofp_pkg ) { $price = $ofp_pkg['total']; }
                         $listing_type  = get_post_meta( $post_id, 'ofp_listing_type', true );
                         $property_type = get_post_meta( $post_id, 'ofp_property_type', true );
                         $bedrooms      = (int) get_post_meta( $post_id, 'ofp_bedrooms', true );
@@ -204,6 +206,7 @@ $query = new WP_Query( [
                             <div class="ofp-property-card-body" style="padding:16px;">
                                 <h3 style="margin:0 0 8px 0; font-size:16px; font-weight:600; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php the_title(); ?></h3>
                                 <p style="margin:0 0 12px 0; font-size:18px; font-weight:700; color:#2563eb;">NGN <?php echo esc_html( number_format( $price, 2 ) ); ?></p>
+                                <?php if ( $ofp_pkg ) : ?><p style="margin:-8px 0 12px 0; font-size:12px; color:#64748b;"><?php echo esc_html( OFP_Property_Package::note( $ofp_pkg ) ); ?></p><?php endif; ?>
                                 <p style="margin:0; font-size:13px; color:#64748b; display:flex; gap:12px;">
                                     <?php if ( $bedrooms ) : ?><span><?php echo esc_html( $bedrooms ); ?> bed</span><?php endif; ?>
                                     <?php if ( $bathrooms ) : ?><span><?php echo esc_html( $bathrooms ); ?> bath</span><?php endif; ?>

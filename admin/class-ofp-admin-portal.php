@@ -213,6 +213,7 @@ class OFP_Admin_Portal {
                 update_post_meta( $post_id, 'ofp_price', $price );
                 update_post_meta( $post_id, 'ofp_price_period', $price_period );
                 update_post_meta( $post_id, 'ofp_total_package', $total_package );
+                OFP_Property_Package::save( $post_id, $_POST ); // fee breakdown, recalculates the total
                 update_post_meta( $post_id, 'ofp_allow_installment', $allow_installment );
                 update_post_meta( $post_id, 'ofp_title_document', $title_document );
                 update_post_meta( $post_id, 'ofp_bank_account_id', $bank_account_id );
@@ -473,8 +474,8 @@ class OFP_Admin_Portal {
      * @return string
      */
     public function redirect_after_login( string $redirect_to, string $requested_redirect_to, $user ): string {
-        // Only when the feature is enabled
-        if ( '1' !== (string) get_option( 'ofp_portal_default_dashboard', '0' ) ) {
+        // Only when the feature is enabled (defaults to '1' so modern admin dashboard is active out of the box)
+        if ( '1' !== (string) get_option( 'ofp_portal_default_dashboard', '1' ) ) {
             return $redirect_to;
         }
 
@@ -516,8 +517,8 @@ class OFP_Admin_Portal {
      * - POST requests are never redirected (form submissions)
      */
     public function redirect_dashboard_to_portal(): void {
-        // Only when the feature is enabled
-        if ( '1' !== (string) get_option( 'ofp_portal_default_dashboard', '0' ) ) {
+        // Only when the feature is enabled (defaults to '1' so modern admin dashboard is active out of the box)
+        if ( '1' !== (string) get_option( 'ofp_portal_default_dashboard', '1' ) ) {
             return;
         }
 

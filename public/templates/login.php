@@ -91,9 +91,13 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             } else {
                 OFP_Auth::issue_session( (int) $saved['client_id'], (string) $saved['user_type'], $saved['team_member_id'] );
 
+                $default_dest = ( OFP_Auth::is_admin_user() && '1' === (string) get_option( 'ofp_portal_default_dashboard', '1' ) )
+                    ? home_url( '/admin-portal' )
+                    : home_url( '/dashboard' );
+
                 $redirect_to = isset( $_GET['redirect_to'] )
                     ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) )
-                    : home_url( '/dashboard' );
+                    : $default_dest;
 
                 wp_safe_redirect( $redirect_to );
                 exit;
@@ -124,9 +128,12 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                 // Admin bypass: Skip OTP and login directly
                 if ( OFP_Auth::is_admin_user() ) {
                     OFP_Auth::issue_session( $credentials_valid['client_id'], $credentials_valid['user_type'], $credentials_valid['team_member_id'] );
+                    $default_dest = ( '1' === (string) get_option( 'ofp_portal_default_dashboard', '1' ) )
+                        ? home_url( '/admin-portal' )
+                        : home_url( '/dashboard' );
                     $redirect_to = isset( $_GET['redirect_to'] )
                         ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) )
-                        : home_url( '/dashboard' );
+                        : $default_dest;
                     wp_safe_redirect( $redirect_to );
                     exit;
                 }

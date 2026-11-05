@@ -64,7 +64,7 @@ if ( ! empty( $current_beds ) ) {
 // 6. Price max filter
 if ( ! empty( $current_price_max ) ) {
     $args['meta_query'][] = [
-        'key'     => 'ofp_price',
+        'key'     => 'ofp_price_effective', // real move-in price (rent + fees)
         'value'   => (float) $current_price_max,
         'compare' => '<=',
         'type'    => 'NUMERIC',
@@ -96,12 +96,12 @@ if ( $current_verified ) {
 // 8. Sorting
 switch ( $current_sort ) {
     case 'price_asc':
-        $args['meta_key'] = 'ofp_price';
+        $args['meta_key'] = 'ofp_price_effective';
         $args['orderby']  = 'meta_value_num';
         $args['order']    = 'ASC';
         break;
     case 'price_desc':
-        $args['meta_key'] = 'ofp_price';
+        $args['meta_key'] = 'ofp_price_effective';
         $args['orderby']  = 'meta_value_num';
         $args['order']    = 'DESC';
         break;
@@ -775,6 +775,8 @@ $marketplace_query = new WP_Query( $args );
                         <?php if ( $marketplace_query->have_posts() ) :
                 while ( $marketplace_query->have_posts() ) : $marketplace_query->the_post();
                     $price        = get_post_meta( get_the_ID(), 'ofp_price', true );
+                    $ofp_pkg      = OFP_Property_Package::get( get_the_ID() ); // rental with a move-in package?
+                    if ( $ofp_pkg ) { $price = $ofp_pkg['total']; }
                     $listing_type = get_post_meta( get_the_ID(), 'ofp_listing_type', true );
                     $prop_type    = get_post_meta( get_the_ID(), 'ofp_property_type', true );
                     $location     = get_post_meta( get_the_ID(), 'ofp_location_text', true );
@@ -870,6 +872,7 @@ $marketplace_query = new WP_Query( $args );
                     </div>
                     <div class="absolute bottom-3.5 left-3.5 right-3.5 flex justify-between items-end pointer-events-none">
                         <div class="text-white font-black text-2xl sm:text-[26px] tracking-tight drop-shadow-md"><?php echo esc_html( $formatted_price ); ?></div>
+                        <?php if ( $ofp_pkg ) : ?><div class="text-white/90 text-[11px] font-semibold drop-shadow"><?php echo esc_html( OFP_Property_Package::note( $ofp_pkg ) ); ?></div><?php endif; ?>
                         <div class="bg-slate-950/75 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-1 rounded-md border border-white/10 capitalize">
                             <?php echo esc_html( str_replace('-', ' ', $prop_type) ); ?>
                         </div>
@@ -906,7 +909,23 @@ $marketplace_query = new WP_Query( $args );
                             <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Total Area</span>
                         </div>
                         <div class="leading-none">
-                            <span class="text-[13px] font-bold text-slate-900 dark:text-white block truncate" title="<?php echo esc_attr( get_post_meta( get_the_ID(), 'ofp_title_document', true ) ?: 'On Request' ); ?>"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_title_document', true ) ?: 'On Request' ); ?></span>
+                            <?php
+                            $raw_title_doc = get_post_meta( get_the_ID(), 'ofp_title_document', true ) ?: '';
+                            $docs_array = array_filter( array_map( 'trim', explode( ',', $raw_title_doc ) ) );
+                            if ( ! empty( $docs_array ) ) :
+                                $first_doc = $docs_array[0];
+                                $extra_count = count( $docs_array ) - 1;
+                                $all_docs_tooltip = esc_attr( implode( ', ', $docs_array ) );
+                            ?>
+                                <div class="flex items-center gap-1 min-w-0" title="<?php echo $all_docs_tooltip; ?>">
+                                    <span class="text-[13px] font-bold text-slate-900 dark:text-white truncate"><?php echo esc_html( $first_doc ); ?></span>
+                                    <?php if ( $extra_count > 0 ) : ?>
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700/50 shrink-0 cursor-default" title="<?php echo $all_docs_tooltip; ?>">+<?php echo (int) $extra_count; ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php else : ?>
+                                <span class="text-[13px] font-bold text-slate-900 dark:text-white block truncate">On Request</span>
+                            <?php endif; ?>
                             <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">Title Doc</span>
                         </div>
                     </div>

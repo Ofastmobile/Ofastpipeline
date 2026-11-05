@@ -324,6 +324,7 @@ $titles = [
             <div class="ofp-nav-group">
                 <div class="ofp-nav-group-title">Administration</div>
                 <ul class="ofp-nav-list">
+                    <?php if ( OFP_Auth::is_super_admin() ) : ?>
                     <li class="ofp-nav-item <?php echo $tab === 'settings' ? 'active' : ''; ?>">
                         <a href="<?php echo esc_url( home_url( '/admin-portal?tab=settings' ) ); ?>">
                             <svg class="ofp-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -336,6 +337,7 @@ $titles = [
                             <span>Manage Admins</span>
                         </a>
                     </li>
+                    <?php endif; ?>
                     <li class="ofp-nav-item <?php echo $tab === 'activity-logs' ? 'active' : ''; ?>">
                         <a href="<?php echo esc_url( home_url( '/admin-portal?tab=activity-logs' ) ); ?>">
                             <svg class="ofp-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -733,12 +735,24 @@ $titles = [
                 <?php include OFP_PATH . 'admin/views/reports.php'; ?>
 
             <?php elseif ( $tab === 'settings' ) : ?>
-                <!-- Embedded Settings Module -->
-                <?php include OFP_PATH . 'admin/views/settings.php'; ?>
+                <!-- Embedded Settings Module (Super Admin Only) -->
+                <?php
+                if ( ! OFP_Auth::is_super_admin() ) {
+                    echo '<div class="ofp-card"><div class="ofp-card-body" style="padding:48px 24px;text-align:center;"><div style="font-size:36px;margin-bottom:12px;">🔒</div><h3 style="color:#dc2626;margin:0 0 8px 0;font-size:18px;">Access Restricted</h3><p style="color:#64748b;font-size:14px;max-width:440px;margin:0 auto;">Only Super Administrators have permission to access Platform Settings.</p></div></div>';
+                } else {
+                    include OFP_PATH . 'admin/views/settings.php';
+                }
+                ?>
 
             <?php elseif ( $tab === 'manage-admins' ) : ?>
-                <!-- Embedded Admins Module -->
-                <?php include OFP_PATH . 'admin/views/manage-admins.php'; ?>
+                <!-- Embedded Admins Module (Super Admin Only) -->
+                <?php
+                if ( ! OFP_Auth::is_super_admin() ) {
+                    echo '<div class="ofp-card"><div class="ofp-card-body" style="padding:48px 24px;text-align:center;"><div style="font-size:36px;margin-bottom:12px;">🔒</div><h3 style="color:#dc2626;margin:0 0 8px 0;font-size:18px;">Access Restricted</h3><p style="color:#64748b;font-size:14px;max-width:440px;margin:0 auto;">Only Super Administrators have permission to view or manage administrators.</p></div></div>';
+                } else {
+                    include OFP_PATH . 'admin/views/manage-admins.php';
+                }
+                ?>
 
             <?php elseif ( $tab === 'activity-logs' ) : ?>
                 <!-- Embedded Activity Logs Module -->
@@ -1214,7 +1228,8 @@ $titles = [
                                         <input type="number" step="0.01" name="total_package" class="ofp-input-text"
                                                value="<?php echo esc_attr( $val_total_package ); ?>" placeholder="e.g. Rent + Legal + Agency + Caution" style="padding-left:30px;">
                                     </div>
-                                    <span style="font-size:11.5px; color:var(--ofp-text-muted); margin-top:4px;">In Nigeria, rent is displayed alongside the total move-in package including legal, agency, and caution deposits.</span>
+                                    <span style="font-size:11.5px; color:var(--ofp-text-muted); margin-top:4px;">This becomes the price tenants see everywhere. Fill in the fees below and it is calculated for you, or type a total only.</span>
+                                    <?php OFP_Property_Package::render_fields( (int) $post_id, 'input[name="price"]', 'input[name="total_package"]' ); ?>
                                 </div>
 
                                 <div class="ofp-form-group">

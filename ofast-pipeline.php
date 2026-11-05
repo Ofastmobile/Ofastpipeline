@@ -3,7 +3,7 @@
  * Plugin Name: OFast Pipeline
  * Plugin URI:  https://ofastpipeline.com
  * Description: Done-for-you lead pipeline and CRM automation engine for SMB clients in Nigeria.
- * Version:     2.2.23
+ * Version:     2.2.25
  * Author:      Olabode / Bofast World
  * Author URI:  https://bofastworld.com
  * Text Domain: ofast-pipeline
@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION', '2.2.23' );
+define( 'OFP_VERSION', '2.2.25' );
 define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
@@ -54,6 +54,7 @@ if ( ! function_exists( 'ofp_image_url' ) ) {
 require_once OFP_PATH . 'includes/class-ofp-activator.php';
 require_once OFP_PATH . 'includes/class-ofp-deactivator.php';
 require_once OFP_PATH . 'includes/class-ofp-security.php';
+require_once OFP_PATH . 'includes/class-ofp-admin-url.php';
 require_once OFP_PATH . 'includes/class-ofp-auth.php';
 require_once OFP_PATH . 'includes/class-ofp-mailer.php';
 require_once OFP_PATH . 'includes/class-ofp-client.php';
@@ -87,6 +88,8 @@ require_once OFP_PATH . 'includes/class-ofp-property-commerce-repair.php';
 require_once OFP_PATH . 'includes/class-ofp-property-rent.php';
 require_once OFP_PATH . 'includes/class-ofp-property-rent-visibility.php';
 require_once OFP_PATH . 'includes/class-ofp-white-label.php';
+require_once OFP_PATH . 'includes/class-ofp-platform.php';
+require_once OFP_PATH . 'includes/class-ofp-property-package.php';
 require_once OFP_PATH . 'includes/class-ofp-brand.php';
 require_once OFP_PATH . 'includes/class-ofp-bank-account.php';
 require_once OFP_PATH . 'includes/class-ofp-prembly.php';
@@ -167,6 +170,8 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Property_Amenities::init();
     OFP_Host_Router::init();
     OFP_White_Label::init();
+    OFP_Platform::init();
+    OFP_Property_Package::init();
     OFP_Brand::init();
     OFP_Subscription::cleanup_free_pending_once();
     OFP_Payment::init();
@@ -196,6 +201,7 @@ OFP_Prembly::init();
     OFP_Watermark::init();
     OFP_Feedback::init();
     OFP_Chat_Service::init();
+    OFP_Admin_Url::init();
 } );
 
 // ── Frontend Admin Bar Control ─────────────────────────────────────────────

@@ -744,6 +744,8 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                     <?php while ( $properties->have_posts() ) : $properties->the_post(); 
                         $prop_id      = get_the_ID();
                         $price        = get_post_meta( $prop_id, 'ofp_price', true );
+                        $ofp_pkg      = OFP_Property_Package::get( $prop_id );
+                        if ( $ofp_pkg ) { $price = $ofp_pkg['total']; }
                         $location     = get_post_meta( $prop_id, 'ofp_location_text', true ) ?: 'Lagos, Nigeria';
                         $beds         = get_post_meta( $prop_id, 'ofp_bedrooms', true );
                         $baths        = get_post_meta( $prop_id, 'ofp_bathrooms', true );
@@ -820,6 +822,7 @@ $banner_title = $agent_name . ' • Official Real Estate Portfolio';
                                 </div>
                                 <div class="absolute bottom-3.5 left-3.5 right-3.5 flex justify-between items-end pointer-events-none">
                                     <div class="text-white font-black text-2xl tracking-tight drop-shadow-md"><?php echo esc_html( $formatted_price ); ?></div>
+                                    <?php if ( $ofp_pkg ) : ?><div class="text-white/90 text-[11px] font-semibold drop-shadow"><?php echo esc_html( OFP_Property_Package::note( $ofp_pkg ) ); ?></div><?php endif; ?>
                                     <div class="bg-slate-950/75 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-1 rounded-md border border-white/10 capitalize">
                                         <?php echo esc_html( str_replace('-', ' ', $prop_type) ); ?>
                                     </div>

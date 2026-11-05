@@ -1138,11 +1138,11 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 
             <div class="ofp-field">
                 <label for="ofp-offer-rate-id"><span>Select Rent Rate Option <span class="req">*</span></span></label>
-                <select name="rent_option_id" id="ofp-offer-rate-id" required class="ofp-select" onchange="ofpCalcOfferTotal()">
+                <select name="rent_option_id" id="ofp-offer-rate-id" required class="ofp-select" onchange="ofpApplyPackageDefaults(); ofpCalcOfferTotal()">
                     <option value="" data-amount="0">— Select property first —</option>
                     <?php foreach ( $rent_options as $ro ) : ?>
                         <?php if ( ! $ro->is_active ) continue; ?>
-                        <option value="<?php echo esc_attr( $ro->id ); ?>" data-property="<?php echo esc_attr( $ro->property_id ); ?>" data-amount="<?php echo esc_attr( $ro->amount ); ?>">
+                        <option value="<?php echo esc_attr( $ro->id ); ?>" data-property="<?php echo esc_attr( $ro->property_id ); ?>" data-amount="<?php echo esc_attr( $ro->amount ); ?>" <?php $pk = OFP_Property_Package::offer_defaults( (int) $ro->property_id ); ?>data-legal="<?php echo esc_attr( $pk['legal'] ); ?>" data-agency="<?php echo esc_attr( $pk['agency'] ); ?>" data-caution="<?php echo esc_attr( $pk['caution'] ); ?>" data-service="<?php echo esc_attr( $pk['service'] ); ?>" data-svc-recurring="<?php echo (int) $pk['recurring']; ?>">
                             <?php echo esc_html( $ro->property_title . ' — ' . OFP_Property_Rent::period_label( $ro->period, (int) $ro->custom_days ) . ' — NGN ' . number_format( $ro->amount, 2 ) ); ?>
                         </option>
                     <?php endforeach; ?>
@@ -1564,11 +1564,29 @@ function ofpUpdateRateOptionsForProperty(propertyId) {
         }
     });
     if (!foundFirst) select.value = '';
+    ofpApplyPackageDefaults();
     select.dispatchEvent(new Event('change', { bubbles: true }));
     if (typeof ofpSyncCustomSelect === 'function') {
         ofpSyncCustomSelect(select);
     }
     ofpCalcOfferTotal();
+}
+
+// Fill the offer's fees from the property's Total Move-in Package (staff can still edit them).
+function ofpApplyPackageDefaults() {
+    var select = document.getElementById('ofp-offer-rate-id');
+    if (!select || select.selectedIndex < 0) return;
+    var opt = select.options[select.selectedIndex];
+    if (!opt || !opt.value) return;
+    var map = { 'ofp-offer-legal': 'data-legal', 'ofp-offer-agency': 'data-agency', 'ofp-offer-caution': 'data-caution', 'ofp-offer-service': 'data-service' };
+    Object.keys(map).forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = (parseFloat(opt.getAttribute(map[id])) || 0).toFixed(2);
+    });
+    var first = document.getElementById('ofp-offer-legal');
+    var form = first ? first.closest('form') : null;
+    var rec = form ? form.querySelector('input[name="is_service_charge_recurring"]') : null;
+    if (rec) rec.checked = opt.getAttribute('data-svc-recurring') === '1';
 }
 
 function ofpCalcOfferTotal() {

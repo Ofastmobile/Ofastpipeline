@@ -98,7 +98,7 @@ class OFP_Brand {
 
 	/** Solo companies see no signup links and no upgrade prompts. */
 	public static function hide_plan_prompts( $client = null ): bool {
-		return self::mode( $client ) === 'solo';
+		return self::mode( $client ) === 'solo' || ( class_exists( 'OFP_Platform' ) && OFP_Platform::is_platform( $client ) );
 	}
 
 	/** Whose logo, colors and support details apply. Null means the app's own look. */

@@ -973,16 +973,25 @@ if ( empty( $gallery_urls ) ) {
 
                 <!-- Price card -->
                 <div class="pointer-events-auto bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-xl sm:rounded-2xl px-3.5 py-2.5 sm:px-5 sm:py-3.5 self-start sm:self-auto text-left sm:text-right shadow-2xl shrink-0">
-                    <p class="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-0.5">Price</p>
-                    <p class="text-emerald-400 font-black text-lg sm:text-2xl leading-tight">₦<?php echo number_format( (float) get_post_meta( get_the_ID(), 'ofp_price', true ) ); ?></p>
-                    <?php if ( $listing_type === "rent" || $listing_type === "shortlet" ) : ?>
+                    <?php $ofp_pkg = OFP_Property_Package::get( $post_id ); // rental with a move-in package? ?>
+                    <p class="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-0.5"><?php echo $ofp_pkg ? 'Total Move-in' : 'Price'; ?></p>
+                    <p class="text-emerald-400 font-black text-lg sm:text-2xl leading-tight">₦<?php echo number_format( $ofp_pkg ? $ofp_pkg['total'] : (float) get_post_meta( get_the_ID(), 'ofp_price', true ) ); ?></p>
+                    <?php if ( $ofp_pkg ) : ?>
+                        <p class="text-slate-400 text-[11px] sm:text-xs font-semibold">Rent ₦<?php echo number_format( $ofp_pkg['rent'] ); ?> / <?php echo esc_html( $ofp_pkg['period'] ); ?></p>
+                        <?php if ( $ofp_pkg['itemized'] ) : ?>
+                            <details class="mt-1.5 pt-1.5 border-t border-slate-700/70">
+                                <summary class="cursor-pointer text-[10px] font-bold text-blue-400 uppercase tracking-wider">See breakdown</summary>
+                                <ul class="mt-1 space-y-0.5 text-[11px] text-slate-300 font-semibold">
+                                    <li class="flex justify-between gap-4"><span>Rent</span><span>₦<?php echo number_format( $ofp_pkg['rent'] ); ?></span></li>
+                                    <?php foreach ( $ofp_pkg['lines'] as $line_label => $line_amount ) : ?>
+                                        <li class="flex justify-between gap-4"><span><?php echo esc_html( $line_label ); ?></span><span>₦<?php echo number_format( $line_amount ); ?></span></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                                <?php if ( $ofp_pkg['service_recurring'] ) : ?><p class="text-[10px] text-slate-400 mt-1">Service charge repeats every renewal.</p><?php endif; ?>
+                            </details>
+                        <?php endif; ?>
+                    <?php elseif ( $listing_type === "rent" || $listing_type === "shortlet" ) : ?>
                         <p class="text-slate-400 text-[11px] sm:text-xs font-semibold">/ <?php echo esc_html( get_post_meta( $post_id, "ofp_price_period", true ) ?: "year" ); ?></p>
-                    <?php endif; ?>
-                    <?php if ( ( $listing_type === 'rent' || $listing_type === 'shortlet' ) && $total_package > 0 ) : ?>
-                        <div class="mt-1 pt-1 sm:mt-1.5 sm:pt-1.5 border-t border-slate-700/70">
-                            <span class="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Total Move-in Package</span>
-                            <span class="text-xs font-black text-blue-400">₦<?php echo number_format( $total_package ); ?></span>
-                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1049,7 +1058,23 @@ if ( empty( $gallery_urls ) ) {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
                         <span class="text-[11px] sm:text-xs text-slate-500 font-semibold uppercase tracking-wider">Land Title</span>
-                        <span class="font-bold text-xs sm:text-sm truncate max-w-[120px] text-center" title="<?php echo esc_attr( $title_doc ?: 'Pending' ); ?>"><?php echo esc_html( $title_doc ?: 'On Request' ); ?></span>
+                        <?php
+                        $raw_single_doc = $title_doc ?: '';
+                        $docs_single = array_filter( array_map( 'trim', explode( ',', $raw_single_doc ) ) );
+                        if ( ! empty( $docs_single ) ) :
+                            $first_single = $docs_single[0];
+                            $extra_single = count( $docs_single ) - 1;
+                            $all_single_tooltip = esc_attr( implode( ', ', $docs_single ) );
+                        ?>
+                            <div class="flex items-center gap-1 justify-center max-w-[140px]" title="<?php echo $all_single_tooltip; ?>">
+                                <span class="font-bold text-xs sm:text-sm truncate text-center"><?php echo esc_html( $first_single ); ?></span>
+                                <?php if ( $extra_single > 0 ) : ?>
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700/50 shrink-0 cursor-default" title="<?php echo $all_single_tooltip; ?>">+<?php echo (int) $extra_single; ?></span>
+                                <?php endif; ?>
+                            </div>
+                        <?php else : ?>
+                            <span class="font-bold text-xs sm:text-sm text-center">On Request</span>
+                        <?php endif; ?>
                     </div>
                     <?php endif; ?>
                     <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 sm:bg-transparent sm:dark:bg-transparent">
@@ -1104,8 +1129,21 @@ if ( empty( $gallery_urls ) ) {
                                     class="font-semibold"><?php the_ID(); ?></span></div>
                             <div><span class="text-slate-500 block mb-1">Status:</span><span
                                     class="font-semibold <?php echo esc_attr( $status_ctx['tw_text'] ); ?>"><?php echo esc_html( $status_ctx['full_label'] ); ?></span></div>
-                            <div><span class="text-slate-500 block mb-1">Title Document:</span><span
-                                    class="font-semibold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_title_document', true ) ?: 'N/A' ); ?></span></div>
+                            <div><span class="text-slate-500 block mb-1">Title Document(s):</span>
+                                <?php
+                                $raw_detail_doc = get_post_meta( get_the_ID(), 'ofp_title_document', true ) ?: '';
+                                $detail_docs = array_filter( array_map( 'trim', explode( ',', $raw_detail_doc ) ) );
+                                if ( ! empty( $detail_docs ) ) {
+                                    echo '<div class="flex flex-wrap gap-1.5 mt-1">';
+                                    foreach ( $detail_docs as $d ) {
+                                        echo '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60">' . esc_html( $d ) . '</span>';
+                                    }
+                                    echo '</div>';
+                                } else {
+                                    echo '<span class="font-semibold">N/A</span>';
+                                }
+                                ?>
+                            </div>
                             <?php if ( $listing_type !== 'land' ) : ?>
                             <div><span class="text-slate-500 block mb-1">Condition:</span><span
                                     class="font-semibold"><?php echo esc_html( get_post_meta( get_the_ID(), 'ofp_condition', true ) ?: 'N/A' ); ?></span></div>
@@ -2120,7 +2158,7 @@ if ( empty( $gallery_urls ) ) {
                 <div class="min-w-0 flex-1">
                     <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate"><?php echo esc_html( get_the_title() ); ?></h4>
                     <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate"><?php echo esc_html( $location ); ?></p>
-                    <p class="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-0.5">₦<?php echo number_format( (float) $price ); ?></p>
+                    <p class="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-0.5">₦<?php $ofp_pkg_mini = OFP_Property_Package::get( $post_id ); echo number_format( $ofp_pkg_mini ? $ofp_pkg_mini['total'] : (float) $price ); ?></p>
                 </div>
             </div>
 
@@ -2407,10 +2445,11 @@ if ( empty( $gallery_urls ) ) {
     <div class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200/90 dark:border-slate-800 px-4 py-2.5 shadow-[0_-4px_25px_rgba(0,0,0,0.12)] flex items-center justify-between gap-3">
         <!-- Left: Price Info -->
         <div class="min-w-0 flex-1">
-            <p class="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider leading-none mb-1">Asking Price</p>
+            <?php $ofp_pkg_bar = OFP_Property_Package::get( $post_id ); ?>
+            <p class="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider leading-none mb-1"><?php echo $ofp_pkg_bar ? 'Total Move-in' : 'Asking Price'; ?></p>
             <div class="flex items-baseline gap-1 truncate">
-                <span class="text-emerald-600 dark:text-emerald-400 font-black text-base sm:text-lg leading-none tracking-tight">₦<?php echo number_format( (float) $price ); ?></span>
-                <?php if ( $listing_type === 'rent' || $listing_type === 'shortlet' ) : ?>
+                <span class="text-emerald-600 dark:text-emerald-400 font-black text-base sm:text-lg leading-none tracking-tight">₦<?php echo number_format( $ofp_pkg_bar ? $ofp_pkg_bar['total'] : (float) $price ); ?></span>
+                <?php if ( ! $ofp_pkg_bar && ( $listing_type === 'rent' || $listing_type === 'shortlet' ) ) : ?>
                     <span class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold leading-none">/<?php echo esc_html( get_post_meta( $post_id, "ofp_price_period", true ) ?: "yr" ); ?></span>
                 <?php endif; ?>
             </div>

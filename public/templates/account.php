@@ -554,9 +554,9 @@ $cover_url        = ! empty( $client->cover_image_url ) ? $client->cover_image_u
 $has_custom_cover = ! empty( $client->cover_image_url );
 
 // Stamp / seal image URL (used on receipts & vouchers)
-$default_stamp    = ofp_image_url( 'receipt-verified-stamp.png' );
-$stamp_url        = ! empty( $client->stamp_url ) ? $client->stamp_url : $default_stamp;
-$has_custom_stamp = ! empty( $client->stamp_url );
+$default_stamp    = 'https://pub-f02915809d3846b8ab0aaedeab54dbf7.r2.dev/mypropertyhq/images/receipt-verified-stamp.png';
+$stamp_url        = ( ! empty( $client->stamp_url ) && false === strpos( $client->stamp_url, 'receipt-verified-stamp.png' ) ) ? $client->stamp_url : $default_stamp;
+$has_custom_stamp = ! empty( $client->stamp_url ) && false === strpos( $client->stamp_url, 'receipt-verified-stamp.png' );
 
 // Tier badge text
 $plan_badge = 'Premium User';

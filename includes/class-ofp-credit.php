@@ -35,6 +35,11 @@ class OFP_Credit {
     public static function has_balance( int $client_id, string $channel, float $amount ): bool {
         global $wpdb;
 
+        // The platform's own account is never limited by credits.
+        if ( OFP_Platform::is_platform( $client_id ) ) {
+            return true;
+        }
+
         $col       = sanitize_key( $channel ) . '_remaining';
         $remaining = (float) $wpdb->get_var(
             $wpdb->prepare(
@@ -84,6 +89,11 @@ class OFP_Credit {
      */
     public static function deduct( int $client_id, string $channel, float $amount ): bool {
         global $wpdb;
+
+        // Nothing is charged on the platform's own account.
+        if ( OFP_Platform::is_platform( $client_id ) ) {
+            return true;
+        }
         $p   = $wpdb->prefix;
         $col = sanitize_key( $channel );
 
@@ -273,7 +283,7 @@ class OFP_Credit {
             )
         );
 
-        if ( ! $client ) return;
+        if ( ! $client || OFP_Platform::is_platform( $client ) ) return;
 
         OFP_Mailer::send_low_credit_warning( $client, $channel, $remaining );
 

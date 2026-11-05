@@ -679,7 +679,8 @@ class OFP_Property_CPT {
                                     <input type="number" step="0.01" name="ofp_total_package" id="ofp_total_package_input" class="ofp-input-number ofp-currency-input"
                                            value="<?php echo esc_attr( $meta['ofp_total_package'] ); ?>" placeholder="e.g. Total Package including Legal &amp; Agency">
                                 </div>
-                                <span class="ofp-field-hint">In Nigeria, total move-in cost includes agency, legal, caution, and service fee. Displayed separately alongside rent.</span>
+                                <span class="ofp-field-hint">This becomes the price tenants see everywhere. Fill in the fees below and it is calculated for you, or type a total only.</span>
+                                <?php OFP_Property_Package::render_fields( (int) $post->ID, '#ofp_price_input', '#ofp_total_package_input' ); ?>
                             </div>
 
                             <div class="ofp-form-group ofp-field-full" style="padding:14px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px;">
@@ -1519,15 +1520,22 @@ class OFP_Property_CPT {
         ];
 
         foreach ( $fields as $key => $sanitizer ) {
-            $value = isset( $_POST[ $key ] )
-                ? $sanitizer( wp_unslash( $_POST[ $key ] ) )
-                : '';
+            if ( $key === 'ofp_title_document' && isset( $_POST[ $key ] ) && is_array( $_POST[ $key ] ) ) {
+                $value = implode( ', ', array_filter( array_map( 'sanitize_text_field', wp_unslash( $_POST[ $key ] ) ) ) );
+            } else {
+                $value = isset( $_POST[ $key ] )
+                    ? $sanitizer( wp_unslash( $_POST[ $key ] ) )
+                    : '';
+            }
             // Normalize legacy one-time -> sales.
             if ( $key === 'ofp_price_period' && $value === 'one-time' ) {
                 $value = 'sales';
             }
             update_post_meta( $post_id, $key, $value );
         }
+
+        // Move-in package fees (calculates the total move-in price)
+        OFP_Property_Package::save( $post_id, wp_unslash( $_POST ) );
 
         // Save amenities array
         $amenities = isset( $_POST['ofp_amenities'] ) && is_array( $_POST['ofp_amenities'] )
