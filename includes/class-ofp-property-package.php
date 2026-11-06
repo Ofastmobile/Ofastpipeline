@@ -105,10 +105,22 @@ class OFP_Property_Package {
         if ( empty( $src['ofp_fee_present'] ) ) {
             return;
         }
+        // The total typed into the form (the field is named differently in the wp-admin form).
+        $typed = (float) ( $src['total_package'] ?? $src['ofp_total_package'] ?? 0 );
+
+        $sum = 0.0;
         foreach ( self::FEES as $meta ) {
-            update_post_meta( $post_id, $meta, max( 0, round( (float) ( $src[ $meta ] ?? 0 ), 2 ) ) );
+            $val  = max( 0, round( (float) ( $src[ $meta ] ?? 0 ), 2 ) );
+            $sum += $val;
+            update_post_meta( $post_id, $meta, $val );
         }
         update_post_meta( $post_id, self::META_RECURRING, ! empty( $src[ self::META_RECURRING ] ) ? '1' : '0' );
+
+        // No itemised fees: the typed total (or nothing) decides. Without this, clearing every fee
+        // would leave the old calculated total behind.
+        if ( $sum <= 0 ) {
+            update_post_meta( $post_id, 'ofp_total_package', $typed > 0 ? $typed : 0 );
+        }
         self::refresh( $post_id );
     }
 
@@ -204,18 +216,17 @@ class OFP_Property_Package {
         ?>
         <div class="ofp-pkg" id="<?php echo esc_attr( $uid ); ?>" data-rent="<?php echo esc_attr( $rent_selector ); ?>" data-total="<?php echo esc_attr( $total_selector ); ?>">
             <style>
-                .ofp-pkg{margin-top:12px;padding:12px;border:1px solid rgba(128,128,128,.3);border-radius:10px}
+                .ofp-pkg{margin-top:0;padding:0;border:none;border-radius:0}
                 .ofp-pkg-title{margin:0 0 4px;font-size:12.5px;font-weight:700}
                 .ofp-pkg-hint{margin:0 0 10px;font-size:11.5px;opacity:.75}
-                .ofp-pkg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+                .ofp-pkg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}@media(max-width:480px){.ofp-pkg-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.ofp-pkg input[type=number]{padding:8px 8px;font-size:13px}}@media(max-width:360px){.ofp-pkg-grid{grid-template-columns:1fr!important}}
                 .ofp-pkg label{display:block;font-size:12px;font-weight:600;margin-bottom:4px}
                 .ofp-pkg input[type=number]{width:100%;padding:9px 10px;border-radius:8px;border:1px solid rgba(128,128,128,.4);background:transparent;color:inherit;box-sizing:border-box}
                 .ofp-pkg-recur{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;font-weight:500}
                 .ofp-pkg-sum{margin-top:10px;font-size:13px;font-weight:700}
             </style>
             <input type="hidden" name="ofp_fee_present" value="1">
-            <p class="ofp-pkg-title">Move-in fees (optional)</p>
-            <p class="ofp-pkg-hint">Fill these in and the total move-in price is calculated for you. Tenants see that total as the price, and it pre-fills your lease offers.</p>
+            <p class="ofp-pkg-title" style="margin-bottom:8px;">Move-in fees (optional)</p>
             <div class="ofp-pkg-grid">
                 <?php foreach ( $fields as $key => $f ) : ?>
                     <div>
@@ -255,6 +266,8 @@ class OFP_Property_Package {
                 }
                 fees.forEach(function (i) { i.addEventListener('input', update); });
                 if (rent) { rent.addEventListener('input', update); }
+                // A saved package has a calculated total, so clearing its fees must clear that total too.
+                fees.forEach(function (i) { if ((parseFloat(i.value) || 0) > 0) { auto = true; } });
                 update();
             })();
             </script>

@@ -1138,7 +1138,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 
             <div class="ofp-field">
                 <label for="ofp-offer-rate-id"><span>Select Rent Rate Option <span class="req">*</span></span></label>
-                <select name="rent_option_id" id="ofp-offer-rate-id" required class="ofp-select" onchange="ofpApplyPackageDefaults(); ofpCalcOfferTotal()">
+                <select name="rent_option_id" id="ofp-offer-rate-id" required class="ofp-select ofp-native-select" onchange="ofpApplyPackageDefaults(); ofpCalcOfferTotal()">
                     <option value="" data-amount="0">— Select property first —</option>
                     <?php foreach ( $rent_options as $ro ) : ?>
                         <?php if ( ! $ro->is_active ) continue; ?>

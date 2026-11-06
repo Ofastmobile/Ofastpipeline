@@ -1,0 +1,87 @@
+/**
+ * OFast Pipeline - Plans & Pricing Page Styles
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+
+[x-cloak] { display: none !important; }
+.theme-toggle-sun { display: none; }
+.dark .theme-toggle-sun { display: inline-block; }
+.dark .theme-toggle-moon { display: none; }
+.theme-toggle-moon { display: inline-block; }
+
+/* Custom hero background with balanced overlay: vibrant image visibility without being washed out */
+.plans-hero-bg {
+    background-image: 
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.38) 45%, rgba(255, 255, 255, 0.85) 85%, #f8fafc 100%),
+        var(--ofp-plans-hero-img, none);
+    background-size: cover;
+    background-position: center;
+    background-attachment: scroll;
+}
+html.dark .plans-hero-bg {
+    background-image: 
+        linear-gradient(to bottom, rgba(11, 17, 32, 0.45) 0%, rgba(11, 17, 32, 0.75) 50%, rgba(2, 6, 23, 0.95) 100%),
+        var(--ofp-plans-hero-img, none);
+}
+
+/* Direct Light & Dark mode guarantees for entire page */
+html:not(.dark) body,
+html.light body {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+}
+html.dark body {
+    background-color: #020617 !important;
+    color: #f8fafc !important;
+}
+
+/* Ensure cards switch cleanly in light mode */
+html:not(.dark) .plan-hover-card,
+html.light .plan-hover-card,
+html:not(.dark) .plan-card-bg,
+html.light .plan-card-bg {
+    background-color: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+html.dark .plan-hover-card,
+html.dark .plan-card-bg {
+    background-color: #0f172a !important;
+    border-color: #1e293b !important;
+    color: #f8fafc !important;
+}
+
+/* iOS Liquid / Frosted Glass Navbar */
+header.ofp-ios-glass-nav {
+    transition: background-color 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Not scrolled / At hero section: Very faint in both Light & Dark modes */
+header.ofp-ios-glass-nav.ofp-nav-top {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(8px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: none !important;
+}
+html.dark header.ofp-ios-glass-nav.ofp-nav-top {
+    background-color: rgba(2, 6, 23, 0.15) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-shadow: none !important;
+}
+
+/* When scrolled down past hero: Full iOS liquid/frosted glass */
+header.ofp-ios-glass-nav.ofp-nav-scrolled {
+    background-color: rgba(255, 255, 255, 0.70) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.7) !important;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05) !important;
+}
+html.dark header.ofp-ios-glass-nav.ofp-nav-scrolled {
+    background-color: rgba(2, 6, 23, 0.75) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.35) !important;
+}
+

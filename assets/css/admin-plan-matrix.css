@@ -1,0 +1,108 @@
+/**
+ * OFast Pipeline - Plan Comparison Matrix Editor
+ * Styles for interactive comparison table on Settings page
+ */
+
+.ofp-matrix-row:hover .ofp-matrix-del-row-btn {
+    opacity: 1 !important;
+}
+
+.ofp-matrix-group-row:hover .ofp-matrix-del-group-btn {
+    opacity: 1 !important;
+}
+
+.ofp-matrix-cell {
+    position: relative;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.ofp-matrix-cell:hover {
+    background: rgba(37, 99, 235, 0.06) !important;
+}
+
+.ofp-matrix-cell:hover::after {
+    content: '✎';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 11px;
+    color: #3b82f6;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.ofp-matrix-cell[data-col="feature"]:hover::after {
+    right: 28px;
+}
+
+.ofp-matrix-cell.is-editing::after {
+    display: none !important;
+}
+
+.ofp-matrix-cell.is-editing {
+    background: #f8fafc !important;
+    padding: 6px !important;
+}
+
+.ofp-matrix-editor-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+    width: 100%;
+}
+
+.ofp-matrix-quick-pills {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.ofp-matrix-pill-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1.2;
+    transition: all 0.12s ease;
+    color: #334155;
+}
+
+.ofp-matrix-pill-btn:hover {
+    background: #f1f5f9;
+}
+
+.ofp-matrix-pill-btn.btn-check:hover {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+}
+
+.ofp-matrix-pill-btn.btn-dash:hover {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.ofp-matrix-inline-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 600;
+    color: #0f172a;
+    border: 1.5px solid #3b82f6;
+    border-radius: 5px;
+    outline: none;
+    background: #ffffff;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.ofp-matrix-add-feature-btn:hover {
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+}

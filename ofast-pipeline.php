@@ -3,7 +3,7 @@
  * Plugin Name: OFast Pipeline
  * Plugin URI:  https://ofastpipeline.com
  * Description: Done-for-you lead pipeline and CRM automation engine for SMB clients in Nigeria.
- * Version:     2.2.25
+ * Version:     2.2.27
  * Author:      Olabode / Bofast World
  * Author URI:  https://bofastworld.com
  * Text Domain: ofast-pipeline
@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION', '2.2.25' );
+define( 'OFP_VERSION', '2.2.28' );
 define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
@@ -55,6 +55,7 @@ require_once OFP_PATH . 'includes/class-ofp-activator.php';
 require_once OFP_PATH . 'includes/class-ofp-deactivator.php';
 require_once OFP_PATH . 'includes/class-ofp-security.php';
 require_once OFP_PATH . 'includes/class-ofp-admin-url.php';
+require_once OFP_PATH . 'includes/class-ofp-admin-tweaks.php';
 require_once OFP_PATH . 'includes/class-ofp-auth.php';
 require_once OFP_PATH . 'includes/class-ofp-mailer.php';
 require_once OFP_PATH . 'includes/class-ofp-client.php';
@@ -90,6 +91,7 @@ require_once OFP_PATH . 'includes/class-ofp-property-rent-visibility.php';
 require_once OFP_PATH . 'includes/class-ofp-white-label.php';
 require_once OFP_PATH . 'includes/class-ofp-platform.php';
 require_once OFP_PATH . 'includes/class-ofp-property-package.php';
+require_once OFP_PATH . 'includes/class-ofp-field-agent.php';
 require_once OFP_PATH . 'includes/class-ofp-brand.php';
 require_once OFP_PATH . 'includes/class-ofp-bank-account.php';
 require_once OFP_PATH . 'includes/class-ofp-prembly.php';
@@ -172,6 +174,7 @@ add_action( 'plugins_loaded', function (): void {
     OFP_White_Label::init();
     OFP_Platform::init();
     OFP_Property_Package::init();
+    OFP_Field_Agent::init();
     OFP_Brand::init();
     OFP_Subscription::cleanup_free_pending_once();
     OFP_Payment::init();
@@ -202,20 +205,8 @@ OFP_Prembly::init();
     OFP_Feedback::init();
     OFP_Chat_Service::init();
     OFP_Admin_Url::init();
+    OFP_Admin_Tweaks::init();
 } );
-
-// ── Frontend Admin Bar Control ─────────────────────────────────────────────
-add_action( 'init', function (): void {
-    if ( ! is_admin() && '1' === (string) get_option( 'ofp_hide_admin_bar', '1' ) ) {
-        add_filter( 'show_admin_bar', '__return_false' );
-    }
-}, 1 );
-
-add_action( 'wp_head', function (): void {
-    if ( ! is_admin() && '1' === (string) get_option( 'ofp_hide_admin_bar', '1' ) ) {
-        echo '<style id="ofp-hide-admin-bar">#wpadminbar{display:none!important;}html{margin-top:0!important;}* html body{margin-top:0!important;}body.admin-bar header{top:0!important;}</style>' . "\n";
-    }
-}, 1 );
 
 add_action( 'init', function (): void {
     // Flush when asked to (activation) AND once after every plugin version change.

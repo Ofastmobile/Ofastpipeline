@@ -47,6 +47,16 @@ $app_name           = get_option( 'ofp_app_name', '' );
 $use_app_host       = get_option( 'ofp_use_app_host', '1' );
 
 $hide_admin_bar     = get_option( 'ofp_hide_admin_bar', '1' );
+$hide_admin_bar_roles = (array) get_option( 'ofp_hide_admin_bar_roles', [] );
+$remove_wp_logo     = get_option( 'ofp_remove_wp_logo', '0' );
+$remove_new_content = get_option( 'ofp_remove_new_content', '0' );
+$custom_greeting_enabled = get_option( 'ofp_custom_greeting_enabled', '0' );
+$custom_greeting_text = get_option( 'ofp_custom_greeting_text', 'Welcome' );
+
+$disable_xmlrpc         = get_option( 'ofp_disable_xmlrpc', '0' );
+$obfuscate_author_slugs = get_option( 'ofp_obfuscate_author_slugs', '0' );
+$obfuscate_emails       = get_option( 'ofp_obfuscate_emails', '0' );
+$all_wp_roles           = function_exists( 'wp_roles' ) ? wp_roles()->roles : [];
 
 $watermark_enabled  = get_option( 'ofp_watermark_enabled', '1' );
 
@@ -814,28 +824,6 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
 
 
-                            <!-- Switch 3: Hide WP Admin Bar on Frontend -->
-
-                            <div class="ofp-switch-row">
-
-                                <div class="ofp-switch-info">
-
-                                    <span class="ofp-switch-title">Hide WordPress Admin Top Bar on Frontend</span>
-
-                                    <p class="ofp-switch-desc">Hides the black WordPress admin bar for logged-in users and administrators across the public frontend website and client portal. Keeps the layout clean and prevents header overlap.</p>
-
-                                </div>
-
-                                <label class="ofp-switch">
-
-                                    <input type="checkbox" name="ofp_hide_admin_bar" value="1" <?php checked( $hide_admin_bar, '1' ); ?>>
-
-                                    <span class="ofp-slider"></span>
-
-                                </label>
-
-                            </div>
-
 
 
                             <!-- Switch 4: Auto Watermark Property Photos -->
@@ -889,6 +877,95 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                     </div>
 
 
+
+                    <!-- Admin Bar & Dashboard White-Labeling Card -->
+                    <div class="ofp-card" style="margin-top: 24px;">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-blue">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Admin Bar &amp; White-Labeling</h3>
+                                    <p>Control admin bar visibility on the frontend, remove standard WordPress brand marks, and customize system greetings.</p>
+                                </div>
+                            </div>
+                            <span class="ofp-pill ofp-pill-ready">Active Controls</span>
+                        </div>
+                        <div class="ofp-card-body">
+                            <!-- Switch: Global Frontend Admin Bar Hide -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Hide Admin Bar Globally on Frontend</span>
+                                    <p class="ofp-switch-desc">Completely hides the top admin bar for all visitors and logged-in users on the public frontend website and client portal.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_hide_admin_bar" value="1" <?php checked( $hide_admin_bar, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Role-based Admin Bar Hiding -->
+                            <div style="margin: 18px 0; padding: 14px 0; border-top: 1px dashed var(--ofp-slate-200, #e2e8f0); border-bottom: 1px dashed var(--ofp-slate-200, #e2e8f0);">
+                                <label class="ofp-field-label" style="margin-bottom: 4px; display: block; font-weight: 600;">Hide Frontend Admin Bar by Specific Roles</label>
+                                <p class="ofp-field-hint" style="margin-bottom: 10px;">Select user roles that should NOT see the admin bar on the frontend (applies when global hide is disabled).</p>
+                                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                    <?php foreach ( $all_wp_roles as $role_slug => $role_data ) : ?>
+                                        <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--ofp-slate-100, #f1f5f9); border: 1px solid var(--ofp-slate-200, #e2e8f0); border-radius: 6px; font-size: 12px; font-weight: 500; color: var(--ofp-slate-700, #334155); cursor: pointer;">
+                                            <input type="checkbox" name="ofp_hide_admin_bar_roles[]" value="<?php echo esc_attr( $role_slug ); ?>" <?php checked( in_array( $role_slug, $hide_admin_bar_roles, true ) ); ?>>
+                                            <span><?php echo esc_html( translate_user_role( $role_data['name'] ) ); ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+
+                            <!-- Switch: Remove WP Logo -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Remove WordPress Logo from Admin Bar</span>
+                                    <p class="ofp-switch-desc">Removes the standard "W" logo dropdown from the top-left corner of the admin bar for a cleaner white-label interface.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_remove_wp_logo" value="1" <?php checked( $remove_wp_logo, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Switch: Remove "+ New" Creation Menu -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Remove "+ New" Quick Creation Menu</span>
+                                    <p class="ofp-switch-desc">Removes the generic "+ New" dropdown (post, page, media) from the top admin bar to streamline navigation.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_remove_new_content" value="1" <?php checked( $remove_new_content, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Switch & Input: Custom Admin Bar Greeting -->
+                            <div class="ofp-switch-row" style="margin-top: 10px;">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Custom Admin User Greeting</span>
+                                    <p class="ofp-switch-desc">Replace the default "Howdy, [Name]" in the top-right account menu with your preferred greeting (e.g. "Welcome", "Hello", "Hi").</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_custom_greeting_enabled" id="ofp_custom_greeting_enabled" value="1" <?php checked( $custom_greeting_enabled, '1' ); ?> onchange="document.getElementById('ofp-greeting-text-wrap').style.display = this.checked ? 'block' : 'none';">
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
+                            <div id="ofp-greeting-text-wrap" style="<?php echo $custom_greeting_enabled === '1' ? '' : 'display:none;'; ?> margin-top: 12px; padding: 14px; background: var(--ofp-slate-50, #f8fafc); border-radius: 6px; border: 1px solid var(--ofp-slate-200, #e2e8f0);">
+                                <label class="ofp-field-label" for="ofp_custom_greeting_text" style="font-weight: 600;">Greeting Text Prefix</label>
+                                <div class="ofp-input-box" style="max-width: 280px; margin-top: 6px;">
+                                    <input type="text" name="ofp_custom_greeting_text" id="ofp_custom_greeting_text" value="<?php echo esc_attr( $custom_greeting_text ); ?>" placeholder="Welcome">
+                                </div>
+                                <p class="ofp-field-hint" style="margin-top: 6px;">Example preview: <code><?php echo esc_html( ! empty( $custom_greeting_text ) ? $custom_greeting_text : 'Welcome' ); ?>, <?php echo esc_html( wp_get_current_user()->display_name ); ?></code></p>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Social Media Channels Card -->
 
@@ -2540,6 +2617,12 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                                    name="listing_price_<?php echo esc_attr( $plan_key ); ?>"
 
+                                                   id="listing_price_<?php echo esc_attr( $plan_key ); ?>"
+
+                                                   class="ofp-plan-monthly-price-input"
+
+                                                   data-plan="<?php echo esc_attr( $plan_key ); ?>"
+
                                                    value="<?php echo esc_attr( $p['price'] ?? 0 ); ?>">
 
                                         </div>
@@ -2550,25 +2633,60 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                     <?php if ( $plan_key !== 'free' ) : ?>
 
-                                    <?php foreach ( [ 3, 6, 12 ] as $pp_m ) :
+                                    <div style="margin: 12px 0 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ofp-slate-500, #64748b);">
+                                            Period Discounts
+                                        </span>
+                                        <button type="button" class="ofp-btn-recalc-plan-discounts" data-plan="<?php echo esc_attr( $plan_key ); ?>"
+                                                style="background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.25); border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 600; color: #2563eb; cursor: pointer; transition: all 0.15s ease;"
+                                                title="Recalculate 3m (5%), 6m (10%) and 1yr (15%) discounts from monthly price">
+                                            ⚡ Auto-calc (5%, 10%, 15%)
+                                        </button>
+                                    </div>
 
+                                    <?php 
+                                    $discounts = [
+                                        3  => [ 'rate' => 0.05, 'label' => '-5% off' ],
+                                        6  => [ 'rate' => 0.10, 'label' => '-10% off' ],
+                                        12 => [ 'rate' => 0.15, 'label' => '-15% off' ],
+                                    ];
+                                    foreach ( [ 3, 6, 12 ] as $pp_m ) :
                                         $pp_saved = (float) get_option( "ofp_period_price_{$plan_key}_{$pp_m}", 0 );
-
+                                        $disc_info = $discounts[ $pp_m ];
+                                        $monthly_base = (float) ( $p['price'] ?? 0 );
+                                        $calc_val = round( $monthly_base * $pp_m * ( 1 - $disc_info['rate'] ), 2 );
+                                        $display_val = $pp_saved > 0 ? $pp_saved : ( $monthly_base > 0 ? $calc_val : 0 );
                                     ?>
 
                                     <div class="ofp-tier-input-group">
 
-                                        <label><?php echo (int) $pp_m; ?>-Month Price (NGN) <span style="font-weight:400;opacity:.65;">leave 0 for monthly price x <?php echo (int) $pp_m; ?></span></label>
+                                        <label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                                            <span>
+                                                <?php echo (int) $pp_m === 12 ? '1-Year (12m)' : (int) $pp_m . '-Month'; ?> Price (NGN)
+                                                <span class="ofp-badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px;">
+                                                    <?php echo esc_html( $disc_info['label'] ); ?>
+                                                </span>
+                                            </span>
+                                            <span class="ofp-period-mo-preview" id="period_mo_preview_<?php echo esc_attr( $plan_key ); ?>_<?php echo (int) $pp_m; ?>" style="font-size: 11px; font-weight: 500; color: var(--ofp-slate-400, #94a3b8);">
+                                                <?php if ( $display_val > 0 ) : ?>
+                                                    ₦<?php echo number_format( round( $display_val / $pp_m ) ); ?>/mo
+                                                <?php endif; ?>
+                                            </span>
+                                        </label>
 
                                         <div class="ofp-currency-input-wrap">
 
                                             <span class="ofp-currency-symbol">₦</span>
 
                                             <input type="number" step="0.01" min="0"
-
                                                    name="period_price_<?php echo esc_attr( $plan_key ); ?>_<?php echo (int) $pp_m; ?>"
-
-                                                   value="<?php echo esc_attr( $pp_saved ); ?>">
+                                                   id="period_price_<?php echo esc_attr( $plan_key ); ?>_<?php echo (int) $pp_m; ?>"
+                                                   class="ofp-period-price-input"
+                                                   data-plan="<?php echo esc_attr( $plan_key ); ?>"
+                                                   data-months="<?php echo (int) $pp_m; ?>"
+                                                   data-discount="<?php echo esc_attr( $disc_info['rate'] ); ?>"
+                                                   value="<?php echo esc_attr( $display_val > 0 ? $display_val : '' ); ?>"
+                                                   placeholder="<?php echo esc_attr( $calc_val > 0 ? $calc_val : '0.00' ); ?>">
 
                                         </div>
 
@@ -2676,12 +2794,129 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                 <?php endforeach; ?>
 
-
-
                             </div>
 
                         </div>
 
+                    </div>
+
+                    <!-- ── DETAILED COMPARISON MATRIX ────────────────────────── -->
+                    <div class="ofp-card" style="margin-top: 24px;" id="ofp-matrix-card">
+
+                        <div class="ofp-card-header" style="flex-wrap: wrap; gap: 12px;">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-blue">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                        <line x1="3" y1="9" x2="21" y2="9"/>
+                                        <line x1="3" y1="15" x2="21" y2="15"/>
+                                        <line x1="9" y1="3" x2="9" y2="21"/>
+                                        <line x1="15" y1="3" x2="15" y2="21"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <span class="ofp-section-eyebrow" style="text-transform:uppercase; font-size:11px; font-weight:800; color:var(--ofp-primary, #2563eb); letter-spacing:0.06em; display:block; margin-bottom:2px;">Feature by Feature</span>
+                                    <h3 style="margin:0 0 4px 0; font-size:18px; font-weight:800; color:#0f172a;">Full Plan Matrix Comparison</h3>
+                                    <p style="margin:0; font-size:13px; color:#64748b;">Click any cell to edit custom text or select ✓ / — &middot; Live synced with client pricing page.</p>
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <button type="button" id="ofp-matrix-add-group-btn" class="ofp-btn ofp-btn-sm" style="background:#f8fafc; color:#334155; border:1px solid #cbd5e1; font-size:12px; font-weight:700; padding:6px 12px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Add Section
+                                </button>
+                                <button type="button" id="ofp-matrix-save-quick-btn" class="ofp-btn ofp-btn-sm" style="background:var(--ofp-primary, #2563eb); color:#fff; border:none; font-size:12px; font-weight:700; padding:6px 14px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 1px 2px rgba(37,99,235,0.2);">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                    <span id="ofp-matrix-save-txt">Save Matrix</span>
+                                </button>
+                                <span class="ofp-pill ofp-pill-ready">Active on Pricing Page</span>
+                            </div>
+                        </div>
+
+                        <!-- Hidden serialized JSON input inside the settings form -->
+                        <input type="hidden" name="ofp_plan_matrix_json" id="ofp_plan_matrix_json" value="">
+
+                        <div class="ofp-card-body" style="padding: 0; overflow-x: auto;">
+                            <?php
+                            $matrix_groups = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_plan_matrix() : [];
+
+                            $render_admin_val = function( $val, $col = 'free' ) {
+                                $val = trim( (string) $val );
+                                if ( $val === '✓' ) {
+                                    return '<span class="ofp-badge-check" style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:#dcfce7; color:#16a34a; font-weight:800; font-size:13px;">✓</span>';
+                                }
+                                if ( $val === '—' || $val === '' ) {
+                                    return '<span class="ofp-badge-dash" style="color:#94a3b8; font-size:16px;">—</span>';
+                                }
+                                $weight = ( $col === 'wl' || $col === 'gold' ) ? '800' : '600';
+                                $color = '#1e293b';
+                                if ( $col === 'gold' ) {
+                                    $color = '#2563eb';
+                                } elseif ( $col === 'wl' ) {
+                                    $color = '#b45309';
+                                }
+                                return '<span class="ofp-badge-text" style="font-weight:' . $weight . '; font-size:12px; color:' . $color . ';">' . esc_html( $val ) . '</span>';
+                            };
+                            ?>
+
+                            <table id="ofp-admin-matrix-table" class="ofp-table" style="width:100%; border-collapse:collapse; min-width:750px; text-align:left;">
+                                <thead>
+                                    <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+                                        <th style="padding:14px 20px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#334155; width:36%;">Platform Features</th>
+                                        <th style="padding:14px 14px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#475569; text-align:center; width:16%;">Free (Starter)</th>
+                                        <th style="padding:14px 14px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#2563eb; text-align:center; width:16%;">Silver (Growth)</th>
+                                        <th style="padding:14px 14px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#d97706; text-align:center; width:16%;">Gold (Enterprise)</th>
+                                        <th style="padding:14px 14px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#b45309; text-align:center; width:16%;">White-Label (Solo)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ofp-matrix-tbody">
+                                    <?php foreach ( $matrix_groups as $group_title => $items ) : ?>
+                                        <tr class="ofp-matrix-group-row" data-group-name="<?php echo esc_attr( $group_title ); ?>" style="background:#f1f5f9; border-top:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0;">
+                                            <td colspan="5" style="padding:9px 20px;">
+                                                 <div style="display:flex; align-items:center; justify-content:space-between;">
+                                                    <span class="ofp-matrix-group-title" title="Click to rename section" style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:#475569; cursor:pointer;">
+                                                        <?php echo esc_html( $group_title ); ?>
+                                                    </span>
+                                                    <button type="button" class="ofp-matrix-del-group-btn" title="Delete section" style="background:none; border:none; color:#ef4444; font-size:12px; font-weight:700; cursor:pointer; opacity:0; transition:opacity 0.15s; padding:2px 8px; border-radius:4px;">
+                                                        Remove Section
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <?php foreach ( $items as $row ) : ?>
+                                            <tr class="ofp-matrix-row" data-group="<?php echo esc_attr( $group_title ); ?>" style="border-bottom:1px solid #f1f5f9; transition:background 0.15s ease;">
+                                                <td class="ofp-matrix-cell" data-col="feature" data-val="<?php echo esc_attr( $row['feature'] ?? '' ); ?>" title="Click to edit feature name" style="padding:12px 20px; font-size:13px; font-weight:600; color:#1e293b;">
+                                                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                                                        <span class="ofp-matrix-display-val"><?php echo esc_html( $row['feature'] ?? '' ); ?></span>
+                                                        <button type="button" class="ofp-matrix-del-row-btn" title="Delete feature" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:2px 6px; font-size:16px; line-height:1; opacity:0; transition:opacity 0.15s; border-radius:4px;">&times;</button>
+                                                    </div>
+                                                </td>
+                                                <td class="ofp-matrix-cell" data-col="free" data-val="<?php echo esc_attr( $row['free'] ?? '—' ); ?>" title="Click to edit text or set checkmark" style="padding:12px 14px; text-align:center;">
+                                                    <span class="ofp-matrix-display-val"><?php echo $render_admin_val( $row['free'] ?? '—', 'free' ); ?></span>
+                                                </td>
+                                                <td class="ofp-matrix-cell" data-col="silver" data-val="<?php echo esc_attr( $row['silver'] ?? '—' ); ?>" title="Click to edit text or set checkmark" style="padding:12px 14px; text-align:center;">
+                                                    <span class="ofp-matrix-display-val"><?php echo $render_admin_val( $row['silver'] ?? '—', 'silver' ); ?></span>
+                                                </td>
+                                                <td class="ofp-matrix-cell" data-col="gold" data-val="<?php echo esc_attr( $row['gold'] ?? '—' ); ?>" title="Click to edit text or set checkmark" style="padding:12px 14px; text-align:center;">
+                                                    <span class="ofp-matrix-display-val"><?php echo $render_admin_val( $row['gold'] ?? '—', 'gold' ); ?></span>
+                                                </td>
+                                                <td class="ofp-matrix-cell" data-col="wl" data-val="<?php echo esc_attr( $row['wl'] ?? '—' ); ?>" title="Click to edit text or set checkmark" style="padding:12px 14px; text-align:center;">
+                                                    <span class="ofp-matrix-display-val"><?php echo $render_admin_val( $row['wl'] ?? '—', 'wl' ); ?></span>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                        <tr class="ofp-matrix-add-row" data-group="<?php echo esc_attr( $group_title ); ?>">
+                                            <td colspan="5" style="padding:6px 20px; background:#fafbfc; border-bottom:1px solid #e2e8f0; text-align:left;">
+                                                <button type="button" class="ofp-matrix-add-feature-btn" data-group="<?php echo esc_attr( $group_title ); ?>" style="display:inline-flex; align-items:center; gap:6px; background:none; border:none; color:var(--ofp-primary, #2563eb); font-size:12px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.15s ease;">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                                    + Add Feature to this section
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
 
@@ -3364,6 +3599,62 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                     </div>
 
+                    <!-- System Hardening & Information Disclosure Shield Card -->
+                    <div class="ofp-card" style="margin-top: 24px;">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-rose">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>System Hardening &amp; Information Disclosure Shield</h3>
+                                    <p>Prevent automated scanner probes, disable obsolete remote endpoints, and stop bot harvesting of author profiles and email addresses.</p>
+                                </div>
+                            </div>
+                            <span class="ofp-pill ofp-pill-ready">Active Defense</span>
+                        </div>
+                        <div class="ofp-card-body">
+                            <!-- Switch 1: Disable XML-RPC -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Disable XML-RPC Endpoint &amp; Pingbacks</span>
+                                    <p class="ofp-switch-desc">Fully disables <code>xmlrpc.php</code>, strips <code>X-Pingback</code> headers, and blocks XML-RPC methods. Prevents brute-force amplification attacks and XML-RPC DDoS exploits.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_disable_xmlrpc" value="1" <?php checked( $disable_xmlrpc, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Switch 2: Obfuscate Author Slugs & Block Enumeration -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Obfuscate Author Slugs &amp; Block Username Enumeration</span>
+                                    <p class="ofp-switch-desc">Blocks scanning bots querying <code>/?author=1</code> by redirecting to the homepage. Replaces public author archive URLs (<code>/author/username/</code>) with unique cryptographic 12-char hashes to prevent admin usernames from being discovered.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_obfuscate_author_slugs" value="1" <?php checked( $obfuscate_author_slugs, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Switch 3: Email Address Obfuscator -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Email Address Anti-Scraping Obfuscator</span>
+                                    <p class="ofp-switch-desc">Encodes plaintext email addresses across posts, pages, widgets, and comments into HTML decimal entities (<code>&amp;#101;&amp;#120;...</code>). Keeps emails completely readable to visitors while invisible to spam bots and automated email harvesters.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_obfuscate_emails" value="1" <?php checked( $obfuscate_emails, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+
 
 
 
@@ -3837,703 +4128,6 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
 
 <!-- ── Settings Interactive Scripts ───────────────────────────────────────── -->
-
-<script>
-
-(function() {
-
-    'use strict';
-
-
-
-    // ── 1. Tab Switching & Hash Persistence ──────────────────────────────────
-
-    function switchTab(tabId) {
-
-        if ( ! tabId ) return;
-
-        tabId = tabId.replace(/^#/, '');
-
-
-
-        var targetPane = document.getElementById(tabId);
-
-        if ( ! targetPane ) return;
-
-
-
-        // Update nav items
-
-        document.querySelectorAll('.ofp-settings-tab-btn, .ofp-nav-item').forEach(function(btn) {
-
-            btn.classList.toggle('is-active', btn.getAttribute('data-tab') === tabId);
-
-        });
-
-
-
-        // Update panes
-
-        document.querySelectorAll('.ofp-tab-pane').forEach(function(pane) {
-
-            pane.classList.remove('is-active');
-
-        });
-
-        targetPane.classList.add('is-active');
-
-
-
-        // Update hidden field & URL hash
-
-        var activeTabInput = document.getElementById('ofp_active_tab');
-
-        if ( activeTabInput ) activeTabInput.value = tabId;
-
-
-
-        if ( history.replaceState ) {
-
-            history.replaceState(null, null, '#' + tabId);
-
-        } else {
-
-            location.hash = '#' + tabId;
-
-        }
-
-
-
-        // Scroll into view if requested from health card
-
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    }
-
-
-
-    // Attach click to sidebar nav items
-
-    document.querySelectorAll('.ofp-settings-tab-btn, .ofp-nav-item').forEach(function(btn) {
-
-        btn.addEventListener('click', function(e) {
-
-            e.preventDefault();
-
-            switchTab(this.getAttribute('data-tab'));
-
-        });
-
-    });
-
-
-
-    // Attach click to top health cards
-
-    document.querySelectorAll('.ofp-nav-trigger').forEach(function(card) {
-
-        card.addEventListener('click', function(e) {
-
-            e.preventDefault();
-
-            switchTab(this.getAttribute('data-target'));
-
-        });
-
-    });
-
-
-
-    // Check initial hash on page load
-
-    window.addEventListener('DOMContentLoaded', function() {
-
-        var hash = location.hash ? location.hash.replace(/^#/, '') : '';
-
-        if ( hash && document.getElementById(hash) ) {
-
-            switchTab(hash);
-
-        }
-
-    });
-
-
-
-    // ── 2. Password Eyeball Show/Hide Toggle ─────────────────────────────────
-
-    document.querySelectorAll('.ofp-btn-toggle-pwd').forEach(function(btn) {
-
-        btn.addEventListener('click', function(e) {
-
-            e.preventDefault();
-
-            var input = this.closest('.ofp-input-box').querySelector('input');
-
-            if ( ! input ) return;
-
-
-
-            var isPassword = input.type === 'password';
-
-            input.type = isPassword ? 'text' : 'password';
-
-
-
-            this.innerHTML = isPassword
-
-                ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
-
-                : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-
-        });
-
-    });
-
-
-
-    // ── 3. One-Click Copy to Clipboard ───────────────────────────────────────
-
-    document.querySelectorAll('.ofp-copy-btn').forEach(function(btn) {
-
-        btn.addEventListener('click', function(e) {
-
-            e.preventDefault();
-
-            var targetSelector = this.getAttribute('data-clipboard-target');
-
-            var targetElem = document.querySelector(targetSelector);
-
-            if ( ! targetElem ) return;
-
-
-
-            var textToCopy = targetElem.innerText || targetElem.value;
-
-            navigator.clipboard.writeText(textToCopy).then(function() {
-
-                var originalHtml = btn.innerHTML;
-
-                btn.classList.add('is-copied');
-
-                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> <span>Copied!</span>';
-
-
-
-                setTimeout(function() {
-
-                    btn.classList.remove('is-copied');
-
-                    btn.innerHTML = originalHtml;
-
-                }, 2000);
-
-            });
-
-        });
-
-    });
-
-
-
-    // ── 4. Click-to-Insert Merge Tag Chips ───────────────────────────────────
-
-    document.querySelectorAll('.ofp-chip').forEach(function(chip) {
-
-        chip.addEventListener('click', function(e) {
-
-            e.preventDefault();
-
-            var tag = this.getAttribute('data-insert');
-
-            var targetId = this.getAttribute('data-target');
-
-            var textarea = document.getElementById(targetId);
-
-            if ( ! textarea || ! tag ) return;
-
-
-
-            var start = textarea.selectionStart;
-
-            var end = textarea.selectionEnd;
-
-            var text = textarea.value;
-
-
-
-            textarea.value = text.substring(0, start) + tag + text.substring(end);
-
-            textarea.selectionStart = textarea.selectionEnd = start + tag.length;
-
-            textarea.focus();
-
-
-
-            // Trigger character counter update
-
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-
-        });
-
-    });
-
-
-
-    // ── 5. Live SMS Character Counter ────────────────────────────────────────
-
-    function updateSmsCounters() {
-
-        document.querySelectorAll('.ofp-sms-counter-input').forEach(function(ta) {
-
-            var counterBar = ta.nextElementSibling;
-
-            if ( ! counterBar || ! counterBar.classList.contains('ofp-char-counter-bar') ) return;
-
-            var pill = counterBar.querySelector('.ofp-char-pill');
-
-            if ( ! pill ) return;
-
-
-
-            var count = ta.value.length;
-
-            var segments = Math.ceil(count / 160) || 1;
-
-            pill.textContent = count + ' chars (' + segments + ' SMS)';
-
-
-
-            pill.classList.toggle('is-multisms', count > 160);
-
-        });
-
-    }
-
-
-
-    document.querySelectorAll('.ofp-sms-counter-input').forEach(function(ta) {
-
-        ta.addEventListener('input', updateSmsCounters);
-
-    });
-
-    updateSmsCounters();
-
-
-
-    // ── 6. Live Bank Account Card Preview ────────────────────────────────────
-
-    function syncBankPreview() {
-
-        var bankNameInput   = document.getElementById('ofp_bank_name_input');
-
-        var bankAccInput    = document.getElementById('ofp_bank_acc_input');
-
-        var bankHolderInput = document.getElementById('ofp_bank_holder_input');
-
-
-
-        var cardBankName   = document.getElementById('ofp-card-bank-name');
-
-        var cardAccNo      = document.getElementById('ofp-card-acc-no');
-
-        var cardHolderName = document.getElementById('ofp-card-holder-name');
-
-
-
-        if ( bankNameInput && cardBankName ) {
-
-            bankNameInput.addEventListener('input', function() {
-
-                cardBankName.textContent = this.value.trim() ? this.value.toUpperCase() : 'BANK NAME';
-
-            });
-
-        }
-
-
-
-        if ( bankAccInput && cardAccNo ) {
-
-            bankAccInput.addEventListener('input', function() {
-
-                cardAccNo.textContent = this.value.trim() ? this.value : '0000 0000 00';
-
-            });
-
-        }
-
-
-
-        if ( bankHolderInput && cardHolderName ) {
-
-            bankHolderInput.addEventListener('input', function() {
-
-                cardHolderName.textContent = this.value.trim() ? this.value.toUpperCase() : 'OFFICIAL BENEFICIARY';
-
-            });
-
-        }
-
-    }
-
-    syncBankPreview();
-
-
-
-    // ── 7. Mode Visual Cards Toggle (SMTP & Prembly) ─────────────────────────
-
-    function syncRadioCards(name) {
-
-        var radios = document.querySelectorAll('input[name="' + name + '"]');
-
-        radios.forEach(function(radio) {
-
-            var card = radio.closest('.ofp-mode-card');
-
-            if ( card ) {
-
-                if ( radio.checked ) {
-
-                    card.classList.add('is-active');
-
-                } else {
-
-                    card.classList.remove('is-active');
-
-                }
-
-            }
-
-        });
-
-    }
-
-
-
-    function syncSmtpCards() {
-
-        syncRadioCards('ofp_smtp_mode');
-
-        var selected = document.querySelector('input[name="ofp_smtp_mode"]:checked');
-
-        var panel = document.getElementById('ofp-smtp-credentials-panel');
-
-        if ( panel && selected ) {
-
-            panel.style.display = selected.value === 'custom' ? '' : 'none';
-
-        }
-
-    }
-
-
-
-    document.querySelectorAll('input[name="ofp_smtp_mode"]').forEach(function(radio) {
-
-        radio.addEventListener('change', syncSmtpCards);
-
-    });
-
-
-
-    document.querySelectorAll('input[name="ofp_prembly_env"]').forEach(function(radio) {
-
-        radio.addEventListener('change', function() {
-
-            syncRadioCards('ofp_prembly_env');
-
-        });
-
-    });
-
-
-
-    // ── 8. Pricing Tier Cards Features Accordion & FAQ Arrow Toggle ──────────
-
-    var tierGrid = document.querySelector('.ofp-pricing-tier-grid');
-
-    var tierToggles = document.querySelectorAll('.ofp-tier-accordion-toggle');
-
-    var globalTierToggle = document.getElementById('ofp-admin-toggle-all-cards');
-
-
-
-    function setTierExpansion(expand) {
-
-        if ( ! tierGrid ) return;
-
-        tierGrid.classList.toggle('is-expanded', expand);
-
-        tierToggles.forEach(function(btn) {
-
-            btn.setAttribute('aria-expanded', expand ? 'true' : 'false');
-
-            var arrow = btn.querySelector('.ofp-faq-arrow');
-
-            if ( arrow ) {
-
-                arrow.classList.toggle('is-rotated', expand);
-
-            }
-
-        });
-
-        if ( globalTierToggle ) {
-
-            globalTierToggle.textContent = expand ? 'Collapse All Features' : 'Toggle All Features';
-
-        }
-
-    }
-
-
-
-    if ( tierGrid && tierToggles.length ) {
-
-        tierToggles.forEach(function(btn) {
-
-            btn.addEventListener('click', function(e) {
-
-                e.preventDefault();
-
-                var willExpand = ! tierGrid.classList.contains('is-expanded');
-
-                setTierExpansion(willExpand);
-
-            });
-
-        });
-
-
-
-        if ( globalTierToggle ) {
-
-            globalTierToggle.addEventListener('click', function(e) {
-
-                e.preventDefault();
-
-                var willExpand = ! tierGrid.classList.contains('is-expanded');
-
-                setTierExpansion(willExpand);
-
-            });
-
-        }
-
-
-
-        // Live update bullet count pill as user types in textarea
-
-        document.querySelectorAll('.ofp-tier-accordion-body textarea').forEach(function(ta) {
-
-            ta.addEventListener('input', function() {
-
-                var lines = this.value.split('\n').filter(function(l) { return l.trim().length > 0; });
-
-                var wrap = this.closest('.ofp-tier-accordion-wrap');
-
-                if ( wrap ) {
-
-                    var pill = wrap.querySelector('.ofp-tier-count-pill');
-
-                    if ( pill ) {
-
-                        pill.textContent = lines.length;
-
-                    }
-
-                }
-
-            });
-
-        });
-
-    }
-
-
-
-    // ── 9. Real-Time Settings Search & Filter across Tabs ────────────────────
-
-    var searchInput = document.getElementById('ofp-settings-filter-input');
-
-    var navButtons = document.querySelectorAll('.ofp-settings-tab-btn, .ofp-nav-item');
-
-    var originalPills = {};
-
-
-
-    navButtons.forEach(function(btn) {
-
-        var tabKey = btn.getAttribute('data-tab');
-
-        var pill = btn.querySelector('.ofp-nav-pill');
-
-        if ( pill ) {
-
-            originalPills[tabKey] = pill.textContent;
-
-        }
-
-    });
-
-
-
-    if ( searchInput ) {
-
-        searchInput.addEventListener('input', function() {
-
-            var q = this.value.toLowerCase().trim();
-
-            var firstTabWithMatch = null;
-
-
-
-            navButtons.forEach(function(btn) {
-
-                var tabId = btn.getAttribute('data-tab');
-
-                var pane = document.getElementById(tabId);
-
-                var pill = btn.querySelector('.ofp-nav-pill');
-
-                if ( ! pane ) return;
-
-
-
-                var cards = pane.querySelectorAll('.ofp-card');
-
-                var matchCount = 0;
-
-
-
-                cards.forEach(function(card) {
-
-                    if ( ! q ) {
-
-                        card.style.display = '';
-
-                        return;
-
-                    }
-
-                    var text = (card.textContent || '').toLowerCase();
-
-                    var isMatch = text.indexOf(q) !== -1;
-
-                    card.style.display = isMatch ? '' : 'none';
-
-                    if ( isMatch ) matchCount++;
-
-                });
-
-
-
-                if ( ! q ) {
-
-                    if ( pill && originalPills[tabId] ) {
-
-                        pill.textContent = originalPills[tabId];
-
-                        pill.style.background = '';
-
-                        pill.style.color = '';
-
-                    }
-
-                } else {
-
-                    if ( pill ) {
-
-                        pill.textContent = matchCount + ' found';
-
-                        pill.style.background = matchCount > 0 ? '#dcfce7' : '#f1f5f9';
-
-                        pill.style.color = matchCount > 0 ? '#15803d' : '#94a3b8';
-
-                    }
-
-                    if ( matchCount > 0 && ! firstTabWithMatch ) {
-
-                        firstTabWithMatch = tabId;
-
-                    }
-
-                }
-
-            });
-
-
-
-            if ( q && firstTabWithMatch ) {
-
-                var activeBtn = document.querySelector('.ofp-settings-tab-btn.is-active, .ofp-nav-item.is-active');
-
-                var currentActiveTab = activeBtn ? activeBtn.getAttribute('data-tab') : '';
-
-                var currentPane = document.getElementById(currentActiveTab);
-
-                var currentHasMatch = currentPane ? currentPane.querySelectorAll('.ofp-card:not([style*="display: none"])').length > 0 : false;
-
-                
-
-                if ( ! currentHasMatch ) {
-
-                    switchTab(firstTabWithMatch);
-
-                }
-
-            }
-
-        });
-
-    }
-
-
-
-    // ── 10. Global Keyboard Shortcuts (⌘S to Save, ⌘K to Search) ─────────────
-
-    document.addEventListener('keydown', function(e) {
-
-        // ⌘S or Ctrl+S to save
-
-        if ( ( e.metaKey || e.ctrlKey ) && e.key.toLowerCase() === 's' ) {
-
-            e.preventDefault();
-
-            var form = document.getElementById('ofp-master-settings-form');
-
-            if ( form ) form.submit();
-
-        }
-
-
-
-        // ⌘K or Ctrl+K to focus search filter
-
-        if ( ( e.metaKey || e.ctrlKey ) && e.key.toLowerCase() === 'k' ) {
-
-            if ( searchInput ) {
-
-                e.preventDefault();
-
-                searchInput.focus();
-
-                searchInput.select();
-
-            }
-
-        }
-
-    });
-
-
-
-})();
-
-</script>
-
 
 
 <?php

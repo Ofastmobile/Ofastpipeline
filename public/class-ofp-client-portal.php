@@ -61,6 +61,8 @@ class OFP_Client_Portal {
         'agents' => 'agents.php',
         'our-agents' => 'agents.php',
         'investment' => 'investment.php',
+        'field' => 'field.php',
+        'field-team' => 'field-team.php',
     ];
 
     private array $public_routes = [ 'login', 'signup', 'forgot-password', 'reset-password', 'team-invite', 'agents', 'our-agents', 'plans-pricing', 'pricing-plans', 'plans', 'plans-and-pricing' ];
@@ -265,6 +267,31 @@ class OFP_Client_Portal {
             wp_enqueue_style(
                 'ofp-api-settings',
                 OFP_URL . 'assets/css/api-settings.css',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION
+            );
+        }
+
+        if ( 'field' === $route ) {
+            wp_enqueue_style(
+                'ofp-field',
+                OFP_URL . 'assets/css/field.css',
+                [ 'ofp-client-portal' ],
+                OFP_VERSION
+            );
+            wp_enqueue_script(
+                'ofp-field',
+                OFP_URL . 'assets/js/field.js',
+                [],
+                OFP_VERSION,
+                true
+            );
+        }
+
+        if ( 'field-team' === $route ) {
+            wp_enqueue_style(
+                'ofp-field-team',
+                OFP_URL . 'assets/css/field-team.css',
                 [ 'ofp-client-portal' ],
                 OFP_VERSION
             );

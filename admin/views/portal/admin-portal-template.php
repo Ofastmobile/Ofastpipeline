@@ -113,6 +113,84 @@ $titles = [
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <?php wp_head(); ?>
+<style>
+        /* Modern iOS-style toggle switch matching brand */
+        .ofp-toggle-switch {
+            display: inline-flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            width: fit-content !important;
+            max-width: fit-content !important;
+            cursor: pointer !important;
+            font-size: 14px !important;
+            color: var(--text-main, #1e293b) !important;
+            gap: 10px !important;
+            user-select: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+        }
+        .ofp-pkg,
+        #ofp-total-package-field,
+        #ofp_total_package_box {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .ofp-toggle-field {
+            border: none !important;
+            background: transparent !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+        }
+        .ofp-toggle-switch input,
+        .ofp-toggle-switch input[type="checkbox"] {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+            position: absolute !important;
+            pointer-events: none !important;
+            margin: 0 !important;
+        }
+        .ofp-toggle-switch .ofp-toggle-slider {
+            position: relative !important;
+            display: inline-block !important;
+            width: 44px !important;
+            height: 24px !important;
+            background-color: #cbd5e1 !important;
+            border: none !important;
+            border-radius: 9999px !important;
+            transition: background-color 0.25s ease !important;
+            flex-shrink: 0 !important;
+            box-sizing: border-box !important;
+        }
+        .ofp-toggle-switch .ofp-toggle-slider::after {
+            display: none !important;
+        }
+        .ofp-toggle-switch .ofp-toggle-slider::before {
+            content: "" !important;
+            position: absolute !important;
+            width: 20px !important;
+            height: 20px !important;
+            border-radius: 50% !important;
+            background-color: #ffffff !important;
+            top: 2px !important;
+            left: 2px !important;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+        }
+        .ofp-toggle-switch input:checked + .ofp-toggle-slider {
+            background-color: #2563eb !important;
+            border: none !important;
+        }
+        .ofp-toggle-switch input:checked + .ofp-toggle-slider::before {
+            transform: translateX(20px) !important;
+            background-color: #ffffff !important;
+        }
+</style>
 </head>
 <body class="ofp-admin-portal-body">
 
@@ -377,8 +455,8 @@ $titles = [
         <header class="ofp-portal-header">
             <div class="ofp-portal-header-left">
                 <div class="ofp-nav-app-branding">
-                    <span class="ofp-nav-app-name">NaijaHub</span>
-                    <span class="ofp-nav-app-version">v2.2.3</span>
+                    <span class="ofp-nav-app-name"><?php echo esc_html( class_exists( 'OFP_Brand' ) ? OFP_Brand::name() : 'App' ); ?></span>
+                    <span class="ofp-nav-app-version">v<?php echo esc_html( defined( 'OFP_VERSION' ) ? OFP_VERSION : '2.2.27' ); ?></span>
                 </div>
                 <div class="ofp-portal-header-title-row">
                     <h3 class="ofp-page-title">
@@ -1222,48 +1300,50 @@ $titles = [
 
                             <div class="ofp-form-grid-2" style="margin-top:10px;">
                                 <div class="ofp-form-group" id="ofp_total_package_box">
-                                    <label>Total Move-in Package (₦) <span style="color:var(--ofp-text-muted); font-size:11px;">(Rent / Lease Only)</span></label>
-                                    <div style="position:relative;">
-                                        <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-weight:700; color:var(--ofp-text-muted);">₦</span>
-                                        <input type="number" step="0.01" name="total_package" class="ofp-input-text"
-                                               value="<?php echo esc_attr( $val_total_package ); ?>" placeholder="e.g. Rent + Legal + Agency + Caution" style="padding-left:30px;">
-                                    </div>
-                                    <span style="font-size:11.5px; color:var(--ofp-text-muted); margin-top:4px;">This becomes the price tenants see everywhere. Fill in the fees below and it is calculated for you, or type a total only.</span>
                                     <?php OFP_Property_Package::render_fields( (int) $post_id, 'input[name="price"]', 'input[name="total_package"]' ); ?>
+                                    <div style="margin-top:12px;">
+                                        <label>Total Move-in Package (₦) <span style="color:var(--ofp-text-muted); font-size:11px;">(Rent / Lease Only)</span></label>
+                                        <div style="position:relative;">
+                                            <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-weight:700; color:var(--ofp-text-muted);">₦</span>
+                                            <input type="number" step="0.01" name="total_package" class="ofp-input-text"
+                                                   value="<?php echo esc_attr( $val_total_package ); ?>" placeholder="e.g. Rent + Legal + Agency + Caution" style="padding-left:30px;">
+                                        </div>
+                                        <span style="font-size:11.5px; color:var(--ofp-text-muted); margin-top:4px;">This becomes the price tenants see everywhere. Fill in the fees above and it is calculated for you, or type a total only.</span>
+                                    </div>
                                 </div>
 
-                                <div class="ofp-form-group">
-                                    <label>Official Registered Title Document</label>
-                                    <select name="title_document" class="ofp-input-select">
-                                        <option value="">-- Select Registered Title Deed --</option>
-                                        <?php
-                                        $title_deeds = [
-                                            'C of O'             => 'Certificate of Occupancy (C of O)',
-                                            "Governor's Consent" => "Governor's Consent",
-                                            'Gazette'            => 'Government Gazette',
-                                            'Deed of Assignment' => 'Deed of Assignment',
-                                            'R of O'             => 'Right of Occupancy (R of O)',
-                                            'Excision'           => 'Government Excision',
-                                            'Court Judgment'     => 'Court Judgment / Ruling',
-                                            'Other'              => 'Other Registered Deed',
-                                        ];
-                                        foreach ( $title_deeds as $td_val => $td_label ) {
-                                            echo '<option value="' . esc_attr( $td_val ) . '" ' . selected( $val_title_document, $td_val, false ) . '>' . esc_html( $td_label ) . '</option>';
-                                        }
-                                        ?>
-                                    </select>
-                                    <span style="font-size:11.5px; color:var(--ofp-text-muted); margin-top:4px;">Verifiable title deeds give prospective buyers and legal teams immediate certainty.</span>
-                                </div>
-                            </div>
+                                <div style="display:flex; flex-direction:column; gap:12px;">
+                                    <div class="ofp-form-group ofp-toggle-field" style="margin:0; padding:4px 0;">
+                                        <label class="ofp-toggle-switch" style="cursor:pointer; display:inline-flex !important; flex-direction:row !important; align-items:center !important; justify-content:flex-start !important; gap:10px !important; width:auto !important; max-width:fit-content !important; margin:0 !important;">
+                                            <input type="checkbox" name="allow_installment" value="1" <?php checked( $val_allow_installment, '1' ); ?> style="display:none !important;">
+                                            <span class="ofp-toggle-slider"></span>
+                                            <span style="font-size:13.5px !important; font-weight:600 !important; color:var(--ofp-text-main) !important; line-height:1.35 !important; margin-left:0 !important;">Allow Installment / Mortgage Financing Plan</span>
+                                        </label>
+                                    </div>
 
-                            <div style="margin-top:12px; padding:12px 16px; background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.2); border-radius:8px;">
-                                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:600; color:var(--ofp-text-main);">
-                                    <input type="checkbox" name="allow_installment" value="1" <?php checked( $val_allow_installment, '1' ); ?>>
-                                    <span>Allow Installment &amp; Mortgage Financing Plan</span>
-                                </label>
-                                <span style="font-size:12px; color:var(--ofp-text-muted); margin-left:26px; display:block; margin-top:2px;">
-                                    When checked, prospective buyers will see the interactive Installment &amp; Mortgage Estimator on the property page.
-                                </span>
+                                    <div class="ofp-form-group" style="margin:0;">
+                                        <label>Official Registered Title Document</label>
+                                        <select name="title_document" class="ofp-input-select">
+                                            <option value="">-- Select Registered Title Deed --</option>
+                                            <?php
+                                            $title_deeds = [
+                                                'C of O'             => 'Certificate of Occupancy (C of O)',
+                                                "Governor's Consent" => "Governor's Consent",
+                                                'Gazette'            => 'Government Gazette',
+                                                'Deed of Assignment' => 'Deed of Assignment',
+                                                'R of O'             => 'Right of Occupancy (R of O)',
+                                                'Excision'           => 'Government Excision',
+                                                'Court Judgment'     => 'Court Judgment / Ruling',
+                                                'Other'              => 'Other Registered Deed',
+                                            ];
+                                            foreach ( $title_deeds as $td_val => $td_label ) {
+                                                echo '<option value="' . esc_attr( $td_val ) . '" ' . selected( $val_title_document, $td_val, false ) . '>' . esc_html( $td_label ) . '</option>';
+                                            }
+                                            ?>
+                                        </select>
+                                        <span style="font-size:11.5px; color:var(--ofp-text-muted); margin-top:4px;">Verifiable title deeds give prospective buyers and legal teams immediate certainty.</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

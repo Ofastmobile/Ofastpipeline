@@ -2105,7 +2105,12 @@ class OFP_Property_CPT {
             return $monthly;
         }
         $saved = (float) get_option( "ofp_period_price_{$plan}_{$months}", 0 );
-        return $saved > 0 ? $saved : round( $monthly * $months, 2 );
+        if ( $saved > 0 ) {
+            return $saved;
+        }
+        // Default discounts: 3 months: 5%, 6 months: 10%, 12 months (1 yr): 15%
+        $discount = ( $months === 3 ) ? 0.05 : ( ( $months === 6 ) ? 0.10 : ( ( $months === 12 ) ? 0.15 : 0.0 ) );
+        return round( $monthly * $months * ( 1.0 - $discount ), 2 );
     }
 
     /** @param array<string,array<int,mixed>> $posted plan => [ months => price ] */
@@ -2219,6 +2224,212 @@ class OFP_Property_CPT {
      */
     public static function save_pricing_cards( array $cards_data ): bool {
         return (bool) update_option( 'ofp_pricing_cards_data', $cards_data );
+    }
+
+    /**
+     * Default Feature Comparison Matrix items across Free, Silver, Gold, White-Label.
+     *
+     * @return array
+     */
+    public static function get_default_plan_matrix(): array {
+        $brand_name = class_exists( 'OFP_Brand' ) ? OFP_Brand::name() : 'OFast Pipeline';
+        return [
+            'Capacity & Team Limits' => [
+                [
+                    'feature' => 'Active Property Listings',
+                    'free'    => '1',
+                    'silver'  => '3',
+                    'gold'    => '10',
+                    'wl'      => 'Unlimited',
+                ],
+                [
+                    'feature' => 'Team Members / Sub-Agents',
+                    'free'    => '0 (Solo)',
+                    'silver'  => '2 seats',
+                    'gold'    => '3 seats',
+                    'wl'      => 'Unlimited',
+                ],
+                [
+                    'feature' => 'High-Res Media & Gallery Storage',
+                    'free'    => 'Standard',
+                    'silver'  => 'High Speed',
+                    'gold'    => 'HD Optimized',
+                    'wl'      => 'Unlimited CDN',
+                ],
+            ],
+            'Marketplace & Exposure' => [
+                [
+                    'feature' => 'Public Agency Profile Page (/agent/slug)',
+                    'free'    => '✓',
+                    'silver'  => '✓',
+                    'gold'    => '✓',
+                    'wl'      => 'Custom Domain',
+                ],
+                [
+                    'feature' => 'Partner Trust Badge',
+                    'free'    => 'Light',
+                    'silver'  => 'Verified Agency',
+                    'gold'    => 'Verified Partner',
+                    'wl'      => 'Solo Brand Crest',
+                ],
+                [
+                    'feature' => 'Marketplace Search Placement',
+                    'free'    => 'Standard',
+                    'silver'  => 'Priority',
+                    'gold'    => 'Top Boosted',
+                    'wl'      => 'On Agency Website',
+                ],
+                [
+                    'feature' => 'Ads / Promotions',
+                    'free'    => '—',
+                    'silver'  => '2 Ads / Month',
+                    'gold'    => '2 Ads / Month',
+                    'wl'      => 'Custom',
+                ],
+            ],
+            'CRM & Financial Technology' => [
+                [
+                    'feature' => 'Lead Pipeline & Deal Tracking',
+                    'free'    => '✓',
+                    'silver'  => '✓',
+                    'gold'    => '✓',
+                    'wl'      => '✓',
+                ],
+                [
+                    'feature' => 'CRM Automation & Workflows',
+                    'free'    => '✓',
+                    'silver'  => '✓',
+                    'gold'    => '✓',
+                    'wl'      => '✓',
+                ],
+                [
+                    'feature' => 'Import Customers',
+                    'free'    => '✓',
+                    'silver'  => '✓',
+                    'gold'    => '✓',
+                    'wl'      => '✓',
+                ],
+                [
+                    'feature' => 'Analytics & Performance Reports',
+                    'free'    => '✓',
+                    'silver'  => '✓',
+                    'gold'    => '✓',
+                    'wl'      => '✓',
+                ],
+                [
+                    'feature' => 'WhatsApp & SMS Instant Deal Alerts',
+                    'free'    => '—',
+                    'silver'  => '✓',
+                    'gold'    => '✓',
+                    'wl'      => '✓ (₦50k credit incl.)',
+                ],
+                [
+                    'feature' => 'Rent Monitoring & Digital Tenancy Leases',
+                    'free'    => '—',
+                    'silver'  => '—',
+                    'gold'    => '✓',
+                    'wl'      => '✓',
+                ],
+                [
+                    'feature' => 'Off-Plan Installment Plans & Buyer Ledgers',
+                    'free'    => '—',
+                    'silver'  => '—',
+                    'gold'    => '✓',
+                    'wl'      => '✓',
+                ],
+                [
+                    'feature' => 'ROI & Yield Investment Projector',
+                    'free'    => '—',
+                    'silver'  => '—',
+                    'gold'    => '✓',
+                    'wl'      => '✓',
+                ],
+            ],
+            'Brand Ownership & Infrastructure' => [
+                [
+                    'feature' => 'Custom Email Templates',
+                    'free'    => '—',
+                    'silver'  => '✓',
+                    'gold'    => '✓',
+                    'wl'      => '✓',
+                ],
+                [
+                    'feature' => 'Fully Customize Email / SMS',
+                    'free'    => '—',
+                    'silver'  => '—',
+                    'gold'    => '—',
+                    'wl'      => 'Send from Brand Name',
+                ],
+                [
+                    'feature' => 'Custom Domain Routing (e.g. portal.yourbrand.ng)',
+                    'free'    => '—',
+                    'silver'  => '—',
+                    'gold'    => '—',
+                    'wl'      => 'Included',
+                ],
+                [
+                    'feature' => 'Removal of ' . $brand_name . ' Branding (100% White-Label)',
+                    'free'    => '—',
+                    'silver'  => '—',
+                    'gold'    => '—',
+                    'wl'      => '100% Solo',
+                ],
+                [
+                    'feature' => 'VIP Account Manager & SLA',
+                    'free'    => '—',
+                    'silver'  => 'Standard',
+                    'gold'    => 'Priority',
+                    'wl'      => '24/7 Dedicated SLA',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Get the active plan comparison matrix, falling back to defaults.
+     *
+     * @return array
+     */
+    public static function get_plan_matrix(): array {
+        $saved = get_option( 'ofp_plan_matrix_data', null );
+        if ( is_array( $saved ) && ! empty( $saved ) ) {
+            return $saved;
+        }
+        return self::get_default_plan_matrix();
+    }
+
+    /**
+     * Persist dynamic plan comparison matrix.
+     *
+     * @param array $matrix
+     * @return bool
+     */
+    public static function save_plan_matrix( array $matrix ): bool {
+        $clean = [];
+        foreach ( $matrix as $group_title => $items ) {
+            $group_name = sanitize_text_field( $group_title );
+            if ( empty( $group_name ) || ! is_array( $items ) ) {
+                continue;
+            }
+            $clean[ $group_name ] = [];
+            foreach ( $items as $row ) {
+                if ( ! is_array( $row ) ) {
+                    continue;
+                }
+                $feature = sanitize_text_field( $row['feature'] ?? '' );
+                if ( empty( $feature ) ) {
+                    continue;
+                }
+                $clean[ $group_name ][] = [
+                    'feature' => $feature,
+                    'free'    => sanitize_text_field( $row['free'] ?? '—' ),
+                    'silver'  => sanitize_text_field( $row['silver'] ?? '—' ),
+                    'gold'    => sanitize_text_field( $row['gold'] ?? '—' ),
+                    'wl'      => sanitize_text_field( $row['wl'] ?? '—' ),
+                ];
+            }
+        }
+        return (bool) update_option( 'ofp_plan_matrix_data', $clean );
     }
 
     /** Every allowed listing type value. */

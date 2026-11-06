@@ -25,7 +25,12 @@ $raw_prices = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_plan_pr
 $price_silver_mo = isset( $raw_prices['silver'] ) && $raw_prices['silver'] > 0 ? (float) $raw_prices['silver'] : 50000.0;
 $price_gold_mo   = isset( $raw_prices['gold'] ) && $raw_prices['gold'] > 0 ? (float) $raw_prices['gold'] : 100000.0;
 
-// Calculated quarterly (10% off per month) and annual (20% off per month)
+// Calculated quarterly (3 months 5% off) and annual (12 months 15% off)
+$silver_3m_tot  = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_period_price( 'silver', 3 ) : round( $price_silver_mo * 3 * 0.95 );
+$silver_12m_tot = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_period_price( 'silver', 12 ) : round( $price_silver_mo * 12 * 0.85 );
+$gold_3m_tot    = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_period_price( 'gold', 3 ) : round( $price_gold_mo * 3 * 0.95 );
+$gold_12m_tot   = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_period_price( 'gold', 12 ) : round( $price_gold_mo * 12 * 0.85 );
+
 $prices = [
     'free' => [
         'monthly'   => 0,
@@ -34,17 +39,17 @@ $prices = [
     ],
     'silver' => [
         'monthly'       => $price_silver_mo,
-        'quarterly_mo'  => round( $price_silver_mo * 0.9 ),
-        'quarterly_tot' => round( $price_silver_mo * 0.9 * 3 ),
-        'annually_mo'   => round( $price_silver_mo * 0.8 ),
-        'annually_tot'  => round( $price_silver_mo * 0.8 * 12 ),
+        'quarterly_mo'  => round( $silver_3m_tot / 3 ),
+        'quarterly_tot' => round( $silver_3m_tot ),
+        'annually_mo'   => round( $silver_12m_tot / 12 ),
+        'annually_tot'  => round( $silver_12m_tot ),
     ],
     'gold' => [
         'monthly'       => $price_gold_mo,
-        'quarterly_mo'  => round( $price_gold_mo * 0.9 ),
-        'quarterly_tot' => round( $price_gold_mo * 0.9 * 3 ),
-        'annually_mo'   => round( $price_gold_mo * 0.8 ),
-        'annually_tot'  => round( $price_gold_mo * 0.8 * 12 ),
+        'quarterly_mo'  => round( $gold_3m_tot / 3 ),
+        'quarterly_tot' => round( $gold_3m_tot ),
+        'annually_mo'   => round( $gold_12m_tot / 12 ),
+        'annually_tot'  => round( $gold_12m_tot ),
     ],
 ];
 
@@ -179,89 +184,7 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
         }
     </script>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
-        [x-cloak] { display: none !important; }
-        .theme-toggle-sun { display: none; }
-        .dark .theme-toggle-sun { display: inline-block; }
-        .dark .theme-toggle-moon { display: none; }
-        .theme-toggle-moon { display: inline-block; }
-
-        /* Custom hero background with balanced overlay: vibrant image visibility without being washed out */
-        .plans-hero-bg {
-            background-image: 
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.38) 45%, rgba(255, 255, 255, 0.85) 85%, #f8fafc 100%),
-                url('<?php echo esc_url( $plans_hero_img ); ?>');
-            background-size: cover;
-            background-position: center;
-            background-attachment: scroll;
-        }
-        html.dark .plans-hero-bg {
-            background-image: 
-                linear-gradient(to bottom, rgba(11, 17, 32, 0.45) 0%, rgba(11, 17, 32, 0.75) 50%, rgba(2, 6, 23, 0.95) 100%),
-                url('<?php echo esc_url( $plans_hero_img ); ?>');
-        }
-
-        /* Direct Light & Dark mode guarantees for entire page */
-        html:not(.dark) body,
-        html.light body {
-            background-color: #f8fafc !important;
-            color: #0f172a !important;
-        }
-        html.dark body {
-            background-color: #020617 !important;
-            color: #f8fafc !important;
-        }
-
-        /* Ensure cards switch cleanly in light mode */
-        html:not(.dark) .plan-hover-card,
-        html.light .plan-hover-card,
-        html:not(.dark) .plan-card-bg,
-        html.light .plan-card-bg {
-            background-color: #ffffff !important;
-            border-color: #e2e8f0 !important;
-            color: #0f172a !important;
-        }
-        html.dark .plan-hover-card,
-        html.dark .plan-card-bg {
-            background-color: #0f172a !important;
-            border-color: #1e293b !important;
-            color: #f8fafc !important;
-        }
-
-        /* iOS Liquid / Frosted Glass Navbar */
-        header.ofp-ios-glass-nav {
-            transition: background-color 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        /* Not scrolled / At hero section: Very faint in both Light & Dark modes */
-        header.ofp-ios-glass-nav.ofp-nav-top {
-            background-color: rgba(255, 255, 255, 0.08) !important;
-            backdrop-filter: blur(8px) saturate(120%) !important;
-            -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
-            box-shadow: none !important;
-        }
-        html.dark header.ofp-ios-glass-nav.ofp-nav-top {
-            background-color: rgba(2, 6, 23, 0.15) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-            box-shadow: none !important;
-        }
-
-        /* When scrolled down past hero: Full iOS liquid/frosted glass */
-        header.ofp-ios-glass-nav.ofp-nav-scrolled {
-            background-color: rgba(255, 255, 255, 0.70) !important;
-            backdrop-filter: blur(24px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-            border-bottom: 1px solid rgba(226, 232, 240, 0.7) !important;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05) !important;
-        }
-        html.dark header.ofp-ios-glass-nav.ofp-nav-scrolled {
-            background-color: rgba(2, 6, 23, 0.75) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.35) !important;
-        }
-    </style>
+    <link rel="stylesheet" href="<?php echo esc_url( OFP_URL . 'assets/css/plans-pricing.css' ); ?>">
 </head>
 
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 font-sans antialiased selection:bg-blue-600 selection:text-white">
@@ -534,7 +457,7 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
     </div>
 
     <!-- ── HERO BANNER ────────────────────────────────────────────────── -->
-    <section class="plans-hero-bg relative overflow-hidden border-b border-slate-200 dark:border-slate-800 pt-28 sm:pt-36 pb-16 sm:pb-24 transition-colors duration-300">
+    <section class="plans-hero-bg relative overflow-hidden border-b border-slate-200 dark:border-slate-800 pt-28 sm:pt-36 pb-16 sm:pb-24 transition-colors duration-300" style="--ofp-plans-hero-img: url('<?php echo esc_url( $plans_hero_img ); ?>');">
         <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <!-- Badge matching /agents -->
             <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-slate-900/80 border border-slate-200 dark:border-white/20 backdrop-blur-md text-slate-800 dark:text-blue-300 text-xs font-bold uppercase tracking-wider mb-6 shadow-sm">
@@ -721,13 +644,13 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                         </button>
                         <button type="button" @click="setCycle('quarterly')"
                             :class="billingCycle === 'quarterly' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'"
-                            class="flex-1 py-1 rounded-lg transition-all text-center cursor-pointer" title="Save 10%">
-                            Qtr <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold">-10%</span>
+                            class="flex-1 py-1 rounded-lg transition-all text-center cursor-pointer" title="Save 5%">
+                            Qtr <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold">-5%</span>
                         </button>
                         <button type="button" @click="setCycle('annually')"
                             :class="billingCycle === 'annually' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'"
-                            class="flex-1 py-1 rounded-lg transition-all text-center cursor-pointer" title="Save 20%">
-                            Year <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold">-20%</span>
+                            class="flex-1 py-1 rounded-lg transition-all text-center cursor-pointer" title="Save 15%">
+                            Year <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold">-15%</span>
                         </button>
                     </div>
 
@@ -835,13 +758,13 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                         </button>
                         <button type="button" @click="setCycle('quarterly')"
                             :class="billingCycle === 'quarterly' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'"
-                            class="flex-1 py-1 rounded-lg transition-all text-center cursor-pointer" title="Save 10%">
-                            Qtr <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold">-10%</span>
+                            class="flex-1 py-1 rounded-lg transition-all text-center cursor-pointer" title="Save 5%">
+                            Qtr <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold">-5%</span>
                         </button>
                         <button type="button" @click="setCycle('annually')"
                             :class="billingCycle === 'annually' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'"
-                            class="flex-1 py-1 rounded-lg transition-all text-center cursor-pointer" title="Save 20%">
-                            Year <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold">-20%</span>
+                            class="flex-1 py-1 rounded-lg transition-all text-center cursor-pointer" title="Save 15%">
+                            Year <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold">-15%</span>
                         </button>
                     </div>
 
@@ -1021,144 +944,45 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs text-slate-700 dark:text-slate-300">
-                        <!-- Group 1: Capacity -->
-                        <tr class="bg-slate-50/60 dark:bg-slate-800/40">
-                            <td colspan="5" class="py-2.5 px-4 font-black text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Capacity &amp; Team Limits</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">Active Property Listings</td>
-                            <td class="py-3 px-3 text-center">1</td>
-                            <td class="py-3 px-3 text-center font-bold">3</td>
-                            <td class="py-3 px-3 text-center font-bold text-blue-600 dark:text-blue-400">10</td>
-                            <td class="py-3 px-3 text-center font-black text-amber-500">Unlimited</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">Team Members / Sub-Agents</td>
-                            <td class="py-3 px-3 text-center text-slate-400">0 (Solo)</td>
-                            <td class="py-3 px-3 text-center">2 seats</td>
-                            <td class="py-3 px-3 text-center text-blue-600 dark:text-blue-400 font-bold">3 seats</td>
-                            <td class="py-3 px-3 text-center font-black text-amber-500">Unlimited</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">High-Res Media &amp; Gallery Storage</td>
-                            <td class="py-3 px-3 text-center">Standard</td>
-                            <td class="py-3 px-3 text-center">High Speed</td>
-                            <td class="py-3 px-3 text-center">HD Optimized</td>
-                            <td class="py-3 px-3 text-center font-bold text-amber-500">Unlimited CDN</td>
-                        </tr>
-
-                        <!-- Group 2: Marketplace & Exposure -->
-                        <tr class="bg-slate-50/60 dark:bg-slate-800/40">
-                            <td colspan="5" class="py-2.5 px-4 font-black text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Marketplace &amp; Exposure</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">Public Agency Profile Page (/agent/slug)</td>
-                            <td class="py-3 px-3 text-center text-emerald-500">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500">✓</td>
-                            <td class="py-3 px-3 text-center font-bold text-amber-500">Custom Domain</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">Partner Trust Badge</td>
-                            <td class="py-3 px-3 text-center text-slate-400">Light</td>
-                            <td class="py-3 px-3 text-center text-blue-500 font-bold">Verified Agency</td>
-                            <td class="py-3 px-3 text-center text-blue-600 dark:text-blue-400 font-black">Verified Partner</td>
-                            <td class="py-3 px-3 text-center text-amber-500 font-black">Solo Brand Crest</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">Marketplace Search Placement</td>
-                            <td class="py-3 px-3 text-center">Standard</td>
-                            <td class="py-3 px-3 text-center">Priority</td>
-                            <td class="py-3 px-3 text-center text-blue-600 dark:text-blue-400 font-bold">Top Boosted</td>
-                            <td class="py-3 px-3 text-center font-bold text-amber-600 dark:text-amber-400">On Agency Website</td>
-                        </tr>
-
-                        <!-- Group 3: CRM & FinTech -->
-                        <tr class="bg-slate-50/60 dark:bg-slate-800/40">
-                            <td colspan="5" class="py-2.5 px-4 font-black text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">CRM &amp; Financial Technology</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">Lead Pipeline &amp; Deal Tracking</td>
-                            <td class="py-3 px-3 text-center text-emerald-500">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500">✓</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">CRM Automation &amp; Workflows</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">Analytics &amp; Performance Reports</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">WhatsApp &amp; SMS Instant Deal Alerts</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center text-emerald-500">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500">✓</td>
-                            <td class="py-3 px-3 text-center font-black text-amber-500">✓ (₦50k credit incl.)</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">Rent Monitoring &amp; Digital Tenancy Leases</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">Off-Plan Installment Plans &amp; Buyer Ledgers</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">ROI &amp; Yield Investment Projector</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                        </tr>
-
-                        <!-- Group 4: Branding & Independence -->
-                        <tr class="bg-slate-50/60 dark:bg-slate-800/40">
-                            <td colspan="5" class="py-2.5 px-4 font-black text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Brand Ownership &amp; Infrastructure</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">Custom Email Templates</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center text-emerald-500">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500">✓</td>
-                            <td class="py-3 px-3 text-center text-emerald-500 font-bold">✓</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">Custom Domain Routing (e.g. portal.yourbrand.ng)</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center font-black text-amber-500">Included</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">Removal of <?php echo esc_html( OFP_Brand::name() ); ?> Branding (100% White-Label)</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center font-black text-amber-500">100% Solo</td>
-                        </tr>
-                        <tr>
-                            <td class="py-3 px-4 font-semibold">VIP Account Manager &amp; SLA</td>
-                            <td class="py-3 px-3 text-center text-slate-400">—</td>
-                            <td class="py-3 px-3 text-center">Standard</td>
-                            <td class="py-3 px-3 text-center text-blue-600 dark:text-blue-400 font-bold">Priority</td>
-                            <td class="py-3 px-3 text-center font-black text-amber-500">24/7 Dedicated SLA</td>
-                        </tr>
+                        <?php
+                        $dyn_matrix = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_plan_matrix() : [];
+                        foreach ( $dyn_matrix as $group_title => $items ) :
+                        ?>
+                            <tr class="bg-slate-50/60 dark:bg-slate-800/40">
+                                <td colspan="5" class="py-2.5 px-4 font-black text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                    <?php echo esc_html( $group_title ); ?>
+                                </td>
+                            </tr>
+                            <?php foreach ( $items as $row ) :
+                                $render_client_cell = function( $val, $col = 'free' ) {
+                                    $val = trim( (string) $val );
+                                    if ( $val === '✓' ) {
+                                        $cls = ( $col === 'silver' || $col === 'gold' || $col === 'wl' ) ? 'text-emerald-500 font-bold' : 'text-emerald-500';
+                                        return '<span class="' . $cls . '">✓</span>';
+                                    }
+                                    if ( $val === '—' || $val === '' ) {
+                                        return '<span class="text-slate-400">—</span>';
+                                    }
+                                    $cls = 'font-semibold';
+                                    if ( $col === 'gold' ) {
+                                        $cls = 'font-bold text-blue-600 dark:text-blue-400';
+                                    } elseif ( $col === 'wl' ) {
+                                        $cls = 'font-black text-amber-500';
+                                    } elseif ( $col === 'silver' ) {
+                                        $cls = 'font-bold';
+                                    }
+                                    return '<span class="' . $cls . '">' . esc_html( $val ) . '</span>';
+                                };
+                            ?>
+                                <tr>
+                                    <td class="py-3 px-4 font-semibold"><?php echo esc_html( $row['feature'] ?? '' ); ?></td>
+                                    <td class="py-3 px-3 text-center"><?php echo $render_client_cell( $row['free'] ?? '—', 'free' ); ?></td>
+                                    <td class="py-3 px-3 text-center"><?php echo $render_client_cell( $row['silver'] ?? '—', 'silver' ); ?></td>
+                                    <td class="py-3 px-3 text-center"><?php echo $render_client_cell( $row['gold'] ?? '—', 'gold' ); ?></td>
+                                    <td class="py-3 px-3 text-center"><?php echo $render_client_cell( $row['wl'] ?? '—', 'wl' ); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
@@ -1403,21 +1227,7 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
     </footer>
 
     <!-- ── GSAP SCRIPT (PROGRESSIVE MICRO-INTERACTIONS ONLY, NEVER HIDES CONTENT) ── -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            if (typeof gsap !== 'undefined') {
-                // Interactive micro-lift on card hover
-                document.querySelectorAll('.plan-hover-card').forEach(function(card) {
-                    card.addEventListener('mouseenter', function() {
-                        gsap.to(card, { y: -5, duration: 0.25, ease: 'power1.out' });
-                    });
-                    card.addEventListener('mouseleave', function() {
-                        gsap.to(card, { y: 0, duration: 0.25, ease: 'power1.out' });
-                    });
-                });
-            }
-        });
-    </script>
+    <script src="<?php echo esc_url( OFP_URL . 'assets/js/plans-pricing.js' ); ?>" defer></script>
 
     <?php wp_footer(); ?>
 </body>

@@ -225,6 +225,7 @@ $avatar_gradients = [
                         <label class="ofp-permission-item"><input type="checkbox" name="permissions[]" value="edit_leads"> Edit Leads</label>
                         <label class="ofp-permission-item"><input type="checkbox" name="permissions[]" value="send_messages"> Send Messages</label>
                         <label class="ofp-permission-item"><input type="checkbox" name="permissions[]" value="view_reports"> View Reports</label>
+                        <?php if ( OFP_Platform::is_platform( $client ) ) : ?><label class="ofp-permission-item"><input type="checkbox" name="permissions[]" value="approve_listings"> Approve Listings</label><?php endif; ?>
                     </div>
                     <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">Managers have full access automatically.</p>
                 </div>
@@ -260,6 +261,7 @@ $avatar_gradients = [
                         <label class="ofp-permission-item"><input type="checkbox" name="permissions[]" value="edit_leads" id="perm_edit_leads"> Edit Leads</label>
                         <label class="ofp-permission-item"><input type="checkbox" name="permissions[]" value="send_messages" id="perm_send_messages"> Send Messages</label>
                         <label class="ofp-permission-item"><input type="checkbox" name="permissions[]" value="view_reports" id="perm_view_reports"> View Reports</label>
+                        <?php if ( OFP_Platform::is_platform( $client ) ) : ?><label class="ofp-permission-item"><input type="checkbox" name="permissions[]" value="approve_listings" id="perm_approve_listings"> Approve Listings</label><?php endif; ?>
                     </div>
                 </div>
 

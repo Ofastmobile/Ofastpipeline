@@ -1,0 +1,171 @@
+/**
+ * OFast Pipeline - Field Team Management Styles
+ */
+
+.ft-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.ft-tab {
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid var(--border-color, #e2e8f0);
+    color: var(--text-main, #0f172a);
+    background: var(--bg-card, #fff);
+}
+
+.ft-tab.on {
+    background: #0f172a;
+    color: #fff;
+    border-color: #0f172a;
+}
+
+.ft-card {
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+.ft-card h3 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    color: var(--text-main, #0f172a);
+}
+
+.ft-muted {
+    color: var(--text-muted, #64748b);
+    font-size: 13px;
+    margin: 0 0 10px;
+}
+
+.ft-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.ft-kv {
+    font-size: 13px;
+    color: var(--text-main, #0f172a);
+    margin: 3px 0;
+}
+
+.ft-kv b {
+    color: var(--text-muted, #64748b);
+    font-weight: 600;
+}
+
+.ft-pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+}
+
+.ft-flag {
+    background: #fef2f2;
+    color: #991b1b;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12.5px;
+    margin: 6px 0;
+    font-weight: 600;
+}
+
+.ft-photos {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+}
+
+.ft-photos img {
+    width: 84px;
+    height: 84px;
+    object-fit: cover;
+    border-radius: 8px;
+    flex: none;
+}
+
+.ft-form input[type=text],
+.ft-form input[type=email],
+.ft-form input[type=tel],
+.ft-form input[type=number],
+.ft-form select,
+.ft-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #cbd5e1);
+    background: var(--bg-card, #fff);
+    color: var(--text-main, #0f172a);
+}
+
+.ft-form label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    margin: 10px 0 4px;
+}
+
+.ft-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.ft-btn-ok {
+    background: #047857 !important;
+    color: #fff !important;
+}
+
+.ft-btn-warn {
+    background: #b45309 !important;
+    color: #fff !important;
+}
+
+.ft-btn-bad {
+    background: #b91c1c !important;
+    color: #fff !important;
+}
+
+.ft-details summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    margin: 8px 0;
+}
+
+.ft-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 12.5px;
+    color: #047857;
+    font-weight: 600;
+}
+
+.ft-chk {
+    display: flex !important;
+    gap: 8px;
+    align-items: flex-start;
+    font-weight: 500 !important;
+}
+
+.ft-chk input {
+    width: auto !important;
+    margin-top: 3px;
+}
+

@@ -590,6 +590,7 @@ class OFP_Admin_Portal {
         wp_enqueue_style( 'ofp-admin', OFP_URL . 'assets/css/admin.css', [], OFP_VERSION );
         wp_enqueue_style( 'ofp-admin-portal', OFP_URL . 'assets/css/admin-portal.css', [ 'ofp-admin' ], OFP_VERSION );
         wp_enqueue_style( 'ofp-admin-activity-logs', OFP_URL . 'assets/css/admin-activity-logs.css', [ 'ofp-admin' ], OFP_VERSION );
+        wp_enqueue_style( 'ofp-admin-plan-matrix', OFP_URL . 'assets/css/admin-plan-matrix.css', [ 'ofp-admin' ], OFP_VERSION );
 
         // Enqueue Admin Portal scripts with localization
         wp_enqueue_script( 'ofp-admin', OFP_URL . 'assets/js/admin.js', [ 'jquery' ], OFP_VERSION, true );
@@ -600,6 +601,12 @@ class OFP_Admin_Portal {
 
         wp_enqueue_script( 'ofp-admin-portal', OFP_URL . 'assets/js/admin-portal.js', [ 'jquery', 'ofp-admin' ], OFP_VERSION, true );
         wp_enqueue_script( 'ofp-admin-activity-logs', OFP_URL . 'assets/js/admin-activity-logs.js', [ 'jquery', 'ofp-admin' ], OFP_VERSION, true );
+        wp_enqueue_script( 'ofp-admin-plan-matrix', OFP_URL . 'assets/js/admin-plan-matrix.js', [ 'jquery', 'ofp-admin' ], OFP_VERSION, true );
+        wp_localize_script( 'ofp-admin-plan-matrix', 'ofpPlanMatrix', [
+            'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+            'nonce'   => wp_create_nonce( 'ofp_save_settings' ),
+        ] );
+        wp_enqueue_script( 'ofp-admin-settings', OFP_URL . 'assets/js/admin-settings.js', [ 'jquery', 'ofp-admin' ], OFP_VERSION, true );
 
         $template_file = OFP_PATH . 'admin/views/portal/admin-portal-template.php';
         if ( file_exists( $template_file ) ) {

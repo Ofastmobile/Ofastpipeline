@@ -51,8 +51,8 @@ class OFP_Platform {
     /** Emails that are never copied to the team (codes, passwords, invitations, owner-only alerts). */
     const PRIVATE_SUBJECT_PATTERN = '/password|otp|verification|verify|one-time|reset|welcome|invit|login|log in|sign.?in|security|team member|activity/i';
 
-    /** Words in an email body that mark it as private to the owner. */
-    const PRIVATE_BODY_PATTERN = '/action=rp|action=resetpass|token=|otp|one-time|verification code|verify your|temporary password|temporary code/i';
+    /** Links or text that carry a secret: reset/invite tokens, codes, passwords. Mail with any of these is never copied. */
+    const PRIVATE_BODY_PATTERN = '/[?&](?:token|key|code|reset|invite|otp|verify|hash|sig)=|temporary password|your password|one-time|verification code|\b(?:code|otp|pin)\b[^<]{0,40}\b\d{4,8}\b/i';
 
     public static function init(): void {
         self::ensure_schema();
@@ -149,8 +149,20 @@ class OFP_Platform {
 
     // ── Server-side guards ─────────────────────────────────────────────
 
-    public static function guard_routes(): void {
+    /** The portal page being requested, even if rewrite rules have not been refreshed yet. */
+    private static function current_route(): string {
         $route = (string) get_query_var( 'ofp_route', '' );
+        if ( '' !== $route ) {
+            return $route;
+        }
+        $path  = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+        $seg   = array_values( array_filter( explode( '/', $path ) ) );
+        $known = array_merge( self::BILLING_ROUTES, self::OWNER_ONLY_ROUTES, [ 'account', 'profile' ] );
+        return ( 1 === count( $seg ) && in_array( $seg[0], $known, true ) ) ? $seg[0] : '';
+    }
+
+    public static function guard_routes(): void {
+        $route = self::current_route();
         if ( '' === $route || ! self::session_is_platform() ) {
             return;
         }
@@ -211,7 +223,7 @@ class OFP_Platform {
         if ( ! self::is_team_member_session() ) {
             return;
         }
-        $route = (string) get_query_var( 'ofp_route', '' );
+        $route = self::current_route();
         if ( ! in_array( $route, [ 'account', 'profile' ], true ) ) {
             return;
         }
@@ -269,7 +281,7 @@ class OFP_Platform {
 
         global $wpdb;
         $emails = $wpdb->get_col( $wpdb->prepare(
-            "SELECT email FROM {$wpdb->prefix}ofp_team_members WHERE client_id = %d AND status = 'active'",
+            "SELECT email FROM {$wpdb->prefix}ofp_team_members WHERE client_id = %d AND status = 'active' AND role_name <> 'Field Agent'",
             (int) $recipient_client->id
         ) );
 

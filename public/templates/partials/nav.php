@@ -231,6 +231,11 @@ if ( ! OFP_Brand::hide_plan_prompts( $client ) ) {
     ];
 }
 
+// Field Agents get a reduced menu; reviewers get a "Field Agents" item.
+if ( class_exists( 'OFP_Field_Agent' ) ) {
+    $nav_sections = OFP_Field_Agent::filter_nav( $nav_sections );
+}
+
 // Flat list maintained for backward compatibility
 $nav_items = [];
 foreach ( $nav_sections as $section ) {

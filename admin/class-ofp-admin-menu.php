@@ -64,6 +64,7 @@ class OFP_Admin_Menu {
         add_action( 'admin_post_ofp_save_universal_template',  [ $this, 'handle_save_universal_template' ] );
         add_action( 'wp_ajax_ofp_admin_get_email_preview',     [ $this, 'ajax_get_email_preview' ] );
         add_action( 'wp_ajax_ofp_admin_resend_activity_email', [ $this, 'ajax_resend_activity_email' ] );
+        add_action( 'wp_ajax_ofp_admin_save_plan_matrix',      [ $this, 'ajax_save_plan_matrix' ] );
         add_action( 'admin_init',                              [ $this, 'restrict_co_admin_access' ] );
     }
 
@@ -169,6 +170,13 @@ class OFP_Admin_Menu {
             OFP_VERSION
         );
 
+        wp_enqueue_style(
+            'ofp-admin-plan-matrix',
+            OFP_URL . 'assets/css/admin-plan-matrix.css',
+            [ 'ofp-admin' ],
+            OFP_VERSION
+        );
+
         wp_enqueue_script(
             'ofp-admin',
             OFP_URL . 'assets/js/admin.js',
@@ -185,6 +193,27 @@ class OFP_Admin_Menu {
         wp_enqueue_script(
             'ofp-admin-activity-logs',
             OFP_URL . 'assets/js/admin-activity-logs.js',
+            [ 'jquery', 'ofp-admin' ],
+            OFP_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'ofp-admin-plan-matrix',
+            OFP_URL . 'assets/js/admin-plan-matrix.js',
+            [ 'jquery', 'ofp-admin' ],
+            OFP_VERSION,
+            true
+        );
+
+        wp_localize_script( 'ofp-admin-plan-matrix', 'ofpPlanMatrix', [
+            'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+            'nonce'   => wp_create_nonce( 'ofp_save_settings' ),
+        ] );
+
+        wp_enqueue_script(
+            'ofp-admin-settings',
+            OFP_URL . 'assets/js/admin-settings.js',
             [ 'jquery', 'ofp-admin' ],
             OFP_VERSION,
             true
@@ -685,6 +714,13 @@ class OFP_Admin_Menu {
             'ofp_use_app_host'        => empty( $_POST['ofp_use_app_host'] ) ? '0' : '1',
             'ofp_portal_default_dashboard' => empty( $_POST['ofp_portal_default_dashboard'] ) ? '0' : '1',
             'ofp_hide_admin_bar'      => empty( $_POST['ofp_hide_admin_bar'] ) ? '0' : '1',
+            'ofp_remove_wp_logo'      => empty( $_POST['ofp_remove_wp_logo'] ) ? '0' : '1',
+            'ofp_remove_new_content'  => empty( $_POST['ofp_remove_new_content'] ) ? '0' : '1',
+            'ofp_custom_greeting_enabled' => empty( $_POST['ofp_custom_greeting_enabled'] ) ? '0' : '1',
+            'ofp_custom_greeting_text'    => sanitize_text_field( wp_unslash( $_POST['ofp_custom_greeting_text'] ?? 'Welcome' ) ),
+            'ofp_disable_xmlrpc'          => empty( $_POST['ofp_disable_xmlrpc'] ) ? '0' : '1',
+            'ofp_obfuscate_author_slugs'  => empty( $_POST['ofp_obfuscate_author_slugs'] ) ? '0' : '1',
+            'ofp_obfuscate_emails'        => empty( $_POST['ofp_obfuscate_emails'] ) ? '0' : '1',
             'ofp_watermark_enabled'   => empty( $_POST['ofp_watermark_enabled'] ) ? '0' : '1',
             'ofp_watermark_text'      => sanitize_text_field( wp_unslash( $_POST['ofp_watermark_text'] ?? '' ) ),
             'ofp_global_pixel_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_global_pixel_id']     ?? '' ) ),
@@ -772,6 +808,12 @@ class OFP_Admin_Menu {
             update_option( $key, $value );
         }
 
+        // ── Admin Bar Roles Hiding ─────────────────────────────────────────
+        $hide_bar_roles = isset( $_POST['ofp_hide_admin_bar_roles'] ) && is_array( $_POST['ofp_hide_admin_bar_roles'] )
+            ? array_map( 'sanitize_text_field', wp_unslash( $_POST['ofp_hide_admin_bar_roles'] ) )
+            : [];
+        update_option( 'ofp_hide_admin_bar_roles', $hide_bar_roles );
+
         // ── Company Bank Account (Phase 17) ───────────────────────────────
         if ( isset( $_POST['company_bank_name'] ) ) {
             update_option( 'ofp_company_bank_name',    sanitize_text_field( wp_unslash( $_POST['company_bank_name'] ?? '' ) ) );
@@ -816,6 +858,15 @@ class OFP_Admin_Menu {
             }
             if ( ! empty( $pricing_cards ) ) {
                 OFP_Property_CPT::save_pricing_cards( $pricing_cards );
+            }
+        }
+
+        // ── Plan Comparison Matrix Customizer ─────────────────────────────
+        if ( isset( $_POST['ofp_plan_matrix_json'] ) ) {
+            $raw_matrix = wp_unslash( $_POST['ofp_plan_matrix_json'] );
+            $matrix_arr = json_decode( $raw_matrix, true );
+            if ( is_array( $matrix_arr ) ) {
+                OFP_Property_CPT::save_plan_matrix( $matrix_arr );
             }
         }
 
@@ -1979,6 +2030,29 @@ class OFP_Admin_Menu {
             ] );
         } else {
             wp_send_json_error( 'Failed to send email. Please check your SMTP settings and server status.' );
+        }
+    }
+
+    /**
+     * AJAX handler to save Plan Comparison Matrix.
+     */
+    public function ajax_save_plan_matrix(): void {
+        check_ajax_referer( 'ofp_save_settings', 'nonce' );
+        if ( ! OFP_Auth::is_admin_user() ) {
+            wp_send_json_error( 'Unauthorized.' );
+        }
+
+        $raw_matrix = wp_unslash( $_POST['matrix_json'] ?? '' );
+        $matrix_arr = json_decode( $raw_matrix, true );
+        if ( ! is_array( $matrix_arr ) ) {
+            wp_send_json_error( 'Invalid matrix payload.' );
+        }
+
+        $saved = OFP_Property_CPT::save_plan_matrix( $matrix_arr );
+        if ( $saved !== false ) {
+            wp_send_json_success( [ 'message' => 'Comparison matrix updated successfully.' ] );
+        } else {
+            wp_send_json_error( 'Could not save matrix data.' );
         }
     }
 

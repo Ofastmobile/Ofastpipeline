@@ -1,0 +1,155 @@
+/**
+ * OFast Pipeline - Field Agent Portal Styles
+ */
+
+.fa-wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding-bottom: 60px;
+}
+
+.fa-card {
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+.fa-card h2 {
+    margin: 0 0 6px;
+    font-size: 18px;
+    color: var(--text-main, #0f172a);
+}
+
+.fa-muted {
+    color: var(--text-muted, #64748b);
+    font-size: 13px;
+    margin: 0 0 12px;
+}
+
+.fa-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.fa-stat {
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.fa-stat b {
+    display: block;
+    font-size: 24px;
+    color: var(--text-main, #0f172a);
+}
+
+.fa-stat span {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-muted, #64748b);
+}
+
+.fa-form label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 12px 0 4px;
+    color: var(--text-main, #0f172a);
+}
+
+.fa-form input[type=text],
+.fa-form input[type=number],
+.fa-form input[type=date],
+.fa-form input[type=tel],
+.fa-form input[type=url],
+.fa-form select,
+.fa-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color, #cbd5e1);
+    background: var(--bg-card, #fff);
+    color: var(--text-main, #0f172a);
+}
+
+.fa-form input[type=file] {
+    width: 100%;
+    font-size: 14px;
+}
+
+.fa-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.fa-check {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-weight: 500 !important;
+    margin: 8px 0 !important;
+}
+
+.fa-check input {
+    margin-top: 3px;
+    width: 18px;
+    height: 18px;
+    flex: none;
+}
+
+.fa-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+.fa-item:first-child {
+    border-top: 0;
+}
+
+.fa-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    background: #e2e8f0 center/cover;
+    flex: none;
+}
+
+.fa-pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+}
+
+.fa-note {
+    font-size: 12.5px;
+    margin: 6px 0 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.fa-hide {
+    display: none !important;
+}
+
+.fa-gps {
+    font-size: 12px;
+    color: var(--text-muted, #64748b);
+    margin-top: 6px;
+}
+

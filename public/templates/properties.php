@@ -418,6 +418,84 @@ $prop_tabs = [
     <title><?php echo esc_html( OFP_Brand::title( 'My Properties', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
     <style>
+
+        /* Modern iOS-style toggle switch matching brand */
+        .ofp-toggle-switch {
+            display: inline-flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            width: fit-content !important;
+            max-width: fit-content !important;
+            cursor: pointer !important;
+            font-size: 14px !important;
+            color: var(--text-main, #1e293b) !important;
+            gap: 10px !important;
+            user-select: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+        }
+        .ofp-pkg,
+        #ofp-total-package-field,
+        #ofp_total_package_box {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .ofp-toggle-field {
+            border: none !important;
+            background: transparent !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+        }
+        .ofp-toggle-switch input,
+        .ofp-toggle-switch input[type="checkbox"] {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+            position: absolute !important;
+            pointer-events: none !important;
+            margin: 0 !important;
+        }
+        .ofp-toggle-switch .ofp-toggle-slider {
+            position: relative !important;
+            display: inline-block !important;
+            width: 44px !important;
+            height: 24px !important;
+            background-color: #cbd5e1 !important;
+            border: none !important;
+            border-radius: 9999px !important;
+            transition: background-color 0.25s ease !important;
+            flex-shrink: 0 !important;
+            box-sizing: border-box !important;
+        }
+        .ofp-toggle-switch .ofp-toggle-slider::after {
+            display: none !important;
+        }
+        .ofp-toggle-switch .ofp-toggle-slider::before {
+            content: "" !important;
+            position: absolute !important;
+            width: 20px !important;
+            height: 20px !important;
+            border-radius: 50% !important;
+            background-color: #ffffff !important;
+            top: 2px !important;
+            left: 2px !important;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+        }
+        .ofp-toggle-switch input:checked + .ofp-toggle-slider {
+            background-color: #2563eb !important;
+            border: none !important;
+        }
+        .ofp-toggle-switch input:checked + .ofp-toggle-slider::before {
+            transform: translateX(20px) !important;
+            background-color: #ffffff !important;
+        }
+
         .ofp-custom-select-wrapper select,
         .ofp-custom-select-wrapper select.ofp-select {
             display: none !important;
@@ -504,6 +582,131 @@ $prop_tabs = [
         .ofp-multiselect-menu::-webkit-scrollbar-thumb {
             background: var(--border-color, #cbd5e1);
             border-radius: 4px;
+        }
+
+        /* ── Mobile Responsiveness for Section 2 (Pricing) & Section 3 (Specs) ── */
+        .ofp-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        .ofp-specs-2col-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            align-items: start;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 860px) {
+            .ofp-form-grid,
+            .ofp-specs-2col-layout {
+                grid-template-columns: 1fr !important;
+                gap: 16px !important;
+            }
+
+            .ofp-form-grid > .ofp-field[style*="grid-column:1/-1"],
+            .ofp-form-grid > .ofp-field[style*="grid-column: 1 / -1"],
+            .ofp-form-grid > .ofp-field[style*="grid-column: 1/-1"] {
+                grid-column: auto !important;
+            }
+
+            /* Section 2 Total Move-in Package grid */
+            .ofp-pkg-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 10px !important;
+            }
+
+            /* Section 3 Sizing Card Header & Live Nigerian Plot Benchmark Badge */
+            .ofp-sizing-card-header {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 10px !important;
+            }
+
+            .ofp-sizing-card-title-group {
+                width: 100% !important;
+            }
+
+            .ofp-benchmark-live-badge {
+                width: 100% !important;
+                box-sizing: border-box !important;
+                font-size: 11.5px !important;
+                line-height: 1.4 !important;
+                white-space: normal !important;
+                word-break: break-word !important;
+                padding: 6px 10px !important;
+            }
+
+            .ofp-benchmark-live-badge svg {
+                flex-shrink: 0 !important;
+            }
+
+            /* Plot Presets row wrapping */
+            .ofp-sizing-card .ofp-hint {
+                line-height: 1.8 !important;
+                word-break: break-word !important;
+            }
+
+            .ofp-sqm-preset-btn {
+                display: inline-block !important;
+                padding: 2px 6px !important;
+                margin: 2px 1px !important;
+                background: rgba(128, 128, 128, 0.08) !important;
+                border-radius: 4px !important;
+                font-size: 11px !important;
+            }
+
+            /* Room specs card & sizing card padding */
+            .ofp-room-specs-card,
+            .ofp-sizing-card {
+                padding: 16px !important;
+            }
+
+            /* Dedicated Nigerian Land Studio Box on mobile */
+            .ofp-land-studio-box {
+                padding: 16px !important;
+            }
+
+            .ofp-land-studio-header {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 8px !important;
+            }
+
+            .ofp-land-studio-badge {
+                font-size: 11px !important;
+                line-height: 1.3 !important;
+                white-space: normal !important;
+            }
+
+            .ofp-land-grid {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            /* Installment Toggle switch flexibility */
+            .ofp-toggle-switch {
+                max-width: 100% !important;
+                width: auto !important;
+            }
+
+            .ofp-toggle-switch span:not(.ofp-toggle-slider) {
+                word-break: break-word !important;
+                white-space: normal !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .ofp-pkg-grid {
+                grid-template-columns: 1fr !important;
+                gap: 8px !important;
+            }
+
+            .ofp-form-card-section {
+                padding: 16px 14px !important;
+            }
         }
     </style>
 </head>
@@ -855,7 +1058,7 @@ $prop_tabs = [
                                 <h4 class="ofp-form-section-title">1. Basic Information</h4>
                             </div>
 
-                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+                            <div class="ofp-form-grid">
                                 <div class="ofp-field" style="grid-column:1/-1;">
                                     <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Property Title <span style="color:#ef4444;">*</span></label>
                                     <input type="text" name="title" required placeholder="e.g. Luxury 4-Bedroom Semi-Detached Duplex with BQ"
@@ -903,7 +1106,7 @@ $prop_tabs = [
                                 <h4 class="ofp-form-section-title">2. Pricing &amp; Commerce</h4>
                             </div>
 
-                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+                            <div class="ofp-form-grid">
                                 <div class="ofp-field">
                                     <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Price (₦ Nigerian Naira) <span style="color:#ef4444;">*</span></label>
                                     <div style="position:relative;">
@@ -930,31 +1133,27 @@ $prop_tabs = [
                                 </div>
 
                                 <div class="ofp-field" id="ofp-total-package-field">
-                                    <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Total Move-in Package (₦) <span class="ofp-hint" style="display:inline;margin:0;">(Rent Only)</span></label>
-                                    <div style="position:relative;">
-                                        <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:700; color:var(--text-muted); font-size:15px;">₦</span>
-                                        <input type="number" step="0.01" name="total_package" placeholder="e.g. Rent + Legal + Agency + Caution"
-                                               value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_total_package', true ) : '' ); ?>"
-                                               style="width:100%; padding:11px 14px 11px 32px; border-radius:8px;">
-                                    </div>
-                                    <span class="ofp-hint" style="font-size:11.5px; margin-top:4px; display:block;">This becomes the price tenants see everywhere. Fill in the fees below and it is calculated for you, or type a total only.</span>
 <?php OFP_Property_Package::render_fields( $editing_post ? (int) $editing_post->ID : 0, 'input[name="price"]', 'input[name="total_package"]' ); ?>
+                                    <div style="margin-top:14px;">
+                                        <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Total Move-in Package (₦) <span class="ofp-hint" style="display:inline;margin:0;">(Rent Only)</span></label>
+                                        <div style="position:relative;">
+                                            <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:700; color:var(--text-muted); font-size:15px;">₦</span>
+                                            <input type="number" step="0.01" name="total_package" placeholder="e.g. Rent + Legal + Agency + Caution"
+                                                   value="<?php echo esc_attr( $editing_post ? get_post_meta( $editing_post->ID, 'ofp_total_package', true ) : '' ); ?>"
+                                                   style="width:100%; padding:11px 14px 11px 32px; border-radius:8px;">
+                                        </div>
+                                        <span class="ofp-hint" style="font-size:11.5px; margin-top:4px; display:block;">This becomes the price tenants see everywhere. Fill in the fees above and it is calculated for you, or type a total only.</span>
+                                    </div>
                                 </div>
 
-                                <div class="ofp-field" style="display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; gap:16px; align-self:start;">
-                                    <div>
-                                        <label for="ofp_allow_installment_toggle" style="font-size:13.5px; font-weight:600; color:var(--text-main); margin-bottom:3px; display:block; cursor:pointer;">
-                                            Allow Installment / Mortgage Financing Plan
+                                <div style="display:flex; flex-direction:column; gap:18px;">
+                                    <div class="ofp-field ofp-toggle-field" style="margin-bottom:0; padding:4px 0;">
+                                        <label class="ofp-toggle-switch" style="cursor:pointer; display:inline-flex !important; flex-direction:row !important; align-items:center !important; justify-content:flex-start !important; gap:10px !important; width:auto !important; max-width:fit-content !important; margin:0 !important;">
+                                            <input type="checkbox" id="ofp_allow_installment_toggle" name="allow_installment" value="1" <?php checked( $editing_post ? (string) get_post_meta( $editing_post->ID, 'ofp_allow_installment', true ) : '0', '1' ); ?> style="display:none !important;">
+                                            <span class="ofp-toggle-slider"></span>
+                                            <span style="font-size:13.5px !important; font-weight:600 !important; color:var(--text-main) !important; line-height:1.35 !important; margin-left:0 !important;">Allow Installment / Mortgage Financing Plan</span>
                                         </label>
-                                        <span class="ofp-hint" style="font-size:11.5px; margin:0; display:block;">
-                                            Enable to activate the interactive Installment &amp; Mortgage Estimator on the single property page.
-                                        </span>
                                     </div>
-                                    <label class="ofp-toggle" style="margin:0; cursor:pointer; flex-shrink:0;">
-                                        <input type="checkbox" id="ofp_allow_installment_toggle" name="allow_installment" value="1" <?php checked( $editing_post ? (string) get_post_meta( $editing_post->ID, 'ofp_allow_installment', true ) : '0', '1' ); ?>>
-                                        <span class="ofp-toggle-slider"></span>
-                                    </label>
-                                </div>
 
                                 <div class="ofp-field">
                                     <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Title Document(s)</label>
@@ -1020,6 +1219,7 @@ $prop_tabs = [
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
+                                </div>
                             </div>
                         </div>
 
@@ -1030,7 +1230,7 @@ $prop_tabs = [
                             </div>
 
                             <!-- 2-Column Section 3 Layout matching wireframe (Left: Bedrooms, Bathrooms, Parking | Right: Total Area, Condition, Furnishing) -->
-                            <div class="ofp-specs-2col-layout" style="display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start;">
+                            <div class="ofp-specs-2col-layout">
                                 <!-- Left Column: Bedrooms, Bathrooms, Parking Spaces, Construction & Furnishing in One Minimal Container Card -->
                                 <div class="ofp-field ofp-room-specs-card" id="ofp-rooms-spec-container">
                                     <!-- Bedrooms -->
@@ -1235,7 +1435,7 @@ $prop_tabs = [
                                 <h4 class="ofp-form-section-title">4. Location &amp; Media</h4>
                             </div>
 
-                            <div class="ofp-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+                            <div class="ofp-form-grid">
                                 <div class="ofp-field">
                                     <label style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px; display:block;">Location / Address <span style="color:#ef4444;">*</span></label>
                                     <input type="text" name="location_text" required placeholder="e.g. Lekki Phase 1, off Admiralty Way, Lagos"
