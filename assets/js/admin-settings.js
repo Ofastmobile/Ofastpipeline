@@ -747,6 +747,197 @@
 
 
 
+    // ── Platform Brand Logo Media Uploader ──────────────────────────────────
+    var uploadLogoBtn = document.getElementById('ofp-upload-logo-btn');
+    var removeLogoBtn = document.getElementById('ofp-remove-logo-btn');
+    var logoInput     = document.getElementById('ofp_logo_url');
+    var logoPreview   = document.getElementById('ofp-logo-preview');
+
+    if ( uploadLogoBtn && logoInput && logoPreview ) {
+        var logoMediaFrame = null;
+        uploadLogoBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if ( typeof wp === 'undefined' || ! wp.media ) {
+                var promptUrl = prompt('Enter Logo Image URL:', logoInput.value);
+                if ( promptUrl !== null ) {
+                    logoInput.value = promptUrl.trim();
+                    if ( promptUrl.trim() ) logoPreview.src = promptUrl.trim();
+                }
+                return;
+            }
+            if ( logoMediaFrame ) {
+                logoMediaFrame.open();
+                return;
+            }
+            logoMediaFrame = wp.media({
+                title: 'Select or Upload Platform Logo',
+                button: { text: 'Use As Logo' },
+                multiple: false,
+                library: { type: 'image' }
+            });
+            logoMediaFrame.on('select', function() {
+                var attachment = logoMediaFrame.state().get('selection').first().toJSON();
+                if ( attachment && attachment.url ) {
+                    logoInput.value = attachment.url;
+                    logoPreview.src = attachment.url;
+                }
+            });
+            logoMediaFrame.open();
+        });
+
+        if ( removeLogoBtn ) {
+            removeLogoBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                logoInput.value = '';
+                var defaultSrc = logoPreview.getAttribute('data-default');
+                if ( defaultSrc ) {
+                    logoPreview.src = defaultSrc;
+                }
+            });
+        }
+
+        logoInput.addEventListener('input', function() {
+            var val = this.value.trim();
+            if ( val ) {
+                logoPreview.src = val;
+            } else {
+                var def = logoPreview.getAttribute('data-default');
+                if ( def ) logoPreview.src = def;
+            }
+            if ( window.updateLoginPreview ) window.updateLoginPreview();
+        });
+    }
+
+    // ── Modern Dark Login Page Customizer Live Preview & Upload ─────────────
+    function hexToRgb(hex) {
+        hex = (hex || '').replace('#', '');
+        if ( hex.length === 3 ) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        if ( hex.length !== 6 ) return '15, 23, 42';
+        return parseInt(hex.substring(0, 2), 16) + ', ' + parseInt(hex.substring(2, 4), 16) + ', ' + parseInt(hex.substring(4, 6), 16);
+    }
+
+    window.updateLoginPreview = function() {
+        var box         = document.getElementById('ofp-login-live-preview-box');
+        var card        = document.getElementById('ofp-preview-card');
+        var overlay     = document.getElementById('ofp-preview-overlay');
+        var btn         = document.getElementById('ofp-preview-btn');
+        var logoImg     = document.getElementById('ofp-preview-logo-img');
+        var backLink    = document.getElementById('ofp-preview-back-link');
+        var logoInputEl = document.getElementById('ofp_logo_url');
+
+        if ( ! box || ! card ) return;
+
+        var cardColor    = (document.getElementById('ofp_login_card_color') || {}).value || '#0f172a';
+        var cardOpacity  = ((document.getElementById('ofp_login_card_opacity') || {}).value || 75) / 100;
+        var bgImage      = ((document.getElementById('ofp_login_bg_image') || {}).value || '').trim();
+        var overlayColor = (document.getElementById('ofp_login_overlay_color') || {}).value || '#000000';
+        var overlayOpac  = ((document.getElementById('ofp_login_overlay_opacity') || {}).value || 40) / 100;
+        var hideBack        = (document.getElementById('ofp_login_hide_back_link') || {}).checked;
+        var hideRegister    = (document.getElementById('ofp_login_hide_register') || {}).checked;
+        var hideLostPass    = (document.getElementById('ofp_login_hide_lost_password') || {}).checked;
+        var hidePrivacy     = (document.getElementById('ofp_login_hide_privacy_policy') || {}).checked;
+        var navLinks        = document.getElementById('ofp-preview-nav-links');
+        var registerLink    = document.getElementById('ofp-preview-register-link');
+        var lostPassLink    = document.getElementById('ofp-preview-lostpass-link');
+        var linkSep         = document.getElementById('ofp-preview-link-sep');
+        var privacyLink     = document.getElementById('ofp-preview-privacy-link');
+
+        if ( bgImage ) {
+            box.style.backgroundImage = 'url("' + bgImage + '")';
+            box.style.backgroundSize = 'cover';
+            box.style.backgroundPosition = 'center';
+        } else {
+            box.style.backgroundImage = 'radial-gradient(at 15% 15%, rgba(37,99,235,0.25) 0px, transparent 50%), radial-gradient(at 85% 85%, rgba(14,165,233,0.18) 0px, transparent 50%)';
+            box.style.backgroundColor = cardColor;
+        }
+
+        if ( overlay ) {
+            if ( overlayOpac > 0 && bgImage ) {
+                var oRgb = hexToRgb(overlayColor);
+                overlay.style.backgroundColor = 'rgba(' + oRgb + ', ' + overlayOpac + ')';
+                overlay.style.display = 'block';
+            } else {
+                overlay.style.display = 'none';
+            }
+        }
+
+        var cRgb = hexToRgb(cardColor);
+        card.style.backgroundColor = 'rgba(' + cRgb + ', ' + cardOpacity + ')';
+
+        if ( btn ) {
+            btn.style.background = 'rgba(255, 255, 255, 0.1)';
+            btn.style.border = '1px solid rgba(255, 255, 255, 0.22)';
+        }
+
+        if ( logoImg && logoInputEl && logoInputEl.value.trim() ) {
+            logoImg.src = logoInputEl.value.trim();
+        }
+
+        if ( backLink ) {
+            backLink.style.display = hideBack ? 'none' : 'block';
+        }
+
+        if ( navLinks ) {
+            navLinks.style.display = (hideRegister && hideLostPass) ? 'none' : 'block';
+        }
+
+        if ( registerLink ) {
+            registerLink.style.display = hideRegister ? 'none' : 'inline';
+        }
+
+        if ( lostPassLink ) {
+            lostPassLink.style.display = hideLostPass ? 'none' : 'inline';
+        }
+
+        if ( linkSep ) {
+            linkSep.style.display = (hideRegister || hideLostPass) ? 'none' : 'inline';
+        }
+
+        if ( privacyLink ) {
+            privacyLink.style.display = hidePrivacy ? 'none' : 'block';
+        }
+    };
+
+    var uploadLoginBgBtn = document.getElementById('ofp-upload-login-bg-btn');
+    var loginBgInput     = document.getElementById('ofp_login_bg_image');
+
+    if ( uploadLoginBgBtn && loginBgInput ) {
+        var loginBgFrame = null;
+        uploadLoginBgBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if ( typeof wp === 'undefined' || ! wp.media ) {
+                var promptUrl = prompt('Enter Background Image URL:', loginBgInput.value);
+                if ( promptUrl !== null ) {
+                    loginBgInput.value = promptUrl.trim();
+                    if ( window.updateLoginPreview ) window.updateLoginPreview();
+                }
+                return;
+            }
+            if ( loginBgFrame ) {
+                loginBgFrame.open();
+                return;
+            }
+            loginBgFrame = wp.media({
+                title: 'Select Login Background Wallpaper',
+                button: { text: 'Use As Background' },
+                multiple: false,
+                library: { type: 'image' }
+            });
+            loginBgFrame.on('select', function() {
+                var attachment = loginBgFrame.state().get('selection').first().toJSON();
+                if ( attachment && attachment.url ) {
+                    loginBgInput.value = attachment.url;
+                    if ( window.updateLoginPreview ) window.updateLoginPreview();
+                }
+            });
+            loginBgFrame.open();
+        });
+    }
+
+    if ( document.getElementById('ofp-login-live-preview-box') ) {
+        window.updateLoginPreview();
+    }
+
     // ── 10. Global Keyboard Shortcuts (⌘S to Save, ⌘K to Search) ─────────────
 
     document.addEventListener('keydown', function(e) {

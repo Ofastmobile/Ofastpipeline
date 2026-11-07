@@ -211,10 +211,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                             <?php echo OFP_Brand::auth_heading( 'Client Portal Sign In' ); ?>
                         <?php else : ?>
                             <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ofp-split-logo-badge">
-                                <span class="ofp-split-logo-icon">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                </span>
-                                <span class="ofp-split-logo-text"><?php echo esc_html( OFP_Brand::name() ); ?></span>
+                                <div class="ofp-split-logo-wrap">
+                                    <img src="<?php echo esc_url( OFP_Brand::logo_url() ); ?>" alt="<?php echo esc_attr( OFP_Brand::name() ); ?>" class="ofp-auth-logo-img">
+                                </div>
                             </a>
                         <?php endif; ?>
                     </div>

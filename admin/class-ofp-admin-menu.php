@@ -156,6 +156,8 @@ class OFP_Admin_Menu {
             return;
         }
 
+        wp_enqueue_media();
+
         wp_enqueue_style(
             'ofp-admin',
             OFP_URL . 'assets/css/admin.css',
@@ -725,6 +727,25 @@ class OFP_Admin_Menu {
             'ofp_watermark_text'      => sanitize_text_field( wp_unslash( $_POST['ofp_watermark_text'] ?? '' ) ),
             'ofp_global_pixel_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_global_pixel_id']     ?? '' ) ),
             'ofp_app_name'            => sanitize_text_field( wp_unslash( $_POST['ofp_app_name']            ?? '' ) ),
+            'ofp_logo_url'            => esc_url_raw( wp_unslash( $_POST['ofp_logo_url']                    ?? '' ) ),
+            'ofp_platform_email'      => sanitize_email( wp_unslash( $_POST['ofp_platform_email']          ?? '' ) ),
+            'ofp_support_email'       => sanitize_email( wp_unslash( $_POST['ofp_support_email']           ?? '' ) ),
+            'ofp_support_phone'       => sanitize_text_field( wp_unslash( $_POST['ofp_support_phone']       ?? '' ) ),
+            'ofp_office_address'      => sanitize_text_field( wp_unslash( $_POST['ofp_office_address']      ?? '' ) ),
+            // Modern Dark Login Redesign
+            'ofp_login_redesign_enabled'   => empty( $_POST['ofp_login_redesign_enabled'] ) ? '0' : '1',
+            'ofp_login_card_color'         => sanitize_hex_color( wp_unslash( $_POST['ofp_login_card_color'] ?? '#0f172a' ) ) ?: '#0f172a',
+            'ofp_login_card_opacity'       => max( 10, min( 100, absint( $_POST['ofp_login_card_opacity'] ?? 75 ) ) ),
+            'ofp_login_bg_image'           => esc_url_raw( wp_unslash( $_POST['ofp_login_bg_image'] ?? '' ) ),
+            'ofp_login_overlay_color'      => sanitize_hex_color( wp_unslash( $_POST['ofp_login_overlay_color'] ?? '#000000' ) ) ?: '#000000',
+            'ofp_login_overlay_opacity'    => max( 0, min( 100, absint( $_POST['ofp_login_overlay_opacity'] ?? 40 ) ) ),
+            'ofp_login_logo_width'         => max( 40, min( 500, absint( $_POST['ofp_login_logo_width'] ?? 220 ) ) ),
+            'ofp_login_logo_height'        => max( 20, min( 200, absint( $_POST['ofp_login_logo_height'] ?? 64 ) ) ),
+            'ofp_login_hide_back_link'     => empty( $_POST['ofp_login_hide_back_link'] ) ? '0' : '1',
+            'ofp_login_hide_register'      => empty( $_POST['ofp_login_hide_register'] ) ? '0' : '1',
+            'ofp_login_hide_lost_password' => empty( $_POST['ofp_login_hide_lost_password'] ) ? '0' : '1',
+            'ofp_login_hide_privacy_policy' => empty( $_POST['ofp_login_hide_privacy_policy'] ) ? '0' : '1',
+            'ofp_login_custom_css'         => sanitize_textarea_field( wp_unslash( $_POST['ofp_login_custom_css'] ?? '' ) ),
             // Default pipeline messages
             'ofp_default_instant_sms' => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_instant_sms'] ?? '' ) ),
             'ofp_default_instant_email_subject' => sanitize_text_field( wp_unslash( $_POST['ofp_default_instant_email_subject'] ?? '' ) ),

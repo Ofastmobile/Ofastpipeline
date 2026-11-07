@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Brand {
 
-	const DEFAULT_NAME = 'OFast Pipeline';
+	const DEFAULT_NAME = 'MyPropertyHQ';
 
 	private static bool $head_printed = false;
 
@@ -114,6 +114,76 @@ class OFP_Brand {
 	}
 
 	// ------------------------------------------------------------------ pieces
+
+	/** URL of the platform or branded logo. Falls back to assets/images/mypropertyhq-logo-light.png. */
+	public static function logo_url( $client = null ): string {
+		$c = self::brand_client( $client );
+		if ( $c && ! empty( $c->logo_url ) ) {
+			return (string) $c->logo_url;
+		}
+		$custom = trim( (string) get_option( 'ofp_logo_url', '' ) );
+		if ( $custom !== '' ) {
+			return $custom;
+		}
+		return function_exists( 'ofp_image_url' )
+			? ofp_image_url( 'mypropertyhq-logo-light.png' )
+			: ( defined( 'OFP_URL' ) ? OFP_URL . 'assets/images/mypropertyhq-logo-light.png' : '' );
+	}
+
+	/** Primary platform administrative email. */
+	public static function platform_email(): string {
+		$e = trim( (string) get_option( 'ofp_platform_email', '' ) );
+		return $e !== '' ? $e : (string) get_option( 'admin_email', 'info@mypropertyhq.com' );
+	}
+
+	/** Customer support / supporting email. */
+	public static function support_email( $client = null ): string {
+		$c = self::brand_client( $client );
+		if ( $c && ! empty( $c->support_email ) ) {
+			return (string) $c->support_email;
+		}
+		$e = trim( (string) get_option( 'ofp_support_email', '' ) );
+		if ( $e !== '' ) {
+			return $e;
+		}
+		return self::platform_email();
+	}
+
+	/** Customer support phone number. */
+	public static function support_phone( $client = null ): string {
+		$c = self::brand_client( $client );
+		if ( $c && ! empty( $c->support_phone ) ) {
+			return (string) $c->support_phone;
+		}
+		$p = trim( (string) get_option( 'ofp_support_phone', '' ) );
+		return $p !== '' ? $p : '+234 (01) 888 4000';
+	}
+
+	/** Platform office address. */
+	public static function office_address( $client = null ): string {
+		$c = self::brand_client( $client );
+		if ( $c && ! empty( $c->address ) ) {
+			return (string) $c->address;
+		}
+		$addr = trim( (string) get_option( 'ofp_office_address', '' ) );
+		return $addr !== '' ? $addr : 'Suite 208 Glory to God Complex, Ajah, Lagos, Nigeria';
+	}
+
+	/** Check if custom logo URL is uploaded. */
+	public static function has_custom_logo( $client = null ): bool {
+		$c = self::brand_client( $client );
+		if ( $c && ! empty( $c->logo_url ) ) {
+			return true;
+		}
+		return trim( (string) get_option( 'ofp_logo_url', '' ) ) !== '';
+	}
+
+	/** Official brand squircle icon URL. */
+	public static function logo_icon_url(): string {
+		return function_exists( 'ofp_image_url' )
+			? ofp_image_url( 'mypropertyhq-icon.svg' )
+			: ( defined( 'OFP_URL' ) ? OFP_URL . 'assets/images/mypropertyhq-icon.svg' : '' );
+	}
 
 	private static function logo_img( ?object $c, int $max_h, int $max_w ): string {
 		if ( ! $c || empty( $c->logo_url ) ) {

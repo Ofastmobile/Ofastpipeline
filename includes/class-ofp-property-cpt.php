@@ -1959,7 +1959,8 @@ class OFP_Property_CPT {
         }
 
         // Main site front page: load modern property-homepage.php
-        if ( ( is_front_page() || is_home() ) && OFP_Host_Router::current_zone() !== 'app' ) {
+        // Use is_front_page() only so that a dedicated WordPress posts page (is_home()) is never hijacked.
+        if ( is_front_page() && OFP_Host_Router::current_zone() !== 'app' ) {
             if ( file_exists( OFP_PATH . 'public/templates/property-homepage.php' ) ) {
                 return OFP_PATH . 'public/templates/property-homepage.php';
             }

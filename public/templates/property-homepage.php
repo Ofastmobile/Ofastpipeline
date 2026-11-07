@@ -236,9 +236,9 @@
                                 <li><a href="<?php echo esc_url( home_url('/login') ); ?>"
                                         class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs tracking-widest transition-colors uppercase flex items-center gap-2"><span
                                             class="w-2 h-2 rounded-full bg-blue-500"></span> BECOME A PARTNER</a></li>
-                                <li><a href="<?php echo esc_url( home_url('/login') ); ?>"
+                                <li><a href="<?php echo esc_url( home_url('/blog') ); ?>"
                                         class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs tracking-widest transition-colors uppercase flex items-center gap-2"><span
-                                            class="w-2 h-2 rounded-full bg-blue-500"></span> DEVELOPERS HUB</a></li>
+                                            class="w-2 h-2 rounded-full bg-blue-500"></span> BLOG</a></li>
                                 <li><a href="<?php echo esc_url( home_url('/careers') ); ?>"
                                         class="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs tracking-widest transition-colors uppercase flex items-center gap-2"><span
                                             class="w-2 h-2 rounded-full bg-blue-500"></span> CAREERS</a></li>
@@ -352,11 +352,11 @@
                         Become a Partner
                     </span>
                 </a>
-                <a href="<?php echo esc_url( home_url('/login') ); ?>"
+                <a href="<?php echo esc_url( home_url('/blog') ); ?>"
                     class="py-3 sm:py-3.5 flex items-center text-slate-800 dark:text-slate-200 font-bold text-xs uppercase tracking-wider hover:text-blue-600 transition-colors">
                     <span class="flex items-center gap-2.5">
                         <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                        Developers Hub
+                        Blog
                     </span>
                 </a>
                 <a href="<?php echo esc_url( home_url('/careers') ); ?>"
@@ -2296,16 +2296,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr] gap-8 lg:gap-10">
                     <!-- Column 1 -->
                     <div>
-                        <a href="<?php echo esc_url( home_url('/') ); ?>" class="flex items-center gap-2 mb-6">
-                            <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
-                                    </path>
-                                </svg>
-                            </div>
-                            <span style="font-size:16px;font-weight:700"
-                                class="tracking-tight text-slate-900 dark:text-white"><?php echo esc_html( OFP_Brand::public_name_text( 'Bofast Homes' ) ); ?></span>
+                        <a href="<?php echo esc_url( home_url('/') ); ?>" class="inline-flex items-center gap-3 mb-6">
+                            <img src="<?php echo esc_url( OFP_Brand::logo_url() ); ?>" alt="<?php echo esc_attr( OFP_Brand::name() ); ?>" class="h-9 sm:h-10 w-auto object-contain">
+                            <span style="font-size:18px;font-weight:800" class="tracking-tight text-slate-900 dark:text-white">
+                                <?php echo esc_html( OFP_Brand::public_name_text( 'MyPropertyHQ' ) ); ?>
+                            </span>
                         </a>
                         <p class="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
                             Nigeria's leading verified real estate marketplace and integrated broker CRM portal. Fast,
@@ -2313,13 +2308,13 @@
                         </p>
                         <div class="space-y-3 text-slate-500 dark:text-slate-400 text-[12px]">
                             <div class="flex items-start gap-3">
-                                <svg class="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor"
+                                <svg class="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor"
                                     viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z">
                                     </path>
                                 </svg>
-                                <span>Plot 14 Admiralty Way, Lekki Phase 1, Lagos</span>
+                                <span><?php echo esc_html( OFP_Brand::office_address() ); ?></span>
                             </div>
                             <div class="flex items-center gap-3">
                                 <svg class="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor"
@@ -2328,7 +2323,7 @@
                                         d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
                                     </path>
                                 </svg>
-                                <span>+234 (01) 888 4000</span>
+                                <a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9+]/', '', OFP_Brand::support_phone() ) ); ?>" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"><?php echo esc_html( OFP_Brand::support_phone() ); ?></a>
                             </div>
                             <div class="flex items-center gap-3">
                                 <svg class="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor"
@@ -2337,8 +2332,19 @@
                                         d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
                                     </path>
                                 </svg>
-                                <span>support@propertyportal.ng</span>
+                                <a href="mailto:<?php echo esc_attr( OFP_Brand::support_email() ); ?>" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"><?php echo esc_html( OFP_Brand::support_email() ); ?></a>
                             </div>
+                            <?php if ( OFP_Brand::platform_email() && OFP_Brand::platform_email() !== OFP_Brand::support_email() ) : ?>
+                            <div class="flex items-center gap-3">
+                                <svg class="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207">
+                                    </path>
+                                </svg>
+                                <a href="mailto:<?php echo esc_attr( OFP_Brand::platform_email() ); ?>" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"><?php echo esc_html( OFP_Brand::platform_email() ); ?></a>
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <!-- Column 2 -->

@@ -64,6 +64,27 @@ $watermark_text     = get_option( 'ofp_watermark_text', '' );
 
 $pixel_id           = get_option( 'ofp_global_pixel_id', '' );
 
+$logo_url           = get_option( 'ofp_logo_url', '' );
+$platform_email     = get_option( 'ofp_platform_email', '' );
+$support_email      = get_option( 'ofp_support_email', '' );
+$support_phone      = get_option( 'ofp_support_phone', '' );
+$office_address     = get_option( 'ofp_office_address', '' );
+
+// Modern Dark Login Redesign
+$login_redesign_enabled   = get_option( 'ofp_login_redesign_enabled', '1' );
+$login_card_color         = get_option( 'ofp_login_card_color', '#0f172a' );
+$login_card_opacity       = (int) get_option( 'ofp_login_card_opacity', 75 );
+$login_bg_image           = get_option( 'ofp_login_bg_image', '' );
+$login_overlay_color      = get_option( 'ofp_login_overlay_color', '#000000' );
+$login_overlay_opacity    = (int) get_option( 'ofp_login_overlay_opacity', 40 );
+$login_logo_width         = (int) get_option( 'ofp_login_logo_width', 220 );
+$login_logo_height        = (int) get_option( 'ofp_login_logo_height', 64 );
+$login_hide_back_link     = get_option( 'ofp_login_hide_back_link', '0' );
+$login_hide_register      = get_option( 'ofp_login_hide_register', '0' );
+$login_hide_lost_password = get_option( 'ofp_login_hide_lost_password', '0' );
+$login_hide_privacy_policy = get_option( 'ofp_login_hide_privacy_policy', '0' );
+$login_custom_css         = get_option( 'ofp_login_custom_css', '' );
+
 $portal_default_dashboard = get_option( 'ofp_portal_default_dashboard', '1' );
 
 
@@ -718,6 +739,162 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
 
 
+                                <div class="ofp-field-group ofp-field-full">
+
+                                    <div class="ofp-field-label-row">
+
+                                        <label class="ofp-field-label">Platform Brand Logo</label>
+
+                                    </div>
+
+                                    <div style="display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;">
+
+                                        <div style="width: 140px; height: 60px; padding: 6px 12px; background: #ffffff; border: 1px solid var(--ofp-slate-200, #e2e8f0); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+
+                                            <img id="ofp-logo-preview"
+
+                                                 src="<?php echo esc_url( $logo_url ?: OFP_Brand::logo_url() ); ?>"
+
+                                                 alt="Platform Logo"
+
+                                                 data-default="<?php echo esc_url( OFP_Brand::logo_url() ); ?>"
+
+                                                 style="max-width: 100%; max-height: 100%; object-fit: contain;">
+
+                                        </div>
+
+                                        <div style="flex: 1; min-width: 260px;">
+
+                                            <div class="ofp-input-box" style="display: flex; gap: 8px; align-items: center;">
+
+                                                <input type="text" id="ofp_logo_url" name="ofp_logo_url"
+
+                                                       value="<?php echo esc_attr( $logo_url ); ?>"
+
+                                                       placeholder="<?php echo esc_attr( OFP_Brand::logo_url() ); ?>"
+
+                                                       style="flex: 1;">
+
+                                                <button type="button" class="button button-secondary" id="ofp-upload-logo-btn" style="white-space: nowrap; height: 38px;">
+
+                                                    Upload / Select Logo
+
+                                                </button>
+
+                                                <button type="button" class="button" id="ofp-remove-logo-btn" style="white-space: nowrap; height: 38px;" title="Reset to default logo">
+
+                                                    Reset
+
+                                                </button>
+
+                                            </div>
+
+                                            <p class="ofp-field-hint">Used in website header, footer, client portal, login, and registration screens. Leave empty to use default (<code>assets/images/mypropertyhq-logo-light.png</code>).</p>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+
+                                <div class="ofp-field-group">
+
+                                    <div class="ofp-field-label-row">
+
+                                        <label class="ofp-field-label">Platform Primary Email</label>
+
+                                    </div>
+
+                                    <div class="ofp-input-box">
+
+                                        <input type="email" name="ofp_platform_email"
+
+                                               value="<?php echo esc_attr( $platform_email ); ?>"
+
+                                               placeholder="<?php echo esc_attr( get_option( 'admin_email', 'info@mypropertyhq.com' ) ); ?>">
+
+                                    </div>
+
+                                    <p class="ofp-field-hint">Primary administrative contact email for platform notifications and system inquiries.</p>
+
+                                </div>
+
+
+
+                                <div class="ofp-field-group">
+
+                                    <div class="ofp-field-label-row">
+
+                                        <label class="ofp-field-label">Supporting Email (Customer Support)</label>
+
+                                    </div>
+
+                                    <div class="ofp-input-box">
+
+                                        <input type="email" name="ofp_support_email"
+
+                                               value="<?php echo esc_attr( $support_email ); ?>"
+
+                                               placeholder="support@mypropertyhq.com">
+
+                                    </div>
+
+                                    <p class="ofp-field-hint">Customer support &amp; helpdesk email displayed in the website footer, client receipts, and assistance links.</p>
+
+                                </div>
+
+
+
+                                <div class="ofp-field-group">
+
+                                    <div class="ofp-field-label-row">
+
+                                        <label class="ofp-field-label">Support Phone Number</label>
+
+                                    </div>
+
+                                    <div class="ofp-input-box">
+
+                                        <input type="text" name="ofp_support_phone"
+
+                                               value="<?php echo esc_attr( $support_phone ); ?>"
+
+                                               placeholder="+234 (01) 888 4000">
+
+                                    </div>
+
+                                    <p class="ofp-field-hint">Official contact and customer hotline displayed in website footer and client help panels.</p>
+
+                                </div>
+
+
+
+                                <div class="ofp-field-group ofp-field-full">
+
+                                    <div class="ofp-field-label-row">
+
+                                        <label class="ofp-field-label">Office Address</label>
+
+                                    </div>
+
+                                    <div class="ofp-input-box">
+
+                                        <input type="text" name="ofp_office_address"
+
+                                               value="<?php echo esc_attr( $office_address ); ?>"
+
+                                               placeholder="Suite 208 Glory to God Complex, Ajah, Lagos, Nigeria">
+
+                                    </div>
+
+                                    <p class="ofp-field-hint">Physical office address displayed in the website footer. Default: <code>Suite 208 Glory to God Complex, Ajah, Lagos, Nigeria</code>.</p>
+
+                                </div>
+
+
+
                                 <div class="ofp-field-group">
 
                                     <div class="ofp-field-label-row">
@@ -963,6 +1140,228 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                     <input type="text" name="ofp_custom_greeting_text" id="ofp_custom_greeting_text" value="<?php echo esc_attr( $custom_greeting_text ); ?>" placeholder="Welcome">
                                 </div>
                                 <p class="ofp-field-hint" style="margin-top: 6px;">Example preview: <code><?php echo esc_html( ! empty( $custom_greeting_text ) ? $custom_greeting_text : 'Welcome' ); ?>, <?php echo esc_html( wp_get_current_user()->display_name ); ?></code></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modern Dark Login Page Customizer Card -->
+                    <div class="ofp-card" style="margin-top: 24px;">
+                        <div class="ofp-card-header">
+                            <div class="ofp-card-header-main">
+                                <div class="ofp-icon-box ofp-icon-lg icon-indigo">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect width="18" height="18" x="3" y="3" rx="2"/>
+                                        <path d="M7 7h10"/>
+                                        <path d="M7 12h10"/>
+                                        <path d="M7 17h6"/>
+                                    </svg>
+                                </div>
+                                <div class="ofp-card-title-group">
+                                    <h3>Modern Dark Login Page Customizer</h3>
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <a href="<?php echo esc_url( wp_login_url() ); ?>" target="_blank" class="ofp-btn ofp-btn-secondary ofp-btn-sm" style="display:inline-flex; align-items:center; gap:4px; text-decoration:none;">
+                                    <span>View Login Page</span>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                </a>
+                                <span class="ofp-pill ofp-pill-indigo">Modern Dark Only</span>
+                            </div>
+                        </div>
+                        <div class="ofp-card-body">
+
+                            <!-- Enable Switch -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Enable Modern Dark Login Design</span>
+                                    <p class="ofp-switch-desc">Applies the high-end dark glassmorphism theme to <code>wp-login.php</code> with custom card blur, inputs, and brand styling.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_login_redesign_enabled" id="ofp_login_redesign_enabled" value="1" <?php checked( $login_redesign_enabled, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 340px; gap: 24px; margin-top: 20px; align-items: start;">
+                                
+                                <!-- Left Column: Settings Form -->
+                                <div>
+                                    <!-- Card Background Color & Opacity -->
+                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                                        <div>
+                                            <label class="ofp-field-label" for="ofp_login_card_color" style="font-weight: 600;">Glass Card Base Color</label>
+                                            <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                                                <input type="color" id="ofp_login_card_color_picker" value="<?php echo esc_attr( $login_card_color ); ?>" style="width:38px; height:38px; border:1px solid #cbd5e1; border-radius:6px; cursor:pointer; padding:2px; background:#fff;" oninput="document.getElementById('ofp_login_card_color').value = this.value; if(window.updateLoginPreview) window.updateLoginPreview();">
+                                                <div class="ofp-input-box" style="flex:1;">
+                                                    <input type="text" name="ofp_login_card_color" id="ofp_login_card_color" value="<?php echo esc_attr( $login_card_color ); ?>" placeholder="#0f172a" oninput="document.getElementById('ofp_login_card_color_picker').value = this.value; if(window.updateLoginPreview) window.updateLoginPreview();">
+                                                </div>
+                                            </div>
+                                            <p class="ofp-field-hint" style="margin-top:4px;">Default: <code>#0f172a</code> (Slate-900)</p>
+                                        </div>
+
+                                        <div>
+                                            <label class="ofp-field-label" for="ofp_login_card_opacity" style="font-weight: 600;">
+                                                Card Opacity: <span id="ofp_login_card_opacity_label" style="font-weight: 700; color: #2563eb;"><?php echo (int) $login_card_opacity; ?>%</span>
+                                            </label>
+                                            <div style="margin-top: 14px;">
+                                                <input type="range" name="ofp_login_card_opacity" id="ofp_login_card_opacity" min="10" max="100" step="5" value="<?php echo (int) $login_card_opacity; ?>" style="width:100%; cursor:pointer;" oninput="document.getElementById('ofp_login_card_opacity_label').textContent = this.value + '%'; if(window.updateLoginPreview) window.updateLoginPreview();">
+                                            </div>
+                                            <p class="ofp-field-hint" style="margin-top:4px;">Lower values increase glass transparency blur</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Optional Custom Background Wallpaper -->
+                                    <div style="margin-bottom: 16px; padding: 14px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                        <label class="ofp-field-label" for="ofp_login_bg_image" style="font-weight: 600;">Optional Background Wallpaper Image</label>
+                                        <div style="display:flex; gap:8px; margin-top:6px;">
+                                            <div class="ofp-input-box" style="flex:1;">
+                                                <input type="text" name="ofp_login_bg_image" id="ofp_login_bg_image" value="<?php echo esc_url( $login_bg_image ); ?>" placeholder="https://... image URL (leave empty for dark mesh)" oninput="if(window.updateLoginPreview) window.updateLoginPreview();">
+                                            </div>
+                                            <button type="button" class="ofp-btn ofp-btn-secondary ofp-btn-sm" id="ofp-upload-login-bg-btn" style="white-space:nowrap;">Upload</button>
+                                            <button type="button" class="ofp-btn ofp-btn-secondary ofp-btn-sm" id="ofp-clear-login-bg-btn" style="white-space:nowrap;" onclick="document.getElementById('ofp_login_bg_image').value=''; if(window.updateLoginPreview) window.updateLoginPreview();">Clear</button>
+                                        </div>
+                                        <p class="ofp-field-hint" style="margin-top:6px;">Leave blank to use the high-tech radial mesh gradient background.</p>
+
+                                        <!-- Wallpaper Overlay Settings -->
+                                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #cbd5e1;">
+                                            <div>
+                                                <label class="ofp-field-label" style="font-size:12px;">Wallpaper Overlay Color</label>
+                                                <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+                                                    <input type="color" id="ofp_login_overlay_color_picker" value="<?php echo esc_attr( $login_overlay_color ); ?>" style="width:32px; height:32px; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;" oninput="document.getElementById('ofp_login_overlay_color').value = this.value; if(window.updateLoginPreview) window.updateLoginPreview();">
+                                                    <input type="text" name="ofp_login_overlay_color" id="ofp_login_overlay_color" value="<?php echo esc_attr( $login_overlay_color ); ?>" style="font-size:12px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:4px; width:80px;" oninput="document.getElementById('ofp_login_overlay_color_picker').value = this.value; if(window.updateLoginPreview) window.updateLoginPreview();">
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="ofp-field-label" style="font-size:12px;">Overlay Opacity: <span id="ofp_login_overlay_opacity_label" style="font-weight:700; color:#2563eb;"><?php echo (int) $login_overlay_opacity; ?>%</span></label>
+                                                <div style="margin-top:8px;">
+                                                    <input type="range" name="ofp_login_overlay_opacity" id="ofp_login_overlay_opacity" min="0" max="100" step="5" value="<?php echo (int) $login_overlay_opacity; ?>" style="width:100%; cursor:pointer;" oninput="document.getElementById('ofp_login_overlay_opacity_label').textContent = this.value + '%'; if(window.updateLoginPreview) window.updateLoginPreview();">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Logo Dimensions & Auto-Sync -->
+                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                                        <div>
+                                            <label class="ofp-field-label" for="ofp_login_logo_width" style="font-weight: 600;">Logo Render Width (px)</label>
+                                            <div class="ofp-input-box" style="margin-top:6px;">
+                                                <input type="number" name="ofp_login_logo_width" id="ofp_login_logo_width" min="40" max="500" value="<?php echo (int) $login_logo_width; ?>" oninput="if(window.updateLoginPreview) window.updateLoginPreview();">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="ofp-field-label" for="ofp_login_logo_height" style="font-weight: 600;">Logo Render Height (px)</label>
+                                            <div class="ofp-input-box" style="margin-top:6px;">
+                                                <input type="number" name="ofp_login_logo_height" id="ofp_login_logo_height" min="20" max="200" value="<?php echo (int) $login_logo_height; ?>" oninput="if(window.updateLoginPreview) window.updateLoginPreview();">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="ofp-field-hint" style="margin-top:-8px; margin-bottom:16px;">
+                                        Logo image automatically syncs with your official <strong>Platform Brand Logo</strong> configured above (<code><?php echo esc_html( OFP_Brand::name() ); ?></code>).
+                                    </p>
+
+                                    <!-- Visibility Toggles (Back Link, Register, Privacy Policy) -->
+                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px;">
+                                        <!-- Switch: Hide Back to Site Link -->
+                                        <div class="ofp-switch-row" style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
+                                            <div class="ofp-switch-info">
+                                                <span class="ofp-switch-title">Hide "← Back to <?php echo esc_html( OFP_Brand::name() ); ?>" Link</span>
+                                                <p class="ofp-switch-desc">Hides the WordPress navigation link below the login box.</p>
+                                            </div>
+                                            <label class="ofp-switch">
+                                                <input type="checkbox" name="ofp_login_hide_back_link" id="ofp_login_hide_back_link" value="1" <?php checked( $login_hide_back_link, '1' ); ?> onchange="if(window.updateLoginPreview) window.updateLoginPreview();">
+                                                <span class="ofp-slider"></span>
+                                            </label>
+                                        </div>
+
+                                        <!-- Switch: Hide Register Link -->
+                                        <div class="ofp-switch-row" style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
+                                            <div class="ofp-switch-info">
+                                                <span class="ofp-switch-title">Hide "Register" Link</span>
+                                                <p class="ofp-switch-desc">Hides the WordPress default user registration link on the login screen.</p>
+                                            </div>
+                                            <label class="ofp-switch">
+                                                <input type="checkbox" name="ofp_login_hide_register" id="ofp_login_hide_register" value="1" <?php checked( $login_hide_register, '1' ); ?> onchange="if(window.updateLoginPreview) window.updateLoginPreview();">
+                                                <span class="ofp-slider"></span>
+                                            </label>
+                                        </div>
+
+                                        <!-- Switch: Hide Lost Password Link -->
+                                        <div class="ofp-switch-row" style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
+                                            <div class="ofp-switch-info">
+                                                <span class="ofp-switch-title">Hide "Lost your password?" Link</span>
+                                                <p class="ofp-switch-desc">Hides the password reset link below the login box.</p>
+                                            </div>
+                                            <label class="ofp-switch">
+                                                <input type="checkbox" name="ofp_login_hide_lost_password" id="ofp_login_hide_lost_password" value="1" <?php checked( $login_hide_lost_password, '1' ); ?> onchange="if(window.updateLoginPreview) window.updateLoginPreview();">
+                                                <span class="ofp-slider"></span>
+                                            </label>
+                                        </div>
+
+                                        <!-- Switch: Hide Privacy Policy Link -->
+                                        <div class="ofp-switch-row">
+                                            <div class="ofp-switch-info">
+                                                <span class="ofp-switch-title">Hide "Privacy Policy" Link</span>
+                                                <p class="ofp-switch-desc">Hides the WordPress privacy policy footer link below the login form.</p>
+                                            </div>
+                                            <label class="ofp-switch">
+                                                <input type="checkbox" name="ofp_login_hide_privacy_policy" id="ofp_login_hide_privacy_policy" value="1" <?php checked( $login_hide_privacy_policy, '1' ); ?> onchange="if(window.updateLoginPreview) window.updateLoginPreview();">
+                                                <span class="ofp-slider"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Custom CSS Field -->
+                                    <div>
+                                        <label class="ofp-field-label" for="ofp_login_custom_css" style="font-weight: 600;">Custom Login CSS (Optional)</label>
+                                        <textarea name="ofp_login_custom_css" id="ofp_login_custom_css" rows="3" style="width:100%; font-family:monospace; font-size:12px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc;" placeholder="/* Additional custom CSS rules for wp-login.php */"><?php echo esc_textarea( $login_custom_css ); ?></textarea>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column: Interactive Live Preview Mini-Card -->
+                                <div style="position: sticky; top: 80px;">
+                                    <label class="ofp-field-label" style="font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                                        <span>LIVE PREVIEW</span>
+                                        <span style="font-size: 11px; font-weight: 500; color: #64748b;">wp-login.php (Real-time)</span>
+                                    </label>
+                                    
+                                    <div id="ofp-login-live-preview-box" style="border-radius: 12px; overflow: hidden; background: #0f172a; padding: 24px 16px; border: 1px solid #334155; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); min-height: 380px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+                                        <!-- Overlay Div -->
+                                        <div id="ofp-preview-overlay" style="position: absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; z-index:0;"></div>
+
+                                        <!-- Content -->
+                                        <div style="position: relative; z-index: 1; width: 100%; max-width: 280px; text-align: center;">
+                                            <!-- Logo -->
+                                            <div style="margin-bottom: 14px; display: flex; justify-content: center;">
+                                                <img id="ofp-preview-logo-img" src="<?php echo esc_url( OFP_Brand::logo_url() ); ?>" alt="Logo" style="max-height: 48px; max-width: 180px; object-fit: contain;">
+                                            </div>
+
+                                            <!-- Card Form -->
+                                            <div id="ofp-preview-card" style="background: rgba(15,23,42,0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 18px 16px; box-shadow: 0 15px 30px rgba(0,0,0,0.4); text-align: left;">
+                                                <div style="font-size: 10px; color: #cbd5e1; margin-bottom: 4px; font-weight: 500;">Username or Email</div>
+                                                <div style="background: rgba(0,0,0,0.32); border: 1px solid rgba(255,255,255,0.14); border-radius: 6px; padding: 6px 8px; font-size: 11px; color: #fff; margin-bottom: 10px;">admin</div>
+
+                                                <div style="font-size: 10px; color: #cbd5e1; margin-bottom: 4px; font-weight: 500;">Password</div>
+                                                <div style="background: rgba(0,0,0,0.32); border: 1px solid rgba(255,255,255,0.14); border-radius: 6px; padding: 6px 8px; font-size: 11px; color: #fff; margin-bottom: 12px;">••••••••••••</div>
+
+                                                <button type="button" id="ofp-preview-btn" style="width: 100%; border: 1px solid rgba(255,255,255,0.22); border-radius: 6px; height: 32px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(255,255,255,0.1); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); cursor: default; box-shadow: 0 4px 15px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.25);">
+                                                    Log In
+                                                </button>
+                                            </div>
+
+                                            <!-- Links -->
+                                            <div id="ofp-preview-nav-links" style="margin-top: 10px; font-size: 10px; text-align: center; color: #94a3b8;">
+                                                <span id="ofp-preview-register-link"><span style="text-decoration:none; color:#94a3b8;">Register</span><span id="ofp-preview-link-sep"> | </span></span>
+                                                <span id="ofp-preview-lostpass-link">Lost your password?</span>
+                                            </div>
+                                            <div id="ofp-preview-back-link" style="margin-top: 4px; font-size: 9px; text-align: center; color: #64748b;">
+                                                &larr; Back to <?php echo esc_html( OFP_Brand::name() ); ?>
+                                            </div>
+                                            <div id="ofp-preview-privacy-link" style="margin-top: 6px; font-size: 9px; text-align: center; color: #64748b;">
+                                                Privacy Policy
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

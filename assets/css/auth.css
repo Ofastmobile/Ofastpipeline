@@ -635,6 +635,24 @@ html.light .ofp-split-logo-badge {
     color: #0f172a;
 }
 
+.ofp-split-logo-wrap {
+    display: inline-flex;
+    align-items: center;
+}
+
+.ofp-split-logo-badge:hover .ofp-split-logo-wrap {
+    opacity: 0.95;
+}
+
+.ofp-auth-logo-img {
+    height: 38px;
+    max-height: 44px;
+    width: auto;
+    max-width: 200px;
+    object-fit: contain;
+    display: block;
+}
+
 .ofp-split-logo-icon {
     width: 32px;
     height: 32px;
@@ -1450,5 +1468,82 @@ html.light .ofp-success-panel p {
 
 html.light .ofp-success-panel strong {
     color: #0284c7;
+}
+
+/* ── Compact Signup Layout Refinements ──────────────────────────────────── */
+.ofp-signup-container,
+.ofp-signup-topbar,
+body.ofp-auth-signup .ofp-split-container,
+body.ofp-auth-signup .ofp-split-topbar {
+    max-width: 860px !important;
+}
+
+body.ofp-auth-signup .ofp-split-card {
+    min-height: 520px;
+    border-radius: 20px;
+}
+
+body.ofp-auth-signup .ofp-split-form-panel {
+    flex: 1 1 52%;
+    padding: 34px 30px;
+}
+
+body.ofp-auth-signup .ofp-split-form-inner {
+    max-width: 360px;
+}
+
+body.ofp-auth-signup .ofp-split-showcase-panel {
+    flex: 1 1 48%;
+    padding: 34px 28px;
+}
+
+body.ofp-auth-signup .ofp-input-group {
+    margin-bottom: 15px;
+}
+
+body.ofp-auth-signup .ofp-split-brand {
+    margin-bottom: 18px;
+}
+
+body.ofp-auth-signup .ofp-split-heading {
+    margin-bottom: 18px;
+}
+
+body.ofp-auth-signup .ofp-split-heading h2 {
+    font-size: 22px;
+}
+
+body.ofp-auth-signup .ofp-input-styled {
+    padding: 10px 14px 10px 40px;
+    font-size: 13.5px;
+}
+
+body.ofp-auth-signup .ofp-subdomain-input {
+    padding: 10px 10px;
+    font-size: 13.5px;
+}
+
+body.ofp-auth-signup .ofp-split-submit-btn {
+    padding: 11px 18px;
+    font-size: 14.5px;
+    height: 44px;
+}
+
+body.ofp-auth-signup .ofp-showcase-headline {
+    font-size: 20px;
+}
+
+body.ofp-auth-signup .ofp-showcase-subhead {
+    font-size: 13px;
+    margin-bottom: 18px;
+}
+
+body.ofp-auth-signup .ofp-perks-list {
+    margin-bottom: 20px;
+}
+
+body.ofp-auth-signup .ofp-perk-item {
+    font-size: 12.5px;
+    margin-bottom: 8px;
 }
 

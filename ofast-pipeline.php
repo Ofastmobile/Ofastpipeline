@@ -56,6 +56,7 @@ require_once OFP_PATH . 'includes/class-ofp-deactivator.php';
 require_once OFP_PATH . 'includes/class-ofp-security.php';
 require_once OFP_PATH . 'includes/class-ofp-admin-url.php';
 require_once OFP_PATH . 'includes/class-ofp-admin-tweaks.php';
+require_once OFP_PATH . 'includes/class-ofp-login-redesign.php';
 require_once OFP_PATH . 'includes/class-ofp-auth.php';
 require_once OFP_PATH . 'includes/class-ofp-mailer.php';
 require_once OFP_PATH . 'includes/class-ofp-client.php';
@@ -206,6 +207,7 @@ OFP_Prembly::init();
     OFP_Chat_Service::init();
     OFP_Admin_Url::init();
     OFP_Admin_Tweaks::init();
+    OFP_Login_Redesign::init();
 } );
 
 add_action( 'init', function (): void {
