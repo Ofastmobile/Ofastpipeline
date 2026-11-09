@@ -317,11 +317,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce']
             }
         }
     } elseif ( isset( $_POST['update_branding'] ) ) {
-        // Branding (Gold and solo company only)
+        // Branding (Gold only)
         if ( ! OFP_Brand::can_brand( $client ) ) {
             $error = 'Branding is available on the Gold plan.';
-        } elseif ( ! OFP_White_Label::schema_ready() ) {
-            $error = 'Branding is not ready yet. Please reload the page.';
         } else {
             $pick_color = static function ( string $field ): ?string {
                 if ( ! empty( $_POST[ 'use_default_' . $field ] ) ) {
@@ -571,20 +569,6 @@ if ( class_exists( 'OFP_Subscription' ) ) {
     }
 }
 
-// White label: show the real billing state on the profile.
-if ( ! empty( $client->is_white_label ) ) {
-    $wl_prof = OFP_White_Label::summary( $client );
-    if ( $wl_prof['type'] === 'yearly' ) {
-        $plan_badge = OFP_White_Label::yearly_expired( $client )
-            ? 'White Label (Yearly, ended)'
-            : 'White Label (Yearly, until ' . gmdate( 'M j, Y', strtotime( (string) $client->subscription_expires ) ) . ')';
-    } elseif ( $wl_prof['type'] === 'lifetime' ) {
-        $plan_badge = 'White Label (Lifetime)';
-    } else {
-        $plan_badge = 'White Label';
-    }
-}
-
 // ── Bank Accounts & Branding Data ───────────────────────────────────────────
 $client_banks = class_exists( 'OFP_Bank_Account' ) ? OFP_Bank_Account::list( (int) $client->id ) : [];
 $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
@@ -794,7 +778,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
     <!-- ── 2-Column Split: Branding (Left) & Bank/CAC (Right) ───────────── -->
     <div class="ofp-branding-bank-split-grid">
         
-        <!-- Column 1: Branding & White-Label Portal Card -->
+        <!-- Column 1: Portal Branding Card -->
         <div class="ofp-profile-card ofp-branding-card" style="min-width:0 !important; margin-bottom:0 !important; height:100% !important;">
             <div class="ofp-productions-header-row" style="margin-bottom: 22px; border-bottom: 1px solid var(--prof-border); padding-bottom: 16px;">
                     <div style="display:flex; align-items:center; gap:12px;">
@@ -802,8 +786,8 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
                         </div>
                         <div>
-                            <h3 class="ofp-productions-title" style="margin:0;">Branding &amp; White-Label Portal</h3>
-                            <p style="margin:2px 0 0; font-size:12.5px; color:var(--prof-text-sub);">Custom white-label portal identity &amp; receipt seal</p>
+                            <h3 class="ofp-productions-title" style="margin:0;">Portal Branding</h3>
+                            <p style="margin:2px 0 0; font-size:12.5px; color:var(--prof-text-sub);">Your own logo, colours &amp; receipt seal</p>
                         </div>
                     </div>
                     <button type="button" class="ofp-productions-view-all" onclick="openEditModal('tab-branding')" style="background:rgba(255,255,255,0.04); border:1px solid var(--prof-border); border-radius:8px; padding:6px 14px; cursor:pointer;">
@@ -1254,7 +1238,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
             <button type="button" class="ofp-modal-tab-btn" data-tab="tab-banking">Bank Accounts</button>
                     <button type="button" class="ofp-modal-tab-btn" data-tab="tab-verification">Verification (KYC/KYB)</button>
             <button type="button" class="ofp-modal-tab-btn" data-tab="tab-security">Security</button>
-            <?php if ( OFP_Brand::can_brand( $client ) && OFP_White_Label::schema_ready() ) : ?>
+            <?php if ( OFP_Brand::can_brand( $client ) ) : ?>
                 <button type="button" class="ofp-modal-tab-btn" data-tab="tab-branding">Branding</button>
             <?php endif; ?>
         </div>
@@ -1694,8 +1678,8 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                 </form>
             </div>
 
-            <!-- Tab 5: Branding (Gold / Solo Company Only) -->
-            <?php if ( OFP_Brand::can_brand( $client ) && OFP_White_Label::schema_ready() ) : ?>
+            <!-- Tab 5: Branding (Gold only) -->
+            <?php if ( OFP_Brand::can_brand( $client ) ) : ?>
             <div class="ofp-tab-panel" id="tab-branding">
                 <form method="POST" action="" enctype="multipart/form-data">
                     <input type="hidden" name="ofp_account_nonce" value="<?php echo esc_attr( wp_create_nonce( 'ofp_account_' . $client->id ) ); ?>">

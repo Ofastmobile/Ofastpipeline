@@ -1,4 +1,15 @@
-<?php if ( ! defined( 'ABSPATH' ) ) { exit; } ?>
+<?php
+if ( ! defined( 'ABSPATH' ) ) { exit; }
+
+$site_name  = class_exists( 'OFP_Brand' ) ? OFP_Brand::name() : get_bloginfo( 'name' );
+$page_title = $site_name . ' | Verified Real Estate Marketplace & Broker CRM Portal Nigeria';
+$page_desc  = 'Browse verified residential, commercial, and land properties across Lagos, Abuja, and prime locations in Nigeria. Fast, transparent acquisitions with verified legal documentation.';
+$page_url   = home_url( '/' );
+$og_image   = class_exists( 'OFP_Brand' ) ? OFP_Brand::logo_url() : '';
+if ( empty( $og_image ) && function_exists( 'ofp_image_url' ) ) {
+    $og_image = ofp_image_url( 'mypropertyhq-logo-light.png' );
+}
+?>
 <!DOCTYPE html>
 <html lang="en"
     x-data="{
@@ -11,12 +22,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php wp_title('|', true, 'right'); ?></title>
+    <title><?php echo esc_html( $page_title ); ?></title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="<?php echo esc_attr( $page_desc ); ?>">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <link rel="canonical" href="<?php echo esc_url( $page_url ); ?>">
+
+    <!-- Open Graph / Facebook / WhatsApp Preview -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="<?php echo esc_attr( $site_name ); ?>">
+    <meta property="og:url" content="<?php echo esc_url( $page_url ); ?>">
+    <meta property="og:title" content="<?php echo esc_attr( $page_title ); ?>">
+    <meta property="og:description" content="<?php echo esc_attr( $page_desc ); ?>">
+    <?php if ( ! empty( $og_image ) ) : ?>
+    <meta property="og:image" content="<?php echo esc_url( $og_image ); ?>">
+    <meta property="og:image:secure_url" content="<?php echo esc_url( $og_image ); ?>">
+    <meta property="og:image:alt" content="<?php echo esc_attr( $site_name ); ?>">
+    <?php endif; ?>
+
+    <!-- Twitter Card Meta -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="<?php echo esc_url( $page_url ); ?>">
+    <meta name="twitter:title" content="<?php echo esc_attr( $page_title ); ?>">
+    <meta name="twitter:description" content="<?php echo esc_attr( $page_desc ); ?>">
+    <?php if ( ! empty( $og_image ) ) : ?>
+    <meta name="twitter:image" content="<?php echo esc_url( $og_image ); ?>">
+    <?php endif; ?>
+
+    <!-- Schema.org JSON-LD Structured Data for Search Engines -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "RealEstateAgent",
+      "name": <?php echo json_encode( $site_name ); ?>,
+      "url": <?php echo json_encode( $page_url ); ?>,
+      "description": <?php echo json_encode( $page_desc ); ?>,
+      <?php if ( ! empty( $og_image ) ) : ?>"image": <?php echo json_encode( $og_image ); ?>,<?php endif; ?>
+      "areaServed": "Nigeria"
+    }
+    </script>
     <script>
         (function() {
             var theme = localStorage.getItem('ofp_theme');
-            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            var isDark = theme ? (theme === 'dark') : prefersDark;
+            var isDark = (theme === 'dark');
             var html = document.documentElement;
             if (isDark) {
                 html.classList.add('dark');
@@ -1145,73 +1194,8 @@
                 wp_reset_postdata();
             }
 
-            // Fallback showcase properties matching user's reference mockup if database has none
-            if ( empty( $cards_data ) ) {
-                $cards_data = [
-                    [
-                        'id'            => 1,
-                        'title'         => 'Ultra-Luxury 5-Bedroom Fully Detached Duplex with Cinema & Pool',
-                        'link'          => esc_url( home_url('/marketplace/') ),
-                        'image'         => 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80',
-                        'price'         => '₦450 Million',
-                        'location'      => 'Admiralty Way, Lekki Phase 1, Lagos',
-                        'listing_type'  => 'sale',
-                        'prop_type'     => 'Detached Duplex',
-                        'beds'          => '5',
-                        'baths'         => '6',
-                        'parking'       => '4',
-                        'sqm'           => '650',
-                        'is_verified'   => true,
-                        'is_featured'   => true,
-                        'agent_name'    => 'Tunde Adeleke',
-                        'agent_company' => 'Apex Capital Realty',
-                        'agent_avatar'  => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80',
-                        'profile_url'   => home_url( '/agent/tunde-adeleke' ),
-                    ],
-                    [
-                        'id'            => 2,
-                        'title'         => 'Modern 4-Bedroom Semi-Detached House in Diplomatic Zone',
-                        'link'          => esc_url( home_url('/marketplace/') ),
-                        'image'         => 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
-                        'price'         => '₦580 Million',
-                        'location'      => 'Maitama District, Abuja, FCT',
-                        'listing_type'  => 'sale',
-                        'prop_type'     => 'Detached Duplex',
-                        'beds'          => '4',
-                        'baths'         => '5',
-                        'parking'       => '3',
-                        'sqm'           => '520',
-                        'is_verified'   => true,
-                        'is_featured'   => true,
-                        'agent_name'    => 'Ibrahim Danjuma',
-                        'agent_company' => 'Capital Peak Prime',
-                        'agent_avatar'  => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80',
-                        'profile_url'   => home_url( '/agent/ibrahim-danjuma' ),
-                    ],
-                    [
-                        'id'            => 3,
-                        'title'         => 'Contemporary 4-Bedroom Terrace Duplex with BQ in Gated Estate',
-                        'link'          => esc_url( home_url('/marketplace/') ),
-                        'image'         => 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80',
-                        'price'         => '₦220 Million',
-                        'location'      => 'Ikeja GRA, Lagos Mainland',
-                        'listing_type'  => 'sale',
-                        'prop_type'     => 'Terraced Duplex',
-                        'beds'          => '4',
-                        'baths'         => '4',
-                        'parking'       => '3',
-                        'sqm'           => '340',
-                        'is_verified'   => true,
-                        'is_featured'   => false,
-                        'agent_name'    => 'Babatunde Fash',
-                        'agent_company' => 'Mainland Premier Realty',
-                        'agent_avatar'  => 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80',
-                        'profile_url'   => home_url( '/agent/babatunde-fash' ),
-                    ],
-                ];
-            }
-
-            foreach ( $cards_data as $card ) :
+            if ( ! empty( $cards_data ) ) :
+                foreach ( $cards_data as $card ) :
             ?>
             <div class="bg-white dark:bg-[#0F1423] rounded-2xl overflow-hidden border border-slate-100 dark:border-[#1C2438] shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-xl transition-all duration-300 flex flex-col group">
                 <!-- Image with Badges & Price Overlay -->
@@ -1345,14 +1329,30 @@
                         <div>
                             <!-- Details Button Only -->
                             <a href="<?php echo esc_url( $card['link'] ); ?>" 
-                               class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-[13px] px-4 py-2 rounded-xl flex items-center gap-1 shadow-sm shadow-blue-500/20 transition-colors">
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-[13px] px-4 py-2 rounded-xl flex items-center gap-1 shadow-sm shadow-blue-500/20 transition-colors">
                                 Details <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                             </a>
                         </div>
                     </div>
                 </div>
             </div>
-            <?php endforeach; ?>
+            <?php
+                endforeach;
+            else :
+            ?>
+                <div class="col-span-full text-center py-16 px-6 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-white/50 dark:bg-slate-900/40">
+                    <div class="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1">No Properties Currently Listed</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-5">
+                        Verified property listings will appear here as soon as they are published.
+                    </p>
+                    <a href="<?php echo esc_url( home_url('/login') ); ?>" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-colors">
+                        List a Property
+                    </a>
+                </div>
+            <?php endif; ?>
         </div>
     </section>
 
@@ -1662,6 +1662,94 @@
         </div>
     </section>
 
+    <!-- Stats Counter (Positioned directly below Neighborhood) -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 mb-24 md:mb-28">
+        <div class="bg-[#125BDB] rounded-3xl py-10 px-6 sm:px-10 shadow-2xl relative overflow-hidden">
+            <!-- Subtle background effect -->
+            <div
+                class="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-white/5 to-blue-600/0 pointer-events-none">
+            </div>
+
+            <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-0 lg:divide-x divide-white/20 relative z-10">
+                <!-- Stat 1 -->
+                <div class="flex items-center gap-5 lg:px-8 justify-center lg:justify-start">
+                    <div
+                        class="w-[52px] h-[52px] shrink-0 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-white border border-white/10 shadow-inner">
+                        <svg class="w-[26px] h-[26px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                            </path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div
+                            class="text-[32px] font-extrabold text-white mb-0.5 leading-none font-system tracking-tight">
+                            &#8358;120B+</div>
+                        <div class="text-[13px] text-white/90 font-medium">Verified Transactions</div>
+                    </div>
+                </div>
+
+                <!-- Stat 2 -->
+                <div class="flex items-center gap-5 lg:px-8 justify-center lg:justify-start">
+                    <div
+                        class="w-[52px] h-[52px] shrink-0 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-white border border-white/10 shadow-inner">
+                        <svg class="w-[26px] h-[26px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                            </path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div
+                            class="text-[32px] font-extrabold text-white mb-0.5 leading-none font-system tracking-tight">
+                            4,800+</div>
+                        <div class="text-[13px] text-white/90 font-medium">Active Listings</div>
+                    </div>
+                </div>
+
+                <!-- Stat 3 -->
+                <div class="flex items-center gap-5 lg:px-8 justify-center lg:justify-start">
+                    <div
+                        class="w-[52px] h-[52px] shrink-0 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-white border border-white/10 shadow-inner">
+                        <svg class="w-[26px] h-[26px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14.4 14.4l-4.8 4.8a2.5 2.5 0 0 1-3.5 0l-2.7-2.7a2.5 2.5 0 0 1 0-3.5l10-10a2.5 2.5 0 0 1 3.5 0l2.7 2.7a2.5 2.5 0 0 1 0 3.5z">
+                            </path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 8l8 8M18.8 9.2l-4.8 4.8M9.2 18.8l4.8-4.8"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div
+                            class="text-[32px] font-extrabold text-white mb-0.5 leading-none font-system tracking-tight">
+                            99.8%</div>
+                        <div class="text-[13px] text-white/90 font-medium">Clean Title Diligence</div>
+                    </div>
+                </div>
+
+                <!-- Stat 4 -->
+                <div class="flex items-center gap-5 lg:px-8 justify-center lg:justify-start">
+                    <div
+                        class="w-[52px] h-[52px] shrink-0 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-white border border-white/10 shadow-inner">
+                        <svg class="w-[26px] h-[26px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="8" r="6" stroke-width="2"></circle>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8.21 13.89L7 21l5-3 5 3-1.21-7.11"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div
+                            class="text-[32px] font-extrabold text-white mb-0.5 leading-none font-system tracking-tight">
+                            15 Mins</div>
+                        <div class="text-[13px] text-white/90 font-medium">Average Broker Response</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
     <!-- 9. Verified Client Proof & Polaroid Milestone Reel -->
     <section class="w-full mb-24 md:mb-28 px-[10px] box-border">
         <div class="ofp-polaroid-section">
@@ -1897,94 +1985,6 @@
                 </div>
             </div>
 
-        </div>
-    </section>
-
-    <!-- 10. Stats Counter -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 mb-24 md:mb-28">
-        <div class="bg-[#125BDB] rounded-3xl py-10 px-6 sm:px-10 shadow-2xl relative overflow-hidden">
-            <!-- Subtle background effect -->
-            <div
-                class="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-white/5 to-blue-600/0 pointer-events-none">
-            </div>
-
-            <div
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-0 lg:divide-x divide-white/20 relative z-10">
-                <!-- Stat 1 -->
-                <div class="flex items-center gap-5 lg:px-8 justify-center lg:justify-start">
-                    <div
-                        class="w-[52px] h-[52px] shrink-0 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-white border border-white/10 shadow-inner">
-                        <svg class="w-[26px] h-[26px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
-                            </path>
-                        </svg>
-                    </div>
-                    <div>
-                        <div
-                            class="text-[32px] font-extrabold text-white mb-0.5 leading-none font-system tracking-tight">
-                            &#8358;120B+</div>
-                        <div class="text-[13px] text-white/90 font-medium">Verified Transactions</div>
-                    </div>
-                </div>
-
-                <!-- Stat 2 -->
-                <div class="flex items-center gap-5 lg:px-8 justify-center lg:justify-start">
-                    <div
-                        class="w-[52px] h-[52px] shrink-0 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-white border border-white/10 shadow-inner">
-                        <svg class="w-[26px] h-[26px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
-                            </path>
-                        </svg>
-                    </div>
-                    <div>
-                        <div
-                            class="text-[32px] font-extrabold text-white mb-0.5 leading-none font-system tracking-tight">
-                            4,800+</div>
-                        <div class="text-[13px] text-white/90 font-medium">Active Listings</div>
-                    </div>
-                </div>
-
-                <!-- Stat 3 -->
-                <div class="flex items-center gap-5 lg:px-8 justify-center lg:justify-start">
-                    <div
-                        class="w-[52px] h-[52px] shrink-0 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-white border border-white/10 shadow-inner">
-                        <svg class="w-[26px] h-[26px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M14.4 14.4l-4.8 4.8a2.5 2.5 0 0 1-3.5 0l-2.7-2.7a2.5 2.5 0 0 1 0-3.5l10-10a2.5 2.5 0 0 1 3.5 0l2.7 2.7a2.5 2.5 0 0 1 0 3.5z">
-                            </path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 8l8 8M18.8 9.2l-4.8 4.8M9.2 18.8l4.8-4.8"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <div
-                            class="text-[32px] font-extrabold text-white mb-0.5 leading-none font-system tracking-tight">
-                            99.8%</div>
-                        <div class="text-[13px] text-white/90 font-medium">Clean Title Diligence</div>
-                    </div>
-                </div>
-
-                <!-- Stat 4 -->
-                <div class="flex items-center gap-5 lg:px-8 justify-center lg:justify-start">
-                    <div
-                        class="w-[52px] h-[52px] shrink-0 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-white border border-white/10 shadow-inner">
-                        <svg class="w-[26px] h-[26px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <circle cx="12" cy="8" r="6" stroke-width="2"></circle>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8.21 13.89L7 21l5-3 5 3-1.21-7.11"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <div
-                            class="text-[32px] font-extrabold text-white mb-0.5 leading-none font-system tracking-tight">
-                            15 Mins</div>
-                        <div class="text-[13px] text-white/90 font-medium">Average Broker Response</div>
-                    </div>
-                </div>
-
-            </div>
         </div>
     </section>
 

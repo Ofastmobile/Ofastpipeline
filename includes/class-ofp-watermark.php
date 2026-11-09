@@ -8,7 +8,7 @@
  * Priority cascade for watermark text:
  *   1. Client's own watermark_text (if logged in and they set one)
  *   2. Admin-configured custom text  (ofp_watermark_text option)
- *   3. White-label / brand name      (OFP_Brand::name())
+ *   3. Brand name                    (OFP_Brand::name())
  *   4. Site name fallback             (get_bloginfo('name'))
  *
  * @package OFast_Pipeline

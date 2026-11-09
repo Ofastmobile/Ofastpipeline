@@ -229,9 +229,6 @@ class OFP_Property_Receipt_Generator {
                     $html = str_replace( '--primary-dark:#4020a7;', '--primary-dark:' . OFP_Brand::darken( $rc, 0.2 ) . ';', $html );
                 }
             }
-            if ( ! empty( $brand_client->is_white_label ) ) {
-                $html = str_replace( '<div class="brand-sub">Real Estate Management & Transaction Platform</div>', '', $html );
-            }
         }
 
         // ── Official Verification Stamp: Client custom stamp or platform fallback ──

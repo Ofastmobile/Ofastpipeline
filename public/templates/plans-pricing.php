@@ -3,7 +3,7 @@
  * Template: /plans-pricing, /pricing-plans, /plans, /plans-and-pricing
  * Public Plans & Pricing page with universal header and footer,
  * accurate hero banner matching /agents regarding Light & Dark mode overlays,
- * in-card billing period tabs, custom White-Label tier with Contact Us button,
+ * in-card billing period tabs,
  * and high-end GSAP interactive effects.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -12,12 +12,12 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 $client = class_exists( 'OFP_Auth' ) ? OFP_Auth::current_client() : null;
 
 // Determine active plan if logged in
-$is_solo = false;
+$is_solo = false; // true for an unlimited account (the platform's own account)
 $current_plan = 'guest';
 
 if ( $client ) {
-    $is_solo = ! empty( $client->is_white_label ) || ( class_exists('OFP_Subscription') && OFP_Subscription::is_unlimited( (int) $client->id ) );
-    $current_plan = $is_solo ? 'white_label' : ( class_exists('OFP_Subscription') ? OFP_Subscription::client_plan( (int) $client->id ) : 'free' );
+    $is_solo = class_exists('OFP_Subscription') && OFP_Subscription::is_unlimited( (int) $client->id );
+    $current_plan = $is_solo ? 'unlimited' : ( class_exists('OFP_Subscription') ? OFP_Subscription::client_plan( (int) $client->id ) : 'free' );
 }
 
 // Fetch dynamic prices from plugin settings or defaults
@@ -52,12 +52,6 @@ $prices = [
         'annually_tot'  => round( $gold_12m_tot ),
     ],
 ];
-
-// WhatsApp URL for custom White-Label inquiries
-$wa_base = get_option( 'ofp_social_whatsapp' ) ?: 'https://wa.me/2348000000000';
-$contact_wl_url = add_query_arg( [
-    'text' => 'Hello Bofast Homes, I would like to inquire about deploying the White-Label Solo Brand tier for my real estate agency.'
-], $wa_base );
 
 // Header social links for universal navigation
 $ofp_header_social = class_exists( 'OFP_Brand' ) ? OFP_Brand::social_links() : [];
@@ -97,8 +91,7 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
     <script>
         (function() {
             var theme = localStorage.getItem('ofp_theme');
-            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            var isDark = theme ? (theme === 'dark') : prefersDark;
+            var isDark = (theme === 'dark');
             var html = document.documentElement;
             if (isDark) {
                 html.classList.add('dark');
@@ -471,7 +464,7 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
             </h1>
 
             <p class="text-slate-700 dark:text-slate-300 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed font-normal">
-                Whether you are an independent realtor starting out or an enterprise property developer looking for a fully-branded solo white-label platform, choose the tier that powers your vision.
+                Whether you are an independent realtor starting out or an enterprise property developer looking for a full enterprise platform, choose the tier that powers your vision.
             </p>
         </div>
     </section>
@@ -531,9 +524,9 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
         </div>
     </section>
 
-    <!-- ── PRICING CARDS (4 TIERS WITH IN-CARD TABS) ──────────────────────── -->
+    <!-- ── PRICING CARDS (3 TIERS WITH IN-CARD TABS) ──────────────────────── -->
     <section id="pricing-plans" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 sm:pb-28">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
 
             <!-- ── TIER 1: FREE STARTER ───────────────────────────────────── -->
             <div class="plan-hover-card flex flex-col justify-between p-6 sm:p-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 transition-all hover:border-slate-300 dark:hover:border-slate-700 relative">
@@ -711,7 +704,7 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                         </a>
                     <?php elseif ( $client && ( $current_plan === 'gold' || $is_solo ) ) : ?>
                         <button disabled class="w-full py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold text-xs uppercase tracking-wider cursor-not-allowed">
-                            Included in <?php echo $is_solo ? 'White-Label' : 'Gold'; ?>
+                            Included in <?php echo $is_solo ? 'your account' : 'Gold'; ?>
                         </button>
                     <?php elseif ( $client ) : ?>
                         <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>"
@@ -825,7 +818,7 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                         </a>
                     <?php elseif ( $client && $is_solo ) : ?>
                         <button disabled class="w-full py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold text-xs uppercase tracking-wider cursor-not-allowed">
-                            Included in White-Label
+                            Included in your account
                         </button>
                     <?php elseif ( $client ) : ?>
                         <a href="<?php echo esc_url( home_url( '/funding' ) ); ?>"
@@ -838,85 +831,6 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                             Get Gold
                         </a>
                     <?php endif; ?>
-                </div>
-            </div>
-
-            <!-- ── TIER 4: WHITE-LABEL (ENTERPRISE SOLO · WHITE ON LIGHT MODE) ── -->
-            <div class="plan-hover-card flex flex-col justify-between p-6 sm:p-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-amber-500/40 transition-all relative text-slate-900 dark:text-white">
-
-                <div>
-                    <div class="flex items-center justify-between gap-2 mb-4">
-                        <span class="text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30">
-                            Enterprise Solo
-                        </span>
-                        <?php if ( $is_solo ) : ?>
-                            <span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black">Active Tier</span>
-                        <?php endif; ?>
-                    </div>
-
-                    <h3 class="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                        <span>White-Label</span>
-                        <span class="text-amber-500 dark:text-amber-400 text-base">✦</span>
-                    </h3>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-5 min-h-[32px]">
-                        Your own standalone real estate platform. Your custom domain, zero Bofast branding, unlimited power.
-                    </p>
-
-                    <!-- In-Card Billing Tab (Custom for White-Label) -->
-                    <div class="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 mb-5 text-[11px] font-bold text-center">
-                        <span class="w-full py-1 text-amber-700 dark:text-amber-300 font-bold">Custom Deployment</span>
-                    </div>
-
-                    <!-- Price (Custom) -->
-                    <div class="mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
-                        <div class="flex items-baseline gap-1">
-                            <span class="text-3xl sm:text-4xl font-black text-amber-600 dark:text-amber-400">Custom</span>
-                        </div>
-                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                            Bespoke setup tailored to your brokerage scale
-                        </p>
-                    </div>
-
-                    <!-- Features -->
-                    <ul class="space-y-3 text-xs text-slate-700 dark:text-slate-300 mb-8">
-                        <li class="flex items-center gap-2.5">
-                            <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                            <span><strong>Unlimited Property Listings</strong></span>
-                        </li>
-                        <li class="flex items-center gap-2.5">
-                            <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                            <span><strong>Unlimited Team Members &amp; Agents</strong></span>
-                        </li>
-                        <li class="flex items-center gap-2.5">
-                            <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                            <span><strong>Custom Domain:</strong> portal.youragency.ng</span>
-                        </li>
-                        <li class="flex items-center gap-2.5">
-                            <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                            <span><strong>100% White-Label</strong> (Zero <?php echo esc_html( OFP_Brand::name() ); ?> branding)</span>
-                        </li>
-                        <li class="flex items-center gap-2.5">
-                            <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                            <span><strong>₦50,000 SMS &amp; Voice Credits</strong> Included</span>
-                        </li>
-                        <li class="flex items-center gap-2.5">
-                            <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                            <span>Custom Portal for Your Buyers &amp; Tenants</span>
-                        </li>
-                        <li class="flex items-center gap-2.5">
-                            <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                            <span>Dedicated 24/7 VIP Account Director</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- CTA: Contact Us -->
-                <div>
-                    <a href="<?php echo esc_url( $contact_wl_url ); ?>" target="_blank" rel="noopener noreferrer"
-                        class="w-full inline-flex items-center justify-center gap-2 text-center py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-500/20">
-                        <span>Contact Us</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                    </a>
                 </div>
             </div>
 
@@ -940,7 +854,6 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                             <th class="py-4 px-3 font-bold text-center text-xs uppercase tracking-wider w-[15%]">Free</th>
                             <th class="py-4 px-3 font-bold text-center text-xs uppercase tracking-wider w-[15%]">Silver</th>
                             <th class="py-4 px-3 font-bold text-center text-xs uppercase tracking-wider w-[15%] text-blue-600 dark:text-blue-400">Gold</th>
-                            <th class="py-4 px-3 font-bold text-center text-xs uppercase tracking-wider w-[15%] text-amber-500">White-Label</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs text-slate-700 dark:text-slate-300">
@@ -949,7 +862,7 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                         foreach ( $dyn_matrix as $group_title => $items ) :
                         ?>
                             <tr class="bg-slate-50/60 dark:bg-slate-800/40">
-                                <td colspan="5" class="py-2.5 px-4 font-black text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                <td colspan="4" class="py-2.5 px-4 font-black text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
                                     <?php echo esc_html( $group_title ); ?>
                                 </td>
                             </tr>
@@ -957,7 +870,7 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                                 $render_client_cell = function( $val, $col = 'free' ) {
                                     $val = trim( (string) $val );
                                     if ( $val === '✓' ) {
-                                        $cls = ( $col === 'silver' || $col === 'gold' || $col === 'wl' ) ? 'text-emerald-500 font-bold' : 'text-emerald-500';
+                                        $cls = ( $col === 'silver' || $col === 'gold' ) ? 'text-emerald-500 font-bold' : 'text-emerald-500';
                                         return '<span class="' . $cls . '">✓</span>';
                                     }
                                     if ( $val === '—' || $val === '' ) {
@@ -966,8 +879,6 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                                     $cls = 'font-semibold';
                                     if ( $col === 'gold' ) {
                                         $cls = 'font-bold text-blue-600 dark:text-blue-400';
-                                    } elseif ( $col === 'wl' ) {
-                                        $cls = 'font-black text-amber-500';
                                     } elseif ( $col === 'silver' ) {
                                         $cls = 'font-bold';
                                     }
@@ -979,7 +890,6 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                                     <td class="py-3 px-3 text-center"><?php echo $render_client_cell( $row['free'] ?? '—', 'free' ); ?></td>
                                     <td class="py-3 px-3 text-center"><?php echo $render_client_cell( $row['silver'] ?? '—', 'silver' ); ?></td>
                                     <td class="py-3 px-3 text-center"><?php echo $render_client_cell( $row['gold'] ?? '—', 'gold' ); ?></td>
-                                    <td class="py-3 px-3 text-center"><?php echo $render_client_cell( $row['wl'] ?? '—', 'wl' ); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endforeach; ?>
@@ -1008,17 +918,6 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                 </div>
             </div>
 
-            <!-- FAQ 2 -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden transition-colors">
-                <button type="button" @click="toggleFaq(2)" class="w-full text-left p-5 flex items-center justify-between gap-4 font-black text-sm text-slate-900 dark:text-white cursor-pointer">
-                    <span>How does the White-Label tier work and what is Custom Domain?</span>
-                    <svg class="w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" :class="expandedFaq === 2 ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                </button>
-                <div x-show="expandedFaq === 2" x-collapse class="px-5 pb-5 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800/60 pt-3">
-                    The White-Label plan is our highest, fully unbranded solution. We point your own domain (e.g. <code class="text-blue-500 font-mono">portal.youragency.ng</code>) directly to your branded portal. All client portals, email receipts, and property links show exclusively your logo, colors, and support information with zero mention of <?php echo esc_html( OFP_Brand::name() ); ?>.
-                </div>
-            </div>
-
             <!-- FAQ 3 -->
             <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden transition-colors">
                 <button type="button" @click="toggleFaq(3)" class="w-full text-left p-5 flex items-center justify-between gap-4 font-black text-sm text-slate-900 dark:text-white cursor-pointer">
@@ -1026,7 +925,7 @@ $page_title = OFP_Brand::title( 'Plans & Pricing · Transparent Real Estate Tech
                     <svg class="w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" :class="expandedFaq === 3 ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
                 <div x-show="expandedFaq === 3" x-collapse class="px-5 pb-5 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800/60 pt-3">
-                    Available on Gold and White-Label, the installment engine lets you structure off-plan payment plans for buyers (e.g. 20% down payment, 6 quarterly installments). The buyer gets a secure login to view their payment ledger, download official receipts, and pay upcoming installments via automated Paystack reminders.
+                    Available on Gold, the installment engine lets you structure off-plan payment plans for buyers (e.g. 20% down payment, 6 quarterly installments). The buyer gets a secure login to view their payment ledger, download official receipts, and pay upcoming installments via automated Paystack reminders.
                 </div>
             </div>
 

@@ -54,7 +54,6 @@ class OFP_Admin_Menu {
         add_action( 'admin_post_ofp_preview_client',  [ $this, 'handle_preview_client' ] );
         add_action( 'admin_post_ofp_topup_credit',    [ $this, 'handle_topup_credit' ] );
         add_action( 'admin_post_ofp_mark_subscription_paid', [ $this, 'handle_mark_subscription_paid' ] );
-        add_action( 'admin_post_ofp_wl_billing', [ $this, 'handle_wl_billing' ] );
         add_action( 'admin_init', [ $this, 'handle_save_plan_pricing' ] );
         add_action( 'admin_init', [ $this, 'handle_save_listing_plans' ] );
         add_action( 'admin_init', [ $this, 'handle_save_company_bank' ] ); // Phase 17
@@ -296,8 +295,6 @@ class OFP_Admin_Menu {
         $add_url     = admin_url( 'admin.php?page=ofp-clients&action=add' );
         $subdomain   = sanitize_title( wp_unslash( $_POST['subdomain'] ?? '' ) );
         $is_platform = ! empty( $_POST['is_platform'] );
-        // The platform account is never a white label (white labels hide their listings from the marketplace).
-        $is_solo     = ! $is_platform && ! empty( $_POST['is_white_label'] );
 
         if ( $is_platform ) {
             OFP_Platform::ensure_schema();
@@ -327,26 +324,7 @@ class OFP_Admin_Menu {
             exit;
         }
 
-        // Solo company: no plan. Optional custom domain, checked first.
-        $custom_domain = '';
-        if ( $is_solo ) {
-            OFP_White_Label::ensure_schema();
-            if ( ! OFP_White_Label::schema_ready() ) {
-                $why = (string) get_option( 'ofp_white_label_schema_error', 'unknown reason' );
-                $this->set_message( 'White Label could not be turned on because the database could not be updated (' . $why . ').', 'error' );
-                wp_safe_redirect( $add_url );
-                exit;
-            }
-            $custom_domain = OFP_White_Label::normalize_domain( wp_unslash( $_POST['custom_domain'] ?? '' ) );
-            $domain_err    = OFP_White_Label::validate_custom_domain( $custom_domain, 0 );
-            if ( $domain_err ) {
-                $this->set_message( '' . $domain_err, 'error' );
-                wp_safe_redirect( $add_url );
-                exit;
-            }
-        }
-
-        $plan = ( $is_solo || $is_platform ) ? 'free' : sanitize_text_field( wp_unslash( $_POST['plan'] ?? 'free' ) );
+        $plan = $is_platform ? 'free' : sanitize_text_field( wp_unslash( $_POST['plan'] ?? 'free' ) );
 
         $client_id = OFP_Client::create( [
             'business_name'     => sanitize_text_field( wp_unslash( $_POST['business_name']     ?? '' ) ),
@@ -358,19 +336,10 @@ class OFP_Admin_Menu {
             'subdomain'         => $subdomain,
             'business_category' => 'property',
             'plan'              => $plan,
-            'listing_plan'      => ( $is_solo || $is_platform ) ? 'free' : sanitize_text_field( wp_unslash( $_POST['listing_plan'] ?? 'free' ) ),
+            'listing_plan'      => $is_platform ? 'free' : sanitize_text_field( wp_unslash( $_POST['listing_plan'] ?? 'free' ) ),
             'subscriptions'     => [ 'crm', 'listing' ],
             'onboarding_source' => 'manual',
         ] );
-
-        if ( $client_id && $is_solo ) {
-            global $wpdb;
-            $wpdb->update(
-                $wpdb->prefix . 'ofp_clients',
-                [ 'is_white_label' => 1, 'custom_domain' => $custom_domain !== '' ? $custom_domain : null ],
-                [ 'id' => $client_id ]
-            );
-        }
 
         if ( $client_id && $is_platform ) {
             global $wpdb;
@@ -1113,27 +1082,6 @@ class OFP_Admin_Menu {
             }
         }
 
-        // Custom domain and white label flag (Blueprint 2.4). Admin only.
-        if ( isset( $_POST['ofp_wl_fields'] ) ) {
-            OFP_White_Label::ensure_schema();
-            $domain     = OFP_White_Label::normalize_domain( wp_unslash( $_POST['custom_domain'] ?? '' ) );
-            $domain_err = OFP_White_Label::validate_custom_domain( $domain, $client_id );
-            if ( $domain_err ) {
-                $this->set_message( '' . $domain_err, 'error' );
-                wp_safe_redirect( $edit_url );
-                exit;
-            }
-            if ( OFP_White_Label::schema_ready() ) {
-                $data['custom_domain']  = $domain !== '' ? $domain : null;
-                $data['is_white_label'] = empty( $_POST['is_white_label'] ) ? 0 : 1;
-            } else {
-                $why = (string) get_option( 'ofp_white_label_schema_error', 'unknown reason' );
-                $this->set_message( 'White Label could not be saved because the database could not be updated (' . $why . '). Send this message to support.', 'error' );
-                wp_safe_redirect( $edit_url );
-                exit;
-            }
-        }
-
         $plan_before = $current ? OFP_Subscription::normalize_plan( $current->plan ) : null;
         $updated = OFP_Client::update( $client_id, $data );
         if ( $updated && $plan_before !== null && class_exists( 'OFP_Logger' )
@@ -1402,35 +1350,6 @@ class OFP_Admin_Menu {
 
         $this->set_message( '✅ Subscription manually marked as paid. Client has access until ' . gmdate( 'F j, Y', strtotime( $period_end ) ) . '.', 'success' );
         wp_safe_redirect( admin_url( 'admin.php?page=ofp-billing' ) );
-        exit;
-    }
-
-    /**
-     * White label billing from the Edit Client page.
-     * wl_do = mark_paid (yearly or lifetime) | maintenance | clear
-     */
-    public function handle_wl_billing(): void {
-        $this->require_admin_post( 'ofp_wl_billing' );
-
-        $client_id = (int) ( $_POST['client_id'] ?? 0 );
-        $do        = sanitize_key( wp_unslash( $_POST['wl_do'] ?? '' ) );
-        $edit_url  = admin_url( 'admin.php?page=ofp-clients&client_id=' . $client_id . '&action=edit' );
-        $amount    = (float) str_replace( ',', '', (string) wp_unslash( $_POST['wl_amount'] ?? '0' ) );
-        $note      = sanitize_text_field( wp_unslash( $_POST['wl_note'] ?? '' ) );
-
-        if ( $do === 'mark_paid' ) {
-            $type   = sanitize_key( wp_unslash( $_POST['wl_type'] ?? '' ) );
-            $result = OFP_White_Label::mark_paid( $client_id, $type, $amount, ! empty( $_POST['wl_credits'] ), $note );
-        } elseif ( $do === 'maintenance' ) {
-            $result = OFP_White_Label::mark_maintenance_paid( $client_id, $amount, $note );
-        } elseif ( $do === 'clear' ) {
-            $result = OFP_White_Label::clear_billing( $client_id );
-        } else {
-            $result = [ 'ok' => false, 'message' => 'Unknown action.' ];
-        }
-
-        $this->set_message( ( $result['ok'] ? '✅ ' : '❌ ' ) . $result['message'], $result['ok'] ? 'success' : 'error' );
-        wp_safe_redirect( $edit_url );
         exit;
     }
 

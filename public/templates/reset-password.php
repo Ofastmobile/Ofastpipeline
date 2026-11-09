@@ -54,7 +54,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && $token_valid ) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Set New Password', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
-    <?php OFP_Brand::print_host_head(); ?>
 </head>
 <body class="ofp-auth-body">
 

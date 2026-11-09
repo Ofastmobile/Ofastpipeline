@@ -22,10 +22,9 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 OFP_Auth::require_client_login();
 OFP_Auth::require_main_client_only();
 
-// Solo companies have no plan to pay for here (their plan is paid by hand to the admin).
-// White label clients can still use this page to top up SMS and voice credit.
+// The platform's own account has no plan or credit to pay for here.
 $ofp_funding_client = OFP_Auth::current_client();
-if ( $ofp_funding_client && OFP_Brand::hide_plan_prompts( $ofp_funding_client ) && empty( $ofp_funding_client->is_white_label ) ) {
+if ( $ofp_funding_client && OFP_Brand::hide_plan_prompts( $ofp_funding_client ) ) {
     wp_safe_redirect( home_url( '/dashboard' ) );
     exit;
 }
@@ -172,9 +171,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_submit_funding'
         $note            = sanitize_textarea_field( $_POST['note'] ?? '' );
 
         $valid_payment_types = [ 'sms', 'voice', 'plan_silver', 'plan_gold' ];
-        if ( ! empty( $client->is_white_label ) ) {
-            $valid_payment_types = [ 'sms', 'voice' ]; // White label plan payments are recorded by the admin.
-        }
 
         // A plan payment also says how many months it covers. Saved as plan_silver_3 etc. (1 month stays plan_silver).
         $plan_months = OFP_Property_CPT::normalize_months( (int) ( $_POST['plan_months'] ?? 1 ) );
@@ -315,20 +311,6 @@ foreach ( [ 'silver', 'gold' ] as $pp_plan ) {
 
     <div id="tab-auto" class="ofp-funding-pane active">
 
-    <?php if ( ! empty( $client->is_white_label ) ) :
-        $wl_fs = OFP_White_Label::summary( $client );
-        if ( $wl_fs['type'] !== '' ) : ?>
-    <div class="ofp-funding-card">
-        <div class="ofp-funding-card-label">Your White Label Plan</div>
-        <div class="ofp-funding-card-title"><?php echo esc_html( $wl_fs['badge'] ); ?></div>
-        <div class="ofp-funding-card-desc">
-            <?php echo esc_html( $wl_fs['note'] ); ?>.
-            Your plan and maintenance fee are paid directly to us, so there is nothing to pay on this page except credit.
-            <a href="<?php echo esc_url( home_url( '/credits' ) ); ?>">See my billing</a>
-        </div>
-    </div>
-    <?php endif; endif; ?>
-
     <?php
         $topup_credits = class_exists( 'OFP_Credit' ) ? OFP_Credit::get( $client->id ) : null;
     ?>
@@ -388,9 +370,9 @@ foreach ( [ 'silver', 'gold' ] as $pp_plan ) {
     //  Any paid, ≤ 7 days   → show card with both Silver & Gold (renew / switch)
     $has_active_paid_plan = in_array( $current_plan, [ 'silver', 'gold' ], true );
 
-    $is_solo_client = ! empty( $client->is_white_label ) || ( class_exists( 'OFP_Subscription' ) && OFP_Subscription::is_unlimited( (int) $client->id ) );
+    $is_solo_client = class_exists( 'OFP_Subscription' ) && OFP_Subscription::is_unlimited( (int) $client->id );
     if ( $is_solo_client ) {
-        // Solo / White-label clients have unlimited plans and are billed outside the portal
+        // Unlimited (platform) account: no plans to buy
         $show_listing_card = false;
         $show_silver       = false;
         $show_gold         = false;
@@ -567,9 +549,7 @@ foreach ( [ 'silver', 'gold' ] as $pp_plan ) {
                     $show_manual_silver = false;
                     $show_manual_gold   = false;
 
-                    if ( ! empty( $client->is_white_label ) ) {
-                        // White label: no plan options, credit top-up only.
-                    } elseif ( ! $has_active_paid_plan ) {
+                    if ( ! $has_active_paid_plan ) {
                         // Free — both available
                         $show_manual_silver = true;
                         $show_manual_gold   = true;

@@ -5,9 +5,7 @@
  * The platform's OWN company account (for example "MyPropertyHQ"), used to list
  * rentals and properties directly.
  *
- * It is NOT a white label. A white label hides its listings from the main
- * marketplace and gets its own website. The platform account is the opposite:
- * its listings appear everywhere, like any other client's.
+ * Its listings appear everywhere on the main marketplace, like any other client's.
  *
  * What a platform account gets
  *  - no listing limit, no team-seat limit, every feature (reuses the existing

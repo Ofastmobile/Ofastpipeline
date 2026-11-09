@@ -167,7 +167,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Login', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
-    <?php OFP_Brand::print_host_head(); ?>
 </head>
 <body class="ofp-split-auth-body">
 
@@ -204,19 +203,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             <!-- LEFT PANEL: Auth Form -->
             <div class="ofp-split-form-panel">
                 <div class="ofp-split-form-inner">
-                    
-                    <!-- Brand Header -->
-                    <div class="ofp-split-brand">
-                        <?php if ( OFP_Brand::is_solo_host() ) : ?>
-                            <?php echo OFP_Brand::auth_heading( 'Client Portal Sign In' ); ?>
-                        <?php else : ?>
-                            <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ofp-split-logo-badge">
-                                <div class="ofp-split-logo-wrap">
-                                    <img src="<?php echo esc_url( OFP_Brand::logo_url() ); ?>" alt="<?php echo esc_attr( OFP_Brand::name() ); ?>" class="ofp-auth-logo-img">
-                                </div>
-                            </a>
-                        <?php endif; ?>
-                    </div>
 
                     <!-- Heading -->
                     <div class="ofp-split-heading">
@@ -341,14 +327,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 
                     <!-- Footer Note -->
                     <div class="ofp-split-panel-footer">
-                        <?php if ( OFP_Brand::is_solo_host() ) : ?>
-                            <?php echo OFP_Brand::support_line_html(); ?>
-                        <?php else : ?>
-                            <p class="ofp-register-prompt">
-                                New client?
-                                <a href="<?php echo esc_url( home_url( '/signup' ) ); ?>">Create an account &rarr;</a>
-                            </p>
-                        <?php endif; ?>
+                        <p class="ofp-register-prompt">
+                            New client?
+                            <a href="<?php echo esc_url( home_url( '/signup' ) ); ?>">Create an account &rarr;</a>
+                        </p>
                     </div>
 
                 </div>

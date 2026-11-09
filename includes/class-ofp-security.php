@@ -436,22 +436,11 @@ class OFP_Security {
      * forms rely on the honeypot, phone check and per-IP rate limit instead.
      *
      * On when a site key AND a secret are saved in Settings. It is skipped on a
-     * white label client's own custom domain, because Cloudflare only shows the
-     * widget on hostnames added to the Turnstile widget, and a missing hostname
-     * would lock that client out of logging in. (They still have password + OTP +
-     * rate limit.) Use the 'ofp_turnstile_enabled' filter to change this.
+     * Use the 'ofp_turnstile_enabled' filter to change this.
      */
     public static function turnstile_enabled(): bool {
         $on = (string) get_option( 'ofp_turnstile_site_key', '' ) !== ''
             && (string) get_option( 'ofp_turnstile_secret', '' ) !== '';
-
-        if ( $on && class_exists( 'OFP_Host_Router' ) && 'client' === OFP_Host_Router::current_zone() ) {
-            $host = OFP_Host_Router::normalized_host();
-            $base = strtolower( (string) get_option( 'ofp_crm_base_domain', '' ) );
-            if ( ! $base || ! str_ends_with( $host, '.' . $base ) ) {
-                $on = false; // custom domain
-            }
-        }
 
         return (bool) apply_filters( 'ofp_turnstile_enabled', $on );
     }

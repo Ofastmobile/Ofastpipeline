@@ -56,7 +56,7 @@ if ( $current_view !== 'credits' ) {
     $where = [ '1=1' ];
     $args  = [];
 
-    if ( in_array( $type_filter, [ 'crm', 'listing', 'whitelabel' ], true ) ) {
+    if ( in_array( $type_filter, [ 'crm', 'listing' ], true ) ) {
         $where[] = 's.type = %s';
         $args[]  = $type_filter;
     }
@@ -96,7 +96,7 @@ if ( $current_view !== 'credits' ) {
 
     $subscriptions = $wpdb->get_results(
         $wpdb->prepare(
-            "SELECT s.*, c.business_name, c.owner_name, c.email, c.phone, c.status AS client_status, c.is_white_label
+            "SELECT s.*, c.business_name, c.owner_name, c.email, c.phone, c.status AS client_status
              FROM {$p}ofp_subscriptions s
              JOIN {$p}ofp_clients c ON c.id = s.client_id
              WHERE {$where_sql}
@@ -108,7 +108,7 @@ if ( $current_view !== 'credits' ) {
 } else {
     // Credits View Query
     $credits_list = $wpdb->get_results(
-        "SELECT cr.*, cl.business_name, cl.owner_name, cl.email, cl.plan, cl.status AS client_status, cl.is_white_label
+        "SELECT cr.*, cl.business_name, cl.owner_name, cl.email, cl.plan, cl.status AS client_status
          FROM {$p}ofp_credits cr
          JOIN {$p}ofp_clients cl ON cl.id = cr.client_id
          ORDER BY cr.updated_at DESC"
@@ -256,7 +256,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                     </td>
                                     <td>
                                         <span class="ofp-badge ofp-badge-crm">
-                                            <?php echo ! empty( $cr->is_white_label ) ? 'SOLO / UNLIMITED' : esc_html( strtoupper( $cr->plan ?: 'STARTER' ) ); ?>
+                                            <?php echo esc_html( strtoupper( $cr->plan ?: 'STARTER' ) ); ?>
                                         </span>
                                     </td>
                                     <td>
@@ -460,11 +460,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                     $rl = OFP_Subscription::row_labels( $sub );
                                     ?>
                                     <td>
-                                        <?php if ( $rl['type'] === 'WHITE LABEL' ) : ?>
-                                            <span class="ofp-badge" style="background:#e0e7ff;color:#3730a3;font-weight:600;">
-                                                White Label
-                                            </span>
-                                        <?php elseif ( $is_listing ) : ?>
+                                        <?php if ( $is_listing ) : ?>
                                             <span class="ofp-badge ofp-badge-listing">
                                                 Listing
                                             </span>

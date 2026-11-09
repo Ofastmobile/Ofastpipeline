@@ -1966,6 +1966,20 @@ class OFP_Property_CPT {
             }
         }
 
+        // Blog Archive / Posts page (e.g. /blog, /category/*, /tag/*, /author/*, /date/*, or page slug 'blog')
+        if ( ( is_home() || is_category() || is_tag() || is_author() || is_date() || is_page( 'blog' ) ) && OFP_Host_Router::current_zone() !== 'app' ) {
+            if ( file_exists( OFP_PATH . 'public/templates/blog-archive.php' ) ) {
+                return OFP_PATH . 'public/templates/blog-archive.php';
+            }
+        }
+
+        // Single Blog Post (/demo, /my-article, etc.)
+        if ( is_singular( 'post' ) && OFP_Host_Router::current_zone() !== 'app' ) {
+            if ( file_exists( OFP_PATH . 'public/templates/blog-single.php' ) ) {
+                return OFP_PATH . 'public/templates/blog-single.php';
+            }
+        }
+
         if ( is_post_type_archive( 'ofp_property' ) && OFP_Host_Router::current_zone() !== 'app' ) {
             $theme_override = locate_template( 'archive-ofp_property.php' );
             if ( $theme_override ) return $theme_override;
@@ -2008,27 +2022,6 @@ class OFP_Property_CPT {
     public function rewrite_permalink_to_property_subdomain( string $post_link, WP_Post $post ): string {
         if ( $post->post_type !== 'ofp_property' ) {
             return $post_link;
-        }
-
-        // A white label client's listing ALWAYS lives on their own host (custom
-        // domain, else {subdomain}.{base_domain}), never on the shared marketplace,
-        // because the marketplace hides white label listings (OFP_White_Label).
-        // Doing this here, at the source, keeps every link right: embed widget,
-        // wp-admin "View", emails and SMS. Previously a white label client with
-        // only a subdomain got a marketplace link that returned 404.
-        if ( class_exists( 'OFP_White_Label' ) ) {
-            $wl_host = OFP_White_Label::host_for_post( (int) $post->ID );
-            if ( $wl_host ) {
-                return preg_replace( '#^https?://[^/]+#', 'https://' . $wl_host, $post_link );
-            }
-        }
-
-        // On a solo company (white label) domain, keep the property permalink on that custom domain
-        if ( class_exists( 'OFP_Brand' ) && OFP_Brand::is_solo_host() ) {
-            $host = OFP_Host_Router::current_client_host();
-            if ( $host ) {
-                return preg_replace( '#^https?://[^/]+#', 'https://' . $host, $post_link );
-            }
         }
 
         $base_domain = get_option( 'ofp_crm_base_domain' );
@@ -2228,7 +2221,7 @@ class OFP_Property_CPT {
     }
 
     /**
-     * Default Feature Comparison Matrix items across Free, Silver, Gold, White-Label.
+     * Default Feature Comparison Matrix items across Free, Silver, Gold.
      *
      * @return array
      */
@@ -2241,21 +2234,18 @@ class OFP_Property_CPT {
                     'free'    => '1',
                     'silver'  => '3',
                     'gold'    => '10',
-                    'wl'      => 'Unlimited',
                 ],
                 [
                     'feature' => 'Team Members / Sub-Agents',
-                    'free'    => '0 (Solo)',
+                    'free'    => '0',
                     'silver'  => '2 seats',
                     'gold'    => '3 seats',
-                    'wl'      => 'Unlimited',
                 ],
                 [
                     'feature' => 'High-Res Media & Gallery Storage',
                     'free'    => 'Standard',
                     'silver'  => 'High Speed',
                     'gold'    => 'HD Optimized',
-                    'wl'      => 'Unlimited CDN',
                 ],
             ],
             'Marketplace & Exposure' => [
@@ -2264,28 +2254,24 @@ class OFP_Property_CPT {
                     'free'    => '✓',
                     'silver'  => '✓',
                     'gold'    => '✓',
-                    'wl'      => 'Custom Domain',
                 ],
                 [
                     'feature' => 'Partner Trust Badge',
                     'free'    => 'Light',
                     'silver'  => 'Verified Agency',
                     'gold'    => 'Verified Partner',
-                    'wl'      => 'Solo Brand Crest',
                 ],
                 [
                     'feature' => 'Marketplace Search Placement',
                     'free'    => 'Standard',
                     'silver'  => 'Priority',
                     'gold'    => 'Top Boosted',
-                    'wl'      => 'On Agency Website',
                 ],
                 [
                     'feature' => 'Ads / Promotions',
                     'free'    => '—',
                     'silver'  => '2 Ads / Month',
                     'gold'    => '2 Ads / Month',
-                    'wl'      => 'Custom',
                 ],
             ],
             'CRM & Financial Technology' => [
@@ -2294,56 +2280,48 @@ class OFP_Property_CPT {
                     'free'    => '✓',
                     'silver'  => '✓',
                     'gold'    => '✓',
-                    'wl'      => '✓',
                 ],
                 [
                     'feature' => 'CRM Automation & Workflows',
                     'free'    => '✓',
                     'silver'  => '✓',
                     'gold'    => '✓',
-                    'wl'      => '✓',
                 ],
                 [
                     'feature' => 'Import Customers',
                     'free'    => '✓',
                     'silver'  => '✓',
                     'gold'    => '✓',
-                    'wl'      => '✓',
                 ],
                 [
                     'feature' => 'Analytics & Performance Reports',
                     'free'    => '✓',
                     'silver'  => '✓',
                     'gold'    => '✓',
-                    'wl'      => '✓',
                 ],
                 [
                     'feature' => 'WhatsApp & SMS Instant Deal Alerts',
                     'free'    => '—',
                     'silver'  => '✓',
                     'gold'    => '✓',
-                    'wl'      => '✓ (₦50k credit incl.)',
                 ],
                 [
                     'feature' => 'Rent Monitoring & Digital Tenancy Leases',
                     'free'    => '—',
                     'silver'  => '—',
                     'gold'    => '✓',
-                    'wl'      => '✓',
                 ],
                 [
                     'feature' => 'Off-Plan Installment Plans & Buyer Ledgers',
                     'free'    => '—',
                     'silver'  => '—',
                     'gold'    => '✓',
-                    'wl'      => '✓',
                 ],
                 [
                     'feature' => 'ROI & Yield Investment Projector',
                     'free'    => '—',
                     'silver'  => '—',
                     'gold'    => '✓',
-                    'wl'      => '✓',
                 ],
             ],
             'Brand Ownership & Infrastructure' => [
@@ -2352,35 +2330,12 @@ class OFP_Property_CPT {
                     'free'    => '—',
                     'silver'  => '✓',
                     'gold'    => '✓',
-                    'wl'      => '✓',
-                ],
-                [
-                    'feature' => 'Fully Customize Email / SMS',
-                    'free'    => '—',
-                    'silver'  => '—',
-                    'gold'    => '—',
-                    'wl'      => 'Send from Brand Name',
-                ],
-                [
-                    'feature' => 'Custom Domain Routing (e.g. portal.yourbrand.ng)',
-                    'free'    => '—',
-                    'silver'  => '—',
-                    'gold'    => '—',
-                    'wl'      => 'Included',
-                ],
-                [
-                    'feature' => 'Removal of ' . $brand_name . ' Branding (100% White-Label)',
-                    'free'    => '—',
-                    'silver'  => '—',
-                    'gold'    => '—',
-                    'wl'      => '100% Solo',
                 ],
                 [
                     'feature' => 'VIP Account Manager & SLA',
                     'free'    => '—',
                     'silver'  => 'Standard',
                     'gold'    => 'Priority',
-                    'wl'      => '24/7 Dedicated SLA',
                 ],
             ],
         ];
@@ -2426,7 +2381,6 @@ class OFP_Property_CPT {
                     'free'    => sanitize_text_field( $row['free'] ?? '—' ),
                     'silver'  => sanitize_text_field( $row['silver'] ?? '—' ),
                     'gold'    => sanitize_text_field( $row['gold'] ?? '—' ),
-                    'wl'      => sanitize_text_field( $row['wl'] ?? '—' ),
                 ];
             }
         }
@@ -2461,7 +2415,7 @@ class OFP_Property_CPT {
 
     public static function can_add_property( int $client_id ): bool {
         if ( OFP_Subscription::is_unlimited( $client_id ) ) {
-            return true; // Solo company: no listing limit.
+            return true; // Unlimited account: no listing limit.
         }
         $plan = OFP_Subscription::client_plan( $client_id );
         $cap  = self::get_plan_cap( $plan );

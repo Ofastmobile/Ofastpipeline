@@ -1357,11 +1357,6 @@ table tbody tr:hover td {
     color: #ef4444;
 }
 
-.ofp-status-pill.white_label {
-    background: rgba(139, 92, 246, 0.15);
-    color: #8b5cf6;
-}
-
 /* Responsive Adjustments */
 @media (max-width: 1200px) {
     .ofp-kpi-grid {

@@ -126,8 +126,7 @@ $agents_hero_img = ofp_image_url( 'Real Estate Deal Handshake.webp' );
     <script>
         (function() {
             var theme = localStorage.getItem('ofp_theme');
-            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            var isDark = theme ? (theme === 'dark') : prefersDark;
+            var isDark = (theme === 'dark');
             var html = document.documentElement;
             if (isDark) {
                 html.classList.add('dark');

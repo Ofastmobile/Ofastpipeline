@@ -1011,7 +1011,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                     <span class="ofp-switch-title">Auto Watermark Property Photos with Platform/Agency Brand</span>
 
-                                    <p class="ofp-switch-desc">Automatically brands all uploaded property photos (JPEG, PNG, WebP) with your platform name or the white-labeled agency name to protect listing images from unauthorized scraping.</p>
+                                    <p class="ofp-switch-desc">Automatically brands all uploaded property photos (JPEG, PNG, WebP) with your platform name, or a client's own watermark text if they set one, to protect listing images from unauthorized scraping.</p>
 
                                 </div>
 
@@ -3247,12 +3247,10 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                 if ( $val === '—' || $val === '' ) {
                                     return '<span class="ofp-badge-dash" style="color:#94a3b8; font-size:16px;">—</span>';
                                 }
-                                $weight = ( $col === 'wl' || $col === 'gold' ) ? '800' : '600';
+                                $weight = ( $col === 'gold' ) ? '800' : '600';
                                 $color = '#1e293b';
                                 if ( $col === 'gold' ) {
                                     $color = '#2563eb';
-                                } elseif ( $col === 'wl' ) {
-                                    $color = '#b45309';
                                 }
                                 return '<span class="ofp-badge-text" style="font-weight:' . $weight . '; font-size:12px; color:' . $color . ';">' . esc_html( $val ) . '</span>';
                             };
@@ -3265,13 +3263,12 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                         <th style="padding:14px 14px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#475569; text-align:center; width:16%;">Free (Starter)</th>
                                         <th style="padding:14px 14px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#2563eb; text-align:center; width:16%;">Silver (Growth)</th>
                                         <th style="padding:14px 14px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#d97706; text-align:center; width:16%;">Gold (Enterprise)</th>
-                                        <th style="padding:14px 14px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#b45309; text-align:center; width:16%;">White-Label (Solo)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="ofp-matrix-tbody">
                                     <?php foreach ( $matrix_groups as $group_title => $items ) : ?>
                                         <tr class="ofp-matrix-group-row" data-group-name="<?php echo esc_attr( $group_title ); ?>" style="background:#f1f5f9; border-top:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0;">
-                                            <td colspan="5" style="padding:9px 20px;">
+                                            <td colspan="4" style="padding:9px 20px;">
                                                  <div style="display:flex; align-items:center; justify-content:space-between;">
                                                     <span class="ofp-matrix-group-title" title="Click to rename section" style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:#475569; cursor:pointer;">
                                                         <?php echo esc_html( $group_title ); ?>
@@ -3299,13 +3296,10 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                                 <td class="ofp-matrix-cell" data-col="gold" data-val="<?php echo esc_attr( $row['gold'] ?? '—' ); ?>" title="Click to edit text or set checkmark" style="padding:12px 14px; text-align:center;">
                                                     <span class="ofp-matrix-display-val"><?php echo $render_admin_val( $row['gold'] ?? '—', 'gold' ); ?></span>
                                                 </td>
-                                                <td class="ofp-matrix-cell" data-col="wl" data-val="<?php echo esc_attr( $row['wl'] ?? '—' ); ?>" title="Click to edit text or set checkmark" style="padding:12px 14px; text-align:center;">
-                                                    <span class="ofp-matrix-display-val"><?php echo $render_admin_val( $row['wl'] ?? '—', 'wl' ); ?></span>
-                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                         <tr class="ofp-matrix-add-row" data-group="<?php echo esc_attr( $group_title ); ?>">
-                                            <td colspan="5" style="padding:6px 20px; background:#fafbfc; border-bottom:1px solid #e2e8f0; text-align:left;">
+                                            <td colspan="4" style="padding:6px 20px; background:#fafbfc; border-bottom:1px solid #e2e8f0; text-align:left;">
                                                 <button type="button" class="ofp-matrix-add-feature-btn" data-group="<?php echo esc_attr( $group_title ); ?>" style="display:inline-flex; align-items:center; gap:6px; background:none; border:none; color:var(--ofp-primary, #2563eb); font-size:12px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.15s ease;">
                                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                                     + Add Feature to this section
@@ -3522,7 +3516,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                     <h3>Cloudflare Turnstile (Anti-Bot Protection)</h3>
 
-                                    <p>Frictionless CAPTCHA alternative protecting registration (/signup) and login (/login) only. Lead and inspection forms are not affected. Skipped on a white-label client's own custom domain unless that hostname is added to the widget in Cloudflare.</p>
+                                    <p>Frictionless CAPTCHA alternative protecting registration (/signup) and login (/login) only. Lead and inspection forms are not affected.</p>
 
                                 </div>
 

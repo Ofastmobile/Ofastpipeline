@@ -6,8 +6,6 @@
  * <div id="ofp-property-widget" data-client-id="YOUR_CLIENT_ID" data-limit="6"></div>
  * <script src="https://YOUR-PLATFORM-DOMAIN/widget.js" async></script>
  *
- * Solo / white-label clients on their own domain can leave out data-client-id,
- * the platform works it out from the domain the script is loaded from.
  */
 (function() {
     'use strict';

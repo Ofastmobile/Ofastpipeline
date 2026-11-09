@@ -231,7 +231,6 @@ $marketplace_query = new WP_Query( $args );
         @click="megaMenuOpen = false"></div>
 
     <!-- Top Navigation -->
-    <?php $ofp_wl_rec = class_exists( 'OFP_Host_Router' ) ? OFP_Host_Router::current_client_record() : null; $ofp_wl = $ofp_wl_rec && ! empty( $ofp_wl_rec->is_white_label ); ?>
     <header x-data="{ scrolledDown: false, lastScroll: 0 }" @scroll.window="
                 if (!megaMenuOpen) {
                     const current = window.pageYOffset;
@@ -247,14 +246,14 @@ $marketplace_query = new WP_Query( $args );
                 <!-- Left: Logo & Hamburger -->
                 <div class="flex items-center gap-3 sm:gap-5">
                     <!-- Logo (Hidden on mobile so only hamburger displays, visible from sm up) -->
-                    <a href="<?php echo esc_url( home_url('/') ); ?>" class="<?php echo $ofp_wl ? 'flex' : 'hidden sm:flex'; ?> items-center">
+                    <a href="<?php echo esc_url( home_url('/') ); ?>" class="hidden sm:flex items-center">
                         <span
                             class="text-[13px] sm:text-sm font-black tracking-[0.25em] text-slate-900 dark:text-white uppercase transition-colors">
                             <?php echo OFP_Brand::public_logo_html( 'BOFAST HOMES' ); ?>
                         </span>
                     </a>
 
-                    <?php if ( ! $ofp_wl ) : ?>
+                    
                     <!-- Mega Menu Hamburger Button (Reduced size) -->
                     <button @click="megaMenuOpen = !megaMenuOpen"
                         class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 transition-colors flex items-center justify-center cursor-pointer border border-slate-200 dark:border-slate-700">
@@ -265,7 +264,7 @@ $marketplace_query = new WP_Query( $args );
                                 stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
-                    <?php endif; ?>
+                    
                 </div>
 
                 <!-- Right: Action Button -->
@@ -285,19 +284,19 @@ $marketplace_query = new WP_Query( $args );
                             </path>
                         </svg>
                     </button>
-                    <?php if ( ! $ofp_wl ) : ?>
+                    
                     <!-- List Property Button -->
                     <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"
                         class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 sm:px-7 py-2 sm:py-2.5 rounded-[7px] text-[11px] sm:text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap uppercase inline-flex items-center justify-center">
                         List Property
                     </a>
-                    <?php endif; ?>
+                    
                 </div>
             </div>
 
             <?php $ofp_header_social = OFP_Brand::social_links(); ?>
 
-            <?php if ( ! $ofp_wl ) : ?>
+            
             <!-- Desktop Mega Menu Dropdown (hidden lg:block) -->
             <div x-show="megaMenuOpen" style="display: none;" @click.away="megaMenuOpen = false"
                 class="hidden lg:block absolute top-full left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 mt-2 z-[100] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden font-sans"
@@ -394,11 +393,11 @@ $marketplace_query = new WP_Query( $args );
                     </div>
                 </div>
             </div>
-            <?php endif; ?>
+            
         </div>
     </header>
 
-    <?php if ( ! $ofp_wl ) : ?>
+    
     <!-- Mobile Full-Page Navigation Screen (lg:hidden, placed outside <header> so transform doesn't clip/break fixed inset-0) -->
     <div x-show="megaMenuOpen" style="display: none;"
         class="lg:hidden fixed inset-0 z-[100] bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-6 font-sans overflow-y-auto"
@@ -537,7 +536,7 @@ $marketplace_query = new WP_Query( $args );
             </a>
         </div>
     </div>
-    <?php endif; ?>
+    
 
     <!-- Hero Banner Section -->
     <div class="hero-bg relative overflow-hidden border-b border-slate-200 dark:border-slate-800 pt-12 pb-10 sm:pt-16 sm:pb-12 transition-colors duration-300">

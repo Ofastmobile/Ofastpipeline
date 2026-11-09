@@ -11,12 +11,6 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-// A white label (solo company) domain has no public signup. Go to login.
-if ( class_exists( 'OFP_Brand' ) && OFP_Brand::is_solo_host() ) {
-    wp_redirect( home_url( '/login' ) );
-    exit;
-}
-
 $error   = '';
 $success = false;
 $step    = 'details'; // 'details' or 'otp'
@@ -228,7 +222,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Create Agency Account', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
-    <?php OFP_Brand::print_host_head(); ?>
 </head>
 <body class="ofp-split-auth-body ofp-auth-signup">
 
@@ -266,15 +259,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
             <div class="ofp-split-form-panel">
                 <div class="ofp-split-form-inner">
 
-                    <!-- Brand Header -->
-                    <div class="ofp-split-brand">
-                        <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ofp-split-logo-badge">
-                            <div class="ofp-split-logo-wrap">
-                                <img src="<?php echo esc_url( OFP_Brand::logo_url() ); ?>" alt="<?php echo esc_attr( OFP_Brand::name() ); ?>" class="ofp-auth-logo-img">
-                            </div>
-                        </a>
-                    </div>
-
                     <?php if ( $success ) : ?>
 
                         <!-- Success State -->
@@ -298,14 +282,12 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 
                     <?php else : ?>
 
-                        <!-- Heading & Step Badge -->
+                        <!-- Heading -->
                         <div class="ofp-split-heading">
                             <?php if ( $step === 'otp' ) : ?>
-                                <span class="ofp-step-badge">Step 2 of 2: Security Verification</span>
                                 <h2>Verify your contact</h2>
                                 <p>Enter the 7-character verification code sent to your email and phone.</p>
                             <?php else : ?>
-                                <span class="ofp-step-badge">Step 1 of 2: Agency Details</span>
                                 <h2>Create your account</h2>
                                 <p>Launch your automated real estate pipeline. Start on the Free plan.</p>
                             <?php endif; ?>

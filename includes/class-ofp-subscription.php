@@ -87,16 +87,10 @@ class OFP_Subscription {
     /**
      * True when a client's paid period has run out. The plan then counts as
      * Free right away, even before the daily job has reset the saved plan.
-     * Solo companies never expire.
      */
     public static function is_plan_expired( ?object $client ): bool {
         if ( ! $client ) {
             return false;
-        }
-        // A yearly white label that has run out counts as Free. Old white label
-        // clients (no billing set) and lifetime clients never expire.
-        if ( ! empty( $client->is_white_label ) ) {
-            return OFP_White_Label::yearly_expired( $client );
         }
         if ( empty( $client->subscription_expires ) ) {
             return false;
@@ -138,9 +132,9 @@ class OFP_Subscription {
     }
 
     /**
-     * A white label (solo company) has no limits at all. They are billed by
-     * the admin outside the plan system, so every feature gate treats them as
-     * Gold with unlimited listings and team seats.
+     * The platform's own account has no limits at all. It is outside the plan
+     * system, so every feature gate treats it as Gold with unlimited listings
+     * and team seats.
      * Billing code keeps using client_plan(), so nothing is charged for this.
      */
     public static function is_unlimited( int $client_id ): bool {
@@ -150,9 +144,8 @@ class OFP_Subscription {
         }
         if ( ! isset( $memo[ $client_id ] ) ) {
             $client = OFP_Client::get( $client_id );
-            // Unlimited while white label benefits are active. A yearly plan that ended is on Free limits.
             // The platform's own account is always unlimited (no plan, no billing).
-            $memo[ $client_id ] = $client && ( OFP_White_Label::has_full_benefits( $client ) || OFP_Platform::is_platform( $client ) );
+            $memo[ $client_id ] = $client && OFP_Platform::is_platform( $client );
         }
         return $memo[ $client_id ];
     }
@@ -162,7 +155,7 @@ class OFP_Subscription {
         return self::is_unlimited( $client_id ) ? 'gold' : self::client_plan( $client_id );
     }
 
-    /** Team seats for a client. Unlimited for a solo company. */
+    /** Team seats for a client. Unlimited for the platform account. */
     public static function team_limit_for_client( int $client_id ): int {
         if ( self::is_unlimited( $client_id ) ) {
             return 100000;
@@ -602,7 +595,7 @@ class OFP_Subscription {
              FROM {$p}ofp_clients
              WHERE subscription_expires BETWEEN CURDATE() AND DATE_ADD( CURDATE(), INTERVAL 7 DAY )
                AND status = 'active'
-               AND plan IN ('silver', 'gold')" . OFP_White_Label::not_solo_sql()
+               AND plan IN ('silver', 'gold')"
         );
         foreach ( $clients_expiring as $client ) {
             self::send_reminder( $client, (int) $client->days_left );
@@ -619,7 +612,7 @@ class OFP_Subscription {
             "SELECT id, plan, listing_plan FROM {$p}ofp_clients
              WHERE subscription_expires < CURDATE()
                AND status = 'active'
-               AND (plan != 'free' OR listing_plan != 'free')" . OFP_White_Label::not_solo_sql()
+               AND (plan != 'free' OR listing_plan != 'free')"
         );
 
         foreach ( $expired_clients as $expired ) {
@@ -654,9 +647,6 @@ class OFP_Subscription {
             }
         }
 
-        // ── White label yearly / lifetime billing reminders and expiry ────────
-        OFP_White_Label::run_daily_billing_check();
-
         // ── Clean expired session tokens ──────────────────────────────────────
         OFP_Auth::purge_expired_sessions();
     }
@@ -678,7 +668,7 @@ class OFP_Subscription {
 
         $free_clients = $wpdb->get_results(
             "SELECT * FROM {$wpdb->prefix}ofp_clients
-             WHERE status = 'active' AND plan = 'free'" . OFP_White_Label::not_solo_sql() . OFP_Platform::not_platform_sql()
+             WHERE status = 'active' AND plan = 'free'" . OFP_Platform::not_platform_sql()
         );
 
         foreach ( $free_clients as $client ) {
@@ -772,9 +762,7 @@ class OFP_Subscription {
             'paid_at'         => current_time( 'mysql' ),
             'created_at'      => current_time( 'mysql' ),
         ];
-        if ( OFP_White_Label::schema_ready() ) {
-            $row['months'] = $months;
-        }
+        $row['months'] = $months;
         $wpdb->insert( $wpdb->prefix . 'ofp_subscriptions', $row );
 
         // A payment for a LOWER plan must not lower a higher plan that is still
@@ -892,10 +880,6 @@ class OFP_Subscription {
 
     /** Type and plan words for a payment row, in plain words, for every payment list. */
     public static function row_labels( object $sub ): array {
-        if ( ( $sub->type ?? '' ) === 'whitelabel' ) {
-            $plan = [ 'wl_yearly' => 'Yearly', 'wl_lifetime' => 'Lifetime', 'wl_maint' => 'Maintenance' ][ $sub->plan ?? '' ] ?? 'White label';
-            return [ 'type' => 'WHITE LABEL', 'plan' => strtoupper( $plan ) ];
-        }
         $plan   = strtoupper( (string) ( $sub->plan ?: '—' ) );
         $months = (int) ( $sub->months ?? 1 );
         if ( $months > 1 ) {
@@ -1056,9 +1040,7 @@ class OFP_Subscription {
             'status'          => 'underpaid',
             'created_at'      => current_time( 'mysql' ),
         ];
-        if ( OFP_White_Label::schema_ready() ) {
-            $under_row['months'] = OFP_Property_CPT::normalize_months( $months );
-        }
+        $under_row['months'] = OFP_Property_CPT::normalize_months( $months );
         $wpdb->insert( $wpdb->prefix . 'ofp_subscriptions', $under_row );
 
         $shortfall = max( 0, $expected - $amount_paid );
@@ -1330,9 +1312,7 @@ class OFP_Subscription {
             'period_end'      => $period_end,
             'paid_at'         => current_time( 'mysql' ),
         ];
-        if ( OFP_White_Label::schema_ready() ) {
-            $paid_row['months'] = $months;
-        }
+        $paid_row['months'] = $months;
 
         if ( $existing && $existing->status !== 'paid' ) {
             // A waiting (pending/underpaid) row becomes the paid one.
@@ -1423,7 +1403,7 @@ class OFP_Subscription {
      * @return bool
      */
     /**
-     * One time cleanup. Earlier signups on the Free plan (and solo companies)
+     * One time cleanup. Earlier signups on the Free plan
      * were given pending CRM and listing rows that showed as "Awaiting Payment".
      * Pending rows for the free tier are removed. A pending upgrade to a paid
      * plan is never touched.

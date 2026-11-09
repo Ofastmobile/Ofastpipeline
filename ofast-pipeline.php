@@ -89,7 +89,6 @@ require_once OFP_PATH . 'includes/class-ofp-property-checkout.php';
 require_once OFP_PATH . 'includes/class-ofp-property-commerce-repair.php';
 require_once OFP_PATH . 'includes/class-ofp-property-rent.php';
 require_once OFP_PATH . 'includes/class-ofp-property-rent-visibility.php';
-require_once OFP_PATH . 'includes/class-ofp-white-label.php';
 require_once OFP_PATH . 'includes/class-ofp-platform.php';
 require_once OFP_PATH . 'includes/class-ofp-property-package.php';
 require_once OFP_PATH . 'includes/class-ofp-field-agent.php';
@@ -172,7 +171,7 @@ add_action( 'plugins_loaded', function (): void {
     new OFP_Property_CPT();
     OFP_Property_Amenities::init();
     OFP_Host_Router::init();
-    OFP_White_Label::init();
+    OFP_Activator::ensure_branding_schema();
     OFP_Platform::init();
     OFP_Property_Package::init();
     OFP_Field_Agent::init();

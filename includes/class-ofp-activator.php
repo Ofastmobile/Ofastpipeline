@@ -70,6 +70,52 @@ class OFP_Activator {
      * Safe to run on every activation — each ALTER is guarded by a
      * column-existence check first.
      */
+    /**
+     * Makes sure the client branding columns and the subscription `months`
+     * column exist on sites that were set up before they were added.
+     * Runs once, then remembers it in an option. (This used to live in the
+     * white-label class; the branding columns are still used by Gold clients.)
+     */
+    public static function ensure_branding_schema(): void {
+        if ( get_option( 'ofp_branding_schema' ) === '1' ) {
+            return;
+        }
+        global $wpdb;
+        $clients = $wpdb->prefix . 'ofp_clients';
+        $subs    = $wpdb->prefix . 'ofp_subscriptions';
+        if ( ! $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $clients ) ) ) ) {
+            return; // Plugin tables not created yet.
+        }
+        $all     = true;
+        $columns = [
+            'brand_color'      => 'VARCHAR(20) DEFAULT NULL',
+            'favicon_url'      => 'VARCHAR(255) DEFAULT NULL',
+            'support_email'    => 'VARCHAR(150) DEFAULT NULL',
+            'support_phone'    => 'VARCHAR(30) DEFAULT NULL',
+            'sidebar_color'    => 'VARCHAR(20) DEFAULT NULL',
+            'menu_hover_color' => 'VARCHAR(20) DEFAULT NULL',
+        ];
+        foreach ( $columns as $name => $definition ) {
+            if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$clients} LIKE '{$name}'" ) ) ) {
+                $wpdb->query( "ALTER TABLE {$clients} ADD COLUMN {$name} {$definition}" );
+            }
+            if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$clients} LIKE '{$name}'" ) ) ) {
+                $all = false;
+            }
+        }
+        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $subs ) ) ) ) {
+            if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$subs} LIKE 'months'" ) ) ) {
+                $wpdb->query( "ALTER TABLE {$subs} ADD COLUMN months TINYINT UNSIGNED NOT NULL DEFAULT 1 AFTER plan" );
+            }
+            if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$subs} LIKE 'months'" ) ) ) {
+                $all = false;
+            }
+        }
+        if ( $all ) {
+            update_option( 'ofp_branding_schema', '1', true );
+        }
+    }
+
     private static function maybe_upgrade_schema(): void {
         global $wpdb;
         $p = $wpdb->prefix;
@@ -162,14 +208,6 @@ class OFP_Activator {
             $wpdb->query( "ALTER TABLE {$p}ofp_activity_logs ADD COLUMN team_member_id BIGINT UNSIGNED DEFAULT NULL AFTER admin_id" );
         }
 
-        // custom_domain and is_white_label on ofp_clients (Blueprint v2 Section 2.4).
-        if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'custom_domain'" ) ) ) {
-            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN custom_domain VARCHAR(150) DEFAULT NULL AFTER subdomain" );
-        }
-        if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'is_white_label'" ) ) ) {
-            $wpdb->query( "ALTER TABLE {$p}ofp_clients ADD COLUMN is_white_label TINYINT(1) NOT NULL DEFAULT 0 AFTER custom_domain" );
-        }
-
         // Email Branding and Custom Template fields on ofp_clients
         $email_branding_exists = $wpdb->get_results(
             "SHOW COLUMNS FROM {$p}ofp_clients LIKE 'email_brand_color'"
@@ -226,8 +264,6 @@ class OFP_Activator {
             phone                  VARCHAR(20)     NOT NULL,
             password               VARCHAR(255)    NOT NULL,
             subdomain              VARCHAR(100)             DEFAULT NULL,
-            custom_domain          VARCHAR(150)             DEFAULT NULL,
-            is_white_label         TINYINT(1)      NOT NULL DEFAULT 0,
             brand_color            VARCHAR(20)              DEFAULT NULL,
             favicon_url            VARCHAR(255)             DEFAULT NULL,
             support_email          VARCHAR(150)             DEFAULT NULL,
@@ -370,6 +406,7 @@ class OFP_Activator {
             client_id      BIGINT UNSIGNED NOT NULL,
             type           VARCHAR(20)     NOT NULL DEFAULT 'crm',
             plan           VARCHAR(20)              DEFAULT NULL,
+            months         TINYINT UNSIGNED NOT NULL DEFAULT 1,
             amount         DECIMAL(10,2)   NOT NULL,
             payment_method VARCHAR(20)     NOT NULL,
             payment_ref    VARCHAR(100)             DEFAULT NULL,

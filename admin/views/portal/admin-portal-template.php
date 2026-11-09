@@ -29,7 +29,6 @@ $tab = $current_tab ?? 'overview';
 $total_clients     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_clients" );
 $active_clients    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_clients WHERE status = 'active'" );
 $pending_clients   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_clients WHERE status = 'pending_review'" );
-$white_label_cnt   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_clients WHERE is_white_label = 1" );
 
 $total_props       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_properties" );
 $props_sale        = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_properties WHERE listing_type = 'sale'" );
@@ -54,7 +53,7 @@ $failed_triggers = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_trigger_q
 
 // Recent Clients (For Design #2 Data Table)
 $recent_clients = $wpdb->get_results( "
-    SELECT c.id, c.business_name, c.owner_name, c.email, c.plan, c.status, c.is_white_label, c.created_at, c.logo_url,
+    SELECT c.id, c.business_name, c.owner_name, c.email, c.plan, c.status, c.created_at, c.logo_url,
            (SELECT COUNT(*) FROM {$p}ofp_properties WHERE client_id = c.id) as prop_count
     FROM {$p}ofp_clients c
     ORDER BY c.id DESC
@@ -665,16 +664,12 @@ $titles = [
                         <div>
                             <span class="ofp-promo-tag">Platform Health</span>
                             <h3 class="ofp-promo-title">Priority Oversight</h3>
-                            <p class="ofp-promo-desc">Client compliance, automated SMS/voice triggers, and white-label hubs are monitored 24/7.</p>
+                            <p class="ofp-promo-desc">Client compliance, and automated SMS/voice triggers are monitored 24/7.</p>
                             
                             <div class="ofp-promo-stats">
                                 <div class="ofp-promo-stat-box">
                                     <span class="ofp-promo-stat-val"><?php echo esc_html( $pending_clients ); ?></span>
                                     <span class="ofp-promo-stat-lbl">Pending Review</span>
-                                </div>
-                                <div class="ofp-promo-stat-box">
-                                    <span class="ofp-promo-stat-val"><?php echo esc_html( $white_label_cnt ); ?></span>
-                                    <span class="ofp-promo-stat-lbl">White Label Hubs</span>
                                 </div>
                             </div>
                         </div>
@@ -708,14 +703,13 @@ $titles = [
                                         <th>Client Name / Business</th>
                                         <th>Plan</th>
                                         <th>Properties</th>
-                                        <th>White Label</th>
                                         <th>Status</th>
                                         <th style="text-align:right;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if ( empty( $recent_clients ) ) : ?>
-                                        <tr><td colspan="6" style="text-align:center; padding:24px; color:var(--ofp-text-muted);">No clients registered yet.</td></tr>
+                                        <tr><td colspan="5" style="text-align:center; padding:24px; color:var(--ofp-text-muted);">No clients registered yet.</td></tr>
                                     <?php else : ?>
                                         <?php foreach ( $recent_clients as $rc ) : ?>
                                             <tr>
@@ -733,13 +727,6 @@ $titles = [
                                                 </td>
                                                 <td>
                                                     <span><?php echo esc_html( $rc->prop_count ); ?> listed</span>
-                                                </td>
-                                                <td>
-                                                    <?php if ( ! empty( $rc->is_white_label ) ) : ?>
-                                                        <span class="ofp-status-pill white_label">Enabled</span>
-                                                    <?php else : ?>
-                                                        <span style="color:var(--ofp-text-light);">Standard</span>
-                                                    <?php endif; ?>
                                                 </td>
                                                 <td>
                                                     <span class="ofp-status-pill <?php echo esc_attr( $rc->status ); ?>">
@@ -1844,7 +1831,7 @@ $titles = [
                      ───────────────────────────────────────────────────────────── -->
                 <?php
                 $all_props = $wpdb->get_results( "
-                    SELECT pr.*, c.business_name, c.is_white_label
+                    SELECT pr.*, c.business_name
                     FROM {$p}ofp_properties pr
                     LEFT JOIN {$p}ofp_clients c ON c.id = pr.client_id
                     ORDER BY pr.id DESC
@@ -1903,9 +1890,6 @@ $titles = [
                                             </td>
                                             <td>
                                                 <strong><?php echo esc_html( $prop->business_name ?: 'System Direct' ); ?></strong>
-                                                <?php if ( ! empty( $prop->is_white_label ) ) : ?>
-                                                    <div style="font-size:11px; color:#8b5cf6;">(White Label)</div>
-                                                <?php endif; ?>
                                             </td>
                                             <td><span style="text-transform:capitalize;"><?php echo esc_html( $prop->property_type ); ?></span></td>
                                             <td><span style="font-weight:600; text-transform:uppercase; font-size:11px;"><?php echo esc_html( $prop->listing_type ); ?></span></td>

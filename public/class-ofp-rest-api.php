@@ -484,7 +484,6 @@ class OFP_REST_API {
      *
      * Where each card links (decided by OFP_Property_CPT::rewrite_permalink_...):
      *  - normal subscriber      -> marketplace.{base_domain}/property/{slug}/
-     *  - white label client     -> their own host (custom domain, else subdomain)
      *
      * @param  WP_REST_Request $request
      * @return WP_REST_Response
@@ -558,9 +557,6 @@ class OFP_REST_API {
         }
 
         // WP_Query so that publish status and the "currently let" rule are applied.
-        // ofp_all_clients lifts the white label host scoping, because this feed is
-        // called from the main host or from a client's external website, not from
-        // the white label client's own domain.
         $query = new WP_Query( [
             'post_type'           => 'ofp_property',
             'post_status'         => 'publish',
@@ -569,7 +565,6 @@ class OFP_REST_API {
             'posts_per_page'      => $limit,
             'no_found_rows'       => true,
             'ignore_sticky_posts' => true,
-            'ofp_all_clients'     => true,
         ] );
 
         $period_suffix = [ 'year' => '/yr', 'month' => '/mo', 'night' => '/night' ];
@@ -582,8 +577,7 @@ class OFP_REST_API {
                 continue;
             }
 
-            // The post_type_link filter puts white label listings on their own host
-            // (or subdomain) and normal subscribers on the marketplace subdomain.
+            // The post_type_link filter puts subscribers' listings on the marketplace subdomain.
             $permalink = (string) get_permalink( $post_id );
 
             $img_url = get_the_post_thumbnail_url( $post_id, 'medium_large' );

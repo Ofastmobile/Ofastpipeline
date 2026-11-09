@@ -140,22 +140,21 @@ class OFP_Mailer {
             return false;
         }
 
-        // Use the right product name. A solo company's people never see ours.
+        // Use the right product name.
         $recipient_client = self::client_for_recipient( $to );
-        $solo_client      = ( $recipient_client && ! empty( $recipient_client->is_white_label ) ) ? $recipient_client : null;
         $brand_name       = OFP_Brand::email_name( $recipient_client );
         $subject          = OFP_Brand::apply_name( $subject, $brand_name );
         $body_html        = OFP_Brand::apply_name( $body_html, $brand_name );
 
         $from_email = get_option( 'ofp_smtp_from_email', get_option( 'admin_email' ) );
-        $from_name  = $solo_client ? $brand_name : ( get_option( 'ofp_smtp_from_name', '' ) ?: OFP_Brand::name() );
+        $from_name  = get_option( 'ofp_smtp_from_name', '' ) ?: OFP_Brand::name();
 
         $headers = [
             'Content-Type: text/html; charset=UTF-8',
             "From: {$from_name} <{$from_email}>",
         ];
 
-        $full_html = self::wrap_in_template( $to_name, $subject, $body_html, $solo_client ? $brand_name : null );
+        $full_html = self::wrap_in_template( $to_name, $subject, $body_html, null );
 
         // Platform account: operational mail to the owner is also copied to the team (never security mail).
         $headers = OFP_Platform::add_team_bcc( $headers, $recipient_client, $to, $subject, (string) $body_html );
@@ -244,7 +243,7 @@ class OFP_Mailer {
         }
         if ( ! $client ) {
             // Tenant messages belong to the landlord's client account. This
-            // ensures correct white-label branding and scoped rent activity.
+            // ensures correct branding and scoped rent activity.
             $client = $wpdb->get_row( $wpdb->prepare(
                 "SELECT c.* FROM {$p}ofp_clients c INNER JOIN {$p}ofp_property_tenants t ON t.client_id = c.id WHERE t.email = %s LIMIT 1",
                 $to
@@ -700,27 +699,6 @@ class OFP_Mailer {
             'Get more out of your ' . get_bloginfo( 'name' ) . ' listings',
             $body
         );
-    }
-
-    /**
-     * Billing email for a white label (yearly / lifetime) client.
-     * Kept free of the product name on purpose: it is their own business.
-     *
-     * @param object   $client Full ofp_clients row.
-     * @param string   $title  Heading and subject.
-     * @param string[] $lines  Paragraphs.
-     * @param bool     $urgent Red heading.
-     */
-    public static function send_wl_billing_notice( object $client, string $title, array $lines, bool $urgent = false ): bool {
-        $paras = '';
-        foreach ( $lines as $line ) {
-            $paras .= '<p>' . esc_html( $line ) . '</p>';
-        }
-        $body = '<h2' . ( $urgent ? ' style="color:#dc2626;"' : '' ) . '>' . esc_html( $title ) . '</h2>'
-            . '<p>Hi ' . esc_html( $client->owner_name ) . ',</p>'
-            . $paras
-            . '<p><a href="' . esc_url( home_url( '/credits' ) ) . '" style="display:inline-block;background:#1a73e8;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:8px;">View my billing</a></p>';
-        return self::send( $client->email, $client->owner_name, $title, $body );
     }
 
     /**

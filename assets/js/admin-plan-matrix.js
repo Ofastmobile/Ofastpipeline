@@ -39,10 +39,9 @@
             if (val === '—' || val === '' || val === '-') {
                 return '<span class="ofp-badge-dash" style="color:#94a3b8; font-size:16px;">—</span>';
             }
-            const weight = (col === 'wl' || col === 'gold') ? '800' : '600';
+            const weight = (col === 'gold') ? '800' : '600';
             let color = '#1e293b';
             if (col === 'gold') color = '#2563eb';
-            else if (col === 'wl') color = '#b45309';
             return '<span class="ofp-badge-text" style="font-weight:' + weight + '; font-size:12px; color:' + color + ';">' + escapeHtml(val) + '</span>';
         }
 
@@ -73,7 +72,6 @@
                     const freeCell = tr.querySelector('.ofp-matrix-cell[data-col="free"]');
                     const silverCell = tr.querySelector('.ofp-matrix-cell[data-col="silver"]');
                     const goldCell = tr.querySelector('.ofp-matrix-cell[data-col="gold"]');
-                    const wlCell = tr.querySelector('.ofp-matrix-cell[data-col="wl"]');
 
                     const feature = featureCell ? (featureCell.getAttribute('data-val') || '').trim() : '';
                     if (feature) {
@@ -81,8 +79,7 @@
                             feature: feature,
                             free: freeCell ? (freeCell.getAttribute('data-val') || '—').trim() : '—',
                             silver: silverCell ? (silverCell.getAttribute('data-val') || '—').trim() : '—',
-                            gold: goldCell ? (goldCell.getAttribute('data-val') || '—').trim() : '—',
-                            wl: wlCell ? (wlCell.getAttribute('data-val') || '—').trim() : '—'
+                            gold: goldCell ? (goldCell.getAttribute('data-val') || '—').trim() : '—'
                         });
                     }
                 }
@@ -225,7 +222,7 @@
 
         // Event delegation on table body
         if (tbody) {
-            // Click to edit any cell (Feature name, Free, Silver, Gold, or White-Label)
+            // Click to edit any cell (Feature name, Free, Silver or Gold)
             tbody.addEventListener('click', function (e) {
                 // Delete feature row
                 const delBtn = e.target.closest('.ofp-matrix-del-row-btn');
@@ -284,9 +281,6 @@
                         '</td>' +
                         '<td class="ofp-matrix-cell" data-col="gold" data-val="✓" title="Click to edit or set checkmark" style="padding:12px 14px; text-align:center;">' +
                         '<span class="ofp-matrix-display-val">' + renderFormattedVal('✓', 'gold') + '</span>' +
-                        '</td>' +
-                        '<td class="ofp-matrix-cell" data-col="wl" data-val="✓" title="Click to edit or set checkmark" style="padding:12px 14px; text-align:center;">' +
-                        '<span class="ofp-matrix-display-val">' + renderFormattedVal('✓', 'wl') + '</span>' +
                         '</td>';
 
                     tbody.insertBefore(newTr, addRow);
@@ -366,7 +360,7 @@
                 groupTr.style.background = '#f1f5f9';
                 groupTr.style.borderTop = '1px solid #e2e8f0';
                 groupTr.style.borderBottom = '1px solid #e2e8f0';
-                groupTr.innerHTML = '<td colspan="5" style="padding:9px 20px;">' +
+                groupTr.innerHTML = '<td colspan="4" style="padding:9px 20px;">' +
                     '<div style="display:flex; align-items:center; justify-content:space-between;">' +
                     '<span class="ofp-matrix-group-title" title="Click to rename section" style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:#475569; cursor:pointer;">' +
                     escapeHtml(safeName) +
@@ -380,7 +374,7 @@
                 const addRowTr = document.createElement('tr');
                 addRowTr.className = 'ofp-matrix-add-row';
                 addRowTr.setAttribute('data-group', safeName);
-                addRowTr.innerHTML = '<td colspan="5" style="padding:6px 20px; background:#fafbfc; border-bottom:1px solid #e2e8f0; text-align:left;">' +
+                addRowTr.innerHTML = '<td colspan="4" style="padding:6px 20px; background:#fafbfc; border-bottom:1px solid #e2e8f0; text-align:left;">' +
                     '<button type="button" class="ofp-matrix-add-feature-btn" data-group="' + escapeHtml(safeName) + '" style="display:inline-flex; align-items:center; gap:6px; background:none; border:none; color:var(--ofp-primary, #2563eb); font-size:12px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.15s ease;">' +
                     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>' +
                     '+ Add Feature to this section' +

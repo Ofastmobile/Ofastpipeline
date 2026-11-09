@@ -76,25 +76,12 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 <input type="text" name="subdomain" required placeholder="supremehomes">
                 <small style="color:#6b7280;">Their dashboard address: name.yourdomain.com. At least 3 letters or numbers.</small>
             </div>
-            <div class="ofp-field" id="ofp-wl-field">
-                <label>White Label (Solo Company)</label>
-                <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start;">
-                    <input type="checkbox" name="is_white_label" id="ofp-wl-checkbox" value="1" style="margin-top:3px;">
-                    <span>No plan, no renewals, no limits. Their properties show only on their own address and never on your main marketplace.</span>
-                </label>
-                <input type="hidden" name="ofp_wl_fields" value="1">
-            </div>
             <div class="ofp-field" id="ofp-platform-field">
                 <label>Platform Account (our own company)</label>
                 <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start;">
                     <input type="checkbox" name="is_platform" id="ofp-platform-checkbox" value="1" style="margin-top:3px;">
                     <span>Use this for the platform's own listings. No limits, no credits or billing. Its properties show on the main marketplace. Its team members cannot invite people, open Integrations &amp; API, or edit the profile. Only one allowed.</span>
                 </label>
-            </div>
-            <div class="ofp-field" id="ofp-domain-field" style="display:none;">
-                <label>Custom Domain (optional)</label>
-                <input type="text" name="custom_domain" placeholder="crm.supremehomes.com">
-                <small style="color:#6b7280;">Only the domain. Leave empty to use the subdomain only.</small>
             </div>
             <div class="ofp-field" id="ofp-plan-field">
                 <label>Plan</label>
@@ -107,27 +94,14 @@ include OFP_PATH . 'admin/views/partials/header.php';
         </div>
         <script>
         (function () {
-            var box = document.getElementById('ofp-wl-checkbox');
-            if (!box) return;
-            function sync() {
-                var on = box.checked;
-                document.getElementById('ofp-plan-field').style.display   = on ? 'none' : '';
-                document.getElementById('ofp-domain-field').style.display = on ? '' : 'none';
-                if (on) { var sel = document.querySelector('#ofp-plan-field select'); if (sel) sel.value = 'free'; }
-            }
-            box.addEventListener('change', sync);
-            sync();
-
-            // Platform account: no subdomain needed (made from the business name), and it is never a white label.
+            // Platform account: no subdomain needed (made from the business name) and no plan to pick.
             var plat = document.getElementById('ofp-platform-checkbox');
             if (!plat) return;
             function syncPlatform() {
                 var on = plat.checked;
                 var sub = document.querySelector('input[name="subdomain"]');
                 if (sub) { sub.required = !on; sub.placeholder = on ? 'optional (made from the business name)' : 'supremehomes'; }
-                box.disabled = on;
-                if (on) { box.checked = false; sync(); document.getElementById('ofp-plan-field').style.display = 'none'; }
-                else { sync(); }
+                document.getElementById('ofp-plan-field').style.display = on ? 'none' : '';
             }
             plat.addEventListener('change', syncPlatform);
             syncPlatform();
@@ -205,19 +179,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 <input type="text" name="subdomain" value="<?php echo esc_attr( $client->subdomain ); ?>" placeholder="supremehomes">
                 <small style="color:#6b7280;">Their dashboard address. Changing it breaks any link already shared.</small>
             </div>
-            <div class="ofp-field">
-                <label>Custom Domain</label>
-                <input type="text" name="custom_domain" value="<?php echo esc_attr( $client->custom_domain ?? '' ); ?>" placeholder="crm.supremehomes.com">
-                <small style="color:#6b7280;">Only the domain, no https:// and no path. The client points their DNS to your server first.</small>
-            </div>
-            <div class="ofp-field">
-                <label>White Label (Solo Company)</label>
-                <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start;">
-                    <input type="checkbox" id="ofp-edit-wl-checkbox" name="is_white_label" value="1" <?php checked( ! empty( $client->is_white_label ) ); ?> style="margin-top:3px;">
-                    <span>Their properties show only on their own domain and never on your main marketplace.</span>
-                </label>
-                <input type="hidden" name="ofp_wl_fields" value="1">
-            </div>
         </div>
 
         <div class="ofp-form-actions">
@@ -226,107 +187,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
         </div>
     </form>
 </div>
-
-<?php
-$wl_is_active = ! empty( $client->is_white_label );
-$wl_sum  = OFP_White_Label::summary( $client );
-$wl_type = OFP_White_Label::billing_type( $client );
-$wl_post = esc_url( admin_url( 'admin-post.php' ) );
-?>
-<!-- ── WHITE LABEL BILLING (paid by hand) ───────────────────────────────── -->
-<div class="ofp-section" id="ofp-wl-billing-section" style="margin-top:24px;<?php echo empty( $client->is_white_label ) ? 'display:none;' : ''; ?>">
-    <h2>White Label Billing</h2>
-    <div class="ofp-info-box">
-        <?php if ( $wl_type === '' ) : ?>
-            <strong>No billing set.</strong> Record their first payment below to start Yearly or Lifetime billing.
-        <?php elseif ( $wl_type === 'yearly' ) : ?>
-            <strong>Yearly.</strong>
-            <?php echo OFP_White_Label::yearly_expired( $client )
-                ? 'Ended on ' . esc_html( (string) $client->subscription_expires ) . '. Dashboard is on Free limits. Website and domain still work.'
-                : 'Active until ' . esc_html( (string) $client->subscription_expires ) . ' (' . esc_html( $wl_sum['note'] ) . ').'; ?>
-        <?php else : ?>
-            <strong>Lifetime.</strong> Maintenance fee: <?php echo esc_html( $wl_sum['note'] ); ?>.
-        <?php endif; ?>
-    </div>
-
-    <form method="POST" action="<?php echo $wl_post; ?>" class="ofp-form" style="margin-bottom:16px;">
-        <?php wp_nonce_field( 'ofp_wl_billing' ); ?>
-        <input type="hidden" name="action" value="ofp_wl_billing">
-        <input type="hidden" name="wl_do" value="mark_paid">
-        <input type="hidden" name="client_id" value="<?php echo esc_attr( $client->id ); ?>">
-        <div class="ofp-form-grid">
-            <div class="ofp-field">
-                <label>Billing Type</label>
-                <select name="wl_type" class="ofp-select">
-                    <option value="yearly"   <?php selected( $wl_type, 'yearly' ); ?>>Yearly (365 days)</option>
-                    <option value="lifetime" <?php selected( $wl_type, 'lifetime' ); ?>>Lifetime</option>
-                </select>
-            </div>
-            <div class="ofp-field">
-                <label>Amount Received (NGN) <span class="required">*</span></label>
-                <input type="number" name="wl_amount" min="1" step="0.01" required placeholder="e.g. 400000">
-            </div>
-            <div class="ofp-field">
-                <label>Note (optional)</label>
-                <input type="text" name="wl_note" placeholder="Bank reference or any note">
-            </div>
-            <div class="ofp-field">
-                <label>Starting Credit</label>
-                <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start;">
-                    <input type="checkbox" name="wl_credits" value="1" <?php checked( $wl_type === '' ); ?> style="margin-top:3px;">
-                    <span>Add starting credit: NGN <?php echo esc_html( number_format( OFP_White_Label::starting_credit( 'yearly' ), 0 ) ); ?> SMS + NGN <?php echo esc_html( number_format( OFP_White_Label::starting_credit( 'yearly' ), 0 ) ); ?> voice (Yearly), NGN <?php echo esc_html( number_format( OFP_White_Label::starting_credit( 'lifetime' ), 0 ) ); ?> each (Lifetime). Leave off when renewing.</span>
-                </label>
-            </div>
-        </div>
-        <div class="ofp-form-actions">
-            <button type="submit" class="button button-primary ofp-btn-primary" onclick="return confirm('Record this payment and tell the client by email and SMS?');">Mark as Paid</button>
-        </div>
-    </form>
-
-    <?php if ( $wl_type === 'lifetime' ) : ?>
-    <form method="POST" action="<?php echo $wl_post; ?>" class="ofp-form" style="margin-bottom:16px;">
-        <?php wp_nonce_field( 'ofp_wl_billing' ); ?>
-        <input type="hidden" name="action" value="ofp_wl_billing">
-        <input type="hidden" name="wl_do" value="maintenance">
-        <input type="hidden" name="client_id" value="<?php echo esc_attr( $client->id ); ?>">
-        <div class="ofp-form-grid">
-            <div class="ofp-field">
-                <label>Maintenance Fee Received (NGN)</label>
-                <input type="number" name="wl_amount" min="1" step="0.01" required placeholder="e.g. 100000">
-            </div>
-            <div class="ofp-field">
-                <label>Note (optional)</label>
-                <input type="text" name="wl_note">
-            </div>
-        </div>
-        <div class="ofp-form-actions">
-            <button type="submit" class="button" onclick="return confirm('Record this maintenance payment?');">Mark Maintenance as Paid</button>
-        </div>
-    </form>
-    <?php endif; ?>
-
-    <?php if ( $wl_type !== '' ) : ?>
-    <form method="POST" action="<?php echo $wl_post; ?>" onsubmit="return confirm('Remove billing? This client goes back to unlimited with nothing to pay or track.');">
-        <?php wp_nonce_field( 'ofp_wl_billing' ); ?>
-        <input type="hidden" name="action" value="ofp_wl_billing">
-        <input type="hidden" name="wl_do" value="clear">
-        <input type="hidden" name="client_id" value="<?php echo esc_attr( $client->id ); ?>">
-        <button type="submit" class="button-link" style="color:#b91c1c;">Remove billing (back to unlimited)</button>
-    </form>
-    <?php endif; ?>
-</div>
-<script>
-(function () {
-    var box = document.getElementById('ofp-edit-wl-checkbox');
-    var wlSection = document.getElementById('ofp-wl-billing-section');
-    if (!box || !wlSection) return;
-    function sync() {
-        wlSection.style.display = box.checked ? '' : 'none';
-    }
-    box.addEventListener('change', sync);
-    sync();
-})();
-</script>
 
 <?php elseif ( $client ) : ?>
 <!-- ── CLIENT DETAIL VIEW ────────────────────────────────────────────────── -->
@@ -385,12 +245,7 @@ $wl_post = esc_url( admin_url( 'admin-post.php' ) );
         $detail_sms_label = $detail_sms_all[ OFP_SMS::platform_provider() ]['label'] ?? '—';
         ?>
         <div><strong>SMS Provider (platform wide):</strong> <?php echo esc_html( $detail_sms_label ); ?></div>
-        <?php if ( ! empty( $client->is_white_label ) && OFP_White_Label::billing_type( $client ) !== '' ) : $wl_s = OFP_White_Label::summary( $client ); ?>
-        <div><strong>White Label Billing:</strong> <?php echo esc_html( ucfirst( $wl_s['type'] ) ); ?> — <?php echo esc_html( $wl_s['note'] ); ?></div>
-        <div><strong><?php echo $wl_s['type'] === 'lifetime' ? 'Maintenance Due' : 'Subscription Expires'; ?>:</strong> <?php echo esc_html( $wl_s['type'] === 'lifetime' ? ( $wl_s['due'] ?: '—' ) : ( $wl_s['expires'] ?: '—' ) ); ?></div>
-        <?php else : ?>
         <div><strong>Subscription Expires:</strong> <?php echo esc_html( $client->subscription_expires ?: '—' ); ?></div>
-        <?php endif; ?>
         <div>
             <strong>KYC / KYB Status:</strong>
             <?php if ( ! empty( $client->is_verified ) ) : ?>
@@ -420,12 +275,6 @@ $wl_post = esc_url( admin_url( 'admin-post.php' ) );
         <div><strong>Subdomain Slug:</strong> <?php echo esc_html( $client_subdomain ); ?> <span style="color:#9ca3af;">(base domain not set in Settings)</span></div>
         <?php else : ?>
         <div><strong>Domain:</strong> <span style="color:#9ca3af;">Not set</span></div>
-        <?php endif; ?>
-        <?php if ( ! empty( $client->custom_domain ) ) : ?>
-        <div><strong>Custom Domain:</strong> <?php echo esc_html( $client->custom_domain ); ?></div>
-        <?php endif; ?>
-        <?php if ( ! empty( $client->is_white_label ) ) : ?>
-        <div><strong>White Label:</strong> <span style="color:#15803d;font-weight:600;">On</span><?php echo OFP_White_Label::billing_type( $client ) === '' ? ' <span style="color:#6b7280;">(no billing set, unlimited)</span>' : ''; ?></div>
         <?php endif; ?>
     </div>
 

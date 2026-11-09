@@ -9,7 +9,7 @@ OFP_Auth::require_client_login();
 $client = OFP_Auth::current_client();
 OFP_Auth::require_active_subscription( $client );
 
-// Solo companies have no plan to buy or renew.
+// The platform's own (unlimited) account has no plan to buy or renew.
 if ( OFP_Brand::hide_plan_prompts( $client ) ) {
     wp_safe_redirect( home_url( '/dashboard' ) );
     exit;
@@ -29,11 +29,11 @@ if ( OFP_Brand::hide_plan_prompts( $client ) ) {
 <?php include OFP_PATH . 'public/templates/partials/nav.php'; ?>
 
     <?php 
-    $is_solo = ! empty( $client->is_white_label ) || ( class_exists('OFP_Subscription') && OFP_Subscription::is_unlimited( (int) $client->id ) );
+    $is_solo = class_exists('OFP_Subscription') && OFP_Subscription::is_unlimited( (int) $client->id );
     if ( $is_solo ) : ?>
         <div style="max-width:1100px; margin:0 auto 24px; padding:16px 20px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.25); border-radius:12px; color:#10b981; display:flex; align-items:center; gap:12px; font-weight:600;">
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span>You are on the <strong>Premium White-Label</strong> tier. Your account includes unlimited property listings, unlimited team members, and priority platform access.</span>
+            <span>You are on the <strong>Premium</strong> tier. Your account includes unlimited property listings, unlimited team members, and priority platform access.</span>
         </div>
     <?php endif; ?>
 

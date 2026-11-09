@@ -11,14 +11,8 @@ OFP_Auth::require_active_subscription( $client );
 
 $base_domain      = get_option( 'ofp_crm_base_domain', '' );
 $client_subdomain = ! empty( $client->subdomain ) ? trim( $client->subdomain ) : '';
-$custom_domain    = ! empty( $client->custom_domain ) ? trim( $client->custom_domain ) : '';
 
-if ( $custom_domain ) {
-    $api_host         = 'https://' . $custom_domain;
-    $lead_endpoint    = $api_host . '/api/v1/inquire';
-    $embed_script_url = $api_host . '/widget.js';
-    $embed_code       = '<div id="ofp-property-widget" data-limit="6"></div>' . "\n" . '<script src="' . esc_url( $embed_script_url ) . '" async></script>';
-} elseif ( $client_subdomain && $base_domain ) {
+if ( $client_subdomain && $base_domain ) {
     $subdomain_host   = 'https://' . $client_subdomain . '.' . $base_domain;
     $lead_endpoint    = $subdomain_host . '/api/v1/inquire';
     $embed_script_url = 'https://' . $base_domain . '/widget.js';
@@ -215,8 +209,8 @@ $lead_sample .= '</script>';
                             <tbody>
                                 <tr>
                                     <td><code>client_id</code></td>
-                                    <td><span style="color: <?php echo ! empty( $custom_domain ) ? 'var(--text-muted)' : '#ef4444; font-weight: 700;'; ?>"><?php echo ! empty( $custom_domain ) ? 'Optional' : 'Required'; ?></span></td>
-                                    <td>Your agency identifier (<code><?php echo esc_html( $client->id ); ?></code>). <?php echo ! empty( $custom_domain ) ? 'Automatically detected from your custom domain if omitted.' : 'Pass as a hidden input.'; ?></td>
+                                    <td><span style="color: #ef4444; font-weight: 700;">Required</span></td>
+                                    <td>Your agency identifier (<code><?php echo esc_html( $client->id ); ?></code>). Pass as a hidden input.</td>
                                 </tr>
                                 <tr>
                                     <td><code>name</code></td>
@@ -361,51 +355,6 @@ $lead_sample .= '</script>';
                         </div>
                     </div>
 
-                    <!-- White Label Custom Domain -->
-                    <?php if ( ! empty( $client->is_white_label ) ) : ?>
-                    <div style="margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));">
-                        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 12px;">
-                            White-Label Custom Domain (Enterprise)
-                        </div>
-
-                        <?php if ( ! empty( $client->custom_domain ) ) : ?>
-                            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 18px;">
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                                    <span class="ofp-pill ofp-pill-green">Verified</span>
-                                    <span style="font-size: 14px; font-weight: 700; color: #10b981; font-family: monospace;"><?php echo esc_html( $client->custom_domain ); ?></span>
-                                </div>
-                                <p style="font-size: 13px; color: var(--text-muted); margin: 0;">
-                                    All portal routes and property listings are fully mapped under your corporate domain.
-                                </p>
-                            </div>
-                        <?php else : ?>
-                            <div class="ofp-spec-tile" style="padding: 18px;">
-                                <div style="font-size: 13.5px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">
-                                    Connect Your Own Domain (e.g., <code>portal.yourcompany.com</code>)
-                                </div>
-                                <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0 0 14px 0;">
-                                    White-label subscribers can map their own branded domain. Add a CNAME record at your DNS provider pointing to our base host.
-                                </p>
-                                <table class="ofp-saas-table" style="margin: 0;">
-                                    <thead>
-                                        <tr>
-                                            <th>Record Type</th>
-                                            <th>Host / Name</th>
-                                            <th>Target / Value</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td><code>CNAME</code></td>
-                                            <td><code>portal</code> (or subdomain)</td>
-                                            <td><code><?php echo esc_html( $base_domain ? $base_domain : 'mypropertyhq.ng' ); ?></code></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                    <?php endif; ?>
                 </div>
             </div>
 

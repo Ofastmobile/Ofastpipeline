@@ -474,23 +474,6 @@ include OFP_PATH . 'public/templates/partials/nav.php';
         </div>
     <?php endif; ?>
 
-    <?php if ( ! empty( $client->is_white_label ) ) :
-        $wl_dash = OFP_White_Label::summary( $client );
-        if ( $wl_dash['type'] !== '' && $wl_dash['tone'] !== 'ok' ) : ?>
-        <div class="ofp-alert <?php echo $wl_dash['tone'] === 'bad' ? 'ofp-alert-error' : 'ofp-alert-warning'; ?>" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-            <span>
-                <?php if ( $wl_dash['type'] === 'yearly' ) : ?>
-                    <?php echo $wl_dash['tone'] === 'bad'
-                        ? 'Your yearly plan has ended, so this dashboard is on Free limits. Your website and properties are still online. Contact us to renew.'
-                        : 'Your yearly plan ends soon (' . esc_html( $wl_dash['note'] ) . '). Contact us to renew.'; ?>
-                <?php else : ?>
-                    Maintenance fee: <?php echo esc_html( $wl_dash['note'] ); ?>. Please contact us to pay.
-                <?php endif; ?>
-            </span>
-            <a href="<?php echo esc_url( home_url( '/credits' ) ); ?>" style="display:inline-block;background:var(--btn-primary);color:#fff;padding:8px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;white-space:nowrap;">View billing →</a>
-        </div>
-    <?php endif; endif; ?>
-
     <!-- ── Dashboard Quick Toolbar ────────────────────────────────────── -->
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
         <div style="display:flex; align-items:center; gap:8px;">

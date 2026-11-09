@@ -115,19 +115,9 @@ class OFP_Host_Router {
 		return $own !== '' && preg_replace( '/^www\./', '', $host ) === $own;
 	}
 
-	private static function has_custom_domain_column(): bool {
-		static $has = null;
-		if ( $has === null ) {
-			global $wpdb;
-			$has = (bool) $wpdb->get_var( "SHOW COLUMNS FROM {$wpdb->prefix}ofp_clients LIKE 'custom_domain'" );
-		}
-		return $has;
-	}
-
 	/**
-	 * Finds the client that owns the current host: first by
-	 * {subdomain}.{base_domain}, then by custom domain (Level 2).
-	 * Works with or without a base domain. Cached per host.
+	 * Finds the client that owns the current host by
+	 * {subdomain}.{base_domain}. Cached per host.
 	 */
 	private static function resolve_host_client(): ?object {
 		static $memo = [];
@@ -144,7 +134,7 @@ class OFP_Host_Router {
 		$client      = null;
 		$base_domain = get_option( 'ofp_crm_base_domain' );
 
-		// 1. A subdomain of the base domain: {subdomain}.{base_domain}
+		// A subdomain of the base domain: {subdomain}.{base_domain}
 		if ( $base_domain && str_ends_with( $host, '.' . $base_domain ) ) {
 			$sub = substr( $host, 0, -strlen( '.' . $base_domain ) );
 			if ( ! self::is_reserved( $sub ) ) {
@@ -153,16 +143,6 @@ class OFP_Host_Router {
 					$sub
 				) );
 			}
-		}
-
-		// 2. A custom domain (Level 2). Matches with or without "www.".
-		if ( ! $client && self::has_custom_domain_column() ) {
-			$bare   = preg_replace( '/^www\./', '', $host );
-			$client = $wpdb->get_row( $wpdb->prepare(
-				"SELECT * FROM {$wpdb->prefix}ofp_clients WHERE custom_domain IN (%s, %s) AND status != 'trash' LIMIT 1",
-				$bare,
-				'www.' . $bare
-			) );
 		}
 
 		$memo[ $host ] = $client ?: null;
@@ -266,31 +246,8 @@ class OFP_Host_Router {
 	public static function maybe_redirect_app_root(): void {
 		$zone = self::current_zone();
 
-		// A white label domain does not carry the platform's own legal pages.
-		// Visitors who land on them are sent to that client's marketplace.
-		if ( 'client' === $zone ) {
-			$wl = self::current_client_record();
-			if ( $wl && ! empty( $wl->is_white_label ) ) {
-				$path = trim( (string) wp_parse_url( (string) ( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH ), '/' );
-				if ( in_array( $path, [ 'privacy-policy', 'terms', 'terms-and-conditions', 'terms-conditions', 'terms-of-service' ], true ) ) {
-					wp_redirect( 'https://' . self::current_client_host() . '/marketplace/' );
-					exit;
-				}
-			}
-		}
-
-		// A white label address only shows the marketplace, single property pages and
-		// agent pages. Any other public page sends the visitor to the marketplace.
-		if ( 'client' === $zone ) {
-			$wl_client = self::current_client_record();
-			if ( $wl_client && ! empty( $wl_client->is_white_label ) ) {
-				self::restrict_white_label_pages();
-			}
-		}
-
 		// /marketplace/ is a custom route. With "Your homepage displays your latest
-		// posts" WordPress also reports it as the front page, which sent a white label
-		// domain's /marketplace/ back to /marketplace/ in an endless redirect loop.
+		// posts" WordPress also reports it as the front page, so it is skipped here.
 		if ( is_front_page() && '1' !== (string) get_query_var( 'ofp_marketplace', '' ) ) {
 			if ( $zone === 'app' ) {
 				wp_redirect( self::rewrite_portal_links( home_url( '/login' ), '/login' ) );
@@ -299,74 +256,11 @@ class OFP_Host_Router {
 			if ( $zone === 'client' ) {
 				$client = self::current_client_record();
 				if ( $client ) {
-					// A white label (solo company) domain opens on their own
-					// marketplace, never on the main site's homepage.
-					if ( ! empty( $client->is_white_label ) ) {
-						wp_redirect( 'https://' . self::current_client_host() . '/marketplace/' );
-						exit;
-					}
 					wp_redirect( self::rewrite_portal_links( home_url( '/login' ), '/login' ) );
 					exit;
 				}
 			}
 		}
-	}
-
-	/**
-	 * On a white label address only these pages are shown to visitors:
-	 *  - the marketplace
-	 *  - a single property page
-	 *  - an agent page (/agent/name)
-	 * The owner's own sign in and dashboard pages, buyer and tenant links
-	 * (payment, receipts, lease, offers) and system files are left alone. The
-	 * platform's own public pages (sign up, agents list, plans and pricing, the
-	 * homepage, blog and other site pages) are not shown. Visitors who type
-	 * them are sent to the marketplace.
-	 */
-	private static function restrict_white_label_pages(): void {
-		if ( ! in_array( strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ), [ 'GET', 'HEAD' ], true ) ) {
-			return; // never interrupt form posts
-		}
-		if ( is_robots() || is_feed() || is_favicon() || is_trackback() || is_embed() ) {
-			return;
-		}
-
-		$path = trim( (string) wp_parse_url( (string) ( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH ), '/' );
-		// Files and system paths (certificates, sitemaps, images) are never redirected.
-		if ( $path !== '' && ( 0 === strpos( $path, '.well-known' ) || 0 === strpos( $path, 'wp-' ) || preg_match( '/\.[A-Za-z0-9]{2,5}$/', $path ) ) ) {
-			return;
-		}
-
-		// The three pages white label visitors may see.
-		if ( '1' === (string) get_query_var( 'ofp_marketplace', '' ) ) {
-			return;
-		}
-		if ( '' !== (string) get_query_var( 'ofp_agent_slug', '' ) ) {
-			return;
-		}
-		if ( is_singular( 'ofp_property' ) ) {
-			return;
-		}
-
-		// Portal pages. Only the platform's public ones are blocked.
-		$route = (string) get_query_var( 'ofp_route', '' );
-		if ( $route !== '' ) {
-			$blocked = [ 'signup', 'agents', 'our-agents', 'plans-pricing', 'pricing-plans', 'plans', 'plans-and-pricing' ];
-			if ( ! in_array( $route, $blocked, true ) ) {
-				return;
-			}
-		} else {
-			// Any other plugin page (buyer payment, receipts, tenant lease, offers).
-			global $wp;
-			foreach ( (array) ( $wp->query_vars ?? [] ) as $key => $value ) {
-				if ( 0 === strpos( (string) $key, 'ofp_' ) && '' !== (string) $value ) {
-					return;
-				}
-			}
-		}
-
-		wp_redirect( 'https://' . self::current_client_host() . '/marketplace/', 302 );
-		exit;
 	}
 
 	/**

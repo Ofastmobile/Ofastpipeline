@@ -8,8 +8,6 @@
  *  - after the code they see every purchase and lease tied to that email or phone:
  *    totals, balance, the installment schedule, every payment with its status,
  *    and a receipt to open for each confirmed payment
- *  - on a solo company's own domain, only that company's records show, with
- *    their logo and nothing of ours
  *
  * Protection: page token, trap field, limits per visitor address, per email or
  * phone and per day, codes that expire in 10 minutes and allow 5 tries, and a
@@ -119,51 +117,43 @@ class OFP_Property_My_Payments {
 		unset( $_COOKIE[ self::COOKIE ] );
 	}
 
-	/** On a solo company's own domain only that company's records are shown. */
-	private static function only_client_id(): int {
-		$c = ( class_exists( 'OFP_Brand' ) && OFP_Brand::is_solo_host() ) ? OFP_White_Label::current_client() : null;
-		return $c ? (int) $c->id : 0;
-	}
-
 	// ------------------------------------------------------------------ data
 
-	private static function purchases( string $type, string $ident, int $only_client ): array {
+	private static function purchases( string $type, string $ident ): array {
 		global $wpdb;
 		$p     = $wpdb->prefix;
 		$where = $type === 'email'
 			? $wpdb->prepare( 'pu.buyer_email = %s', $ident )
 			: $wpdb->prepare( 'pu.buyer_phone LIKE %s', '%' . $wpdb->esc_like( $ident ) );
-		$extra = $only_client ? $wpdb->prepare( ' AND pu.client_id = %d', $only_client ) : '';
 		return (array) $wpdb->get_results(
 			"SELECT pu.*, pr.title AS property_title, c.business_name, c.owner_name
 			 FROM {$p}ofp_property_purchases pu
 			 LEFT JOIN {$p}ofp_properties pr ON pr.id = pu.property_id
 			 LEFT JOIN {$p}ofp_clients c ON c.id = pu.client_id
-			 WHERE {$where}{$extra}
+			 WHERE {$where}
 			 ORDER BY pu.created_at DESC LIMIT 50"
 		);
 	}
 
-	private static function leases( string $type, string $ident, int $only_client ): array {
+	private static function leases( string $type, string $ident ): array {
 		global $wpdb;
 		$p     = $wpdb->prefix;
 		$where = $type === 'email'
 			? $wpdb->prepare( 't.email = %s', $ident )
 			: $wpdb->prepare( 't.phone LIKE %s', '%' . $wpdb->esc_like( $ident ) );
-		$extra = $only_client ? $wpdb->prepare( ' AND l.client_id = %d', $only_client ) : '';
 		return (array) $wpdb->get_results(
 			"SELECT l.*, t.full_name, pr.title AS property_title, c.business_name, c.owner_name
 			 FROM {$p}ofp_property_leases l
 			 INNER JOIN {$p}ofp_property_tenants t ON t.id = l.tenant_id
 			 LEFT JOIN {$p}ofp_properties pr ON pr.id = l.property_id
 			 LEFT JOIN {$p}ofp_clients c ON c.id = l.client_id
-			 WHERE {$where}{$extra}
+			 WHERE {$where}
 			 ORDER BY l.created_at DESC LIMIT 50"
 		);
 	}
 
 	private static function has_records( string $type, string $ident ): bool {
-		return (bool) ( self::purchases( $type, $ident, self::only_client_id() ) || self::leases( $type, $ident, self::only_client_id() ) );
+		return (bool) ( self::purchases( $type, $ident ) || self::leases( $type, $ident ) );
 	}
 
 	private static function status_label( string $status ): string {
@@ -335,7 +325,6 @@ class OFP_Property_My_Payments {
 			if ( ! $id || ! $sess || ! wp_verify_nonce( $n, 'ofp_my_receipt_' . $type . '_' . $id ) ) {
 				wp_die( 'This link has expired. Please log in again.', 'Not allowed', [ 'response' => 403 ] );
 			}
-			$only = self::only_client_id();
 			$html = '';
 
 			if ( $type === 'purchase' ) {
@@ -353,7 +342,7 @@ class OFP_Property_My_Payments {
 				$mine = $row && ( $sess['t'] === 'email'
 					? strtolower( (string) $row->buyer_email ) === $sess['i']
 					: substr( preg_replace( '/\D/', '', (string) $row->buyer_phone ), -10 ) === $sess['i'] );
-				if ( ! $mine || $row->status !== 'successful' || ( $only && (int) $row->client_id !== $only ) ) {
+				if ( ! $mine || $row->status !== 'successful' ) {
 					wp_die( 'Receipt not found.', 'Not found', [ 'response' => 404 ] );
 				}
 				$html = OFP_Property_Receipt_Generator::render_receipt(
@@ -372,7 +361,7 @@ class OFP_Property_My_Payments {
 				$mine = $row && ( $sess['t'] === 'email'
 					? strtolower( (string) $row->t_email ) === $sess['i']
 					: substr( preg_replace( '/\D/', '', (string) $row->t_phone ), -10 ) === $sess['i'] );
-				if ( ! $mine || $row->status !== 'successful' || ( $only && (int) $row->client_id !== $only ) ) {
+				if ( ! $mine || $row->status !== 'successful' ) {
 					wp_die( 'Receipt not found.', 'Not found', [ 'response' => 404 ] );
 				}
 				$saved = OFP_Property_Receipt_Generator::get_or_create_lease_receipt( $id );
@@ -405,10 +394,8 @@ class OFP_Property_My_Payments {
 	private static function render( ?array $sess, string $step, string $token, string $hint, string $msg, string $error ): void {
 		global $wpdb;
 		$p     = $wpdb->prefix;
-		$solo  = class_exists( 'OFP_Brand' ) && OFP_Brand::is_solo_host();
-		$brand = $solo ? OFP_White_Label::current_client() : null;
 		$name  = OFP_Brand::name();
-		$title = $solo ? 'My Payments' : 'My Payments | ' . $name;
+		$title = 'My Payments | ' . $name;
 		$money = static function ( $v ): string {
 			return '₦' . number_format( (float) $v, 2 );
 		};
@@ -425,7 +412,6 @@ if (window.history && window.history.replaceState && window.location.search) {
 	window.history.replaceState(null, document.title, window.location.pathname);
 }
 </script>
-<?php if ( $solo ) { OFP_Brand::print_head( null ); } ?>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f1f5f9;color:#0f172a}
 .wrap{max-width:860px;margin:0 auto;padding:20px 14px 60px}
@@ -450,13 +436,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </head>
 <body><div class="wrap">
 <div class="top">
-	<div class="brand"><?php
-	if ( $solo ) {
-		echo ( $brand && ! empty( $brand->logo_url ) ) ? '<img src="' . esc_url( $brand->logo_url ) . '" alt="Logo">' : '';
-	} else {
-		echo esc_html( $name );
-	}
-	?></div>
+	<div class="brand"><?php echo esc_html( $name ); ?></div>
 	<?php if ( $sess ) : ?>
 	<form method="post" style="margin:0;">
 		<?php wp_nonce_field( 'ofp_my_payments', 'ofp_mp_nonce' ); ?>
@@ -496,9 +476,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 		<?php endif; ?>
 	</div>
 <?php else :
-	$only      = self::only_client_id();
-	$purchases = self::purchases( $sess['t'], $sess['i'], $only );
-	$leases    = self::leases( $sess['t'], $sess['i'], $only );
+	$purchases = self::purchases( $sess['t'], $sess['i'] );
+	$leases    = self::leases( $sess['t'], $sess['i'] );
 	?>
 	<div class="card">
 		<h1>My Payments</h1>

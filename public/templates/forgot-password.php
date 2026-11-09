@@ -40,7 +40,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo esc_html( OFP_Brand::title( 'Forgot Password', $client ?? null ) ); ?></title>
     <?php wp_head(); ?>
-    <?php OFP_Brand::print_host_head(); ?>
 </head>
 <body class="ofp-auth-body">
 

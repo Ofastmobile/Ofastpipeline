@@ -220,7 +220,7 @@ $nav_sections['workspace']['items'][] = [
 ];
 }
 
-// Plans & Pricing: hidden for solo companies, they have no plan to choose
+// Plans & Pricing: hidden for the platform account, it has no plan to choose
 if ( ! OFP_Brand::hide_plan_prompts( $client ) ) {
     $nav_sections['workspace']['items'][] = [
         'label'  => 'Plans & Pricing',

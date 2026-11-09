@@ -147,7 +147,63 @@ if ( empty( $gallery_urls ) ) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo esc_html( OFP_Brand::public_page_title( 'Property Details', 'Bofast Homes' ) ); ?></title>
+    <?php
+    $prop_title_raw = get_the_title( $post_id );
+    $brand_name     = class_exists( 'OFP_Brand' ) ? OFP_Brand::name() : get_bloginfo( 'name' );
+    $page_seo_title = $prop_title_raw . ' | ' . $listing_label . ' in ' . $location . ' · ' . $brand_name;
+    $prop_img       = ! empty( $gallery_urls ) ? $gallery_urls[0] : ( class_exists('OFP_Brand') ? OFP_Brand::logo_url() : '' );
+    $prop_desc      = $listing_label . ': ' . $prop_title_raw . ' located at ' . $location . '. Listed for ₦' . number_format( $price ) . ' on ' . $brand_name . '. Verified legal documentation and transparent acquisition.';
+    $prop_url       = get_permalink( $post_id );
+    ?>
+    <title><?php echo esc_html( $page_seo_title ); ?></title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="<?php echo esc_attr( $prop_desc ); ?>">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <link rel="canonical" href="<?php echo esc_url( $prop_url ); ?>">
+
+    <!-- Open Graph / Facebook / WhatsApp Preview -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="<?php echo esc_attr( $brand_name ); ?>">
+    <meta property="og:url" content="<?php echo esc_url( $prop_url ); ?>">
+    <meta property="og:title" content="<?php echo esc_attr( $page_seo_title ); ?>">
+    <meta property="og:description" content="<?php echo esc_attr( $prop_desc ); ?>">
+    <?php if ( ! empty( $prop_img ) ) : ?>
+    <meta property="og:image" content="<?php echo esc_url( $prop_img ); ?>">
+    <meta property="og:image:secure_url" content="<?php echo esc_url( $prop_img ); ?>">
+    <meta property="og:image:alt" content="<?php echo esc_attr( $prop_title_raw ); ?>">
+    <?php endif; ?>
+
+    <!-- Twitter Card Meta -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="<?php echo esc_url( $prop_url ); ?>">
+    <meta name="twitter:title" content="<?php echo esc_attr( $page_seo_title ); ?>">
+    <meta name="twitter:description" content="<?php echo esc_attr( $prop_desc ); ?>">
+    <?php if ( ! empty( $prop_img ) ) : ?>
+    <meta name="twitter:image" content="<?php echo esc_url( $prop_img ); ?>">
+    <?php endif; ?>
+
+    <!-- Schema.org RealEstateListing Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SingleFamilyResidence",
+      "name": <?php echo json_encode( $prop_title_raw ); ?>,
+      "url": <?php echo json_encode( $prop_url ); ?>,
+      "description": <?php echo json_encode( $prop_desc ); ?>,
+      <?php if ( ! empty( $prop_img ) ) : ?>"image": <?php echo json_encode( $prop_img ); ?>,<?php endif; ?>
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": <?php echo json_encode( $location ); ?>,
+        "addressCountry": "NG"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": <?php echo json_encode( $price ); ?>,
+        "priceCurrency": "NGN"
+      }
+    }
+    </script>
     <script>
         (function() {
             var theme = localStorage.getItem('ofp_theme');
@@ -532,7 +588,6 @@ if ( empty( $gallery_urls ) ) {
         @click="megaMenuOpen = false"></div>
 
     <!-- Top Navigation -->
-    <?php $ofp_wl_rec = class_exists( 'OFP_Host_Router' ) ? OFP_Host_Router::current_client_record() : null; $ofp_wl = $ofp_wl_rec && ! empty( $ofp_wl_rec->is_white_label ); ?>
     <header x-data="{ scrolledDown: false, lastScroll: 0 }" @scroll.window="
                 if (!megaMenuOpen) {
                     const current = window.pageYOffset;
@@ -548,14 +603,14 @@ if ( empty( $gallery_urls ) ) {
                 <!-- Left: Logo & Hamburger -->
                 <div class="flex items-center gap-3 sm:gap-5">
                     <!-- Logo (Hidden on mobile so only hamburger displays, visible from sm up) -->
-                    <a href="<?php echo esc_url( home_url('/') ); ?>" class="<?php echo $ofp_wl ? 'flex' : 'hidden sm:flex'; ?> items-center">
+                    <a href="<?php echo esc_url( home_url('/') ); ?>" class="hidden sm:flex items-center">
                         <span
                             class="text-[13px] sm:text-sm font-black tracking-[0.25em] text-slate-900 dark:text-white uppercase transition-colors">
                             <?php echo OFP_Brand::public_logo_html( 'BOFAST HOMES' ); ?>
                         </span>
                     </a>
 
-                    <?php if ( ! $ofp_wl ) : ?>
+                    
                     <!-- Mega Menu Hamburger Button (Reduced size) -->
                     <button @click="megaMenuOpen = !megaMenuOpen"
                         class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 transition-colors flex items-center justify-center cursor-pointer border border-slate-200 dark:border-slate-700">
@@ -566,7 +621,7 @@ if ( empty( $gallery_urls ) ) {
                                 stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
-                    <?php endif; ?>
+                    
                 </div>
 
                 <!-- Right: Action Button -->
@@ -586,19 +641,19 @@ if ( empty( $gallery_urls ) ) {
                             </path>
                         </svg>
                     </button>
-                    <?php if ( ! $ofp_wl ) : ?>
+                    
                     <!-- List Property Button -->
                     <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"
                         class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 sm:px-7 py-2 sm:py-2.5 rounded-[7px] text-[11px] sm:text-xs tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap uppercase inline-flex items-center justify-center">
                         List Property
                     </a>
-                    <?php endif; ?>
+                    
                 </div>
             </div>
 
             <?php $ofp_header_social = OFP_Brand::social_links(); ?>
 
-            <?php if ( ! $ofp_wl ) : ?>
+            
             <!-- Desktop Mega Menu Dropdown (hidden lg:block) -->
             <div x-show="megaMenuOpen" style="display: none;" @click.away="megaMenuOpen = false"
                 class="hidden lg:block absolute top-full left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 mt-2 z-[100] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden font-sans"
@@ -695,11 +750,11 @@ if ( empty( $gallery_urls ) ) {
                     </div>
                 </div>
             </div>
-            <?php endif; ?>
+            
         </div>
     </header>
 
-    <?php if ( ! $ofp_wl ) : ?>
+    
     <!-- Mobile Full-Page Navigation Screen (lg:hidden, placed outside <header> so transform doesn't clip/break fixed inset-0) -->
     <div x-show="megaMenuOpen" style="display: none;"
         class="lg:hidden fixed inset-0 z-[100] bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-6 font-sans overflow-y-auto"
@@ -838,7 +893,7 @@ if ( empty( $gallery_urls ) ) {
             </a>
         </div>
     </div>
-    <?php endif; ?>
+    
 
     <!-- Breadcrumb Bar (fits directly under nav bar) -->
     <div class="bg-slate-900 dark:bg-slate-950 border-b border-slate-800">
