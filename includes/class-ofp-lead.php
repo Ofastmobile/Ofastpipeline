@@ -20,6 +20,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OFP_Lead {
 
+    /** The only statuses a lead can have (P4.28). Queue also stops follow ups on these. */
+    const STATUSES = [ 'new', 'contacted', 'interested', 'converted', 'dead' ];
+
     /**
      * Create a new lead record.
      *
@@ -230,13 +233,18 @@ class OFP_Lead {
      * Stamps converted_at when status = 'converted'.
      *
      * @param  int    $id
-     * @param  string $status
-     * @return void
+     * @param  string $status  One of OFP_Lead::STATUSES.
+     * @return bool            False when the status is not on the list.
      */
-    public static function update_status( int $id, string $status ): void {
+    public static function update_status( int $id, string $status ): bool {
         global $wpdb;
 
-        $data = [ 'status' => sanitize_text_field( $status ) ];
+        // Only a status from the fixed list is accepted (P4.28).
+        if ( ! in_array( $status, self::STATUSES, true ) ) {
+            return false;
+        }
+
+        $data = [ 'status' => $status ];
 
         if ( $status === 'converted' ) {
             $data['converted_at'] = current_time( 'mysql' );
@@ -248,6 +256,8 @@ class OFP_Lead {
         if ( in_array( $status, [ 'converted', 'dead', 'lost' ], true ) && class_exists( 'OFP_Queue' ) ) {
             OFP_Queue::cancel_for_lead( $id );
         }
+
+        return true;
     }
 
     /**
@@ -260,17 +270,17 @@ class OFP_Lead {
     public static function add_note( int $id, string $note ): void {
         global $wpdb;
 
-        $lead = self::get( $id );
-        if ( ! $lead ) return;
-
-        $timestamp = current_time( 'mysql' );
-        $existing  = $lead->notes ? $lead->notes . "\n\n" : '';
-
-        $wpdb->update(
-            $wpdb->prefix . 'ofp_leads',
-            [ 'notes' => $existing . "[{$timestamp}] " . sanitize_textarea_field( $note ) ],
-            [ 'id'    => $id ]
-        );
+        // One query: append inside the database so two notes saved at the same time
+        // cannot overwrite each other (P4.28).
+        $line = '[' . current_time( 'mysql' ) . '] ' . sanitize_textarea_field( $note );
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE {$wpdb->prefix}ofp_leads
+                SET notes = CONCAT( CASE WHEN notes IS NULL OR notes = '' THEN '' ELSE CONCAT( notes, %s ) END, %s )
+              WHERE id = %d",
+            "\n\n",
+            $line,
+            $id
+        ) );
     }
 
     /**
@@ -349,7 +359,7 @@ class OFP_Lead {
 
         $out = [];
         for ( $i = $days - 1; $i >= 0; $i-- ) {
-            $date = date( 'Y-m-d', strtotime( "-{$i} days" ) );
+            $date = OFP_Security::site_date( 'Y-m-d', strtotime( "-{$i} days" ) );
             $out[] = [
                 'date'  => $date,
                 'label' => date( 'M d', strtotime( $date ) ),
@@ -401,7 +411,7 @@ class OFP_Lead {
 
         $out = [];
         for ( $i = $months - 1; $i >= 0; $i-- ) {
-            $ym    = date( 'Y-m', strtotime( "-{$i} months" ) );
+            $ym    = OFP_Security::site_date( 'Y-m', strtotime( "-{$i} months" ) );
             $total = isset( $totals[ $ym ] ) ? (int) $totals[ $ym ]->c : 0;
             $conv  = isset( $converted[ $ym ] ) ? (int) $converted[ $ym ]->c : 0;
             $rate  = $total > 0 ? round( ( $conv / $total ) * 100 ) : 0;

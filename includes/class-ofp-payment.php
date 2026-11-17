@@ -12,7 +12,7 @@
  *  The active provider is set in wp-admin → OFast Pipeline → Settings.
  *
  * SUPPORTED GATEWAYS:
- *  - paystack     (Paystack Dedicated Virtual Accounts, cards, and transfer)
+ *  - bachs        (Bachs hosted checkout: card, bank transfer, mobile money)
  *
  * ADDING A NEW GATEWAY:
  *  1. Create includes/gateways/class-ofp-gateway-{slug}.php
@@ -30,7 +30,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OFP_Payment {
 
-    const SUPPORTED_GATEWAYS = [ 'paystack' ];
+    const SUPPORTED_GATEWAYS = [ 'bachs' ];
 
     // ─────────────────────────────────────────────────────────────────────────
     // GATEWAY RESOLVER
@@ -42,7 +42,7 @@ class OFP_Payment {
      * @return OFP_Gateway_Interface|null  Null if provider not configured or unsupported.
      */
     private static function get_gateway(): ?object {
-        $provider = 'paystack';
+        $provider = 'bachs';
 
         if ( ! in_array( $provider, self::SUPPORTED_GATEWAYS, true ) ) {
             error_log( "[OFP_Payment] Unsupported provider: {$provider}" );
@@ -72,7 +72,7 @@ class OFP_Payment {
      * @return string|null
      */
     public static function initiate_credit_topup( int $client_id, string $channel, float $amount ): ?string {
-        if ( ! in_array( $channel, [ 'sms', 'voice' ], true ) ) {
+        if ( 'sms' !== $channel ) {
             return null;
         }
 
@@ -97,7 +97,7 @@ class OFP_Payment {
             'name'         => $client->owner_name,
             'phone'        => $client->phone,
             'description'  => ucfirst( $channel ) . ' Credit Top-Up',
-            'redirect_url' => home_url( '/credits?topup_status=pending' ),
+            'redirect_url' => home_url( '/credits' ),
         ] );
         if ( $url ) {
             self::remember_pending( $reference );
@@ -123,7 +123,7 @@ class OFP_Payment {
      * @return bool
      */
     public static function is_credit_topup_reference( string $reference ): bool {
-        return (bool) preg_match( '/^ofp_credit_(sms|voice)_(\d+)_/', $reference );
+        return (bool) preg_match( '/^ofp_credit_(sms)_(\d+)_/', $reference );
     }
 
     /**
@@ -133,7 +133,7 @@ class OFP_Payment {
      * @return array|null
      */
     public static function parse_credit_topup_reference( string $reference ): ?array {
-        if ( ! preg_match( '/^ofp_credit_(sms|voice)_(\d+)_/', $reference, $matches ) ) {
+        if ( ! preg_match( '/^ofp_credit_(sms)_(\d+)_/', $reference, $matches ) ) {
             return null;
         }
 
@@ -179,7 +179,14 @@ class OFP_Payment {
             return false;
         }
 
-        OFP_Credit::topup( $parsed['client_id'], $parsed['channel'], $amount_paid, $reference );
+        // The credit class claims the transaction row first (unique reference), so a
+        // second caller at the same moment gets false and adds nothing (G4.01).
+        if ( ! OFP_Credit::topup( $parsed['client_id'], $parsed['channel'], $amount_paid, $reference ) ) {
+            return (bool) $wpdb->get_var( $wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}ofp_credit_transactions WHERE reference = %s AND type = 'topup' LIMIT 1",
+                $reference
+            ) );
+        }
 
         // Phase 19: let the client know their top-up landed. Previously this
         // was silent — the balance updated but nothing told the client it
@@ -337,7 +344,7 @@ class OFP_Payment {
             'name'         => $client->owner_name,
             'phone'        => $client->phone,
             'description'  => $description,
-            'redirect_url' => home_url( '/funding?sub_status=pending' ),
+            'redirect_url' => home_url( '/funding' ),
         ] );
         if ( $url ) {
             self::remember_pending( $reference );
@@ -437,6 +444,12 @@ class OFP_Payment {
     const RECONCILE_HOOK = 'ofp_reconcile_payments';
 
     public static function init(): void {
+        // One time: remove the saved Paystack key and its bank list cache.
+        if ( ! get_option( 'ofp_paystack_removed' ) ) {
+            delete_option( 'ofp_paystack_secret_key' );
+            delete_transient( 'ofp_paystack_banks_ng' );
+            update_option( 'ofp_paystack_removed', 1, false );
+        }
         add_action( self::RECONCILE_HOOK, [ __CLASS__, 'reconcile_pending' ] );
         if ( ! wp_next_scheduled( self::RECONCILE_HOOK ) ) {
             wp_schedule_event( time() + 300, 'hourly', self::RECONCILE_HOOK );
@@ -451,6 +464,18 @@ class OFP_Payment {
         }
         $sub = self::parse_subscription_checkout_reference( $reference );
         return $sub ? (int) $sub['client_id'] : 0;
+    }
+
+    /**
+     * Bachs sends the customer back with ?checkout_id=... only. This turns that
+     * id back into our own payment reference. Returns '' when it is unknown.
+     */
+    public static function reference_from_checkout_id( string $checkout_id ): string {
+        $gateway = self::get_gateway();
+        if ( $gateway && method_exists( $gateway, 'reference_for_checkout' ) ) {
+            return (string) $gateway->reference_for_checkout( $checkout_id );
+        }
+        return '';
     }
 
     /** Remember a payment that was started, so it can be checked later. */
@@ -468,7 +493,7 @@ class OFP_Payment {
     }
 
     /**
-     * Checks one reference with Paystack and applies it if it was paid.
+     * Checks one reference with Bachs and applies it if it was paid.
      * Safe to call many times: the confirm functions ignore a repeat.
      *
      * @return string 'applied' | 'pending' | 'failed' | 'unknown'
@@ -540,10 +565,10 @@ class OFP_Payment {
     /**
      * Get the name of the currently configured payment provider.
      *
-     * @return string  e.g. 'paystack'
+     * @return string  e.g. 'bachs'
      */
     public static function get_active_provider(): string {
-        return 'paystack';
+        return 'bachs';
     }
 
     /**

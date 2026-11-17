@@ -22,7 +22,6 @@ class OFP_Property_Admin_Rules {
         add_action( 'save_post_ofp_property', [ __CLASS__, 'sync_formal_owner' ], 110, 3 );
         add_action( 'added_post_meta', [ __CLASS__, 'sync_after_owner_meta_change' ], 10, 4 );
         add_action( 'updated_post_meta', [ __CLASS__, 'sync_after_owner_meta_change' ], 10, 4 );
-        add_action( 'init', [ __CLASS__, 'ensure_schema' ], 20 );
     }
 
     public static function ensure_schema(): void {

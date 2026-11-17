@@ -178,7 +178,7 @@ $initial_kpis = $initial_data['kpis'] ?? [];
                     <option value="sales">Property Sales &amp; Revenue</option>
                     <option value="rent">Rent &amp; Tenancies</option>
                     <option value="inspections">Inspections &amp; Tours</option>
-                    <option value="comms_spend">SMS &amp; Voice Spend</option>
+                    <option value="comms_spend">SMS Spend</option>
                     <option value="transactions">All Financial Transactions</option>
                 </select>
 

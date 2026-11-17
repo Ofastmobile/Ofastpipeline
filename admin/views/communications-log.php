@@ -50,7 +50,6 @@ $comms = $wpdb->get_results(
 
 // Summary stats
 $total_sms   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_communications_log WHERE type = 'sms'" );
-$total_voice = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_communications_log WHERE type = 'voice'" );
 $total_email = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_communications_log WHERE type = 'email'" );
 $total_cost  = (float) $wpdb->get_var( "SELECT SUM(cost) FROM {$p}ofp_communications_log" );
 
@@ -59,7 +58,6 @@ $total_pages = ceil( $total / $per_page );
 
 $type_badges = [
     'sms'   => '<span class="ofp-badge ofp-badge-blue">SMS</span>',
-    'voice' => '<span class="ofp-badge ofp-badge-green">Voice</span>',
     'email' => '<span class="ofp-badge ofp-badge-yellow">Email</span>',
 ];
 
@@ -72,10 +70,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <div class="ofp-stat-card">
         <span class="ofp-stat-number"><?php echo esc_html( number_format( $total_sms ) ); ?></span>
         <span class="ofp-stat-label">Total SMS</span>
-    </div>
-    <div class="ofp-stat-card">
-        <span class="ofp-stat-number"><?php echo esc_html( number_format( $total_voice ) ); ?></span>
-        <span class="ofp-stat-label">Total Calls</span>
     </div>
     <div class="ofp-stat-card">
         <span class="ofp-stat-number"><?php echo esc_html( number_format( $total_email ) ); ?></span>
@@ -103,7 +97,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <select name="type" onchange="this.form.submit()">
             <option value="">All Types</option>
             <option value="sms"   <?php selected( $filter_type, 'sms' ); ?>>SMS</option>
-            <option value="voice" <?php selected( $filter_type, 'voice' ); ?>>Voice</option>
             <option value="email" <?php selected( $filter_type, 'email' ); ?>>Email</option>
         </select>
         <?php if ( $filter_client || $filter_type ) : ?>

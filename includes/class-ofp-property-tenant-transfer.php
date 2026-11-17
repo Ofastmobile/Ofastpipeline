@@ -21,7 +21,6 @@ class OFP_Property_Tenant_Transfer {
 	const SCHEMA_OPTION = 'ofp_lease_proof_schema';
 
 	public static function init(): void {
-		self::ensure_schema();
 		add_action( 'ofp_property_lease_payment_processed', [ __CLASS__, 'notify_confirmed' ], 20, 4 );
 		add_action( 'wp_ajax_ofp_lease_proof', [ __CLASS__, 'serve_proof' ] );
 		add_action( 'wp_ajax_nopriv_ofp_lease_proof', [ __CLASS__, 'serve_proof' ] );
@@ -205,8 +204,9 @@ class OFP_Property_Tenant_Transfer {
 
 	public static function proof_url( int $payment_id ): string {
 		$ajax = admin_url( 'admin-ajax.php' );
-		if ( ! is_admin() && ! empty( $_SERVER['HTTP_HOST'] ) ) {
-			$ajax = ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . wp_parse_url( $ajax, PHP_URL_PATH );
+		$trusted_host = is_admin() ? '' : OFP_Security::trusted_request_host();
+		if ( '' !== $trusted_host ) {
+			$ajax = ( is_ssl() ? 'https://' : 'http://' ) . $trusted_host . wp_parse_url( $ajax, PHP_URL_PATH );
 		}
 		return add_query_arg( [
 			'action'     => 'ofp_lease_proof',
@@ -218,6 +218,7 @@ class OFP_Property_Tenant_Transfer {
 	public static function serve_proof(): void {
 		global $wpdb;
 		$p          = $wpdb->prefix;
+		OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'lease_proof_view', 30, 600 );
 		$payment_id = absint( $_GET['payment_id'] ?? 0 );
 		$nonce      = sanitize_text_field( wp_unslash( $_GET['n'] ?? '' ) );
 		if ( ! $payment_id || ! wp_verify_nonce( $nonce, 'ofp_lease_proof_' . $payment_id ) ) {
@@ -289,7 +290,7 @@ class OFP_Property_Tenant_Transfer {
 			return;
 		}
 		$client_id = (int) $row->client_id;
-		$cost      = OFP_Property_Comms_Bridge::SMS_COST;
+		$cost      = OFP_Credit::sms_cost( $message );
 		if ( ! OFP_Credit::has_balance( $client_id, 'sms', $cost ) ) {
 			return;
 		}

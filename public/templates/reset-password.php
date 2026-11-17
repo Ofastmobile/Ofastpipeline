@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /reset-password?token={raw_token}
  *

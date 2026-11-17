@@ -15,7 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Property_Lease_Reminders {
 
-    const SMS_COST = 6.99;
 
     /**
      * Called once daily from OFP_Cron_Handler::check_subscriptions().
@@ -45,6 +44,16 @@ class OFP_Property_Lease_Reminders {
 
             $days_until_expiry = (int) floor( ( $end_ts - $today_ts ) / DAY_IN_SECONDS );
 
+            // Past the end date: mark it expired in its own step, whether or not a reminder is due today.
+            if ( $days_until_expiry < 0 && 'active' === $lease->status ) {
+                $wpdb->update(
+                    "{$p}ofp_property_leases",
+                    [ 'status' => 'expired', 'updated_at' => current_time( 'mysql' ) ],
+                    [ 'id' => (int) $lease->id, 'status' => 'active' ]
+                );
+                $lease->status = 'expired';
+            }
+
             if ( ! self::should_send_today( $days_until_expiry, $lease->last_reminder_at, $today ) ) {
                 continue;
             }
@@ -56,15 +65,6 @@ class OFP_Property_Lease_Reminders {
                 [ 'last_reminder_at' => current_time( 'mysql' ), 'updated_at' => current_time( 'mysql' ) ],
                 [ 'id' => (int) $lease->id ]
             );
-
-            // Mark as expired if past end_date and still active.
-            if ( $days_until_expiry < 0 && $lease->status === 'active' ) {
-                $wpdb->update(
-                    "{$p}ofp_property_leases",
-                    [ 'status' => 'expired', 'updated_at' => current_time( 'mysql' ) ],
-                    [ 'id' => (int) $lease->id ]
-                );
-            }
         }
     }
 
@@ -119,19 +119,19 @@ class OFP_Property_Lease_Reminders {
             $days_past = abs( $days_until_expiry );
             $subject = 'Lease expired — action required';
             $message = sprintf(
-                'Your lease for %s expired %d day(s) ago on %s. Outstanding balance: ₦%s of ₦%s. Please contact your property manager to renew or settle your account.',
+                'Your lease for %s expired %d day(s) ago on %s. Outstanding balance: NGN %s of NGN %s. Please contact your property manager to renew or settle your account.',
                 $property, $days_past, $expiry_date, $balance, $rent_amount
             );
         } elseif ( $days_until_expiry <= 7 ) {
             $subject = 'Urgent: Lease expiring very soon';
             $message = sprintf(
-                'Your lease for %s expires in %d day(s) on %s. Cycle rent: ₦%s. Outstanding: ₦%s. Please arrange your renewal or final payment now.',
+                'Your lease for %s expires in %d day(s) on %s. Cycle rent: NGN %s. Outstanding: NGN %s. Please arrange your renewal or final payment now.',
                 $property, $days_until_expiry, $expiry_date, $rent_amount, $balance
             );
         } else {
             $subject = 'Lease expiry reminder';
             $message = sprintf(
-                'Reminder: Your lease for %s expires on %s (%d days remaining). Cycle rent: ₦%s. Outstanding: ₦%s.',
+                'Reminder: Your lease for %s expires on %s (%d days remaining). Cycle rent: NGN %s. Outstanding: NGN %s.',
                 $property, $expiry_date, $days_until_expiry, $rent_amount, $balance
             );
         }
@@ -160,36 +160,13 @@ class OFP_Property_Lease_Reminders {
             ! empty( $lease->tenant_phone ) &&
             $client_id &&
             class_exists( 'OFP_Credit' ) &&
-            OFP_Credit::has_balance( $client_id, 'sms', self::SMS_COST )
+            OFP_Credit::has_balance( $client_id, 'sms', OFP_Credit::sms_cost( $message ) )
         ) {
             $sms = OFP_SMS::for_client( (int) $client_id );
             $sent = $sms->send( $lease->tenant_phone, $message );
             if ( ! empty( $sent['success'] ) ) {
-                OFP_Credit::deduct( $client_id, 'sms', self::SMS_COST );
+                OFP_Credit::deduct( $client_id, 'sms', OFP_Credit::sms_cost( $message ) );
             }
-        }
-
-        // Due day only (the lease end date is when rent for this cycle is due).
-        // Place a short voice call, but only if money is still owed.
-        if (
-            0 === $days_until_expiry &&
-            $client_id &&
-            ! empty( $lease->tenant_phone ) &&
-            (float) $lease->balance > 0 &&
-            class_exists( 'OFP_Voice_Notice' )
-        ) {
-            OFP_Voice_Notice::queue_reminder(
-                'rent',
-                $client_id,
-                (string) $lease->tenant_phone,
-                [
-                    'name'     => $tenant_name,
-                    'property' => $property,
-                    'amount'   => (float) $lease->balance,
-                    'due_date' => wp_date( 'F j', strtotime( $lease->end_date ) ),
-                ],
-                'rent:' . (int) $lease->id . ':' . $lease->end_date
-            );
         }
 
         // In-app notification to the landlord/client.

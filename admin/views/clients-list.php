@@ -194,15 +194,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <h2><?php echo esc_html( $client->business_name ); ?></h2>
     <p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ofp-clients' ) ); ?>">← Back to Clients</a></p>
 
-    <?php $temp_password = OFP_Client::get_temp_password( $client->id ); ?>
-    <?php if ( $temp_password ) : ?>
-        <div class="ofp-alert ofp-alert-warning" style="margin-bottom:16px;">
-            🔑 <strong>Temporary password (visible for 1 hour after creation):</strong>
-            <code style="background:#fff;padding:3px 10px;border-radius:4px;margin-left:6px;"><?php echo esc_html( $temp_password ); ?></code>
-            <br><span style="font-size:12px;">Use this if the welcome email has not arrived yet (e.g. SMTP not configured locally).</span>
-        </div>
-    <?php endif; ?>
-
     <?php
     $extra_data = ! empty( $client->profile_extra ) ? json_decode( $client->profile_extra, true ) : [];
     if ( $client->status === 'deactivated' ) :
@@ -284,7 +275,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
         <div class="ofp-stat-card"><span class="ofp-stat-number"><?php echo esc_html( $stats['leads_today'] ); ?></span><span class="ofp-stat-label">Today</span></div>
         <div class="ofp-stat-card"><span class="ofp-stat-number"><?php echo esc_html( $stats['leads_converted'] ); ?></span><span class="ofp-stat-label">Converted</span></div>
         <div class="ofp-stat-card"><span class="ofp-stat-number"><?php echo esc_html( $stats['sms_sent'] ); ?></span><span class="ofp-stat-label">SMS Sent</span></div>
-        <div class="ofp-stat-card"><span class="ofp-stat-number"><?php echo esc_html( $stats['calls_made'] ); ?></span><span class="ofp-stat-label">Calls Made</span></div>
         <div class="ofp-stat-card"><span class="ofp-stat-number"><?php echo esc_html( $stats['pending_triggers'] ); ?></span><span class="ofp-stat-label">Queue Pending</span></div>
     </div>
 
@@ -383,7 +373,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
     <div class="ofp-section" style="margin-top:24px;">
         <h3>Load Credit to Account</h3>
         <p class="ofp-hint" style="margin-bottom:16px;">
-            Load SMS or voice credit to this client's balance after confirming their
+            Load SMS credit to this client's balance after confirming their
             manual payment. This immediately updates their balance and logs the
             transaction with a reference for your records.
         </p>
@@ -398,14 +388,13 @@ include OFP_PATH . 'admin/views/partials/header.php';
                     <label>Credit Channel <span class="required">*</span></label>
                     <select name="channel" required>
                         <option value="sms">SMS Credit</option>
-                        <option value="voice">Voice Credit</option>
                     </select>
                 </div>
                 <div class="ofp-field">
                     <label>Amount (NGN) <span class="required">*</span></label>
                     <input type="number" name="amount" min="100" step="100"
                            required placeholder="e.g. 5000">
-                    <p class="ofp-hint">NGN 6.99 per SMS · NGN 15.00 per voice minute</p>
+                    <p class="ofp-hint">NGN <?php echo esc_html( number_format( OFP_Credit::sms_price(), 2 ) ); ?> per SMS</p>
                 </div>
                 <div class="ofp-field ofp-field-full">
                     <label>Payment Reference (optional)</label>
@@ -428,7 +417,7 @@ include OFP_PATH . 'admin/views/partials/header.php';
         if ( $credits ) :
         ?>
         <div style="margin-top:16px;padding:14px 16px;background:#f8fafc;border-radius:8px;
-                    display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;">
+                    display:grid;grid-template-columns:1fr;gap:12px;font-size:13px;">
             <div>
                 <span style="color:#6b7280;">SMS Balance:</span>
                 <strong style="margin-left:8px;">
@@ -437,12 +426,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 <?php if ( $credits->paused ) : ?>
                     <span class="ofp-badge ofp-badge-red" style="margin-left:6px;">Paused</span>
                 <?php endif; ?>
-            </div>
-            <div>
-                <span style="color:#6b7280;">Voice Balance:</span>
-                <strong style="margin-left:8px;">
-                    NGN <?php echo esc_html( number_format( (float) $credits->voice_remaining, 2 ) ); ?>
-                </strong>
             </div>
         </div>
         <?php endif; ?>

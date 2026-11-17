@@ -864,21 +864,8 @@ class OFP_Admin_Url {
      * @return string
      */
     public static function get_client_ip(): string {
-        $ip = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
-
-        $trusted_proxies = apply_filters( 'ofp_trusted_proxies', [ '127.0.0.1', '::1' ] );
-
-        if ( in_array( $ip, $trusted_proxies, true ) ) {
-            if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
-                $forwarded_ips = explode( ',', (string) $_SERVER['HTTP_X_FORWARDED_FOR'] );
-                $ip            = trim( $forwarded_ips[0] );
-            } elseif ( ! empty( $_SERVER['HTTP_CLIENT_IP'] ) ) {
-                $ip = (string) $_SERVER['HTTP_CLIENT_IP'];
-            }
-        }
-
-        $validated = filter_var( $ip, FILTER_VALIDATE_IP );
-        return $validated ? sanitize_text_field( $validated ) : '0.0.0.0';
+        // One safe helper for the whole plugin (P7.01).
+        return OFP_Security::get_client_ip();
     }
 
     /**

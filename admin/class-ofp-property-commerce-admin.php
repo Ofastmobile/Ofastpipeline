@@ -116,14 +116,14 @@ class OFP_Property_Commerce_Admin {
         $where_sql = implode( ' AND ', $where );
 
         $subscriptions = $wpdb->get_results(
-            $wpdb->prepare(
+            OFP_Security::prepare_opt(
                 "SELECT s.*, c.business_name, c.email, c.status AS client_status
                  FROM {$p}ofp_subscriptions s
                  INNER JOIN {$p}ofp_clients c ON c.id = s.client_id
                  WHERE {$where_sql}
                  ORDER BY s.created_at DESC
                  LIMIT 100",
-                ...$args
+                $args
             )
         );
 
@@ -158,9 +158,8 @@ class OFP_Property_Commerce_Admin {
             </div>
 
             <div style="margin:20px 0;">
-                <form method="get">
-                    <input type="hidden" name="post_type" value="ofp_property">
-                    <input type="hidden" name="page" value="ofp-property-billing">
+                <form method="get" action="<?php echo esc_url( home_url( '/admin-portal' ) ); ?>">
+                    <input type="hidden" name="tab" value="property-billing">
                     <select name="client_id" onchange="this.form.submit()">
                         <option value="">All Listing Clients</option>
                         <?php foreach ( $clients as $client ) : ?>
@@ -175,7 +174,7 @@ class OFP_Property_Commerce_Admin {
                         <option value="cancelled" <?php selected( $status_filter, 'cancelled' ); ?>>Cancelled</option>
                     </select>
                     <?php if ( $filter_client || $status_filter ) : ?>
-                        <a class="button" href="<?php echo esc_url( admin_url( 'edit.php?post_type=ofp_property&page=ofp-property-billing' ) ); ?>">Clear</a>
+                        <a class="button" href="<?php echo esc_url( home_url( '/admin-portal?tab=property-billing' ) ); ?>">Clear</a>
                     <?php endif; ?>
                 </form>
             </div>
@@ -218,6 +217,17 @@ class OFP_Property_Commerce_Admin {
 
         $created = isset( $_GET['created'] ) && '1' === $_GET['created'];
         $resent  = isset( $_GET['resent'] ) && '1' === $_GET['resent'];
+
+        // The buyer link is built when the offer is created (only then the real
+        // token exists; the database keeps a hash) and comes back in the redirect.
+        // Show it only if it points to this site's offer page.
+        $offer_url = '';
+        if ( $created && ! empty( $_GET['offer_url'] ) ) {
+            $candidate = esc_url_raw( rawurldecode( wp_unslash( $_GET['offer_url'] ) ) );
+            if ( $candidate !== '' && strpos( $candidate, home_url( '/property-offer' ) ) === 0 ) {
+                $offer_url = $candidate;
+            }
+        }
         if ( class_exists( 'OFP_Property_Commerce' ) ) {
             OFP_Property_Commerce::sync_purchase_totals();
         }

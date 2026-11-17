@@ -43,12 +43,6 @@ if ( empty( $sel_ids ) ) {
 }
 $aud_batches = OFP_Contacts::batches( (int) $client->id );
 
-// ── Redirect old 'calls' tab to Automation page (#call-scripts) ────────────
-if ( isset( $_GET['tab'] ) && $_GET['tab'] === 'calls' ) {
-    wp_safe_redirect( home_url( '/pipeline-settings#call-scripts' ) );
-    exit;
-}
-
 $tab = sanitize_text_field( $_GET['tab'] ?? 'log' );
 $allowed_tabs = [ 'log', 'send', 'templates', 'branding' ];
 if ( ! in_array( $tab, $allowed_tabs, true ) ) {
@@ -86,7 +80,6 @@ $has_filters = ! empty( $filter_type ) || ! empty( $filter_status ) || ! empty( 
 $comm_stats = $wpdb->get_row( $wpdb->prepare(
     "SELECT 
         SUM(CASE WHEN type = 'sms' THEN 1 ELSE 0 END) AS sms_count,
-        SUM(CASE WHEN type = 'voice' THEN 1 ELSE 0 END) AS voice_count,
         SUM(CASE WHEN type = 'email' THEN 1 ELSE 0 END) AS email_count,
         SUM(CASE WHEN status NOT IN ('failed', 'error', 'pending') THEN cost ELSE 0 END) AS total_cost
      FROM {$p}ofp_communications_log 
@@ -94,7 +87,6 @@ $comm_stats = $wpdb->get_row( $wpdb->prepare(
     (int) $client->id
 ) );
 $sms_count   = (int) ( $comm_stats->sms_count ?? 0 );
-$voice_count = (int) ( $comm_stats->voice_count ?? 0 );
 $email_count = (int) ( $comm_stats->email_count ?? 0 );
 $total_cost  = (float) ( $comm_stats->total_cost ?? 0.0 );
 
@@ -108,7 +100,6 @@ $templates = $wpdb->get_results(
 
 $type_badges = [
     'sms'   => '<span class="ofp-badge ofp-badge-blue">SMS</span>',
-    'voice' => '<span class="ofp-badge ofp-badge-green">Voice</span>',
     'email' => '<span class="ofp-badge ofp-badge-yellow">Email</span>',
 ];
 ?>
@@ -153,14 +144,6 @@ $type_badges = [
                 <div class="stat-title">Total SMS Sent</div>
                 <div class="stat-val"><?php echo esc_html( number_format( $sms_count ) ); ?></div>
             </div>
-            <!-- Calls Made -->
-            <div class="ofp-comm-stat-card" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);">
-                <div class="stat-bg-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                </div>
-                <div class="stat-title">Total Calls Made</div>
-                <div class="stat-val"><?php echo esc_html( number_format( $voice_count ) ); ?></div>
-            </div>
             <!-- Emails Sent -->
             <div class="ofp-comm-stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.2);">
                 <div class="stat-bg-icon">
@@ -199,7 +182,6 @@ $type_badges = [
                         <select id="comm-type-select" name="type" class="ofp-select ofp-comm-select">
                             <option value="" <?php selected( $filter_type, '' ); ?>>All Channels</option>
                             <option value="sms" <?php selected( $filter_type, 'sms' ); ?>>SMS</option>
-                            <option value="voice" <?php selected( $filter_type, 'voice' ); ?>>Voice</option>
                             <option value="email" <?php selected( $filter_type, 'email' ); ?>>Email</option>
                         </select>
                     </div>
@@ -588,14 +570,26 @@ $type_badges = [
                 costVal.textContent = 'Free (Plan)';
                 costVal.style.color = '#10b981';
             } else {
+                // Same rule as OFP_SMS::segments(): plain text 160/153, any other character 70/67.
+                const smsBasic = '@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà';
+                const smsExtra = '^{}\\[~]|€';
+                let smsUnits = 0, smsUnicode = false;
+                for (const ch of rawBody) {
+                    if (smsBasic.indexOf(ch) !== -1) smsUnits += 1;
+                    else if (smsExtra.indexOf(ch) !== -1) smsUnits += 2;
+                    else { smsUnicode = true; break; }
+                }
                 let segments = 1;
-                if (bodyLen > 160) {
-                    segments = Math.ceil(bodyLen / 153);
+                if (smsUnicode) {
+                    smsUnits = rawBody.length; // JavaScript length counts UTF-16 units
+                    segments = smsUnits <= 70 ? 1 : Math.ceil(smsUnits / 67);
+                } else {
+                    segments = smsUnits <= 160 ? 1 : Math.ceil(smsUnits / 153);
                 }
                 charCount.innerHTML = bodyLen + ' chars <small style="color:var(--text-muted);font-weight:400;">(' + segments + ' seg)</small>';
                 
                 const neededCredits = totalRecipients * segments;
-                const estCostNaira = (neededCredits * 6.99).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const estCostNaira = (neededCredits * <?php echo esc_js( (string) OFP_Credit::sms_price() ); ?>).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 costVal.textContent = neededCredits + ' Credits (₦' + estCostNaira + ')';
                 costVal.style.color = neededCredits > 0 ? '#10b981' : 'var(--text-muted)';
             }
@@ -936,16 +930,12 @@ $type_badges = [
                         emailBody.innerHTML = formatPreviewText(body);
                     }
                 } else {
-                    if (phoneHeader) phoneHeader.textContent = (type === 'voice') ? 'Voice Preview' : 'SMS Preview';
+                    if (phoneHeader) phoneHeader.textContent = 'SMS Preview';
                     if (emailView) emailView.style.display = 'none';
                     if (smsView) smsView.style.display = 'flex';
                     if (smsBubble) {
                         smsBubble.innerHTML = formatPreviewText(body);
-                        if (type === 'voice') {
-                            smsBubble.classList.add('call-bubble');
-                        } else {
-                            smsBubble.classList.remove('call-bubble');
-                        }
+                        smsBubble.classList.remove('call-bubble');
                     }
                 }
             }

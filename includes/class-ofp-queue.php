@@ -3,8 +3,7 @@
  * OFP_Queue
  *
  * The trigger queue. It powers the automatic SMS and email follow ups for
- * every client. Voice calls are NOT part of follow ups any more. Calls are
- * handled only by OFP_Voice_Notice (call scripts).
+ * every client. Follow ups are SMS or email only.
  *
  * HOW IT WORKS:
  *  1. populate_triggers() runs when a lead is captured. It reads the client's
@@ -34,11 +33,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OFP_Queue {
 
-    // SMS cost in NGN for one SMS segment.
-    const SMS_COST   = 6.99;
-
-    // Voice cost in NGN per call. Used by call scripts only.
-    const VOICE_COST = 15.00;
+    // The SMS price is not kept here. Use OFP_Credit::sms_price() (G8.01).
 
     // Most rows handled in one cron run, and the most seconds one run may take.
     const BATCH_SIZE  = 30;
@@ -246,7 +241,7 @@ class OFP_Queue {
         // Rows that started sending but never finished. We do not resend them
         // automatically because the message may already have gone out.
         // last_attempt is saved in site time, so build the cutoff the same way.
-        $cutoff = gmdate( 'Y-m-d H:i:s', current_time( 'timestamp' ) - self::STUCK_AFTER );
+        $cutoff = gmdate( 'Y-m-d H:i:s', OFP_Security::site_now_ts() - self::STUCK_AFTER );
         $wpdb->query(
             $wpdb->prepare(
                 "UPDATE {$p}ofp_trigger_queue
@@ -307,7 +302,7 @@ class OFP_Queue {
                         return;
                     }
 
-                    $cost = self::SMS_COST * OFP_SMS::segments( $message );
+                    $cost = OFP_Credit::sms_cost( $message );
 
                     if ( ! OFP_Credit::has_balance( (int) $trigger->client_id, 'sms', $cost ) ) {
                         self::close( (int) $trigger->id, 'cancelled', 'Not enough SMS credit.' );
@@ -347,7 +342,7 @@ class OFP_Queue {
                     break;
 
                 default:
-                    // Old voice rows and anything unknown. Follow ups are SMS or email only.
+                    // Anything unknown. Follow ups are SMS or email only.
                     self::close( (int) $trigger->id, 'cancelled', 'This type is no longer supported: ' . $trigger->type );
                     return;
             }
@@ -577,13 +572,14 @@ class OFP_Queue {
         $sms = 'New lead: ' . $name . ' ' . $phone . ( $property !== '' ? ' (' . $property . ')' : '' ) . '. Reach out now.';
         $sms = mb_substr( $sms, 0, 160 );
 
-        if ( ! OFP_Credit::has_balance( $client_id, 'sms', self::SMS_COST ) ) {
+        $sms_cost = OFP_Credit::sms_cost( $sms );
+        if ( ! OFP_Credit::has_balance( $client_id, 'sms', $sms_cost ) ) {
             return;
         }
 
         $result = OFP_SMS::for_client( $client_id )->send( (string) $client->phone, $sms, null );
         if ( ! empty( $result['success'] ) ) {
-            OFP_Credit::deduct( $client_id, 'sms', self::SMS_COST );
+            OFP_Credit::deduct( $client_id, 'sms', $sms_cost );
         }
     }
 
@@ -633,40 +629,6 @@ class OFP_Queue {
         if ( $all_ok ) {
             update_option( 'ofp_instant_cols_v1', '1', true );
         }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // ONE TIME CLEAN UP FOR REMOVED VOICE FOLLOW UPS
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Voice and IVR follow ups were removed. Run once:
-     *  - Any follow up saved as voice becomes sms.
-     *  - Any pending or processing voice row in the queue is cancelled.
-     */
-    public static function migrate_voice_followups_once(): void {
-        if ( get_option( 'ofp_voice_followups_removed' ) ) {
-            return;
-        }
-
-        global $wpdb;
-        $p = $wpdb->prefix;
-
-        foreach ( [ 1, 2, 3 ] as $n ) {
-            $col = "followup_{$n}_type";
-            $wpdb->query( "UPDATE {$p}ofp_pipeline_configs SET {$col} = 'sms' WHERE {$col} = 'voice'" );
-        }
-
-        $wpdb->query(
-            $wpdb->prepare(
-                "UPDATE {$p}ofp_trigger_queue
-                 SET status = 'cancelled', response_data = %s
-                 WHERE type = 'voice' AND status IN ( 'pending', 'processing' )",
-                'Voice follow ups were removed.'
-            )
-        );
-
-        update_option( 'ofp_voice_followups_removed', 1, false );
     }
 
     // ─────────────────────────────────────────────────────────────────────────

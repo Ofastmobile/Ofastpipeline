@@ -9,13 +9,13 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Property_Rent {
 
-    const SCHEMA_VERSION = '1.0.4';
+    const SCHEMA_VERSION = '1.0.5';
 
     /** Rent periods selectable by a landlord when setting up a property. */
     const STANDARD_PERIODS = [ 'monthly', 'quarterly', 'biannual', 'yearly', 'shortlet', 'custom' ];
 
     public static function init(): void {
-        self::ensure_schema();
+        // Schema: OFP_Activator::run_helper_schemas() (P6.02).
     }
 
     /**
@@ -36,6 +36,7 @@ class OFP_Property_Rent {
             full_name         VARCHAR(150) NOT NULL,
             email             VARCHAR(150) NULL,
             phone             VARCHAR(30) NOT NULL,
+            phone10           VARCHAR(10) NULL,
             access_token_hash CHAR(64) NOT NULL,
             status            VARCHAR(20) NOT NULL DEFAULT 'active',
             created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -43,6 +44,7 @@ class OFP_Property_Rent {
             PRIMARY KEY (id),
             UNIQUE KEY access_token_hash (access_token_hash),
             KEY client_phone (client_id, phone),
+            KEY phone10 (phone10),
             KEY client_email (client_id, email),
             KEY client_id (client_id),
             KEY status (status)
@@ -235,6 +237,7 @@ class OFP_Property_Rent {
             'full_name'         => $name,
             'email'             => $email ?: null,
             'phone'             => $phone,
+            'phone10'           => OFP_Security::phone_last10( $phone ),
             'access_token_hash' => hash( 'sha256', $token ),
             'created_at'        => current_time( 'mysql' ),
         ] );

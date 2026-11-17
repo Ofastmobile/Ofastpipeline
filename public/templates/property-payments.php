@@ -260,7 +260,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 
                         <select name="method" class="ofp-select ofp-txn-select">
                             <option value="">All Methods</option>
-                            <option value="checkout" <?php selected( $filter_method, 'checkout' ); ?>>Online Checkout (Paystack)</option>
+                            <option value="checkout" <?php selected( $filter_method, 'checkout' ); ?>>Online Checkout</option>
                             <option value="manual" <?php selected( $filter_method, 'manual' ); ?>>Bank Transfer / Manual</option>
                             <option value="bank_transfer" <?php selected( $filter_method, 'bank_transfer' ); ?>>Direct Transfer</option>
                             <option value="pos" <?php selected( $filter_method, 'pos' ); ?>>POS</option>

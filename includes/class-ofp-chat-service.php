@@ -37,8 +37,6 @@ class OFP_Chat_Service {
     ];
 
     public static function init(): void {
-        self::maybe_upgrade();
-
         add_action( 'wp_footer', [ __CLASS__, 'render_widget_markup' ], 999 );
         add_action( 'admin_footer', [ __CLASS__, 'render_widget_markup' ], 999 );
         add_action( 'wp_enqueue_scripts', [ __CLASS__, 'enqueue_assets' ] );
@@ -214,7 +212,7 @@ class OFP_Chat_Service {
 Your job is to assist website visitors and prospective clients with general enquiries.
 Key details about {$app}:
 - We are a premier real estate CRM, automated property pipeline, and tenant oversight engine.
-- We help property developers, real estate agents, landlords, and investors automate sales, track rent collections, send automated WhatsApp/SMS/Voice reminders, and manage client inquiries.
+- We help property developers, real estate agents, landlords, and investors automate sales, track rent collections, send automated SMS reminders (WhatsApp is coming soon), and manage client inquiries.
 - Visitors can view property listings on our Marketplace (/marketplace).
 - Visitors can create an account by clicking Sign Up (/signup) or log in at /login.
 - Pricing plans: Free Starter, Silver (Professional), and Gold (Enterprise).
@@ -235,7 +233,7 @@ Dashboard Guide:
 - /leads: Manage incoming buyer and tenant inquiries, update stages (Contacted, Inspection, Negotiation, Won/Lost).
 - /tenants & /rent-oversight: Manage active lease agreements, rent payment tracking, automated reminders, and payment receipts.
 - /credits & /plans-pricing: Wallet top-up and subscription plans.
-- /message-templates: Customize automated SMS, email, and voice message follow-up templates.
+- /message-templates: Customize automated SMS and email follow-up templates.
 - /reports: Export activity reports, transaction receipts, and CSV audit logs.
 - /settings: Company branding, bank account details for invoice display, and notification preferences.
 Live Human Support:
@@ -302,6 +300,10 @@ Safety & Security:
     // ═══════════════════════════════════════════════════════════════════
 
     public static function enqueue_assets(): void {
+        // P6.11: chat switched off = stop at once, no client session lookup.
+        if ( '1' !== self::get_config()['enabled'] ) {
+            return;
+        }
         $ctx = self::get_current_user_context();
         if ( ! self::widget_visible( $ctx ) ) {
             return;
@@ -326,6 +328,9 @@ Safety & Security:
         static $rendered = false;
         if ( $rendered ) {
             return;
+        }
+        if ( '1' !== self::get_config()['enabled'] ) {
+            return; // P6.11: chat switched off = no client session lookup.
         }
         $ctx = self::get_current_user_context();
         if ( ! self::widget_visible( $ctx ) ) {
@@ -926,7 +931,7 @@ Safety & Security:
             'ip'      => [ 'max' => 60, 'window' => 600 ],
         ] );
 
-        $ip = class_exists( 'OFP_Security' ) ? OFP_Security::get_client_ip() : (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+        $ip = OFP_Security::get_client_ip();
         $subjects = [ 'session' => $session_id, 'ip' => $ip ];
         $now      = time();
 

@@ -10,8 +10,8 @@
  * What a platform account gets
  *  - no listing limit, no team-seat limit, every feature (reuses the existing
  *    "unlimited" switch, OFP_Subscription::is_unlimited)
- *  - no credits, funding, plans or billing: pages hidden and redirected, SMS and
- *    voice are never charged, and no upgrade or low-credit emails are sent
+ *  - no credits, funding, plans or billing: pages hidden and redirected, SMS is
+ *    never charged, and no upgrade or low-credit emails are sent
  *  - the owner (main login) can do everything
  *  - TEAM MEMBERS of this account can use the whole client side but cannot:
  *      invite, edit or remove team members (they may view the team list)
@@ -53,7 +53,6 @@ class OFP_Platform {
     const PRIVATE_BODY_PATTERN = '/[?&](?:token|key|code|reset|invite|otp|verify|hash|sig)=|temporary password|your password|one-time|verification code|\b(?:code|otp|pin)\b[^<]{0,40}\b\d{4,8}\b/i';
 
     public static function init(): void {
-        self::ensure_schema();
 
         // Run before the portal's own router (priority 10) so blocked pages never render.
         add_action( 'template_redirect', [ __CLASS__, 'guard_routes' ], 5 );

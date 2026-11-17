@@ -276,8 +276,7 @@ $logs = $wpdb->get_results( $wpdb->prepare(
 
                             // Precise email log detection (must NOT mistake SMS with phone recipient for email)
                             $is_sms_log   = ( strpos( $act_lower, 'sms' ) !== false );
-                            $is_voice_log = ( strpos( $act_lower, 'voice' ) !== false || strpos( $act_lower, 'call' ) !== false );
-                            $is_email_log = ( ! $is_sms_log && ! $is_voice_log ) && (
+                            $is_email_log = ( ! $is_sms_log ) && (
                                 strpos( $act_lower, 'email' ) !== false ||
                                 ! empty( $details['subject'] ) ||
                                 ( ! empty( $details['to'] ) && is_email( $details['to'] ) )

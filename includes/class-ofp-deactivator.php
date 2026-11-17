@@ -44,6 +44,7 @@ class OFP_Deactivator {
             'ofp_daily_subscription_check',
             'ofp_daily_credit_check',
             'ofp_monthly_archive',
+            'ofp_daily_property_reconcile',
         ];
 
         foreach ( $hooks as $hook ) {

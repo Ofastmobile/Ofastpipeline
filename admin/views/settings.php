@@ -20,7 +20,7 @@
 
  * - One-click Webhook URL copy-to-clipboard
 
- * - Click-to-insert placeholder chips for SMS/Voice templates
+ * - Click-to-insert placeholder chips for SMS templates
 
  * - Live SMS character count & segment tracker
 
@@ -109,15 +109,20 @@ $has_smtp_pass      = ! empty( get_option( 'ofp_smtp_password', '' ) );
 
 
 
-// Paystack
+// Bachs
 
-$has_paystack_key   = ! empty( get_option( 'ofp_paystack_secret_key', '' ) );
+$has_bachs_key   = ! empty( get_option( 'ofp_bachs_api_key', '' ) );
+$has_bachs_secret = ! empty( get_option( 'ofp_bachs_webhook_secret', '' ) );
 
-$paystack_key_raw   = OFP_Security::decrypt( get_option( 'ofp_paystack_secret_key', '' ) );
+$bachs_key_raw   = OFP_Security::decrypt( get_option( 'ofp_bachs_api_key', '' ) );
 
-$paystack_is_live   = str_starts_with( $paystack_key_raw, 'sk_live_' );
+$bachs_is_live   = str_starts_with( $bachs_key_raw, 'sk_live_' );
 
-$paystack_is_test   = str_starts_with( $paystack_key_raw, 'sk_test_' );
+$bachs_is_test   = str_starts_with( $bachs_key_raw, 'sk_sandbox_' );
+
+// Keep the real key out of this page's variables. Only the mode (live or test) is needed.
+
+unset( $bachs_key_raw );
 
 
 
@@ -129,7 +134,6 @@ $has_at_key         = ! empty( get_option( 'ofp_at_api_key', '' ) );
 
 $at_sender          = get_option( 'ofp_at_sender_id', '' );
 
-$at_phone           = get_option( 'ofp_at_phone_number', '' );
 
 
 
@@ -401,15 +405,15 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
 
 
-                    <!-- Paystack Status -->
+                    <!-- Bachs Status -->
 
-                    <button type="button" class="ofp-telemetry-chip ofp-nav-trigger" data-target="tab-payments" title="Click to view Paystack settings">
+                    <button type="button" class="ofp-telemetry-chip ofp-nav-trigger" data-target="tab-payments" title="Click to view Bachs settings">
 
-                        <span class="ofp-status-dot <?php echo $paystack_is_live ? 'dot-green' : ( $paystack_is_test ? 'dot-yellow' : ( $has_paystack_key ? 'dot-green' : 'dot-gray' ) ); ?>"></span>
+                        <span class="ofp-status-dot <?php echo $bachs_is_live ? 'dot-green' : ( $bachs_is_test ? 'dot-yellow' : ( $has_bachs_key ? 'dot-green' : 'dot-gray' ) ); ?>"></span>
 
-                        <span class="ofp-telemetry-label">Paystack:</span>
+                        <span class="ofp-telemetry-label">Bachs:</span>
 
-                        <span class="ofp-telemetry-val"><?php echo $paystack_is_live ? 'Live' : ( $paystack_is_test ? 'Sandbox' : ( $has_paystack_key ? 'Ready' : 'Setup' ) ); ?></span>
+                        <span class="ofp-telemetry-val"><?php echo $bachs_is_live ? 'Live' : ( $bachs_is_test ? 'Sandbox' : ( $has_bachs_key ? 'Ready' : 'Setup' ) ); ?></span>
 
                     </button>
 
@@ -573,7 +577,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                     <span class="ofp-tab-label">Payment Gateway</span>
 
-                    <span class="ofp-nav-pill">Paystack</span>
+                    <span class="ofp-nav-pill">Bachs</span>
 
                 </button>
 
@@ -587,7 +591,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                     </span>
 
-                    <span class="ofp-tab-label">SMS &amp; Voice</span>
+                    <span class="ofp-tab-label">SMS</span>
 
                     <span class="ofp-nav-pill">Relays</span>
 
@@ -1856,93 +1860,6 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
 
 
-                            <!-- Automatic one way calls -->
-
-                            <?php
-
-                            $vn_hours = OFP_Voice_Notice::hours();
-
-                            $vn_fields = [
-
-                                'interest'    => [ '5. Lead interest call (right after a form lead is captured)', '{{name}} {{business_name}} {{property}}' ],
-
-                                'installment' => [ '6. Installment due day call', '{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}' ],
-
-                                'rent'        => [ '7. Rent due day call', '{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}' ],
-
-                            ];
-
-                            foreach ( $vn_fields as $vn_type => $vn_info ) : ?>
-
-                            <div class="ofp-field-group">
-
-                                <div class="ofp-field-label-row">
-
-                                    <label class="ofp-field-label"><?php echo esc_html( $vn_info[0] ); ?></label>
-
-                                </div>
-
-                                <textarea id="ofp_default_call_<?php echo esc_attr( $vn_type ); ?>" name="ofp_default_call_<?php echo esc_attr( $vn_type ); ?>" rows="3"><?php echo esc_textarea( OFP_Voice_Notice::default_script( $vn_type ) ); ?></textarea>
-
-                                <p class="ofp-field-hint">One way call, no key presses. Starting text for clients who have not written their own. You can use: <?php echo esc_html( $vn_info[1] ); ?></p>
-
-                            </div>
-
-                            <?php endforeach; ?>
-
-
-
-                            <div class="ofp-field-group">
-
-                                <div class="ofp-field-label-row">
-
-                                    <label class="ofp-field-label">8. Calling hours for all automatic calls</label>
-
-                                </div>
-
-                                <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-
-                                    <input type="checkbox" name="ofp_voice_hours_enabled" value="1" <?php checked( $vn_hours['enabled'] ); ?>>
-
-                                    Only call inside these hours (a call due outside them waits for the next morning)
-
-                                </label>
-
-                                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-
-                                    <label>From
-
-                                        <select name="ofp_voice_hours_start">
-
-                                            <?php for ( $h = 0; $h <= 23; $h++ ) : ?>
-
-                                                <option value="<?php echo (int) $h; ?>" <?php selected( $vn_hours['start'], $h ); ?>><?php echo esc_html( gmdate( 'g A', mktime( $h, 0, 0, 1, 1, 2000 ) ) ); ?></option>
-
-                                            <?php endfor; ?>
-
-                                        </select>
-
-                                    </label>
-
-                                    <label>To
-
-                                        <select name="ofp_voice_hours_end">
-
-                                            <?php for ( $h = 1; $h <= 24; $h++ ) : ?>
-
-                                                <option value="<?php echo (int) $h; ?>" <?php selected( $vn_hours['end'], $h ); ?>><?php echo esc_html( gmdate( 'g A', mktime( $h % 24, 0, 0, 1, 1, 2000 ) ) ); ?></option>
-
-                                            <?php endfor; ?>
-
-                                        </select>
-
-                                    </label>
-
-                                </div>
-
-                                <p class="ofp-field-hint">Hours use the time zone set in WordPress Settings, General. Make sure it is set to your city (for example Lagos).</p>
-
-                            </div>
 
 
 
@@ -2282,7 +2199,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
 
 
-                <!-- ════════ TAB 4: PAYMENT GATEWAY (PAYSTACK) ════════ -->
+                <!-- ════════ TAB 4: PAYMENT GATEWAY (BACHS) ════════ -->
 
                 <section id="tab-payments" class="ofp-tab-pane">
 
@@ -2306,23 +2223,23 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                 <div class="ofp-card-title-group">
 
-                                    <h3>Paystack Payment Gateway</h3>
+                                    <h3>Bachs Payment Gateway</h3>
 
-                                    <p>Primary gateway for client subscriptions, credit top-ups, and optional buyer/tenant checkouts.</p>
+                                    <p>Collects client subscription payments and credit top-ups through Bachs hosted checkout.</p>
 
                                 </div>
 
                             </div>
 
-                            <?php if ( $paystack_is_live ) : ?>
+                            <?php if ( $bachs_is_live ) : ?>
 
                                 <span class="ofp-pill ofp-pill-ready">Live Mode</span>
 
-                            <?php elseif ( $paystack_is_test ) : ?>
+                            <?php elseif ( $bachs_is_test ) : ?>
 
                                 <span class="ofp-pill ofp-pill-missing">Test / Sandbox Mode</span>
 
-                            <?php elseif ( $has_paystack_key ) : ?>
+                            <?php elseif ( $has_bachs_key ) : ?>
 
                                 <span class="ofp-pill ofp-pill-ready">Configured</span>
 
@@ -2344,9 +2261,9 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                     <div class="ofp-field-label-row">
 
-                                        <label class="ofp-field-label">Paystack Secret Key</label>
+                                        <label class="ofp-field-label">Bachs API Key</label>
 
-                                        <?php if ( $has_paystack_key ) : ?>
+                                        <?php if ( $has_bachs_key ) : ?>
 
                                             <span class="ofp-badge-encrypted">✓ Encrypted in Vault</span>
 
@@ -2356,9 +2273,9 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                     <div class="ofp-input-box has-action">
 
-                                        <input type="password" name="ofp_paystack_secret_key" class="ofp-secret-input"
+                                        <input type="password" name="ofp_bachs_api_key" class="ofp-secret-input"
 
-                                               placeholder="<?php echo $has_paystack_key ? '•••••••••••••••• (Leave blank to keep existing)' : 'sk_live_... or sk_test_...'; ?>">
+                                               placeholder="<?php echo $has_bachs_key ? '•••••••••••••••• (Leave blank to keep existing)' : 'sk_live_... or sk_sandbox_...'; ?>">
 
                                         <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide Key">
 
@@ -2368,10 +2285,26 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                     </div>
 
-                                    <p class="ofp-field-hint">Must begin with <code>sk_live_</code> (production) or <code>sk_test_</code> (development). Leave empty to retain existing stored key.</p>
+                                    <p class="ofp-field-hint">Must begin with <code>sk_live_</code> (production) or <code>sk_sandbox_</code> (sandbox). Leave empty to retain existing stored key.</p>
 
                                 </div>
 
+                                                            <div class="ofp-field-group ofp-field-full">
+                                    <div class="ofp-field-label-row">
+                                        <label class="ofp-field-label">Bachs Webhook Signing Secret</label>
+                                        <?php if ( $has_bachs_secret ) : ?>
+                                            <span class="ofp-badge-encrypted">&#10003; Encrypted in Vault</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="ofp-input-box has-action">
+                                        <input type="password" name="ofp_bachs_webhook_secret" class="ofp-secret-input"
+                                               placeholder="<?php echo $has_bachs_secret ? '******************** (Leave blank to keep existing)' : 'Paste the signing secret from your Bachs webhook endpoint'; ?>">
+                                        <button type="button" class="ofp-input-action-btn ofp-btn-toggle-pwd" title="Show/Hide Secret">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        </button>
+                                    </div>
+                                    <p class="ofp-field-hint">Found on the endpoint page in the Bachs Developer Portal. Every webhook is checked against this secret, and payments are not confirmed without it.</p>
+                                </div>
                             </div>
 
 
@@ -2386,7 +2319,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                 <div class="ofp-field-label-row">
 
-                                    <label class="ofp-field-label">Paystack Webhook Endpoint URL</label>
+                                    <label class="ofp-field-label">Bachs Webhook Endpoint URL</label>
 
                                     <span class="ofp-pill ofp-pill-info">Automatic Verification</span>
 
@@ -2406,7 +2339,17 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                 </div>
 
-                                <p class="ofp-field-hint">Add this URL to your <strong>Paystack Dashboard → Settings → API & Webhooks → Webhook URL</strong> to enable automatic payment confirmation.</p>
+                                <p class="ofp-field-hint">Add this URL in <strong>Bachs Dashboard &rarr; Developer Portal &rarr; Webhooks &rarr; Add destination</strong>. Select the events <code>collection.succeeded</code> and <code>collection.underpaid</code>, then copy the endpoint signing secret into the field above.</p>
+
+                                <label class="ofp-field-label" style="margin-top:14px;">SMS Delivery Report URL</label>
+
+                                <div class="ofp-copy-input-wrap">
+
+                                    <code id="ofp-sms-dlr-url"><?php echo esc_url( add_query_arg( 'secret', OFP_REST_API::sms_dlr_secret(), home_url( '/wp-json/ofp/v1/webhook/sms-dlr' ) ) ); ?></code>
+
+                                </div>
+
+                                <p class="ofp-field-hint">Put this full address (it carries a secret) in your SMS provider's delivery report callback. Reports sent without the secret are refused.</p>
 
                             </div>
 
@@ -2420,7 +2363,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
 
 
-                <!-- ════════ TAB 5: SMS & VOICE PROVIDERS ════════ -->
+                <!-- ════════ TAB 5: SMS PROVIDERS ════════ -->
 
                 <section id="tab-sms" class="ofp-tab-pane">
 
@@ -2446,7 +2389,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                     <h3>Active SMS Provider</h3>
 
-                                    <p>The one company that sends every SMS on the platform. Clients do not choose a provider. Fill in the keys for the provider you pick below. Voice calls always use Africa's Talking.</p>
+                                    <p>The one company that sends every SMS on the platform. Clients do not choose a provider. Fill in the keys for the provider you pick below.</p>
 
                                 </div>
 
@@ -2518,9 +2461,9 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                 <div class="ofp-card-title-group">
 
-                                    <h3>Africa's Talking (SMS and Voice)</h3>
+                                    <h3>Africa's Talking (SMS)</h3>
 
-                                    <p>High-volume pan-African gateway handling primary outbound SMS and automated voice calls.</p>
+                                    <p>High-volume pan-African gateway handling primary outbound SMS.</p>
 
                                 </div>
 
@@ -2601,26 +2544,6 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                                placeholder="e.g. OFastPipe">
 
                                     </div>
-
-                                </div>
-
-
-
-                                <div class="ofp-field-group">
-
-                                    <label class="ofp-field-label">Virtual Phone Number (Voice Calls)</label>
-
-                                    <div class="ofp-input-box">
-
-                                        <input type="text" name="ofp_at_phone_number"
-
-                                               value="<?php echo esc_attr( $at_phone ); ?>"
-
-                                               placeholder="e.g. +2348000000000">
-
-                                    </div>
-
-                                    <p class="ofp-field-hint">Caller ID used for call script calls (lead interest and payment reminders).</p>
 
                                 </div>
 
@@ -3554,6 +3477,20 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
                                 </div>
 
+                                <div class="ofp-field-group">
+
+                                    <label class="ofp-field-label">Websites allowed to send leads</label>
+
+                                    <div class="ofp-input-box">
+
+                                        <textarea name="ofp_lead_allowed_origins" rows="4" placeholder="example.com&#10;myagency.ng"><?php echo esc_textarea( (string) get_option( 'ofp_lead_allowed_origins', '' ) ); ?></textarea>
+
+                                    </div>
+
+                                    <p class="ofp-field-hint">One website per line, without https://. This site and your client subdomains are always allowed. A lead form on any other website is refused until its domain is listed here.</p>
+
+                                </div>
+
 
 
                                 <div class="ofp-field-group">
@@ -4041,6 +3978,18 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                 </div>
                                 <label class="ofp-switch">
                                     <input type="checkbox" name="ofp_obfuscate_emails" value="1" <?php checked( $obfuscate_emails, '1' ); ?>>
+                                    <span class="ofp-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Switch: delete all data when the plugin is deleted (P4.09) -->
+                            <div class="ofp-switch-row">
+                                <div class="ofp-switch-info">
+                                    <span class="ofp-switch-title">Delete ALL data when this plugin is deleted</span>
+                                    <p class="ofp-switch-desc"><strong>Danger.</strong> Leave this OFF to keep your clients, leads, payments and settings when the plugin is deleted from the Plugins page. If ON, deleting the plugin permanently removes every OFast table, setting and property listing. Uploaded files (receipts, imports, photos) are not removed. Deactivating the plugin never deletes anything.</p>
+                                </div>
+                                <label class="ofp-switch">
+                                    <input type="checkbox" name="ofp_delete_data_on_uninstall" value="1" <?php checked( get_option( 'ofp_delete_data_on_uninstall', '0' ), '1' ); ?>>
                                     <span class="ofp-slider"></span>
                                 </label>
                             </div>

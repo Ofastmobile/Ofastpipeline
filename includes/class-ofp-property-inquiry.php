@@ -22,7 +22,6 @@ class OFP_Property_Inquiry {
     ];
 
     public static function init(): void {
-        add_action( 'init', [ __CLASS__, 'ensure_schema' ], 20 );
         add_action( 'admin_menu', [ __CLASS__, 'register_admin_menu' ] );
         add_action( 'wp_ajax_ofp_update_inspection_status', [ __CLASS__, 'ajax_update_status' ] );
     }

@@ -290,7 +290,7 @@ class OFP_Property_CPT {
 
         // Company Bank for Admin (0)
         $company_bank_name = get_option( 'ofp_company_bank_name', '' );
-        $company_bank_num  = get_option( 'ofp_company_account_number', '' );
+        $company_bank_num  = get_option( 'ofp_company_account_no', '' );
         $company_bank_user = get_option( 'ofp_company_account_name', '' );
 
         $clients_banks_map['0'] = [
@@ -1744,13 +1744,24 @@ class OFP_Property_CPT {
         $wpdb->query( "UPDATE {$table} SET listing_type = 'sale' WHERE listing_type IS NULL OR listing_type = ''" );
 
         // 2. Find all published CPT posts (regardless of ofp_status meta).
-        $post_ids = get_posts( [
-            'post_type'      => 'ofp_property',
-            'post_status'    => 'publish',
-            'posts_per_page' => -1,
-            'fields'         => 'ids',
-            'ofp_include_occupied' => true,
-        ] );
+        // G6.02: read the posts 100 at a time (never all at once); every property is still handled.
+        $post_ids = [];
+        $page     = 1;
+        do {
+            $batch = get_posts( [
+                'post_type'      => 'ofp_property',
+                'post_status'    => 'publish',
+                'posts_per_page' => 100,
+                'paged'          => $page,
+                'orderby'        => 'ID',
+                'order'          => 'ASC',
+                'fields'         => 'ids',
+                'no_found_rows'  => true,
+                'ofp_include_occupied' => true,
+            ] );
+            $post_ids = array_merge( $post_ids, $batch );
+            $page++;
+        } while ( count( $batch ) === 100 );
 
         foreach ( $post_ids as $post_id ) {
             $post_id = (int) $post_id;

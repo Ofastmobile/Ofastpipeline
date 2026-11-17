@@ -65,10 +65,7 @@ var previewData = {
     'instant_sms_message': 'preview_instant_sms_message',
     'followup_1_message': 'preview_followup_1_message',
     'followup_2_message': 'preview_followup_2_message',
-    'followup_3_message': 'preview_followup_3_message',
-    'call_interest_message': 'preview_call_interest_message',
-    'call_installment_message': 'preview_call_installment_message',
-    'call_rent_message': 'preview_call_rent_message'
+    'followup_3_message': 'preview_followup_3_message'
 };
 
 var timelineEl = document.getElementById("ofpPipelineTimeline"); var businessName = (timelineEl && timelineEl.getAttribute("data-business-name")) ? timelineEl.getAttribute("data-business-name") : "My Business";
@@ -97,17 +94,7 @@ Object.keys(previewData).forEach(function(inputName) {
         // Sync on input
         input.addEventListener('input', function() {
             var rawText = this.value;
-            var isVoice = inputName.indexOf('call_') === 0;
-            
-            if (isVoice) {
-                var title = 'Voice Call';
-                if (inputName === 'call_interest_message') title = 'Instant Call: New Lead';
-                if (inputName === 'call_installment_message') title = 'Reminder Call: Installment Due';
-                if (inputName === 'call_rent_message') title = 'Reminder Call: Rent Due';
-                preview.innerHTML = '<strong style="color:#be185d !important;">' + title + '</strong><p style="margin:0; color:#0f172a !important;">' + formatPreviewText(rawText) + '</p>';
-            } else {
-                preview.innerHTML = formatPreviewText(rawText);
-            }
+            preview.innerHTML = formatPreviewText(rawText);
         });
         
         // Highlight bubble on focus

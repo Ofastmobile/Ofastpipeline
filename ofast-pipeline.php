@@ -3,9 +3,10 @@
  * Plugin Name: OFast Pipeline
  * Plugin URI:  https://ofastpipeline.com
  * Description: Done-for-you lead pipeline and CRM automation engine for SMB clients in Nigeria.
- * Version:     2.2.27
+ * Version:     2.2.37
  * Author:      Olabode / Bofast World
  * Author URI:  https://bofastworld.com
+ * Update URI:  false
  * Text Domain: ofast-pipeline
  * Domain Path: /languages
  * Requires at least: 6.0
@@ -14,7 +15,10 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'OFP_VERSION', '2.2.28' );
+// One source of truth: the version is read from the Version line in the header above.
+$ofp_header = get_file_data( __FILE__, [ 'Version' => 'Version' ] );
+define( 'OFP_VERSION', $ofp_header['Version'] ?: '0.0.0' );
+unset( $ofp_header );
 define( 'OFP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OFP_URL', plugin_dir_url( __FILE__ ) );
 define( 'OFP_PLUGIN_FILE', __FILE__ );
@@ -64,8 +68,6 @@ require_once OFP_PATH . 'includes/class-ofp-team-member.php';
 require_once OFP_PATH . 'includes/class-ofp-lead.php';
 require_once OFP_PATH . 'includes/class-ofp-queue.php';
 require_once OFP_PATH . 'includes/class-ofp-sms.php';
-require_once OFP_PATH . 'includes/class-ofp-voice.php';
-require_once OFP_PATH . 'includes/class-ofp-voice-notice.php';
 require_once OFP_PATH . 'includes/class-ofp-contacts.php';
 require_once OFP_PATH . 'includes/class-ofp-import.php';
 require_once OFP_PATH . 'includes/class-ofp-credit.php';
@@ -112,7 +114,7 @@ require_once OFP_PATH . 'includes/class-ofp-chat-telegram.php';
 require_once OFP_PATH . 'includes/class-ofp-chat-service.php';
 
 require_once OFP_PATH . 'includes/class-ofp-payment.php';
-require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-paystack.php';
+require_once OFP_PATH . 'includes/gateways/class-ofp-gateway-bachs.php';
 
 require_once OFP_PATH . 'admin/class-ofp-admin-menu.php';
 require_once OFP_PATH . 'admin/class-ofp-admin-settings.php';
@@ -157,6 +159,7 @@ add_filter( 'cron_schedules', function ( array $schedules ): array {
 } );
 
 add_action( 'plugins_loaded', function (): void {
+    OFP_Activator::maybe_upgrade_db(); // P4.04: schema runs once after an update
     OFP_Mailer::configure_smtp();
 
     new OFP_Admin_Menu();
@@ -171,7 +174,6 @@ add_action( 'plugins_loaded', function (): void {
     new OFP_Property_CPT();
     OFP_Property_Amenities::init();
     OFP_Host_Router::init();
-    OFP_Activator::ensure_branding_schema();
     OFP_Platform::init();
     OFP_Property_Package::init();
     OFP_Field_Agent::init();
@@ -181,14 +183,12 @@ add_action( 'plugins_loaded', function (): void {
     OFP_Bank_Account::init();
 OFP_Prembly::init();
     OFP_Property_Commerce::init();
-    OFP_Property_Commerce_Migration::init();
     OFP_Property_Sales::init();
     OFP_Property_Sales_Client_UI::init();
     OFP_Property_Admin_Rules::init();
     OFP_Property_Marketplace::init();
     OFP_Property_Contact::init();
     OFP_Property_Comms_Bridge::init();
-    OFP_Voice_Notice::init();
     OFP_Contacts::init();
     OFP_Property_Checkout::init();
     OFP_Property_Payment_Records::init();

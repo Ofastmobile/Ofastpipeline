@@ -25,7 +25,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_leads_nonce'] )
     if ( wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ofp_leads_nonce'] ) ), 'ofp_leads_' . $client->id ) ) {
         $lead_id    = (int) ( $_POST['lead_id'] ?? 0 );
         $new_status = sanitize_text_field( wp_unslash( $_POST['new_status'] ?? '' ) );
-        $allowed    = [ 'new', 'contacted', 'interested', 'converted', 'dead' ];
+        $allowed    = OFP_Lead::STATUSES;
 
         // Add a note to a lead.
         if ( isset( $_POST['lead_note'] ) ) {

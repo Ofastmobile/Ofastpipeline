@@ -19,8 +19,6 @@ class OFP_Feedback {
      * Bootstraps the feedback system.
      */
     public static function init(): void {
-        self::ensure_schema();
-
         // AJAX handlers for clients submitting feedback
         add_action( 'wp_ajax_ofp_submit_feedback',        [ __CLASS__, 'ajax_submit_feedback' ] );
         add_action( 'wp_ajax_nopriv_ofp_submit_feedback', [ __CLASS__, 'ajax_submit_feedback' ] );
@@ -148,6 +146,11 @@ class OFP_Feedback {
         if ( ! $client ) {
             wp_send_json_error( [ 'message' => 'Please log in to submit feedback or report an issue.' ], 401 );
         }
+        // 10 reports per 10 minutes. Admin test (id 0) is limited by IP instead.
+        OFP_Security::check_rate_limit(
+            ! empty( $client->id ) ? 'client:' . (int) $client->id : OFP_Security::get_client_ip(),
+            'feedback_submit', 10, 600
+        );
 
         $type        = sanitize_key( $_POST['type'] ?? 'feature_request' );
         if ( ! in_array( $type, [ 'feature_request', 'bug_report' ], true ) ) {
@@ -211,12 +214,7 @@ class OFP_Feedback {
                 esc_html( wp_trim_words( $title, 8, '…' ) )
             );
 
-            OFP_Notification::create( [
-                'client_id' => (int) $client->id,
-                'title'     => $notif_title,
-                'message'   => $notif_msg,
-                'type'      => 'info',
-            ] );
+            OFP_Notification::create( (int) $client->id, 'feedback_received', $notif_title, $notif_msg );
         }
 
         // Notify Administrator via email
@@ -324,12 +322,7 @@ class OFP_Feedback {
                 ! empty( $admin_notes ) ? "\nNote: " . $admin_notes : ''
             );
 
-            OFP_Notification::create( [
-                'client_id' => (int) $existing->client_id,
-                'title'     => $notif_title,
-                'message'   => $notif_msg,
-                'type'      => ( $status === 'resolved' ) ? 'success' : 'info',
-            ] );
+            OFP_Notification::create( (int) $existing->client_id, 'feedback_update', $notif_title, $notif_msg );
         }
 
         wp_send_json_success( [ 'message' => 'Feedback updated successfully!' ] );

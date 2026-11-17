@@ -26,9 +26,6 @@ class OFP_Watermark {
         if ( ! is_admin() ) {
             add_action( 'wp_head', [ __CLASS__, 'inject_watermark_css' ], 99 );
         }
-
-        // Ensure the watermark_text column exists in ofp_clients
-        self::ensure_schema();
     }
 
     /**

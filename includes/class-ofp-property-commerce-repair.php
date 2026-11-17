@@ -9,7 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class OFP_Property_Commerce_Repair {
 
     public static function init(): void {
-        add_action( 'init', [ __CLASS__, 'reconcile_properties' ], 60 );
+        // P4.01/P6.01: no longer on every request. Runs once a day (own cron event) and when one property is saved.
+        add_action( 'ofp_daily_property_reconcile', [ __CLASS__, 'reconcile_properties' ] );
+        add_action( 'save_post_ofp_property', [ __CLASS__, 'reconcile_on_save' ], 1005, 3 );
         add_action( 'save_post_ofp_property', [ __CLASS__, 'sync_property_status' ], 1000, 3 );
         add_action( 'save_post_ofp_property', [ __CLASS__, 'notify_listing_owner' ], 1010, 3 );
         add_action( 'admin_menu', [ __CLASS__, 'replace_admin_pages' ], 100 );
@@ -23,43 +25,63 @@ class OFP_Property_Commerce_Repair {
         $table = $wpdb->prefix . 'ofp_properties';
         if ( ! $wpdb->get_var( "SHOW TABLES LIKE '{$table}'" ) ) return;
 
-        $posts = get_posts([
-            'post_type'      => 'ofp_property',
-            'post_status'    => [ 'publish', 'draft', 'pending', 'private' ],
-            'posts_per_page' => -1,
-            'fields'         => 'ids',
-            'no_found_rows'  => true,
-            'ofp_include_occupied' => true,
-        ]);
+        try {
+            $posts = get_posts([
+                'post_type'      => 'ofp_property',
+                'post_status'    => [ 'publish', 'draft', 'pending', 'private' ],
+                'posts_per_page' => -1,
+                'fields'         => 'ids',
+                'no_found_rows'  => true,
+                'ofp_include_occupied' => true,
+            ]);
 
-        foreach ( $posts as $post_id ) {
-            $client_id  = absint( get_post_meta( $post_id, 'ofp_client_id', true ) );
-            $owner_type = sanitize_key( get_post_meta( $post_id, 'ofp_owner_type', true ) );
-            $owner_type = in_array( $owner_type, [ 'platform', 'client' ], true ) ? $owner_type : ( $client_id ? 'client' : 'platform' );
-            $status = sanitize_key( get_post_meta( $post_id, 'ofp_status', true ) ?: 'pending_upload' );
-            $expected_wp_status = in_array( $status, [ 'live', 'taken' ], true ) ? 'publish' : 'draft';
-
-            if ( get_post_status( $post_id ) !== $expected_wp_status && ! wp_is_post_revision( $post_id ) ) {
-                remove_action( 'save_post_ofp_property', [ __CLASS__, 'sync_property_status' ], 1000 );
-                wp_update_post([ 'ID' => $post_id, 'post_status' => $expected_wp_status ]);
-                add_action( 'save_post_ofp_property', [ __CLASS__, 'sync_property_status' ], 1000, 3 );
+            foreach ( $posts as $post_id ) {
+                self::reconcile_one( (int) $post_id, true );
             }
+        } catch ( \Throwable $e ) {
+            error_log( '[OFP_Property_Commerce_Repair] reconcile failed: ' . $e->getMessage() );
+        }
+    }
 
-            $row_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE wp_post_id = %d LIMIT 1", $post_id ) );
-            $data = [
-                'client_id'  => 'client' === $owner_type ? $client_id : 0,
-                'owner_type' => $owner_type,
-                'owner_id'   => 'client' === $owner_type && $client_id ? $client_id : null,
-                'status'     => $status,
-                'updated_at' => current_time( 'mysql' ),
-            ];
+    /** On save of one property: fix only that property's table row (sync_property_status already fixes the post status). */
+    public static function reconcile_on_save( int $post_id, WP_Post $post, bool $update ): void {
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
+        if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) return;
+        self::reconcile_one( $post_id, false );
+    }
 
-            if ( $row_id ) {
-                $wpdb->update( $table, $data, [ 'id' => (int) $row_id ] );
-            } else {
-                OFP_Property_CPT::sync_to_plugin_table( $post_id, 'client' === $owner_type ? $client_id : 0 );
-                $wpdb->update( $table, [ 'owner_type' => $owner_type, 'owner_id' => $data['owner_id'], 'status' => $status ], [ 'wp_post_id' => $post_id ] );
-            }
+    private static function reconcile_one( int $post_id, bool $fix_post_status ): void {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofp_properties';
+
+        $client_id  = absint( get_post_meta( $post_id, 'ofp_client_id', true ) );
+        $owner_type = sanitize_key( get_post_meta( $post_id, 'ofp_owner_type', true ) );
+        $owner_type = in_array( $owner_type, [ 'platform', 'client' ], true ) ? $owner_type : ( $client_id ? 'client' : 'platform' );
+        $status = sanitize_key( get_post_meta( $post_id, 'ofp_status', true ) ?: 'pending_upload' );
+        $expected_wp_status = in_array( $status, [ 'live', 'taken' ], true ) ? 'publish' : 'draft';
+
+        if ( $fix_post_status && get_post_status( $post_id ) !== $expected_wp_status && ! wp_is_post_revision( $post_id ) ) {
+            remove_action( 'save_post_ofp_property', [ __CLASS__, 'sync_property_status' ], 1000 );
+            remove_action( 'save_post_ofp_property', [ __CLASS__, 'reconcile_on_save' ], 1005 );
+            wp_update_post([ 'ID' => $post_id, 'post_status' => $expected_wp_status ]);
+            add_action( 'save_post_ofp_property', [ __CLASS__, 'sync_property_status' ], 1000, 3 );
+            add_action( 'save_post_ofp_property', [ __CLASS__, 'reconcile_on_save' ], 1005, 3 );
+        }
+
+        $row_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE wp_post_id = %d LIMIT 1", $post_id ) );
+        $data = [
+            'client_id'  => 'client' === $owner_type ? $client_id : 0,
+            'owner_type' => $owner_type,
+            'owner_id'   => 'client' === $owner_type && $client_id ? $client_id : null,
+            'status'     => $status,
+            'updated_at' => current_time( 'mysql' ),
+        ];
+
+        if ( $row_id ) {
+            $wpdb->update( $table, $data, [ 'id' => (int) $row_id ] );
+        } else {
+            OFP_Property_CPT::sync_to_plugin_table( $post_id, 'client' === $owner_type ? $client_id : 0 );
+            $wpdb->update( $table, [ 'owner_type' => $owner_type, 'owner_id' => $data['owner_id'], 'status' => $status ], [ 'wp_post_id' => $post_id ] );
         }
     }
 
@@ -135,7 +157,7 @@ class OFP_Property_Commerce_Repair {
             $message_html .= '<p>If you have any questions, please contact us.</p>';
             OFP_Mailer::send($offer->buyer_email, $offer->buyer_name?:'there', 'Property Installment Offer - ' . ($offer->property_title?:''), $message_html);
         }
-        if(OFP_SMS::ready()&&!empty($offer->buyer_phone)&&!empty($offer->client_id)&&class_exists('OFP_Credit')&&OFP_Credit::has_balance((int)$offer->client_id,'sms',6.99)){ $sms=OFP_SMS::for_client( (int) (int )$offer->client_id); $sent=$sms->send($offer->buyer_phone,$message); if(!empty($sent['success']))OFP_Credit::deduct((int)$offer->client_id,'sms',6.99); }
+        if(OFP_SMS::ready()&&!empty($offer->buyer_phone)&&!empty($offer->client_id)&&class_exists('OFP_Credit')&&OFP_Credit::has_balance((int)$offer->client_id,'sms',OFP_Credit::sms_cost($message))){ $sms=OFP_SMS::for_client( (int) (int )$offer->client_id); $sent=$sms->send($offer->buyer_phone,$message); if(!empty($sent['success']))OFP_Credit::deduct((int)$offer->client_id,'sms',OFP_Credit::sms_cost($message)); }
         if(!empty($offer->client_id)&&class_exists('OFP_Notification'))OFP_Notification::create((int)$offer->client_id,'property_offer_created','Installment offer created',sprintf('An installment offer has been created for %s and sent to %s.', $offer->property_title?:'a property',$offer->buyer_name));
     }
 
@@ -143,7 +165,7 @@ class OFP_Property_Commerce_Repair {
         if('POST'!==($_SERVER['REQUEST_METHOD']??'')||'accept'!==sanitize_key($_POST['ofp_offer_action']??''))return;
         $token=sanitize_text_field(wp_unslash($_GET['offer']??'')); if(!$token)return; global $wpdb; $p=$wpdb->prefix; $hash=hash('sha256',$token); $offer=$wpdb->get_row($wpdb->prepare("SELECT * FROM {$p}ofp_property_offers WHERE offer_token_hash=%s LIMIT 1",$hash)); if(!$offer||'pending'!==$offer->status)return;
         $nonce=sanitize_text_field(wp_unslash($_POST['ofp_offer_nonce']??'')); if(!wp_verify_nonce($nonce,'ofp_offer_action_'.$offer->id)||empty($_POST['accept_terms'])||'1'!==$_POST['accept_terms'])return;
-        $purchase_id=OFP_Property_Commerce::create_purchase_from_offer((int)$offer->id,isset($_SERVER['REMOTE_ADDR'])?sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])):''); if(is_wp_error($purchase_id))return;
+        $purchase_id=OFP_Property_Commerce::create_purchase_from_offer((int)$offer->id,OFP_Security::get_client_ip()); if(is_wp_error($purchase_id))return;
         // create_purchase_from_offer() already emits the purchase-created event.
         // Emit only the acceptance event here so the buyer receives one clear
         // purchase confirmation rather than duplicate emails.

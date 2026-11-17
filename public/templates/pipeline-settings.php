@@ -1,7 +1,7 @@
 <?php
 /**
  * Template: /pipeline-settings
- * Client customises their own pipeline messages and voice scripts.
+ * Client customises their own pipeline messages.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -40,23 +40,6 @@ if ( ! $config ) {
 
 $saved   = false;
 $error   = '';
-
-// ── Handle Call Scripts save (standalone) ──────────────────────────────────
-if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_voice_notice_nonce'] ) && ! isset( $_POST['ofp_pipeline_nonce'] ) ) {
-    if ( ! wp_verify_nonce(
-        sanitize_text_field( wp_unslash( $_POST['ofp_voice_notice_nonce'] ) ),
-        'ofp_voice_notice_' . (int) $client->id
-    ) ) {
-        wp_die( 'Security check failed. Please refresh and try again.', 'Security Check', [ 'response' => 403 ] );
-    }
-
-    if ( class_exists( 'OFP_Voice_Notice' ) ) {
-        OFP_Voice_Notice::save_settings( (int) $client->id, $_POST );
-    }
-
-    wp_safe_redirect( add_query_arg( [ 'saved_calls' => '1' ], home_url( '/pipeline-settings' ) ) . '#call-scripts' );
-    exit;
-}
 
 // ── Handle form submission ─────────────────────────────────────────────────
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_pipeline_nonce'] ) ) {
@@ -108,16 +91,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_pipeline_nonce'
             [ 'client_id' => $client->id ]
         );
 
-        // Also save voice notice / call scripts if submitted with pipeline form.
-        if ( class_exists( 'OFP_Voice_Notice' ) && isset( $_POST['ofp_voice_notice_nonce'] ) ) {
-            if ( wp_verify_nonce(
-                sanitize_text_field( wp_unslash( $_POST['ofp_voice_notice_nonce'] ) ),
-                'ofp_voice_notice_' . (int) $client->id
-            ) ) {
-                OFP_Voice_Notice::save_settings( (int) $client->id, $_POST );
-            }
-        }
-
         // Reload updated config.
         $config = $wpdb->get_row(
             $wpdb->prepare(
@@ -147,13 +120,6 @@ if ( $config ) {
     }
 }
 
-// ── Data for Call Scripts ──────────────────────────────────────────────────
-$call_settings = class_exists( 'OFP_Voice_Notice' ) ? OFP_Voice_Notice::settings( (int) $client->id ) : [];
-$call_hours    = class_exists( 'OFP_Voice_Notice' ) ? OFP_Voice_Notice::hours() : [ 'enabled' => false, 'start' => 8, 'end' => 19 ];
-$call_credits  = class_exists( 'OFP_Credit' ) ? OFP_Credit::get( (int) $client->id ) : null;
-$call_balance  = (float) ( $call_credits->voice_remaining ?? 0 );
-$call_cost     = defined( 'OFP_Queue::VOICE_COST' ) ? (float) OFP_Queue::VOICE_COST : 15.0;
-$max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Notice::MAX_CHARS : 400;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -174,9 +140,6 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                 <?php if ( $saved ) : ?>
                     <div class="ofp-alert ofp-alert-success" style="margin-bottom: 20px;">✅ Pipeline settings saved successfully.</div>
                 <?php endif; ?>
-                <?php if ( ! empty( $_GET['saved_calls'] ) ) : ?>
-                    <div class="ofp-alert ofp-alert-success" style="margin-bottom: 20px;">✅ Your call scripts were saved.</div>
-                <?php endif; ?>
                 <?php if ( $error ) : ?>
                     <div class="ofp-alert ofp-alert-error" style="margin-bottom: 20px;"><?php echo esc_html( $error ); ?></div>
                 <?php endif; ?>
@@ -185,7 +148,6 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
 
                 <form method="POST" action="" class="ofp-form ofp-pipeline-form">
             <?php wp_nonce_field( 'ofp_save_pipeline_' . $client->id, 'ofp_pipeline_nonce' ); ?>
-            <?php wp_nonce_field( 'ofp_voice_notice_' . (int) $client->id, 'ofp_voice_notice_nonce' ); ?>
 
             <?php if ( $empty_notes ) : ?>
                 <div class="ofp-alert ofp-alert-error" style="margin-bottom: 16px;">
@@ -388,89 +350,6 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                     </div>
                 </div>
 
-                <!-- ── Call Scripts (below Follow-up 3) ─────────────────────── -->
-                <div class="ofp-timeline-step" id="call-scripts" style="margin-bottom: 0;">
-                    <div class="ofp-timeline-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></div>
-                    <div class="ofp-timeline-content">
-                        <div class="ofp-card">
-                            <div class="ofp-card-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 10px;">
-                                <h3 style="margin: 0;">Call Scripts</h3>
-                                <div style="display: flex; align-items: center; gap: 10px; font-size: 13px;">
-                                    <span class="ofp-badge ofp-badge-blue">Voice Credit: &#8358;<?php echo esc_html( number_format( $call_balance, 0 ) ); ?></span>
-                                    <span class="ofp-badge ofp-badge-gray">&#8358;<?php echo esc_html( number_format( $call_cost, 0 ) ); ?> / call</span>
-                                </div>
-                            </div>
-
-                            <?php if ( $call_hours['enabled'] ) : ?>
-                                <p class="ofp-hint" style="margin-bottom: 12px;">
-                                    Calls only go out between <?php echo esc_html( gmdate( 'g A', mktime( (int) $call_hours['start'], 0, 0, 1, 1, 2000 ) ) ); ?> and <?php echo esc_html( gmdate( 'g A', mktime( (int) $call_hours['end'] % 24, 0, 0, 1, 1, 2000 ) ) ); ?>. A call due outside those hours waits until the next morning.
-                                </p>
-                            <?php endif; ?>
-                            <?php if ( $call_balance < $call_cost ) : ?>
-                                <div style="margin-bottom: 16px; padding: 10px 14px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; border-radius: 6px; font-size: 13px; color: #b45309;">
-                                    Your voice credit is too low to place a call. Top up on the Credits page.
-                                </div>
-                            <?php endif; ?>
-
-                            <!-- Group A: Instant call to new leads -->
-                            <div style="border-top: 1px solid var(--border-color); padding-top: 18px; margin-top: 8px; margin-bottom: 24px;">
-                                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
-                                    <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: var(--text-main);">Instant call to new leads</h4>
-                                    <label class="ofp-toggle">
-                                        <input type="checkbox" name="call_interest_enabled" value="1" <?php checked( ! empty( $call_settings['interest_enabled'] ) ); ?>>
-                                        <span class="ofp-toggle-slider"></span>
-                                    </label>
-                                </div>
-                                <div class="ofp-field" style="margin-bottom:0;">
-                                    <label for="call_interest_message">What the call says</label>
-                                    <textarea id="call_interest_message" name="call_interest_message" rows="3" maxlength="<?php echo (int) $max_chars; ?>"><?php echo esc_textarea( $call_settings['interest_message'] ?? '' ); ?></textarea>
-                                    <p class="ofp-hint" style="margin-top:4px; font-size:11px; margin-bottom:0; word-break:break-word;">{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}. 400 characters max.</p>
-                                </div>
-                            </div>
-
-                            <!-- Group B: Payment reminder calls -->
-                            <div style="border-top: 1px solid var(--border-color); padding-top: 18px;">
-                                <div style="margin-bottom: 14px;">
-                                    <h4 style="margin: 0 0 4px; font-size: 15px; font-weight: 600; color: var(--text-main);">Payment reminder calls</h4>
-                                    <p class="ofp-subtitle" style="margin: 0; font-size: 13px; color: var(--text-muted);">Automated voice reminders triggered on payment due dates.</p>
-                                </div>
-
-                                <!-- Installment Due Day Call -->
-                                <div style="margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px dashed var(--border-color);">
-                                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
-                                        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">When a buyer's installment is due today</span>
-                                        <label class="ofp-toggle">
-                                            <input type="checkbox" name="call_installment_enabled" value="1" <?php checked( ! empty( $call_settings['installment_enabled'] ) ); ?>>
-                                            <span class="ofp-toggle-slider"></span>
-                                        </label>
-                                    </div>
-                                    <div class="ofp-field" style="margin-bottom:0;">
-                                        <label for="call_installment_message">What the call says</label>
-                                        <textarea id="call_installment_message" name="call_installment_message" rows="3" maxlength="<?php echo (int) $max_chars; ?>"><?php echo esc_textarea( $call_settings['installment_message'] ?? '' ); ?></textarea>
-                                        <p class="ofp-hint" style="margin-top:4px; font-size:11px; margin-bottom:0; word-break:break-word;">{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}. 400 characters max.</p>
-                                    </div>
-                                </div>
-
-                                <!-- Rent Due Day Call -->
-                                <div>
-                                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
-                                        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">When a tenant's rent is due today</span>
-                                        <label class="ofp-toggle">
-                                            <input type="checkbox" name="call_rent_enabled" value="1" <?php checked( ! empty( $call_settings['rent_enabled'] ) ); ?>>
-                                            <span class="ofp-toggle-slider"></span>
-                                        </label>
-                                    </div>
-                                    <div class="ofp-field" style="margin-bottom:0;">
-                                        <label for="call_rent_message">What the call says</label>
-                                        <textarea id="call_rent_message" name="call_rent_message" rows="3" maxlength="<?php echo (int) $max_chars; ?>"><?php echo esc_textarea( $call_settings['rent_message'] ?? '' ); ?></textarea>
-                                        <p class="ofp-hint" style="margin-top:4px; font-size:11px; margin-bottom:0; word-break:break-word;">{{name}} {{business_name}} {{property}} {{amount}} {{due_date}}. 400 characters max.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
             </div>
 
             <div class="ofp-form-actions ofp-pipeline-actions">
@@ -503,18 +382,6 @@ $max_chars     = defined( 'OFP_Voice_Notice::MAX_CHARS' ) ? (int) OFP_Voice_Noti
                             </div>
                             <div class="ofp-chat-bubble" id="preview_followup_3_message">
                                 Hi John, we have been trying to reach you. We would love to help. Call or message us anytime. - My Business
-                            </div>
-                            <div class="ofp-chat-bubble call-bubble" id="preview_call_interest_message" style="color: #0f172a !important;">
-                                <strong style="color: #be185d !important;">📞 Instant Call: New Lead</strong>
-                                <p style="margin:0; color: #0f172a !important;"><?php echo esc_html( $call_settings['interest_message'] ?? 'Hello John, this is My Business regarding your recent inquiry.' ); ?></p>
-                            </div>
-                            <div class="ofp-chat-bubble call-bubble" id="preview_call_installment_message" style="color: #0f172a !important;">
-                                <strong style="color: #be185d !important;">📞 Reminder Call: Installment Due</strong>
-                                <p style="margin:0; color: #0f172a !important;"><?php echo esc_html( $call_settings['installment_message'] ?? 'Hello John, this is My Business. Your installment of 250,000 naira for Sunset Villa is due today.' ); ?></p>
-                            </div>
-                            <div class="ofp-chat-bubble call-bubble" id="preview_call_rent_message" style="color: #0f172a !important;">
-                                <strong style="color: #be185d !important;">📞 Reminder Call: Rent Due</strong>
-                                <p style="margin:0; color: #0f172a !important;"><?php echo esc_html( $call_settings['rent_message'] ?? 'Hello John, this is My Business. Your rent payment for Sunset Villa is due today.' ); ?></p>
                             </div>
                         </div>
                     </div>

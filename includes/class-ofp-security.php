@@ -30,6 +30,46 @@ class OFP_Security {
      * @param  string $input Raw phone input from a form or API.
      * @return string        Cleaned phone string.
      */
+    /**
+     * P4.13: date text for a REAL timestamp (time(), strtotime('+7 days') and so on), in the
+     * site time zone. Use this for "today", "this month", "7 days from now".
+     * Do NOT use it on a date text read from the database: those are saved in site time
+     * already (current_time('mysql')), and date( fmt, strtotime( $text ) ) shows them correctly.
+     */
+    public static function site_date( string $format, ?int $timestamp = null ): string {
+        return wp_date( $format, $timestamp ?? time() );
+    }
+
+    /**
+     * P4.13: replaces current_time('timestamp') (discouraged since WP 5.3), same number:
+     * "site time as if it were UTC". Only for comparing with strtotime() of a stored site-time
+     * text, or for date()/gmdate() on that same number. Never for a real timestamp.
+     */
+    public static function site_now_ts(): int {
+        $now = new DateTimeImmutable( 'now', wp_timezone() );
+        return $now->getTimestamp() + $now->getOffset();
+    }
+
+    /**
+     * P4.31: wpdb::prepare() warns when the query has no placeholder. List pages with
+     * optional filters build "WHERE 1=1" and an empty argument list when no filter is
+     * chosen. Prepare only when there are arguments; otherwise the query is returned as is
+     * (it then holds only fixed text and values already checked by the caller).
+     */
+    public static function prepare_opt( string $sql, array $args ): string {
+        global $wpdb;
+        return empty( $args ) ? $sql : (string) $wpdb->prepare( $sql, ...$args );
+    }
+
+    /**
+     * G6.01: last 10 digits of a phone number, for the indexed phone10 columns.
+     * Same rule as the buyer login (digits only, last 10). Under 10 digits = kept as is.
+     */
+    public static function phone_last10( string $input ): string {
+        $digits = preg_replace( '/\D/', '', $input );
+        return substr( (string) $digits, -10 );
+    }
+
     public static function sanitize_phone( string $input ): string {
         // Keep only digits and a leading +
         $cleaned = preg_replace( '/[^0-9+]/', '', trim( $input ) );
@@ -476,6 +516,96 @@ class OFP_Security {
             ? sanitize_text_field( wp_unslash( $_POST['cf-turnstile-response'] ) )
             : '';
         return self::verify_turnstile( $token );
+    }
+
+    /**
+     * Turn the "websites allowed to send leads" box from Settings into a clean list:
+     * one plain domain per line (no https://, no path, no port). Bad lines are dropped (S2-11).
+     */
+    public static function sanitize_origin_list( $raw ): string {
+        $out = [];
+        foreach ( preg_split( '/[\r\n,]+/', strtolower( (string) $raw ) ) as $line ) {
+            $line = trim( $line );
+            $line = preg_replace( '#^https?://#', '', $line );
+            $line = preg_replace( '#[/:?\#].*$#', '', $line );
+            $line = ltrim( $line, '.' );
+            if ( '' !== $line && preg_match( '/^[a-z0-9\-]+(\.[a-z0-9\-]+)+$/', $line ) ) {
+                $out[ $line ] = $line;
+            }
+        }
+        return implode( "\n", array_values( $out ) );
+    }
+
+    /**
+     * The website a browser says a request came from: the Origin header, or the host
+     * of the Referer when there is no Origin. Empty for calls that are not from a browser.
+     */
+    public static function request_origin(): string {
+        $origin = trim( (string) ( $_SERVER['HTTP_ORIGIN'] ?? '' ) );
+        if ( '' !== $origin ) {
+            return $origin;
+        }
+        $ref = trim( (string) ( $_SERVER['HTTP_REFERER'] ?? '' ) );
+        if ( '' !== $ref ) {
+            $scheme = strtolower( (string) wp_parse_url( $ref, PHP_URL_SCHEME ) );
+            $host   = (string) wp_parse_url( $ref, PHP_URL_HOST );
+            if ( $host && in_array( $scheme, [ 'http', 'https' ], true ) ) {
+                return $scheme . '://' . $host;
+            }
+            return 'null';
+        }
+        return '';
+    }
+
+    /**
+     * May this website send leads to us? Yes for this site, for its client subdomains
+     * ({ofp_crm_base_domain}), and for every domain listed in Settings (and its subdomains) (S2-11).
+     */
+    public static function origin_allowed( string $origin ): bool {
+        $scheme = strtolower( (string) wp_parse_url( $origin, PHP_URL_SCHEME ) );
+        $host   = strtolower( (string) wp_parse_url( $origin, PHP_URL_HOST ) );
+        if ( '' === $host || ! in_array( $scheme, [ 'http', 'https' ], true ) ) {
+            return false;
+        }
+
+        $domains = [ strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ) ];
+        $base    = strtolower( trim( (string) get_option( 'ofp_crm_base_domain', '' ), ". \t" ) );
+        if ( '' !== $base ) {
+            $domains[] = $base;
+        }
+        foreach ( preg_split( '/\R+/', (string) get_option( 'ofp_lead_allowed_origins', '' ), -1, PREG_SPLIT_NO_EMPTY ) as $d ) {
+            $domains[] = strtolower( trim( $d ) );
+        }
+
+        foreach ( $domains as $d ) {
+            if ( '' !== $d && ( $host === $d || substr( $host, -( strlen( $d ) + 1 ) ) === '.' . $d ) ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The Host the visitor used, but only when it is this site or one of its
+     * client subdomains ({ofp_crm_base_domain}). Anything else returns ''
+     * so callers fall back to the normal site address (G9.01).
+     * The port, if any, is kept.
+     */
+    public static function trusted_request_host(): string {
+        $raw = strtolower( trim( (string) ( $_SERVER['HTTP_HOST'] ?? '' ) ) );
+        if ( '' === $raw || ! preg_match( '/^[a-z0-9.\-]+(:\d{1,5})?$/', $raw ) ) {
+            return '';
+        }
+        $host = preg_replace( '/:\d+$/', '', $raw );
+        $site = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+        if ( $host === $site ) {
+            return $raw;
+        }
+        $base = strtolower( trim( (string) get_option( 'ofp_crm_base_domain', '' ), ". \t" ) );
+        if ( '' !== $base && ( $host === $base || substr( $host, -( strlen( $base ) + 1 ) ) === '.' . $base ) ) {
+            return $raw;
+        }
+        return '';
     }
 
     // ─────────────────────────────────────────────────────────────────────────

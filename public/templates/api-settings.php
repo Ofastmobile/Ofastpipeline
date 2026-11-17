@@ -220,7 +220,7 @@ $lead_sample .= '</script>';
                                 <tr>
                                     <td><code>phone</code></td>
                                     <td><span style="color: #ef4444; font-weight: 700;">Required</span></td>
-                                    <td>Lead contact phone number for SMS and voice pipelines.</td>
+                                    <td>Lead contact phone number for SMS pipelines.</td>
                                 </tr>
                                 <tr>
                                     <td><code>email</code></td>

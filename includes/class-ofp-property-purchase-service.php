@@ -107,6 +107,25 @@ class OFP_Property_Purchase_Service {
         $wpdb->query( 'START TRANSACTION' );
 
         try {
+            // Lock the property row, then repeat the checks. Two requests at the same
+            // moment now take turns, so only one purchase can be created (P4.02).
+            $locked = $wpdb->get_row( $wpdb->prepare(
+                "SELECT id, status FROM {$p}ofp_properties WHERE id = %d LIMIT 1 FOR UPDATE",
+                $property_id
+            ) );
+            if ( ! $locked || 'taken' === $locked->status ) {
+                $wpdb->query( 'ROLLBACK' );
+                return new WP_Error( 'property_already_sold', 'This property has already been sold.' );
+            }
+            $existing_locked = (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$p}ofp_property_purchases WHERE property_id = %d AND status IN ('active', 'completed') FOR UPDATE",
+                $property_id
+            ) );
+            if ( $existing_locked > 0 ) {
+                $wpdb->query( 'ROLLBACK' );
+                return new WP_Error( 'property_already_purchased', 'This property already has an active or completed purchase.' );
+            }
+
             $ok = $wpdb->insert(
                 "{$p}ofp_property_purchases",
                 [
@@ -116,6 +135,7 @@ class OFP_Property_Purchase_Service {
                     'contact_id'          => null,
                     'buyer_name'          => $buyer_name,
                     'buyer_phone'         => $buyer_phone,
+                    'phone10'             => OFP_Security::phone_last10( $buyer_phone ),
                     'buyer_email'         => $buyer_email,
                     'total_price'         => $total_price,
                     'amount_paid'         => 0.00,
@@ -181,9 +201,13 @@ class OFP_Property_Purchase_Service {
     }
 
     /**
-     * Calculate a schedule due date using calendar-safe periods.
+     * Calculate a schedule due date. ONE helper used by the manual purchase path and by
+     * offer acceptance (P4.24, P4.25).
+     *
+     * Months are added to the original date and the day is cut to the last day of
+     * the target month (31 January + 1 month = 28 February, + 2 months = 31 March).
      */
-    private static function calculate_due_date( string $base_date, int $offset, string $frequency ): string {
+    public static function calculate_due_date( string $base_date, int $offset, string $frequency ): string {
         $base_timestamp = strtotime( $base_date );
         if ( false === $base_timestamp ) {
             return $base_date;
@@ -195,13 +219,26 @@ class OFP_Property_Purchase_Service {
             case 'weekly':
                 return gmdate( 'Y-m-d', strtotime( "+{$offset} weeks", $base_timestamp ) );
             case 'quarterly':
-                return gmdate( 'Y-m-d', strtotime( "+" . ( $offset * 3 ) . " months", $base_timestamp ) );
+                return self::add_months_clamped( $base_timestamp, $offset * 3 );
             case 'yearly':
-                return gmdate( 'Y-m-d', strtotime( "+{$offset} years", $base_timestamp ) );
+                return self::add_months_clamped( $base_timestamp, $offset * 12 );
             case 'monthly':
             default:
-                return gmdate( 'Y-m-d', strtotime( "+{$offset} months", $base_timestamp ) );
+                return self::add_months_clamped( $base_timestamp, $offset );
         }
+    }
+
+    private static function add_months_clamped( int $base_timestamp, int $months ): string {
+        $year  = (int) gmdate( 'Y', $base_timestamp );
+        $month = (int) gmdate( 'n', $base_timestamp );
+        $day   = (int) gmdate( 'j', $base_timestamp );
+
+        $total      = ( $month - 1 ) + $months;
+        $new_year   = $year + intdiv( $total, 12 );
+        $new_month  = ( $total % 12 ) + 1;
+        $last_day   = (int) gmdate( 't', gmmktime( 0, 0, 0, $new_month, 1, $new_year ) );
+
+        return sprintf( '%04d-%02d-%02d', $new_year, $new_month, min( $day, $last_day ) );
     }
 
     private static function insert_installment( int $purchase_id, int $number, string $due_date, float $amount, int $grace_days, string $status ): void {
@@ -227,107 +264,7 @@ class OFP_Property_Purchase_Service {
     }
 }
 
-/**
- * Payment-plan frequency compatibility UI.
- * Adds a selector only when the existing form does not already have one,
- * and inserts it before the submit button on the client form.
- */
-add_action( 'admin_footer', function (): void {
-    $screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-    if ( ! $screen || strpos( (string) $screen->id, 'ofp_property' ) === false ) return;
-    ?>
-    <script>
-    (function(){
-        var values = [
-            ['daily','Daily'], ['weekly','Weekly'], ['monthly','Monthly'],
-            ['quarterly','Quarterly'], ['yearly','Yearly']
-        ];
-        document.querySelectorAll('form').forEach(function(form){
-            if (form.querySelector('[name="frequency"]') || !form.querySelector('[name="installment_amount"]')) return;
-            var row = document.createElement('tr');
-            row.id = 'ofp-row-frequency';
-            row.className = 'ofp-purchase-installment-field ofp-offer-installment-field';
-            var th = document.createElement('th');
-            th.textContent = 'Payment frequency';
-            var td = document.createElement('td');
-            var select = document.createElement('select');
-            select.name = 'frequency';
-            values.forEach(function(v){
-                var option = document.createElement('option');
-                option.value = v[0];
-                option.textContent = v[1];
-                if (v[0] === 'monthly') option.selected = true;
-                select.appendChild(option);
-            });
-            td.appendChild(select);
-            row.appendChild(th);
-            row.appendChild(td);
-            var amountRow = form.querySelector('[name="installment_amount"]');
-            var amountTr = amountRow && amountRow.closest('tr');
-            if (amountTr) amountTr.parentNode.insertBefore(row, amountTr.nextSibling);
-
-            var typeSelect = form.querySelector('[name="payment_type"]');
-            if (typeSelect) {
-                if (typeSelect.value === 'full_payment') row.style.display = 'none';
-                typeSelect.addEventListener('change', function(){
-                    row.style.display = this.value === 'full_payment' ? 'none' : '';
-                });
-            }
-        });
-    })();
-    </script>
-    <?php
-}, 1000 );
-
-add_action( 'wp_footer', function (): void {
-    ?>
-    <script>
-    (function(){
-        var values = [
-            ['daily','Daily'], ['weekly','Weekly'], ['monthly','Monthly'],
-            ['quarterly','Quarterly'], ['yearly','Yearly']
-        ];
-        document.querySelectorAll('form').forEach(function(form){
-            if (form.querySelector('[name="frequency"]') || !form.querySelector('[name="installment_amount"]')) return;
-            var box = document.createElement('div');
-            box.id = 'ofp-box-frequency';
-            box.className = 'ofp-purchase-installment-field ofp-offer-installment-field';
-            box.style.marginTop = '12px';
-            var label = document.createElement('label');
-            label.textContent = 'Payment frequency';
-            label.style.display = 'block';
-            label.style.marginBottom = '6px';
-            var select = document.createElement('select');
-            select.name = 'frequency';
-            select.style.width = '100%';
-            values.forEach(function(v){
-                var option = document.createElement('option');
-                option.value = v[0];
-                option.textContent = v[1];
-                if (v[0] === 'monthly') option.selected = true;
-                select.appendChild(option);
-            });
-            box.appendChild(label);
-            box.appendChild(select);
-            var submit = form.querySelector('[type="submit"]');
-            if (submit && submit.parentNode) {
-                submit.parentNode.insertBefore(box, submit);
-            } else {
-                form.appendChild(box);
-            }
-
-            var typeSelect = form.querySelector('[name="payment_type"]');
-            if (typeSelect) {
-                if (typeSelect.value === 'full_payment') box.style.display = 'none';
-                typeSelect.addEventListener('change', function(){
-                    box.style.display = this.value === 'full_payment' ? 'none' : '';
-                });
-            }
-        });
-    })();
-    </script>
-    <?php
-}, 1000 );
+// P6.09: the injected "Payment frequency" scripts were removed. Every form already has its own frequency select.
 
 /**
  * Reconcile accepted-offer schedules with the stored purchase frequency.

@@ -61,7 +61,7 @@ class OFP_Property_Tenant_Portal {
             } elseif ( empty( $_POST['accept_terms'] ) ) {
                 $error = 'Please accept the lease terms before continuing.';
             } else {
-                $accepted = OFP_Property_Rent::accept_lease_offer( $token, $_SERVER['REMOTE_ADDR'] ?? '' );
+                $accepted = OFP_Property_Rent::accept_lease_offer( $token, OFP_Security::get_client_ip() );
                 if ( is_wp_error( $accepted ) ) {
                     $error = $accepted->get_error_message();
                 } else {

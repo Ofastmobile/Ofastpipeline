@@ -232,6 +232,16 @@ class OFP_Auth {
 
         $otp_code = strtoupper( trim( $otp_code ) );
 
+        // Wrong-code limit per person (not per login page visit): 5 tries, then
+        // locked for 15 minutes. Starting a new login or sign up does not reset it.
+        $lock_key = 'ofp_otp_try_' . md5( strtolower( trim( $contact ) ) . '|' . $purpose );
+        $tries    = (int) get_transient( $lock_key );
+        if ( $tries >= 5 ) {
+            return false; // Locked. Even the right code is refused until the lock ends.
+        }
+        // Count this try first, so parallel requests cannot get extra guesses.
+        set_transient( $lock_key, $tries + 1, 15 * MINUTE_IN_SECONDS );
+
         $record = $wpdb->get_row(
             $wpdb->prepare(
                 "SELECT id, expires_at FROM {$wpdb->prefix}ofp_otps 
@@ -250,8 +260,9 @@ class OFP_Auth {
             return false; // Expired
         }
 
-        // Valid OTP. Delete it so it can't be reused.
+        // Valid OTP. Delete it so it can't be reused, and clear the try counter.
         $wpdb->delete( $wpdb->prefix . 'ofp_otps', [ 'id' => $record->id ] );
+        delete_transient( $lock_key );
 
         return true;
     }

@@ -39,7 +39,6 @@ class OFP_Admin_Menu {
         // Handle all admin form submissions via admin_post hooks.
         // This keeps form processing separate from view rendering.
         add_action( 'admin_post_ofp_add_client',     [ $this, 'handle_add_client' ] );
-        add_action( 'admin_post_ofp_update_client',  [ $this, 'handle_update_client' ] );
         add_action( 'admin_post_ofp_delete_client',  [ $this, 'handle_delete_client' ] );
         add_action( 'admin_post_ofp_approve_client', [ $this, 'handle_approve_client' ] );
         add_action( 'admin_post_ofp_toggle_client',  [ $this, 'handle_toggle_client' ] );
@@ -56,7 +55,6 @@ class OFP_Admin_Menu {
         add_action( 'admin_post_ofp_mark_subscription_paid', [ $this, 'handle_mark_subscription_paid' ] );
         add_action( 'admin_init', [ $this, 'handle_save_plan_pricing' ] );
         add_action( 'admin_init', [ $this, 'handle_save_listing_plans' ] );
-        add_action( 'admin_init', [ $this, 'handle_save_company_bank' ] ); // Phase 17
         add_action( 'admin_post_ofp_retry_trigger',  [ $this, 'handle_retry_trigger' ] );
         add_action( 'admin_post_ofp_cancel_trigger',  [ $this, 'handle_cancel_trigger' ] );
         add_action( 'admin_post_ofp_send_broadcast',  [ $this, 'handle_send_broadcast' ] );
@@ -692,6 +690,7 @@ class OFP_Admin_Menu {
             'ofp_disable_xmlrpc'          => empty( $_POST['ofp_disable_xmlrpc'] ) ? '0' : '1',
             'ofp_obfuscate_author_slugs'  => empty( $_POST['ofp_obfuscate_author_slugs'] ) ? '0' : '1',
             'ofp_obfuscate_emails'        => empty( $_POST['ofp_obfuscate_emails'] ) ? '0' : '1',
+            'ofp_delete_data_on_uninstall' => empty( $_POST['ofp_delete_data_on_uninstall'] ) ? '0' : '1',
             'ofp_watermark_enabled'   => empty( $_POST['ofp_watermark_enabled'] ) ? '0' : '1',
             'ofp_watermark_text'      => sanitize_text_field( wp_unslash( $_POST['ofp_watermark_text'] ?? '' ) ),
             'ofp_global_pixel_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_global_pixel_id']     ?? '' ) ),
@@ -723,16 +722,9 @@ class OFP_Admin_Menu {
             'ofp_default_followup_1'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_1']  ?? '' ) ),
             'ofp_default_followup_2'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_2']  ?? '' ) ),
             'ofp_default_followup_3'  => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_followup_3']  ?? '' ) ),
-            // Automatic one way calls: starting text and calling hours
             'ofp_sms_provider'             => ( isset( OFP_SMS::providers()[ sanitize_key( wp_unslash( $_POST['ofp_sms_provider'] ?? '' ) ) ] ) ? sanitize_key( wp_unslash( $_POST['ofp_sms_provider'] ) ) : get_option( 'ofp_sms_provider', 'africastalking' ) ),
-            'ofp_default_call_interest'    => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_call_interest']    ?? '' ) ),
-            'ofp_default_call_installment' => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_call_installment'] ?? '' ) ),
-            'ofp_default_call_rent'        => sanitize_textarea_field( wp_unslash( $_POST['ofp_default_call_rent']        ?? '' ) ),
-            'ofp_voice_hours_enabled'      => empty( $_POST['ofp_voice_hours_enabled'] ) ? '0' : '1',
-            'ofp_voice_hours_start'        => min( 23, absint( $_POST['ofp_voice_hours_start'] ?? 8 ) ),
-            'ofp_voice_hours_end'          => max( 1, min( 24, absint( $_POST['ofp_voice_hours_end'] ?? 19 ) ) ),
             // Payment gateway
-            'ofp_payment_provider'       => 'paystack',
+            'ofp_payment_provider'       => 'bachs',
             // SMTP mode + fields
             'ofp_smtp_mode'        => $smtp_mode,
             'ofp_smtp_host'        => sanitize_text_field( wp_unslash( $_POST['ofp_smtp_host']        ?? '' ) ),
@@ -744,7 +736,6 @@ class OFP_Admin_Menu {
             // Africa's Talking
             'ofp_at_username'      => sanitize_text_field( wp_unslash( $_POST['ofp_at_username']      ?? '' ) ),
             'ofp_at_sender_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_at_sender_id']     ?? '' ) ),
-            'ofp_at_phone_number'  => sanitize_text_field( wp_unslash( $_POST['ofp_at_phone_number']  ?? '' ) ),
             // BulkSMS Nigeria
             'ofp_bsmsn_sender_id'  => sanitize_text_field( wp_unslash( $_POST['ofp_bsmsn_sender_id']  ?? '' ) ),
             // SmartSMSSolutions
@@ -752,9 +743,11 @@ class OFP_Admin_Menu {
             'ofp_smartsms_routing'   => sanitize_text_field( wp_unslash( $_POST['ofp_smartsms_routing']   ?? '3' ) ),
             // Cloudflare Turnstile
             'ofp_turnstile_site_key' => sanitize_text_field( wp_unslash( $_POST['ofp_turnstile_site_key'] ?? '' ) ),
+            // Websites allowed to send leads (S2-11)
+            'ofp_lead_allowed_origins' => OFP_Security::sanitize_origin_list( wp_unslash( $_POST['ofp_lead_allowed_origins'] ?? '' ) ),
             // Prembly (Identitypass) Verification & KYC
             'ofp_prembly_app_id'     => sanitize_text_field( wp_unslash( $_POST['ofp_prembly_app_id'] ?? '' ) ),
-            'ofp_prembly_env'        => sanitize_text_field( wp_unslash( $_POST['ofp_prembly_env'] ?? 'test' ) ),
+            'ofp_prembly_env'        => ( 'live' === sanitize_text_field( wp_unslash( $_POST['ofp_prembly_env'] ?? 'test' ) ) ) ? 'live' : 'test',
             // Social Media Channels
             'ofp_social_facebook'    => self::clean_social_url( $_POST['ofp_social_facebook'] ?? '' ),
             'ofp_social_instagram'   => self::clean_social_url( $_POST['ofp_social_instagram'] ?? '' ),
@@ -786,7 +779,8 @@ class OFP_Admin_Menu {
             'ofp_at_api_key'              => [ 'raw' => $_POST['ofp_at_api_key']              ?? '', 'label' => 'AT API Key' ],
             'ofp_bsmsn_api_key'           => [ 'raw' => $_POST['ofp_bsmsn_api_key']           ?? '', 'label' => 'BulkSMS API Key' ],
             'ofp_smartsms_api_key'        => [ 'raw' => $_POST['ofp_smartsms_api_key']        ?? '', 'label' => 'SmartSMS API Key' ],
-            'ofp_paystack_secret_key'     => [ 'raw' => $_POST['ofp_paystack_secret_key']     ?? '', 'label' => 'Paystack Secret Key' ],
+            'ofp_bachs_api_key'           => [ 'raw' => $_POST['ofp_bachs_api_key']           ?? '', 'label' => 'Bachs API Key' ],
+            'ofp_bachs_webhook_secret'    => [ 'raw' => $_POST['ofp_bachs_webhook_secret']    ?? '', 'label' => 'Bachs Webhook Secret' ],
             'ofp_turnstile_secret'        => [ 'raw' => $_POST['ofp_turnstile_secret']        ?? '', 'label' => 'Turnstile Secret' ],
             'ofp_prembly_secret_key'      => [ 'raw' => $_POST['ofp_prembly_secret_key']      ?? '', 'label' => 'Prembly API Key' ],
             'ofp_chat_gemini_api_key'     => [ 'raw' => $_POST['ofp_chat_gemini_api_key']     ?? '', 'label' => 'Gemini API Key' ],
@@ -1208,7 +1202,7 @@ class OFP_Admin_Menu {
      *
      * Called after Olabode has confirmed a client's manual payment.
      * Immediately loads the specified NGN amount into the client's SMS
-     * or voice credit balance via OFP_Credit::topup().
+     * credit balance via OFP_Credit::topup().
      *
      * Under the reseller model, this is the primary credit-loading mechanism.
      * Self-serve top-up via payment gateway is a future phase.
@@ -1230,8 +1224,8 @@ class OFP_Admin_Menu {
             exit;
         }
 
-        if ( ! in_array( $channel, [ 'sms', 'voice' ], true ) ) {
-            $this->set_message( 'Invalid credit channel. Must be sms or voice.', 'error' );
+        if ( 'sms' !== $channel ) {
+            $this->set_message( 'Invalid credit channel. Must be sms.', 'error' );
             wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients&client_id=' . $client_id ) );
             exit;
         }
@@ -1253,9 +1247,13 @@ class OFP_Admin_Menu {
         //  - Incrementing loaded + remaining balances
         //  - Resetting paused = 0 and low_warned = 0 automatically
         //  - Inserting a transaction log row with the payment reference
-        OFP_Credit::topup( $client_id, $channel, $amount, $reference );
+        if ( ! OFP_Credit::topup( $client_id, $channel, $amount, $reference ) ) {
+            $this->set_message( 'Nothing was loaded. This payment reference was already used, or the credit record is missing.', 'error' );
+            wp_safe_redirect( admin_url( 'admin.php?page=ofp-clients&client_id=' . $client_id ) );
+            exit;
+        }
 
-        $label = $channel === 'sms' ? 'SMS' : 'Voice';
+        $label = 'SMS';
 
         $this->set_message(
             'NGN ' . number_format( $amount, 2 ) . " loaded to {$client->business_name}'s {$label} credit balance.",
@@ -1309,7 +1307,7 @@ class OFP_Admin_Menu {
             [
                 'status'         => 'paid',
                 'payment_method' => 'manual',
-                'payment_ref'    => 'manual_admin_' . current_time( 'timestamp' ),
+                'payment_ref'    => 'manual_admin_' . OFP_Security::site_now_ts(),
                 'period_start'   => $period_start,
                 'period_end'     => $period_end,
                 'paid_at'        => current_time( 'mysql' ),
@@ -1419,20 +1417,6 @@ class OFP_Admin_Menu {
     // PHASE 17 — FUNDING REQUESTS & COMPANY BANK
     // ─────────────────────────────────────────────────────────────────────────
 
-    public function handle_save_company_bank(): void {
-        if ( empty( $_POST['ofp_save_company_bank'] ) ) return;
-        if ( OFP_Auth::current_admin_role() !== 'super_admin' ) {
-            wp_die( 'Access denied.' );
-        }
-        check_admin_referer( 'ofp_save_company_bank_action', 'ofp_company_bank_nonce' );
-        update_option( 'ofp_company_bank_name',    sanitize_text_field( $_POST['company_bank_name'] ?? '' ) );
-        update_option( 'ofp_company_account_no',   sanitize_text_field( $_POST['company_account_no'] ?? '' ) );
-        update_option( 'ofp_company_account_name', sanitize_text_field( $_POST['company_account_name'] ?? '' ) );
-        add_action( 'admin_notices', function () {
-            echo '<div class="notice notice-success is-dismissible"><p>Company bank details saved.</p></div>';
-        } );
-    }
-
     public function render_funding_requests(): void {
         global $wpdb;
 
@@ -1456,8 +1440,8 @@ class OFP_Admin_Menu {
                 // a manual plan payment silently did nothing to the client's
                 // actual plan or subscription, only marked the request row
                 // 'approved'.
-                if ( in_array( $request->channel, [ 'sms', 'voice' ], true ) ) {
-                    // SMS or Voice credit top-up.
+                if ( 'sms' === $request->channel ) {
+                    // SMS credit top-up.
                     OFP_Credit::topup(
                         $request->client_id,
                         $request->channel,
@@ -1740,25 +1724,25 @@ class OFP_Admin_Menu {
     // ─────────────────────────────────────────────────────────────────────────
 
     public function handle_save_universal_template(): void {
+        check_admin_referer( 'ofp_save_universal_template' );
+
         if ( ! OFP_Auth::is_super_admin() ) {
             wp_die( 'Access denied.' );
         }
-
-        check_admin_referer( 'ofp_save_universal_template' );
 
         $template = wp_unslash( $_POST['ofp_universal_email_template'] ?? '' );
         update_option( 'ofp_universal_email_template', $template );
 
-        wp_redirect( add_query_arg( [ 'page' => 'ofp-communications', 'tab' => 'templates', 'updated' => '1' ], admin_url( 'admin.php' ) ) );
+        wp_safe_redirect( add_query_arg( [ 'page' => 'ofp-communications', 'tab' => 'templates', 'updated' => '1' ], admin_url( 'admin.php' ) ) );
         exit;
     }
 
     public function handle_send_broadcast(): void {
+        check_admin_referer( 'ofp_send_broadcast' );
+
         if ( ! OFP_Auth::is_super_admin() ) {
             wp_die( 'Access denied.' );
         }
-
-        check_admin_referer( 'ofp_send_broadcast' );
 
         $channel    = sanitize_text_field( $_POST['channel'] ?? '' );
         $recipients = sanitize_textarea_field( $_POST['recipients'] ?? '' );
@@ -1813,7 +1797,7 @@ class OFP_Admin_Menu {
             }
         }
 
-        wp_redirect( add_query_arg( [ 'page' => 'ofp-communications', 'tab' => 'send', 'sent' => $success, 'failed' => $failed ], admin_url( 'admin.php' ) ) );
+        wp_safe_redirect( add_query_arg( [ 'page' => 'ofp-communications', 'tab' => 'send', 'sent' => $success, 'failed' => $failed ], admin_url( 'admin.php' ) ) );
         exit;
     }
 
@@ -1955,13 +1939,14 @@ class OFP_Admin_Menu {
         }
 
         if ( $sent ) {
+            $acting_admin = OFP_Auth::current_admin();
             OFP_Logger::log( 'Admin resent email via SMTP', $client_id, [
                 'to'              => $to,
                 'subject'         => $subject,
                 'message'         => $body_text,
                 'original_log_id' => $log_id ?: $comm_id,
                 'actor_type'      => 'admin',
-                'actor_name'      => OFP_Auth::current_admin_name() ?: 'Admin',
+                'actor_name'      => ( $acting_admin && ! empty( $acting_admin->name ) ) ? $acting_admin->name : 'Admin',
             ] );
 
             wp_send_json_success( [

@@ -52,21 +52,6 @@ class OFP_Team_Member {
             return new WP_Error( 'invalid_data', 'Name, email, and phone are required.' );
         }
 
-        // Deduct SMS credit
-        // Bug fix: this used to call OFP_Credit::deduct($client_id, 1,
-        // 'team_invite_sms', "...") — deduct()'s real signature is
-        // (client_id, channel, amount), so the 2nd/3rd args were swapped
-        // and a non-numeric string was passed where a float was expected.
-        // That throws a fatal TypeError in PHP 8, so every single team
-        // invite attempt was crashing at this line before this fix.
-        if ( class_exists( 'OFP_Credit' ) ) {
-            $sms_cost = class_exists( 'OFP_Queue' ) ? OFP_Queue::SMS_COST : 6.99;
-            if ( ! OFP_Credit::has_balance( $client_id, 'sms', $sms_cost ) ) {
-                return new WP_Error( 'insufficient_credit', 'Insufficient SMS credits to send the invitation.' );
-            }
-            OFP_Credit::deduct( $client_id, 'sms', $sms_cost );
-        }
-
         // Insert Record
         $invite_token = bin2hex( random_bytes( 32 ) );
         $permissions = isset( $data['permissions'] ) && is_array( $data['permissions'] ) ? wp_json_encode( $data['permissions'] ) : null;
@@ -117,9 +102,14 @@ class OFP_Team_Member {
             OFP_Mailer::send_system_email( $email, $subject, $html );
         }
         
-        if ( class_exists( 'OFP_SMS' ) ) {
-            $sms = "You're invited to join {$client->business_name} on " . OFP_Brand::email_name( $client ) . ". Click here to accept: {$invite_url}";
-            OFP_SMS::send_system_sms( $phone, $sms );
+        // The email above always goes out. The SMS is an extra: it is sent only when the
+        // client has SMS credit, and it is charged (per SMS page) only after it was sent.
+        if ( class_exists( 'OFP_SMS' ) && class_exists( 'OFP_Credit' ) ) {
+            $sms      = "You're invited to join {$client->business_name} on " . OFP_Brand::email_name( $client ) . ". Click here to accept: {$invite_url}";
+            $sms_cost = OFP_Credit::sms_cost( $sms );
+            if ( OFP_Credit::has_balance( $client_id, 'sms', $sms_cost ) && OFP_SMS::send_system_sms( $phone, $sms ) ) {
+                OFP_Credit::deduct( $client_id, 'sms', $sms_cost );
+            }
         }
 
         if ( class_exists( 'OFP_Logger' ) ) {

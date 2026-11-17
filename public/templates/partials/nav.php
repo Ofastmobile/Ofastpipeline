@@ -305,6 +305,14 @@ svg { max-width: 100%; box-sizing: border-box; }
         </div>
         
         <nav class="ofp-sidebar-nav" aria-label="Client portal navigation">
+            <!-- Mobile Quick Search in Sidebar (on top of Overview) -->
+            <div class="ofp-sidebar-mobile-search" id="ofp-sidebar-search-trigger" onclick="if(window.openGlobalSearchModal){window.openGlobalSearchModal();}return false;" style="cursor:pointer;" title="Search everywhere...">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+                <input type="text" placeholder="Search everywhere..." readonly style="cursor:pointer;" />
+            </div>
+
             <?php foreach ( $nav_sections as $sec_key => $section ) :
                 if ( empty( $section['items'] ) ) continue;
             ?>
@@ -419,97 +427,14 @@ svg { max-width: 100%; box-sizing: border-box; }
 
     <main class="ofp-main">
         <?php
-        $ofp_hero_image_file = 'dashboard-hero-banner.webp';
-        if ( ! empty( $ofp_hero_banner_image ) ) {
-            $ofp_hero_image_file = $ofp_hero_banner_image;
-        } else {
-            $curr_uri = $_SERVER['REQUEST_URI'] ?? '';
-            if (
-                strpos( $curr_uri, 'property-sales' ) !== false ||
-                strpos( $curr_uri, 'property-purchases' ) !== false ||
-                strpos( $curr_uri, 'property-payments' ) !== false ||
-                strpos( $current_url, '/property-sales' ) !== false ||
-                strpos( $current_url, '/property-purchases' ) !== false ||
-                strpos( $current_url, '/property-payments' ) !== false ||
-                isset( $ofp_sales_tab )
-            ) {
-                $ofp_hero_image_file = 'Real Estate Deal Handshake.webp';
-            } elseif (
-                strpos( $curr_uri, 'tenants' ) !== false ||
-                strpos( $current_url, '/tenants' ) !== false
-            ) {
-                $ofp_hero_image_file = 'Keys, Contract, and New Beginnings.webp';
-            } elseif (
-                strpos( $curr_uri, 'credits' ) !== false ||
-                strpos( $curr_uri, 'pricing' ) !== false ||
-                strpos( $curr_uri, 'listing-billing' ) !== false ||
-                strpos( $curr_uri, 'funding' ) !== false ||
-                strpos( $current_url, '/credits' ) !== false ||
-                strpos( $current_url, '/pricing' ) !== false ||
-                strpos( $current_url, '/funding' ) !== false
-            ) {
-                $ofp_hero_image_file = 'Miniature House and Coin Stacks.webp';
-            } elseif (
-                strpos( $curr_uri, 'properties' ) !== false ||
-                strpos( $curr_uri, 'my-listing' ) !== false ||
-                strpos( $curr_uri, 'inspections' ) !== false ||
-                strpos( $current_url, '/properties' ) !== false ||
-                strpos( $current_url, '/my-listing' ) !== false
-            ) {
-                $ofp_hero_image_file = 'oleksandrpidvalnyi-real-estate-6688945_1920.webp';
-            } elseif (
-                strpos( $curr_uri, 'reports' ) !== false ||
-                strpos( $current_url, '/reports' ) !== false
-            ) {
-                $ofp_hero_image_file = 'elg21-architecture-10265145_1920.webp';
-            } elseif (
-                strpos( $curr_uri, 'leads' ) !== false ||
-                strpos( $curr_uri, 'customers' ) !== false ||
-                strpos( $curr_uri, 'import' ) !== false ||
-                strpos( $current_url, '/leads' ) !== false ||
-                strpos( $current_url, '/customers' ) !== false ||
-                strpos( $current_url, '/import' ) !== false
-            ) {
-                $ofp_hero_image_file = 'pexels-apartment-2179337_1920.webp';
-            } elseif (
-                strpos( $curr_uri, 'communications' ) !== false ||
-                strpos( $curr_uri, 'message-templates' ) !== false ||
-                strpos( $current_url, '/communications' ) !== false ||
-                strpos( $current_url, '/message-templates' ) !== false
-            ) {
-                $ofp_hero_image_file = '23555986-hallway-9011236_1920.webp';
-            } elseif (
-                strpos( $curr_uri, 'team' ) !== false ||
-                strpos( $curr_uri, 'pipeline-settings' ) !== false ||
-                strpos( $curr_uri, 'api-settings' ) !== false ||
-                strpos( $current_url, '/team' ) !== false ||
-                strpos( $current_url, '/pipeline-settings' ) !== false
-            ) {
-                $ofp_hero_image_file = 'ap301805-old-school-building-7576490_1920.webp';
-            } elseif (
-                strpos( $curr_uri, 'activity-logs' ) !== false ||
-                strpos( $curr_uri, 'notification' ) !== false ||
-                strpos( $current_url, '/activity-logs' ) !== false ||
-                strpos( $current_url, '/notifications' ) !== false
-            ) {
-                $ofp_hero_image_file = 'piro4d-kitchen-1543493_1920.webp';
-            } elseif (
-                strpos( $curr_uri, 'account' ) !== false ||
-                strpos( $curr_uri, 'profile' ) !== false ||
-                strpos( $current_url, '/account' ) !== false ||
-                strpos( $current_url, '/profile' ) !== false
-            ) {
-                $ofp_hero_image_file = 'pexels-house-1836070.webp';
-            } else {
-                // Default dashboard hero banner
-                $ofp_hero_image_file = 'pexels-apartment-2179337_1920.webp';
-            }
-        }
+        $ofp_is_profile_page = (
+            strpos( $_SERVER['REQUEST_URI'] ?? '', 'profile' ) !== false ||
+            strpos( $_SERVER['REQUEST_URI'] ?? '', 'account' ) !== false ||
+            strpos( $current_url, '/profile' ) !== false ||
+            strpos( $current_url, '/account' ) !== false
+        );
         ?>
-        <div class="ofp-hero-full-header" style="background-image: url('<?php echo esc_url( ofp_image_url( $ofp_hero_image_file ) ); ?>');">
-            <div class="ofp-hero-full-header-overlay">
-
-        <header class="ofp-topbar ofp-topbar-transparent">
+        <header class="ofp-topbar ofp-topbar-ios-glass">
             
             <button class="ofp-sidebar-toggle" id="ofp-sidebar-toggle" aria-label="Toggle navigation" title="Toggle navigation">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
@@ -528,7 +453,18 @@ svg { max-width: 100%; box-sizing: border-box; }
                         ?>!
                     </span>
                     <span class="ofp-hero-date-divider">&bull;</span>
-                    <span class="ofp-hero-date"><?php echo date('M j, Y'); ?></span>
+                    <span class="ofp-hero-date"><?php echo esc_html( OFP_Security::site_date( 'M j, Y' ) ); ?></span>
+                </div>
+            </div>
+
+            <!-- Topbar Center Search (iOS 26 Frosted Glass) -->
+            <div class="ofp-topbar-search-wrap">
+                <div class="ofp-hero-search-box ofp-topbar-search-box" id="ofp-hero-search-trigger" style="cursor:pointer;" title="Press Ctrl+L or ⌘+L anywhere to search">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                    <input type="text" id="ofp-hero-quick-search" placeholder="Search everywhere..." readonly style="cursor:pointer;" />
+                    <span class="ofp-hero-kbd" id="ofp-hero-kbd-badge">Ctrl + L</span>
                 </div>
             </div>
 
@@ -655,121 +591,32 @@ svg { max-width: 100%; box-sizing: border-box; }
         })();
         </script>
 
-            <!-- Bottom Controls Row inside full-width hero header -->
-            <div class="ofp-hero-topbar-controls">
-                <!-- Search bar with Ctrl+L / ⌘+L shortcut -->
-                <div class="ofp-hero-search-box" id="ofp-hero-search-trigger" style="cursor:pointer;" title="Press Ctrl+L or ⌘+L anywhere to search">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                    </svg>
-                    <input type="text" id="ofp-hero-quick-search" placeholder="Search everywhere..." readonly style="cursor:pointer;" />
-                    <span class="ofp-hero-kbd" id="ofp-hero-kbd-badge">Ctrl + L</span>
-                </div>
-
-                <!-- Action buttons -->
-                <div class="ofp-hero-action-buttons">
-
-                    <?php
-                    $ofp_is_profile_page = (
-                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'profile' ) !== false ||
-                        strpos( $_SERVER['REQUEST_URI'] ?? '', 'account' ) !== false ||
-                        strpos( $current_url, '/profile' ) !== false ||
-                        strpos( $current_url, '/account' ) !== false
-                    );
-                    ?>
-
-                    <?php if ( $ofp_is_profile_page ) : ?>
-                        <button type="button" class="ofp-hero-btn-more" title="Refresh" onclick="window.location.reload();">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px;">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-                            </svg>
-                        </button>
-
-                        <a href="<?php echo esc_url( home_url( '/agent/' . ( $client->profile_slug ?: 'agent-' . $client->id ) ) ); ?>" target="_blank" class="ofp-hero-btn-export" title="View Public Landing Page">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                            <span>Public Profile</span>
-                        </a>
-
-                        <a href="#" onclick="if(typeof openEditModal==='function'){ openEditModal(); } return false;" class="ofp-hero-btn-add">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                            <span>Edit Profile</span>
-                        </a>
-                    <?php else : ?>
-
-                        <?php
-                        $banner_btn_label   = 'Add New Property';
-                        $banner_btn_url     = home_url( '/properties' );
-                        $banner_btn_onclick = '';
-                        $banner_btn_icon    = 'plus';
-
-                        if ( ! empty( $ofp_banner_btn['label'] ) && ! empty( $ofp_banner_btn['url'] ) ) {
-                            $banner_btn_label   = $ofp_banner_btn['label'];
-                            $banner_btn_url     = $ofp_banner_btn['url'];
-                            $banner_btn_onclick = $ofp_banner_btn['onclick'] ?? '';
-                            $banner_btn_icon    = $ofp_banner_btn['icon'] ?? 'plus';
-                        } elseif (
-                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'team' ) !== false ||
-                            strpos( $current_url, '/team' ) !== false
-                        ) {
-                            $banner_btn_label   = '+ Invite Member';
-                            $banner_btn_url     = home_url( '/team-invite' );
-                            $banner_btn_onclick = "if(typeof openInviteModal==='function'){ openInviteModal(); return false; }";
-                            $banner_btn_icon    = 'none'; // Plus is already included in label
-                        } elseif (
-                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'communication' ) !== false ||
-                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'message-templates' ) !== false ||
-                            strpos( $current_url, '/communications' ) !== false ||
-                            strpos( $current_url, '/message-templates' ) !== false
-                        ) {
-                            $banner_btn_label = 'Email Brand & Layout';
-                            $banner_btn_url   = home_url( '/message-templates?tab=branding' );
-                            $banner_btn_icon  = 'branding';
-                        } elseif (
-                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-sales' ) !== false ||
-                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-purchases' ) !== false ||
-                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'property-payments' ) !== false ||
-                            strpos( $current_url, '/property-sales' ) !== false ||
-                            strpos( $current_url, '/property-purchases' ) !== false ||
-                            strpos( $current_url, '/property-payments' ) !== false ||
-                            isset( $ofp_sales_tab )
-                        ) {
-                            $banner_btn_label = 'Add Purchase';
-                            $banner_btn_url   = home_url( '/property-purchases' );
-                        } elseif (
-                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'customers' ) !== false ||
-                            strpos( $current_url, '/customers' ) !== false
-                        ) {
-                            $banner_btn_label = 'Import Data';
-                            $banner_btn_url   = home_url( '/import' );
-                            $banner_btn_icon  = 'plus';
-                        } elseif (
-                            strpos( $_SERVER['REQUEST_URI'] ?? '', 'import' ) !== false ||
-                            strpos( $current_url, '/import' ) !== false
-                        ) {
-                            $banner_btn_label = 'View Customers';
-                            $banner_btn_url   = home_url( '/customers' );
-                            $banner_btn_icon  = 'none';
-                        }
-                        ?>
-                        <a href="<?php echo esc_url( $banner_btn_url ); ?>" 
-                           <?php if ( ! empty( $banner_btn_onclick ) ) : ?>onclick="<?php echo esc_attr( $banner_btn_onclick ); ?>"<?php endif; ?>
-                           class="ofp-hero-btn-add">
-                            <?php if ( $banner_btn_icon === 'branding' ) : ?>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
+        <?php if ( $ofp_is_profile_page ) : ?>
+            <!-- ── HERO BANNER ONLY FOR /ACCOUNT (PROFILE) ── -->
+            <div class="ofp-hero-full-header ofp-profile-hero-banner" style="background-image: url('<?php echo esc_url( ! empty( $client->cover_image_url ) ? $client->cover_image_url : ofp_image_url( 'pexels-apartment-2179337_1920.webp' ) ); ?>');">
+                <div class="ofp-hero-full-header-overlay">
+                    <div class="ofp-hero-topbar-controls" style="margin-top:auto; padding: 0 32px 20px 32px; display:flex; justify-content:flex-end;">
+                        <div class="ofp-hero-action-buttons">
+                            <button type="button" class="ofp-hero-btn-more" title="Refresh" onclick="window.location.reload();">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
                                 </svg>
-                            <?php elseif ( $banner_btn_icon !== 'none' ) : ?>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:16px;height:16px;">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                </svg>
-                            <?php endif; ?>
-                            <span><?php echo esc_html( $banner_btn_label ); ?></span>
-                        </a>
-                    <?php endif; ?>
+                            </button>
+
+                            <a href="<?php echo esc_url( home_url( '/agent/' . ( $client->profile_slug ?: 'agent-' . $client->id ) ) ); ?>" target="_blank" class="ofp-hero-btn-export" title="View Public Landing Page">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                <span>Public Profile</span>
+                            </a>
+
+                            <a href="#" onclick="if(typeof openEditModal==='function'){ openEditModal(); } return false;" class="ofp-hero-btn-add">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                <span>Edit Profile</span>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
-            </div> <!-- .ofp-hero-full-header-overlay -->
-        </div> <!-- .ofp-hero-full-header -->
+        <?php endif; ?>
 
         <!-- ── GLOBAL SPOTLIGHT / COMMAND PALETTE SEARCH POPUP (Ctrl+L / ⌘+L) ── -->
         <div class="ofp-search-modal-backdrop" id="ofp-search-modal" aria-hidden="true">

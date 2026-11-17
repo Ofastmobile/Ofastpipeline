@@ -82,7 +82,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
         $error = 'Security check failed — please try again.';
     } else {
 
-        OFP_Security::check_rate_limit( $_SERVER['REMOTE_ADDR'] ?? '', 'property_save', 10, 600 );
+        OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'property_save', 10, 600 );
 
         $editing_id = (int) ( $_POST['property_id'] ?? 0 );
         $is_new     = $editing_id === 0;
@@ -101,7 +101,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
         elseif ( empty( OFP_Bank_Account::list( (int) $client->id ) ) ) {
             $error = 'A receiving bank account is required before submitting properties. Please add your bank details in <a href="' . esc_url( home_url( '/account' ) ) . '" style="text-decoration:underline; font-weight:700;">Account Settings &rarr; Bank Accounts</a>.';
         }
-        elseif ( in_array( OFP_Subscription::normalize_plan( $client->plan ?? 'free' ), [ 'silver', 'gold' ], true ) && empty( $client->is_verified ) ) {
+        elseif ( class_exists( 'OFP_Prembly' ) && OFP_Prembly::kyc_required() && in_array( OFP_Subscription::normalize_plan( $client->plan ?? 'free' ), [ 'silver', 'gold' ], true ) && empty( $client->is_verified ) ) {
             $client_plan_name = ucfirst( OFP_Subscription::normalize_plan( $client->plan ?? 'free' ) );
             $error = 'Business verification (CAC & NIN/BVN) is required for ' . esc_html( $client_plan_name ) . ' plan before submitting properties. Please complete your verification in <a href="' . esc_url( home_url( '/account' ) ) . '" style="text-decoration:underline; font-weight:700;">Account Settings &rarr; Verification</a>.';
         }
@@ -272,10 +272,18 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                     $primary_index = isset( $_POST['primary_photo_index'] ) ? (int) $_POST['primary_photo_index'] : 0;
                     $uploaded_items = []; // [ index => attachment_id ]
 
-                    $file_count = count( $_FILES['photos']['name'] );
+                    // S2-06: at most 20 photos per save, 10 MB each, and only jpg, png or webp
+                    // (the form already offers only these; this is the server side of it).
+                    $file_count = min( 20, count( $_FILES['photos']['name'] ) );
+                    $photo_mimes = [
+                        'jpg|jpeg|jpe' => 'image/jpeg',
+                        'png'          => 'image/png',
+                        'webp'         => 'image/webp',
+                    ];
                     for ( $i = 0; $i < $file_count; $i++ ) {
                         if ( empty( $_FILES['photos']['name'][ $i ] ) ) continue;
                         if ( isset( $_FILES['photos']['error'][ $i ] ) && $_FILES['photos']['error'][ $i ] !== UPLOAD_ERR_OK ) continue;
+                        if ( (int) ( $_FILES['photos']['size'][ $i ] ?? 0 ) > 10 * MB_IN_BYTES ) continue;
 
                         $single_file = [
                             'name'     => $_FILES['photos']['name'][ $i ],
@@ -286,7 +294,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_save_property']
                         ];
 
                         $_FILES['ofp_single_photo'] = $single_file;
-                        $attachment_id = media_handle_upload( 'ofp_single_photo', $post_id );
+                        $attachment_id = media_handle_upload( 'ofp_single_photo', $post_id, [], [ 'test_form' => false, 'mimes' => $photo_mimes ] );
 
                         if ( ! is_wp_error( $attachment_id ) && $attachment_id ) {
                             $uploaded_items[ $i ] = (int) $attachment_id;
@@ -1015,7 +1023,7 @@ $prop_tabs = [
                 <?php else : 
                     $ofp_client_banks = OFP_Bank_Account::list( (int) $client->id );
                     $ofp_client_tier  = OFP_Subscription::normalize_plan( $client->plan ?? 'free' );
-                    $ofp_req_kyc      = in_array( $ofp_client_tier, [ 'silver', 'gold' ], true );
+                    $ofp_req_kyc      = class_exists( 'OFP_Prembly' ) && OFP_Prembly::kyc_required() && in_array( $ofp_client_tier, [ 'silver', 'gold' ], true );
                     $ofp_is_verified  = ! empty( $client->is_verified );
                     $ofp_has_banks    = ! empty( $ofp_client_banks );
                     $ofp_can_publish  = $ofp_has_banks && ( ! $ofp_req_kyc || $ofp_is_verified );
@@ -2273,9 +2281,20 @@ function ofpSetExistingMain(id) {
 
         var labelEl = document.createElement('label');
         labelEl.className = 'ofp-amenity-card is-checked';
-        labelEl.innerHTML = '<input type="checkbox" name="amenities[]" value="' + key + '" checked>' +
-            '<span class="ofp-amenity-icon-mini">' + iconSvg + '</span>' +
-            '<span>' + val + '</span>';
+        // Typed text goes in with textContent, never as HTML.
+        var cbEl = document.createElement('input');
+        cbEl.type = 'checkbox';
+        cbEl.name = 'amenities[]';
+        cbEl.value = key;
+        cbEl.checked = true;
+        var iconEl = document.createElement('span');
+        iconEl.className = 'ofp-amenity-icon-mini';
+        iconEl.innerHTML = iconSvg; // fixed icon text written in this file, not user input
+        var nameEl = document.createElement('span');
+        nameEl.textContent = val;
+        labelEl.appendChild(cbEl);
+        labelEl.appendChild(iconEl);
+        labelEl.appendChild(nameEl);
 
         container.appendChild(labelEl);
         labelEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

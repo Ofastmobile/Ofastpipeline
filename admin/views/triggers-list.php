@@ -29,9 +29,9 @@ if ( $filter_client ) {
 $where_sql = implode( ' AND ', $where );
 
 $total = (int) $wpdb->get_var(
-    $wpdb->prepare(
+    OFP_Security::prepare_opt(
         "SELECT COUNT(*) FROM {$p}ofp_trigger_queue q WHERE {$where_sql}",
-        ...$args
+        $args
     )
 );
 

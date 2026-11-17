@@ -3,7 +3,6 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Property_Installment_Reminders {
 
-    const SMS_COST = 6.99;
 
     public static function run_daily(): void {
         global $wpdb;
@@ -30,29 +29,40 @@ class OFP_Property_Installment_Reminders {
             $days = (int) floor( ( $due_ts - $today_ts ) / DAY_IN_SECONDS );
             $type = null;
 
+            // Past the due date: mark it overdue at once, whether or not a reminder is sent today.
+            if ( $days < 0 && 'overdue' !== $row->status ) {
+                $wpdb->update( "{$p}ofp_property_installments", [ 'status' => 'overdue', 'updated_at' => current_time( 'mysql' ) ], [ 'id' => (int) $row->id ] );
+                $row->status = 'overdue';
+            }
+
             if ( 0 === $days ) {
                 $type = 'due_today';
             } elseif ( in_array( $days, [ 7, 3, 1 ], true ) ) {
                 $type = 'due_' . $days . '_days';
-            } elseif ( -1 === $days ) {
-                $type = 'overdue';
+            } elseif ( $days < 0 ) {
+                $type = 'overdue'; // 1 or more days late (a missed cron day no longer skips it)
             }
 
             if ( ! $type ) continue;
 
             $last = $row->last_reminder_at ? strtotime( $row->last_reminder_at ) : 0;
             if ( $last && date( 'Y-m-d', $last ) === $today ) continue;
+            // Overdue: the first one goes out at once, then one every 3 days.
+            if ( 'overdue' === $type && $last ) {
+                $last_day = date( 'Y-m-d', $last );
+                if ( $last_day > $row->due_date && ( $today_ts - strtotime( $last_day . ' 00:00:00' ) ) < 3 * DAY_IN_SECONDS ) continue;
+            }
 
             $amount = (float) $row->amount_due - (float) $row->amount_paid;
             $date_text = wp_date( 'M j, Y', $due_ts );
             if ( 'overdue' === $type ) {
-                $message = sprintf( 'Your installment of ₦%s for %s is overdue. Due date was %s. Outstanding on this installment: ₦%s.', number_format( (float) $row->amount_due, 2 ), $row->property_title ?: 'your property', $date_text, number_format( $amount, 2 ) );
+                $message = sprintf( 'Your installment of NGN %s for %s is overdue. Due date was %s. Outstanding on this installment: NGN %s.', number_format( (float) $row->amount_due, 2 ), $row->property_title ?: 'your property', $date_text, number_format( $amount, 2 ) );
                 $subject = 'Property installment overdue';
             } elseif ( 'due_today' === $type ) {
-                $message = sprintf( 'Reminder: your property installment of ₦%s for %s is due today. Outstanding on this installment: ₦%s.', number_format( (float) $row->amount_due, 2 ), $row->property_title ?: 'your property', number_format( $amount, 2 ) );
+                $message = sprintf( 'Reminder: your property installment of NGN %s for %s is due today. Outstanding on this installment: NGN %s.', number_format( (float) $row->amount_due, 2 ), $row->property_title ?: 'your property', number_format( $amount, 2 ) );
                 $subject = 'Property installment due today';
             } else {
-                $message = sprintf( 'Reminder: your property installment of ₦%s for %s is due on %s. Outstanding on this installment: ₦%s.', number_format( (float) $row->amount_due, 2 ), $row->property_title ?: 'your property', $date_text, number_format( $amount, 2 ) );
+                $message = sprintf( 'Reminder: your property installment of NGN %s for %s is due on %s. Outstanding on this installment: NGN %s.', number_format( (float) $row->amount_due, 2 ), $row->property_title ?: 'your property', $date_text, number_format( $amount, 2 ) );
                 $subject = 'Property installment payment reminder';
             }
 
@@ -69,26 +79,10 @@ class OFP_Property_Installment_Reminders {
                 OFP_Mailer::send( $row->buyer_email, $row->buyer_name ?: 'there', $subject, $email_body );
             }
 
-            if ( OFP_SMS::ready() && ! empty( $row->buyer_phone ) && ! empty( $row->client_id ) && class_exists( 'OFP_Credit' ) && OFP_Credit::has_balance( (int) $row->client_id, 'sms', self::SMS_COST ) ) {
+            if ( OFP_SMS::ready() && ! empty( $row->buyer_phone ) && ! empty( $row->client_id ) && class_exists( 'OFP_Credit' ) && OFP_Credit::has_balance( (int) $row->client_id, 'sms', OFP_Credit::sms_cost( $message ) ) ) {
                 $sms = OFP_SMS::for_client( (int) $row->client_id );
                 $sent = $sms->send( $row->buyer_phone, $message );
-                if ( ! empty( $sent['success'] ) ) OFP_Credit::deduct( (int) $row->client_id, 'sms', self::SMS_COST );
-            }
-
-            // Due day only: also place a short voice call, if the client switched it on.
-            if ( 'due_today' === $type && class_exists( 'OFP_Voice_Notice' ) && ! empty( $row->buyer_phone ) && (int) $row->client_id ) {
-                OFP_Voice_Notice::queue_reminder(
-                    'installment',
-                    (int) $row->client_id,
-                    (string) $row->buyer_phone,
-                    [
-                        'name'     => $row->buyer_name,
-                        'property' => $row->property_title,
-                        'amount'   => $amount,
-                        'due_date' => wp_date( 'F j', $due_ts ),
-                    ],
-                    'installment:' . (int) $row->id . ':' . $row->due_date
-                );
+                if ( ! empty( $sent['success'] ) ) OFP_Credit::deduct( (int) $row->client_id, 'sms', OFP_Credit::sms_cost( $message ) );
             }
 
             if ( (int) $row->client_id && class_exists( 'OFP_Notification' ) ) {
@@ -100,10 +94,6 @@ class OFP_Property_Installment_Reminders {
                 [ 'last_reminder_at' => current_time( 'mysql' ), 'updated_at' => current_time( 'mysql' ) ],
                 [ 'id' => (int) $row->id ]
             );
-
-            if ( $days < 0 && 'overdue' !== $row->status ) {
-                $wpdb->update( "{$p}ofp_property_installments", [ 'status' => 'overdue', 'updated_at' => current_time( 'mysql' ) ], [ 'id' => (int) $row->id ] );
-            }
         }
     }
 }

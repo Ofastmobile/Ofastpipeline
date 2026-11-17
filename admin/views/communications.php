@@ -65,9 +65,9 @@ include OFP_PATH . 'admin/views/partials/header.php';
         $where_sql = implode( ' AND ', $where );
 
         $total = (int) $wpdb->get_var(
-            $wpdb->prepare(
+            OFP_Security::prepare_opt(
                 "SELECT COUNT(*) FROM {$p}ofp_communications_log cl WHERE {$where_sql}",
-                ...$args
+                $args
             )
         );
 
@@ -85,17 +85,25 @@ include OFP_PATH . 'admin/views/partials/header.php';
         );
 
         // Summary stats
-        $total_sms   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_communications_log WHERE type = 'sms'" );
-        $total_voice = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_communications_log WHERE type = 'voice'" );
-        $total_email = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_communications_log WHERE type = 'email'" );
-        $total_cost  = (float) $wpdb->get_var( "SELECT SUM(cost) FROM {$p}ofp_communications_log" );
+        // P6.04: the 3 totals are kept for 5 minutes (they were 3 full table scans per page view).
+        $sum_cache = get_transient( 'ofp_comms_totals' );
+        if ( ! is_array( $sum_cache ) || ! isset( $sum_cache['sms'], $sum_cache['email'], $sum_cache['cost'] ) ) {
+            $sum_cache = [
+                'sms'   => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_communications_log WHERE type = 'sms'" ),
+                'email' => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_communications_log WHERE type = 'email'" ),
+                'cost'  => (float) $wpdb->get_var( "SELECT SUM(cost) FROM {$p}ofp_communications_log" ),
+            ];
+            set_transient( 'ofp_comms_totals', $sum_cache, 5 * MINUTE_IN_SECONDS );
+        }
+        $total_sms   = $sum_cache['sms'];
+        $total_email = $sum_cache['email'];
+        $total_cost  = $sum_cache['cost'];
 
         $clients     = OFP_Client::all();
         $total_pages = ceil( $total / $per_page );
 
         $type_badges = [
             'sms'   => '<span class="ofp-badge ofp-badge-blue">SMS</span>',
-            'voice' => '<span class="ofp-badge ofp-badge-green">Voice</span>',
             'email' => '<span class="ofp-badge ofp-badge-yellow">Email</span>',
         ];
         ?>
@@ -104,10 +112,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
             <div class="ofp-stat-card">
                 <span class="ofp-stat-number"><?php echo esc_html( number_format( $total_sms ) ); ?></span>
                 <span class="ofp-stat-label">Total SMS</span>
-            </div>
-            <div class="ofp-stat-card">
-                <span class="ofp-stat-number"><?php echo esc_html( number_format( $total_voice ) ); ?></span>
-                <span class="ofp-stat-label">Total Calls</span>
             </div>
             <div class="ofp-stat-card">
                 <span class="ofp-stat-number"><?php echo esc_html( number_format( $total_email ) ); ?></span>
@@ -141,7 +145,6 @@ include OFP_PATH . 'admin/views/partials/header.php';
                 <select name="type" onchange="this.form.submit()">
                     <option value="">All Types</option>
                     <option value="sms"   <?php selected( $filter_type, 'sms' ); ?>>SMS</option>
-                    <option value="voice" <?php selected( $filter_type, 'voice' ); ?>>Voice</option>
                     <option value="email" <?php selected( $filter_type, 'email' ); ?>>Email</option>
                 </select>
                 <?php if ( $filter_client || $filter_type ) : ?>

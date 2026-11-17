@@ -46,10 +46,6 @@ if ( false === get_transient( 'ofp_clients_account_schema_v2' ) ) {
     set_transient( 'ofp_clients_account_schema_v2', 1, MONTH_IN_SECONDS );
 }
 
-// Ensure verification audit columns exist
-if ( class_exists( 'OFP_Prembly' ) ) {
-    OFP_Prembly::ensure_client_schema();
-}
 
 // ── Form POST Handlers ───────────────────────────────────────────────────────
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_account_nonce'] ) ) {
@@ -547,7 +543,7 @@ $whatsapp_url       = ! empty( $extra['whatsapp_url'] ) ? $extra['whatsapp_url']
 $avatar_url = ! empty( $client->logo_url ) ? $client->logo_url : ofp_image_url( 'default-avatar.png' );
 
 // Cover banner image URL
-$default_cover    = ofp_image_url( 'dashboard-hero-banner.webp' );
+$default_cover    = ofp_image_url( 'pexels-apartment-2179337_1920.webp' );
 $cover_url        = ! empty( $client->cover_image_url ) ? $client->cover_image_url : $default_cover;
 $has_custom_cover = ! empty( $client->cover_image_url );
 
@@ -1546,7 +1542,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                                         ✓ Verified Account
                                     </span>
                                 </div>
-                                <input type="text" name="bank_account_name" id="ofp-bank-account-name" placeholder="Auto-fetches upon typing account number" required>
+                                <input type="text" name="bank_account_name" id="ofp-bank-account-name" placeholder="Name on the bank account" required>
                                 <p id="ofp-bank-resolve-err" style="display:none; color:#f87171; font-size:12px; margin:6px 0 0; line-height:1.4;"></p>
                             </div>
                             <div class="ofp-field-group">
@@ -1594,6 +1590,11 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
                                 <strong style="font-size:14px; color:#ffffff;"><?php echo esc_html( ! empty( $client->verified_at ) ? date( 'M d, Y', strtotime( $client->verified_at ) ) : 'Active' ); ?></strong>
                             </div>
                         </div>
+                    </div>
+                <?php elseif ( class_exists( 'OFP_Prembly' ) && ! OFP_Prembly::kyc_required() ) : ?>
+                    <!-- Verification not switched on yet: no form -->
+                    <div style="background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:16px; color:var(--prof-text-sub); font-size:13px; line-height:1.4;">
+                        Business verification is not available yet. Please check back later.
                     </div>
                 <?php else : ?>
                     <!-- Unverified State Form -->
@@ -2264,6 +2265,7 @@ $can_brand    = class_exists( 'OFP_Brand' ) && OFP_Brand::can_brand( $client );
 
             const formData = new FormData();
             formData.append('action', 'ofp_submit_client_verification');
+            formData.append('nonce', '<?php echo esc_js( wp_create_nonce( 'ofp_client_action' ) ); ?>');
             formData.append('cac_number', cac);
             formData.append('id_type', idType);
             formData.append('id_number', idVal);

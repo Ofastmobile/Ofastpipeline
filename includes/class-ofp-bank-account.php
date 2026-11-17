@@ -20,7 +20,6 @@ class OFP_Bank_Account {
 	const MAX_PER_CLIENT = 5;
 
 	public static function init(): void {
-		self::ensure_schema();
 		add_action( 'wp_ajax_ofp_resolve_bank_account', [ __CLASS__, 'ajax_resolve_account' ] );
 		add_action( 'wp_ajax_nopriv_ofp_resolve_bank_account', [ __CLASS__, 'ajax_resolve_account' ] );
 		add_action( 'wp_ajax_ofp_get_bank_list', [ __CLASS__, 'ajax_get_bank_list' ] );
@@ -187,49 +186,16 @@ class OFP_Bank_Account {
 	}
 
 	/**
-	 * Return list of banks in Nigeria.
-	 * Queries Paystack API (cached 7 days) with robust offline fallback.
+	 * Return list of banks in Nigeria (built in list).
 	 */
+	/**
+	 * Buyer online checkout is not built. Buyers pay by bank transfer to the saved account.
+	 */
+	public static function online_payments_enabled(): bool {
+		return false;
+	}
+
 	public static function get_banks(): array {
-		$cached = get_transient( 'ofp_paystack_banks_ng' );
-		if ( is_array( $cached ) && ! empty( $cached ) ) {
-			return $cached;
-		}
-
-		$secret_encrypted = get_option( 'ofp_paystack_secret_key', '' );
-		$secret = class_exists( 'OFP_Security' ) ? OFP_Security::decrypt( $secret_encrypted ) : '';
-
-		$headers = [ 'Accept' => 'application/json' ];
-		if ( ! empty( $secret ) ) {
-			$headers['Authorization'] = 'Bearer ' . $secret;
-		}
-
-		$res = wp_remote_get( 'https://api.paystack.co/bank?country=nigeria&perPage=100', [
-			'timeout' => 8,
-			'headers' => $headers,
-		] );
-
-		if ( ! is_wp_error( $res ) && wp_remote_retrieve_response_code( $res ) === 200 ) {
-			$body = json_decode( wp_remote_retrieve_body( $res ), true );
-			if ( ! empty( $body['status'] ) && ! empty( $body['data'] ) && is_array( $body['data'] ) ) {
-				$banks = [];
-				foreach ( $body['data'] as $b ) {
-					if ( ! empty( $b['active'] ) && ! empty( $b['name'] ) && ! empty( $b['code'] ) ) {
-						$banks[] = [
-							'name' => trim( (string) $b['name'] ),
-							'code' => trim( (string) $b['code'] ),
-							'slug' => trim( (string) ( $b['slug'] ?? '' ) ),
-						];
-					}
-				}
-				if ( ! empty( $banks ) ) {
-					usort( $banks, fn( $x, $y ) => strcasecmp( $x['name'], $y['name'] ) );
-					set_transient( 'ofp_paystack_banks_ng', $banks, 7 * DAY_IN_SECONDS );
-					return $banks;
-				}
-			}
-		}
-
 		// Curated fallback of major Nigerian commercial, merchant & fintech banks
 		$fallback = [
 			[ 'name' => 'Access Bank', 'code' => '044' ],
@@ -267,7 +233,7 @@ class OFP_Bank_Account {
 	}
 
 	/**
-	 * Resolve 10-digit NUBAN and Bank Code via Paystack API.
+	 * Account name lookup is not connected, so the client types the account name.
 	 */
 	public static function resolve_account( string $account_number, string $bank_code ): array {
 		$account_number = preg_replace( '/\D/', '', $account_number );
@@ -280,51 +246,12 @@ class OFP_Bank_Account {
 			return [ 'success' => false, 'message' => 'Please select a bank first.' ];
 		}
 
-		$secret_encrypted = get_option( 'ofp_paystack_secret_key', '' );
-		$secret = class_exists( 'OFP_Security' ) ? OFP_Security::decrypt( $secret_encrypted ) : '';
-
-		if ( empty( $secret ) ) {
-			return [ 'success' => false, 'message' => 'Paystack secret key is not configured in Admin Settings.' ];
-		}
-
-		$url = sprintf(
-			'https://api.paystack.co/bank/resolve?account_number=%s&bank_code=%s',
-			rawurlencode( $account_number ),
-			rawurlencode( $bank_code )
-		);
-
-		$res = wp_remote_get( $url, [
-			'timeout' => 15,
-			'headers' => [
-				'Authorization' => 'Bearer ' . $secret,
-				'Accept'        => 'application/json',
-			],
-		] );
-
-		if ( is_wp_error( $res ) ) {
-			return [ 'success' => false, 'message' => 'Unable to reach verification service. Check internet connection.' ];
-		}
-
-		$code = wp_remote_retrieve_response_code( $res );
-		$body = json_decode( wp_remote_retrieve_body( $res ), true );
-
-		if ( $code === 200 && ! empty( $body['status'] ) && ! empty( $body['data']['account_name'] ) ) {
-			return [
-				'success'        => true,
-				'account_name'   => trim( (string) $body['data']['account_name'] ),
-				'account_number' => $account_number,
-				'bank_code'      => $bank_code,
-			];
-		}
-
-		$msg = ! empty( $body['message'] ) ? $body['message'] : 'Account number could not be resolved for selected bank.';
-		return [ 'success' => false, 'message' => $msg ];
+		return [ 'success' => false, 'message' => 'Type the account name exactly as it appears on your bank account.' ];
 	}
 
 	/**
 	 * Only a logged-in client (or a WordPress admin) may use the bank tools.
-	 * These calls spend the platform's Paystack key and reveal the name on a bank
-	 * account, so they must never be open to anonymous visitors. The only screen
+	 * These calls touch bank details, so they must never be open to anonymous visitors. The only screen
 	 * that uses them is the client account page.
 	 */
 	private static function caller_allowed(): bool {
@@ -365,6 +292,15 @@ class OFP_Bank_Account {
 		if ( ! self::caller_allowed() ) {
 			wp_send_json_error( [ 'message' => 'Please log in again.' ], 401 );
 		}
+		// Same nonce as the account lookup (S2-10).
+		if ( ! check_ajax_referer( 'ofp_bank_lookup', 'nonce', false ) ) {
+			wp_send_json_error( [ 'message' => 'This page has expired. Please reload it and try again.' ], 403 );
+		}
+		// 20 requests per 10 minutes per IP (S2-10). Answers in JSON when OFP_JSON_API is defined.
+		if ( ! defined( 'OFP_JSON_API' ) ) {
+			define( 'OFP_JSON_API', true );
+		}
+		OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'bank_list', 20, 600 );
 		wp_send_json_success( [ 'banks' => self::get_banks() ] );
 	}
 }

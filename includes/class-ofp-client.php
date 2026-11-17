@@ -6,12 +6,12 @@
  *
  * THE ONBOARDING CHAIN (what happens when create() is called):
  *  1.  Validate required fields
- *  2.  Generate a temporary password (plaintext, emailed once, never stored plain)
+ *  2.  Make a set-password token (only its hash is stored; the link works 48 hours)
  *  3.  Insert the client row into wp_ofp_clients
  *  4.  Create the credit record in wp_ofp_credits (starts at zero balance)
  *  5.  Create the listing subscription
  *  5b. Create the pipeline_config for lead automation messages
- *  6.  Send the welcome email with login credentials
+ *  6.  Send the welcome email with the set-password link
  *
  * TWO ONBOARDING PATHS (v2.1):
  *  - Manual  : Admin creates client via wp-admin form. Status goes straight to 'active'.
@@ -156,7 +156,7 @@ class OFP_Client {
         }
 
         // ── 5b. Create pipeline config for lead automation ────────────────────
-        // Every new client gets a pipeline_config so automated SMS/voice
+        // Every new client gets a pipeline_config so automated SMS
         // follow-ups work from day one, regardless of plan tier.
         $config_exists = $wpdb->get_var(
             $wpdb->prepare(
@@ -185,30 +185,22 @@ class OFP_Client {
             );
         }
 
-        // ── 6. Send welcome email ─────────────────────────────────────────────
-        // Pass the plaintext temp password — it's only used here to email the
-        // client. The hash is already stored in the DB above.
-        OFP_Mailer::send_welcome_email( $client_id, $temp_password );
-
-        // Store the temp password in a short-lived transient so the admin can
-        // see it immediately on the client detail page, in case SMTP is not
-        // yet configured (e.g. local development) and the email never arrives.
-        // Expires in 1 hour — purely a convenience, not a permanent record.
-        set_transient( 'ofp_temp_password_' . $client_id, $temp_password, HOUR_IN_SECONDS );
+        // ── 6. Send welcome email with a "set your password" link ────────────
+        // The random password stored above is never shown or sent (G2.01). The
+        // client picks a password through a reset link that works for 48 hours.
+        // Only the hash of the link token is stored.
+        $raw_token = bin2hex( random_bytes( 32 ) );
+        $wpdb->update(
+            $wpdb->prefix . 'ofp_clients',
+            [
+                'reset_token_hash'    => hash( 'sha256', $raw_token ),
+                'reset_token_expires' => gmdate( 'Y-m-d H:i:s', time() + ( 2 * DAY_IN_SECONDS ) ),
+            ],
+            [ 'id' => $client_id ]
+        );
+        OFP_Mailer::send_welcome_email( $client_id, add_query_arg( [ 'token' => $raw_token ], home_url( '/reset-password' ) ) );
 
         return $client_id;
-    }
-
-    /**
-     * Retrieve a just-created client's temporary password, if still available.
-     * Only valid for 1 hour after creation — purely a local-dev / no-SMTP
-     * convenience so the admin isn't locked out of testing login.
-     *
-     * @param  int          $client_id
-     * @return string|false            The temp password, or false if expired/unavailable.
-     */
-    public static function get_temp_password( int $client_id ): string|false {
-        return get_transient( 'ofp_temp_password_' . $client_id );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -692,13 +684,6 @@ class OFP_Client {
                 $wpdb->prepare(
                     "SELECT COUNT(*) FROM {$p}ofp_communications_log
                      WHERE client_id = %d AND type = 'sms'",
-                    $id
-                )
-            ),
-            'calls_made'      => (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$p}ofp_communications_log
-                     WHERE client_id = %d AND type = 'voice'",
                     $id
                 )
             ),

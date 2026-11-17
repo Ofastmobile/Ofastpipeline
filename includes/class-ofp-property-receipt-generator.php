@@ -290,7 +290,7 @@ class OFP_Property_Receipt_Generator {
     /**
      * Builds the placeholder data array for a rent payment receipt.
      */
-    private static function build_rent_data( object $payment, int $lease_id, int $payment_id ): array {
+    public static function build_rent_data( object $payment, int $lease_id, int $payment_id ): array {
         $receipt_number = 'RNT-' . str_pad( (string) $payment_id, 6, '0', STR_PAD_LEFT );
         $now = current_time( 'mysql' );
 
@@ -299,7 +299,7 @@ class OFP_Property_Receipt_Generator {
         $method_labels = [
             'cash'            => 'Cash',
             'manual'          => 'Manual / Bank Transfer',
-            'checkout'        => 'Online Checkout (Paystack)',
+            'checkout'        => 'Online Checkout',
             'virtual_account' => 'Dedicated Virtual Account',
         ];
 
@@ -547,7 +547,7 @@ class OFP_Property_Receipt_Generator {
         $method_labels = [
             'cash'            => 'Cash',
             'manual'          => 'Manual / Bank Transfer',
-            'checkout'        => 'Online Checkout (Paystack)',
+            'checkout'        => 'Online Checkout',
             'virtual_account' => 'Dedicated Virtual Account',
             'bank_transfer'   => 'Bank Transfer',
             'bank_deposit'    => 'Bank Deposit',

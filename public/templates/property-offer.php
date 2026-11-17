@@ -28,7 +28,7 @@ $notice = '';
 
 if ( ! $offer ) {
     $error = 'This offer link is invalid or no longer available.';
-} elseif ( $offer->status === 'pending' && $offer->expires_at && strtotime( $offer->expires_at ) < current_time( 'timestamp' ) ) {
+} elseif ( $offer->status === 'pending' && $offer->expires_at && strtotime( $offer->expires_at ) < OFP_Security::site_now_ts() ) {
     $wpdb->update(
         "{$p}ofp_property_offers",
         [ 'status' => 'expired', 'updated_at' => current_time( 'mysql' ) ],
@@ -78,7 +78,7 @@ if ( $offer && $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_offer
             } else {
                 $purchase_id = OFP_Property_Commerce::create_purchase_from_offer(
                     (int) $offer->id,
-                    isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : ''
+                    OFP_Security::get_client_ip()
                 );
 
                 if ( is_wp_error( $purchase_id ) ) {

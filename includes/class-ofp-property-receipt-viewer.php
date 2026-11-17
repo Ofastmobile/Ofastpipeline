@@ -53,14 +53,31 @@ class OFP_Property_Receipt_Viewer {
         if ( ! empty( $token ) ) {
             $params['token'] = $token;
         } else {
-            $params['nonce'] = wp_create_nonce( 'ofp_view_receipt_' . $payment_id );
+            // A signed link for THIS receipt only, valid for 3 days (S2-07).
+            $type_clean    = 'purchase' === $type ? 'purchase' : 'rent';
+            $exp           = time() + ( 3 * DAY_IN_SECONDS );
+            $params['type'] = $type_clean;
+            $params['exp']  = $exp;
+            $params['sig']  = self::sign( $payment_id, $type_clean, $exp );
         }
         return add_query_arg( $params, home_url( '/property-receipt/' ) );
+    }
+
+    /**
+     * HMAC of receipt id + type + expiry. A leaked link opens only that one receipt, and only until it expires.
+     */
+    private static function sign( int $payment_id, string $type, int $exp ): string {
+        return hash_hmac( 'sha256', $type . '|' . $payment_id . '|' . $exp, wp_salt( 'auth' ) );
     }
 
     public static function handle_view_receipt(): void {
         global $wpdb;
         $p = $wpdb->prefix;
+
+        // Rate limit for everyone except site admins (S2-08).
+        if ( ! current_user_can( 'manage_options' ) ) {
+            OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'receipt_view', 30, 600 );
+        }
 
         $payment_id = isset( $_REQUEST['payment_id'] ) ? (int) $_REQUEST['payment_id'] : 0;
         if ( ! $payment_id ) {
@@ -69,7 +86,8 @@ class OFP_Property_Receipt_Viewer {
 
         $type  = isset( $_REQUEST['type'] ) ? sanitize_key( $_REQUEST['type'] ) : 'rent';
         $token = isset( $_REQUEST['token'] ) ? sanitize_text_field( $_REQUEST['token'] ) : '';
-        $nonce = isset( $_REQUEST['nonce'] ) ? sanitize_text_field( $_REQUEST['nonce'] ) : '';
+        $exp   = isset( $_REQUEST['exp'] ) ? (int) $_REQUEST['exp'] : 0;
+        $sig   = isset( $_REQUEST['sig'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['sig'] ) ) : '';
 
         // Load payment record
         if ( 'purchase' === $type ) {
@@ -95,7 +113,7 @@ class OFP_Property_Receipt_Viewer {
         }
 
         // Authorize access
-        if ( ! self::authorize_access( $payment, $nonce, $token ) ) {
+        if ( ! self::authorize_access( $payment, $exp, $sig, $token ) ) {
             wp_die( 'Access denied or link expired.', 'Forbidden', [ 'response' => 403 ] );
         }
 
@@ -144,7 +162,7 @@ class OFP_Property_Receipt_Viewer {
         self::deliver_receipt( $payment );
     }
 
-    private static function authorize_access( object $payment, string $nonce, string $token ): bool {
+    private static function authorize_access( object $payment, int $exp, string $sig, string $token ): bool {
         // Admin can view any receipt
         if ( current_user_can( 'manage_options' ) ) {
             return true;
@@ -157,9 +175,12 @@ class OFP_Property_Receipt_Viewer {
             }
         }
 
-        // Nonce verification: secure time-limited signed token generated for this payment
-        if ( ! empty( $nonce ) && wp_verify_nonce( $nonce, 'ofp_view_receipt_' . $payment->id ) ) {
-            return true;
+        // Signed link for this one receipt, not expired (S2-07).
+        if ( '' !== $sig && $exp > time() ) {
+            $expected = self::sign( (int) $payment->id, (string) $payment->receipt_category, $exp );
+            if ( hash_equals( $expected, $sig ) ) {
+                return true;
+            }
         }
 
         // Session check for logged-in portal clients

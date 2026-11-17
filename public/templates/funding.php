@@ -11,7 +11,6 @@
  *
  * The funding form covers three payment types:
  *  - SMS Credit top-up
- *  - Voice Credit top-up
  *  - Unified listing plan payment / renewal / upgrade
  *
  * @package OFast_Pipeline
@@ -33,8 +32,12 @@ $client = OFP_Auth::current_client();
 $success = '';
 $error   = '';
 
-// Back from Paystack: ask Paystack right now instead of waiting for its notification.
-$ofp_return_ref = sanitize_text_field( wp_unslash( $_GET['reference'] ?? ( $_GET['trxref'] ?? '' ) ) );
+// Back from the hosted checkout: ask Bachs right now instead of waiting for its notification.
+$ofp_return_ref = sanitize_text_field( wp_unslash( $_GET['reference'] ?? '' ) );
+if ( ! $ofp_return_ref && ! empty( $_GET['checkout_id'] ) ) {
+    // Bachs adds ?checkout_id=... when the customer comes back from the hosted checkout.
+    $ofp_return_ref = OFP_Payment::reference_from_checkout_id( sanitize_text_field( wp_unslash( $_GET['checkout_id'] ) ) );
+}
 if ( $ofp_return_ref && $client ) {
     $own = ( OFP_Payment::reference_client_id( $ofp_return_ref ) === (int) $client->id );
     if ( $own ) {
@@ -45,6 +48,13 @@ if ( $ofp_return_ref && $client ) {
         } elseif ( $state === 'failed' ) {
             $error = 'This payment was not completed, so nothing was charged. Please try again.';
             $_GET['topup_status'] = $_GET['sub_status'] = '';
+        } else {
+            // Not confirmed yet. Show the waiting message while the Bachs notification arrives.
+            if ( OFP_Payment::is_credit_topup_reference( $ofp_return_ref ) ) {
+                $_GET['topup_status'] = 'pending';
+            } else {
+                $_GET['sub_status'] = 'pending';
+            }
         }
     }
 }
@@ -63,7 +73,7 @@ if ( isset( $_GET['sub_status'] ) && $_GET['sub_status'] === 'pending' ) {
  * Unlike the virtual account (which can't tell what a payment is
  * FOR), this builds a one-time checkout link tagged with a reference
  * like ofp_credit_sms_{client_id}_{random}. The gateway webhook
- * recognises that prefix and credits the SMS/Voice balance directly
+ * recognises that prefix and credits the SMS balance directly
  * — no ambiguity, no manual review needed.
  * --------------------------------------------------------- */
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_initiate_credit_topup'] ) ) {
@@ -75,14 +85,14 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_initiate_credit
     } else {
 
         if ( class_exists( 'OFP_Security' ) ) {
-            OFP_Security::check_rate_limit( $_SERVER['REMOTE_ADDR'] ?? '', 'credit_topup_init', 5, 600 );
+            OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'credit_topup_init', 5, 600 );
         }
 
         $topup_channel = sanitize_text_field( $_POST['topup_channel'] ?? '' );
         $topup_amount  = (float) ( $_POST['topup_amount'] ?? 0 );
 
-        if ( ! in_array( $topup_channel, [ 'sms', 'voice' ], true ) ) {
-            $error = 'Please choose SMS or Voice credit.';
+        if ( 'sms' !== $topup_channel ) {
+            $error = 'Please choose SMS credit.';
         } elseif ( $topup_amount < 500 ) {
             $error = 'Minimum top-up amount is NGN 500.';
         } else {
@@ -110,7 +120,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_initiate_subscr
     } else {
 
         if ( class_exists( 'OFP_Security' ) ) {
-            OFP_Security::check_rate_limit( $_SERVER['REMOTE_ADDR'] ?? '', 'sub_checkout_init', 5, 600 );
+            OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'sub_checkout_init', 5, 600 );
         }
 
         $sub_type   = sanitize_text_field( $_POST['sub_type'] ?? '' );
@@ -160,7 +170,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_submit_funding'
 
         // Basic rate-limit: 5 submissions per IP per 10 minutes.
         if ( class_exists( 'OFP_Security' ) ) {
-            OFP_Security::check_rate_limit( $_SERVER['REMOTE_ADDR'] ?? '', 'manual_funding', 5, 600 );
+            OFP_Security::check_rate_limit( OFP_Security::get_client_ip(), 'manual_funding', 5, 600 );
         }
 
         $amount          = (float) ( $_POST['amount'] ?? 0 );
@@ -170,7 +180,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_submit_funding'
         $transaction_ref = sanitize_text_field( $_POST['transaction_ref'] ?? '' );
         $note            = sanitize_textarea_field( $_POST['note'] ?? '' );
 
-        $valid_payment_types = [ 'sms', 'voice', 'plan_silver', 'plan_gold' ];
+        $valid_payment_types = [ 'sms', 'plan_silver', 'plan_gold' ];
 
         // A plan payment also says how many months it covers. Saved as plan_silver_3 etc. (1 month stays plan_silver).
         $plan_months = OFP_Property_CPT::normalize_months( (int) ( $_POST['plan_months'] ?? 1 ) );
@@ -187,7 +197,6 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ofp_submit_funding'
 
             $payment_labels = [
                 'sms'         => 'SMS Credit',
-                'voice'       => 'Voice Credit',
                 'plan_silver' => 'Silver Plan',
                 'plan_gold'   => 'Gold Plan',
             ];
@@ -318,7 +327,7 @@ foreach ( [ 'silver', 'gold' ] as $pp_plan ) {
         <div class="ofp-funding-card-label">Automatic</div>
         <div class="ofp-funding-card-title">Quick Credit Top-Up</div>
         <div class="ofp-funding-card-desc">
-            Top up your SMS or Voice credit instantly via a secure checkout page.
+            Top up your SMS credit instantly via a secure checkout page.
             Your balance updates automatically within minutes — no need to fill in a form.
         </div>
 
@@ -327,10 +336,6 @@ foreach ( [ 'silver', 'gold' ] as $pp_plan ) {
             <div>
                 <span style="color:var(--text-muted);">SMS Balance:</span>
                 <strong style="color:var(--text-main); margin-left:6px;">NGN <?php echo esc_html( number_format( (float) $topup_credits->sms_remaining, 0 ) ); ?></strong>
-            </div>
-            <div>
-                <span style="color:var(--text-muted);">Voice Balance:</span>
-                <strong style="color:var(--text-main); margin-left:6px;">NGN <?php echo esc_html( number_format( (float) $topup_credits->voice_remaining, 0 ) ); ?></strong>
             </div>
         </div>
         <?php endif; ?>
@@ -342,7 +347,6 @@ foreach ( [ 'silver', 'gold' ] as $pp_plan ) {
                 <label for="ofp-topup-channel">Top Up</label>
                 <select id="ofp-topup-channel" name="topup_channel" class="ofp-form-input ofp-select" required>
                     <option value="sms">SMS Credit</option>
-                    <option value="voice">Voice Credit</option>
                 </select>
             </div>
 
@@ -350,7 +354,7 @@ foreach ( [ 'silver', 'gold' ] as $pp_plan ) {
                 <label for="ofp-topup-amount">Amount (NGN)</label>
                 <input type="number" id="ofp-topup-amount" name="topup_amount" class="ofp-form-input"
                        min="500" step="100" placeholder="e.g. 5000" required>
-                <p class="ofp-hint" style="margin-top:6px;">NGN 6.99 per SMS · NGN 15.00 per voice minute</p>
+                <p class="ofp-hint" style="margin-top:6px;">NGN <?php echo esc_html( number_format( OFP_Credit::sms_price(), 2 ) ); ?> per SMS</p>
             </div>
 
             <button type="submit" name="ofp_initiate_credit_topup" value="1" class="ofp-submit-btn">
@@ -538,7 +542,6 @@ foreach ( [ 'silver', 'gold' ] as $pp_plan ) {
 
                     <optgroup label="Credit Top-Up">
                         <option value="sms">SMS Credit</option>
-                        <option value="voice">Voice Credit</option>
                     </optgroup>
 
                     <?php

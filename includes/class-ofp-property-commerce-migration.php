@@ -5,7 +5,8 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Property_Commerce_Migration {
-    public static function init(): void {
+    /** Runs once from OFP_Activator::run_helper_schemas() (P6.02). */
+    public static function migrate(): void {
         global $wpdb;
         $p = $wpdb->prefix;
 

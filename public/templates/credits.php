@@ -12,8 +12,12 @@ OFP_Auth::require_active_subscription( $client );
 global $wpdb;
 $p = $wpdb->prefix;
 
-// Back from Paystack: ask Paystack right now instead of waiting for its notification.
-$ofp_return_ref = sanitize_text_field( wp_unslash( $_GET['reference'] ?? ( $_GET['trxref'] ?? '' ) ) );
+// Back from the hosted checkout: ask Bachs right now instead of waiting for its notification.
+$ofp_return_ref = sanitize_text_field( wp_unslash( $_GET['reference'] ?? '' ) );
+if ( ! $ofp_return_ref && ! empty( $_GET['checkout_id'] ) ) {
+    // Bachs adds ?checkout_id=... when the customer comes back from the hosted checkout.
+    $ofp_return_ref = OFP_Payment::reference_from_checkout_id( sanitize_text_field( wp_unslash( $_GET['checkout_id'] ) ) );
+}
 $ofp_return_msg = '';
 if ( $ofp_return_ref && OFP_Payment::reference_client_id( $ofp_return_ref ) === (int) $client->id ) {
     $ofp_state = OFP_Payment::settle_reference( $ofp_return_ref );
@@ -29,7 +33,6 @@ if ( $ofp_return_ref && OFP_Payment::reference_client_id( $ofp_return_ref ) === 
 $credits = OFP_Credit::get( $client->id );
 
 $sms_pct   = $credits && $credits->sms_loaded   > 0 ? round( ( $credits->sms_remaining   / $credits->sms_loaded   ) * 100 ) : 0;
-$voice_pct = $credits && $credits->voice_loaded > 0 ? round( ( $credits->voice_remaining / $credits->voice_loaded ) * 100 ) : 0;
 
 // Subscription rows (all types: CRM, Listing, etc.)
 $subscriptions = OFP_Subscription::get_all_for_client( $client->id );
@@ -130,16 +133,16 @@ $transactions = $wpdb->get_results(
             <div class="ofp-kpi-title">SMS Credit Balance</div>
             <div class="ofp-kpi-value">₦<?php echo number_format( (float) ( $credits->sms_remaining ?? 0 ), 0 ); ?></div>
             <div class="ofp-kpi-badge badge-blue">
-                <span>~<?php echo esc_html( $credits ? floor( $credits->sms_remaining / 6.99 ) : 0 ); ?> msgs (~₦<?php echo number_format((float)($credits->sms_loaded ?? 0), 0); ?> loaded)</span>
+                <span>~<?php echo esc_html( $credits ? floor( $credits->sms_remaining / OFP_Credit::sms_price() ) : 0 ); ?> msgs (~₦<?php echo number_format((float)($credits->sms_loaded ?? 0), 0); ?> loaded)</span>
             </div>
         </div>
 
-        <!-- 4. Voice Credit -->
+        <!-- 4. WhatsApp Credit (coming soon) -->
         <div class="ofp-kpi-card">
-            <div class="ofp-kpi-title">Voice Credit Balance</div>
-            <div class="ofp-kpi-value">₦<?php echo number_format( (float) ( $credits->voice_remaining ?? 0 ), 0 ); ?></div>
+            <div class="ofp-kpi-title">WhatsApp Credit Balance</div>
+            <div class="ofp-kpi-value">&mdash;</div>
             <div class="ofp-kpi-badge badge-green">
-                <span>~<?php echo esc_html( $credits ? floor( $credits->voice_remaining / 15 ) : 0 ); ?> mins (~₦<?php echo number_format((float)($credits->voice_loaded ?? 0), 0); ?> loaded)</span>
+                <span>Coming soon</span>
             </div>
         </div>
     </div>

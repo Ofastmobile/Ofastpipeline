@@ -7,7 +7,6 @@
  * ENDPOINTS:
  *  POST /wp-json/ofp/v1/capture-lead       Lead submission from landing pages
  *  POST /wp-json/ofp/v1/webhook/payment    Payment gateway webhook (provider-agnostic)
- *  POST /wp-json/ofp/v1/webhook/voice-ivr  Africa's Talking voice call webhook
  *  POST /wp-json/ofp/v1/webhook/sms-dlr    SMS delivery receipt
  *
  * SECURITY ON capture-lead:
@@ -21,7 +20,7 @@
  *  All endpoints allow cross-origin requests so client landing pages on
  *  separate domains/subdomains can POST to this site's REST API.
  *
- * Depends on: OFP_Security, OFP_Lead, OFP_Queue, OFP_Voice.
+ * Depends on: OFP_Security, OFP_Lead, OFP_Queue.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -29,6 +28,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class OFP_REST_API {
+
+    /** True while /api/v1/inquire (a form on another website) is calling capture_lead(). Set by this class only. */
+    private bool $external_inquire = false;
 
     public function __construct() {
         add_action( 'rest_api_init', [ $this, 'register_routes' ] );
@@ -60,7 +62,19 @@ class OFP_REST_API {
                 return rest_send_cors_headers( $value );
             }
 
-            header( 'Access-Control-Allow-Origin: *' );
+            // S2-11: only the public property feed is open to every website.
+            // Webhooks are server to server and get no CORS headers. Lead capture
+            // answers only the websites that are allowed.
+            $route = $request->get_route();
+            if ( '/ofp/v1/properties' === $route ) {
+                header( 'Access-Control-Allow-Origin: *' );
+            } elseif ( 0 !== strpos( $route, '/ofp/v1/webhook/' ) ) {
+                $origin = OFP_Security::request_origin();
+                if ( '' !== $origin && OFP_Security::origin_allowed( $origin ) ) {
+                    header( 'Access-Control-Allow-Origin: ' . $origin );
+                    header( 'Vary: Origin' );
+                }
+            }
             header( 'Access-Control-Allow-Methods: POST, GET, OPTIONS' );
             header( 'Access-Control-Allow-Headers: Content-Type, X-Requested-With' );
             header( 'Access-Control-Max-Age: 86400' );
@@ -97,14 +111,6 @@ class OFP_REST_API {
         register_rest_route( 'ofp/v1', '/webhook/payment', [
             'methods'             => 'POST',
             'callback'            => [ $this, 'payment_webhook' ],
-            'permission_callback' => '__return_true',
-        ] );
-
-        // Africa's Talking voice call webhook. The address keeps its old name so calls
-        // that are already queued still work.
-        register_rest_route( 'ofp/v1', '/webhook/voice-ivr', [
-            'methods'             => [ 'POST', 'GET' ],
-            'callback'            => [ $this, 'voice_webhook' ],
             'permission_callback' => '__return_true',
         ] );
 
@@ -154,6 +160,19 @@ class OFP_REST_API {
             return new WP_REST_Response( [ 'success' => true ], 200 );
         }
 
+        // ── 1b. Website check (S2-11) ─────────────────────────────────────────
+        // A browser always tells us which website the form is on. If that website
+        // is not this site, a client subdomain or in the allowed list, refuse.
+        // Calls that are not from a browser (no Origin, no Referer) are not blocked here;
+        // the limits below still apply to them.
+        $from = OFP_Security::request_origin();
+        if ( '' !== $from && ! OFP_Security::origin_allowed( $from ) ) {
+            return new WP_REST_Response(
+                [ 'success' => false, 'message' => 'This website is not allowed to send requests here.' ],
+                403
+            );
+        }
+
         // ── 2. Rate limit ─────────────────────────────────────────────────────
         // Max 3 submissions per IP per 10 minutes.
         OFP_Security::check_rate_limit(
@@ -163,11 +182,17 @@ class OFP_REST_API {
             600
         );
 
-        // ── 3. (no Turnstile here) ────────────────────────────────────────────
-        // Turnstile is only on login and sign-up. Lead and inspection forms are
-        // protected by the honeypot, the phone check, the duplicate check and the
-        // per-IP rate limit above/below. For heavy bot traffic add a Cloudflare
-        // rate limiting rule on /api/v1/inquire and /wp-json/ofp/v1/capture-lead.
+        // ── 3. Turnstile (S2-05) ──────────────────────────────────────────────
+        // When a Turnstile site key and secret are saved in Settings, a lead needs a
+        // valid answer. When they are not saved, verify_turnstile() passes, so
+        // nothing changes until you switch it on.
+        // Not applied to /api/v1/inquire (forms on other websites) until the owner decides how those prove themselves.
+        if ( ! $this->external_inquire && ! OFP_Security::verify_turnstile( (string) $request->get_param( 'cf-turnstile-response' ) ) ) {
+            return new WP_REST_Response(
+                [ 'success' => false, 'message' => 'Please complete the security check and try again.' ],
+                200
+            );
+        }
 
         // ── 4. Validate inputs ────────────────────────────────────────────────
         $client_id   = (int) $request->get_param( 'client_id' );
@@ -184,13 +209,14 @@ class OFP_REST_API {
         $source = function_exists( 'mb_substr' ) ? mb_substr( $source, 0, 150 ) : substr( $source, 0, 150 );
 
         // A property id sent from outside is only trusted when it is a real
-        // listing AND belongs to the client it is sent with. Otherwise it is
-        // dropped (the lead itself is still saved).
+        // listing. The client is then taken from the listing itself (S2-05),
+        // never from the client_id the visitor sent. If the property is not
+        // real it is dropped (the lead itself is still saved).
         if ( $property_id ) {
             if ( 'ofp_property' !== get_post_type( $property_id ) ) {
                 $property_id = null;
-            } elseif ( $client_id && (int) get_post_meta( $property_id, 'ofp_client_id', true ) !== $client_id ) {
-                $property_id = null;
+            } else {
+                $client_id = (int) get_post_meta( $property_id, 'ofp_client_id', true );
             }
         }
 
@@ -303,12 +329,6 @@ class OFP_REST_API {
             // Instant SMS and email to the lead, and a new lead alert to the client.
             // This runs after the visitor has their thank you reply.
             OFP_Queue::send_instant_after_response( $client_id, $lead_id );
-
-            // Simple "an agent will reach out" call, if the client switched it on.
-            // Only form leads reach this point. Manual uploads never do.
-            if ( class_exists( 'OFP_Voice_Notice' ) ) {
-                OFP_Voice_Notice::schedule_interest_call( $client_id, $lead_id );
-            }
         }
 
         // ── 8. Handle property inquiry extras (v2.1) ──────────────────────────
@@ -335,9 +355,9 @@ class OFP_REST_API {
      */
     public function payment_webhook( WP_REST_Request $request ): WP_REST_Response {
 
-        // Manual bank payments are used. The webhook stays shut until a
-        // Paystack secret key is saved in Settings.
-        if ( empty( get_option( 'ofp_paystack_secret_key', '' ) ) ) {
+        // The webhook stays shut until the Bachs webhook signing secret
+        // is saved in Settings.
+        if ( empty( get_option( 'ofp_bachs_webhook_secret', '' ) ) ) {
             return new WP_REST_Response( [ 'status' => 'disabled' ], 404 );
         }
 
@@ -351,27 +371,31 @@ class OFP_REST_API {
     }
 
     /**
-     * Africa's Talking voice call webhook. Handled by OFP_Voice.
-     *
-     * @param  WP_REST_Request $request
-     * @return WP_REST_Response
-     */
-    public function voice_webhook( WP_REST_Request $request ): WP_REST_Response {
-
-        if ( class_exists( 'OFP_Voice' ) ) {
-            return OFP_Voice::handle_callback( $request );
-        }
-
-        return new WP_REST_Response( [ 'status' => 'received' ], 200 );
-    }
-
-    /**
      * SMS delivery receipt — logs final delivery status from provider.
      *
      * @param  WP_REST_Request $request
      * @return WP_REST_Response
      */
+    /**
+     * The secret that the SMS provider must send with every delivery report (S2-03).
+     * Made once, kept in ofp_sms_dlr_secret. It is shown in Settings inside the callback URL.
+     */
+    public static function sms_dlr_secret(): string {
+        $secret = (string) get_option( 'ofp_sms_dlr_secret', '' );
+        if ( strlen( $secret ) < 20 ) {
+            $secret = wp_generate_password( 32, false );
+            update_option( 'ofp_sms_dlr_secret', $secret, false );
+        }
+        return $secret;
+    }
+
     public function sms_dlr_webhook( WP_REST_Request $request ): WP_REST_Response {
+
+        // The secret may come in the address (?secret=...) or in the X-OFP-Secret header.
+        $given = (string) ( $request->get_param( 'secret' ) ?? $request->get_header( 'x-ofp-secret' ) ?? '' );
+        if ( '' === $given || ! hash_equals( self::sms_dlr_secret(), $given ) ) {
+            return new WP_REST_Response( [ 'status' => 'forbidden' ], 403 );
+        }
 
         $message_id = sanitize_text_field( $request->get_param( 'id' ) ?? '' );
         $status     = sanitize_text_field( $request->get_param( 'status' ) ?? '' );
@@ -677,11 +701,16 @@ class OFP_REST_API {
         }
 
         // Both API routes below answer in JSON and are called cross-origin.
-        header( 'Access-Control-Allow-Origin: *' );
+        // The property feed is open to every website; the lead route answers only allowed websites (S2-11).
         header( 'X-Content-Type-Options: nosniff' );
 
         // 2. /api/v1/inquire
         if ( $path === 'api/v1/inquire' ) {
+            $origin = OFP_Security::request_origin();
+            if ( '' !== $origin && OFP_Security::origin_allowed( $origin ) ) {
+                header( 'Access-Control-Allow-Origin: ' . $origin );
+                header( 'Vary: Origin' );
+            }
             header( 'Access-Control-Allow-Methods: POST, OPTIONS' );
             header( 'Access-Control-Allow-Headers: Content-Type, X-Requested-With, Authorization' );
 
@@ -726,13 +755,16 @@ class OFP_REST_API {
                 $req->set_header( 'referer', esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) );
             }
 
+            $this->external_inquire = true;
             $res = $this->capture_lead( $req );
+            $this->external_inquire = false;
 
             wp_send_json( $res->get_data(), $res->get_status() );
         }
 
         // 3. /api/v1/properties
         if ( $path === 'api/v1/properties' ) {
+            header( 'Access-Control-Allow-Origin: *' );
             header( 'Access-Control-Allow-Methods: GET, OPTIONS' );
             header( 'Access-Control-Allow-Headers: Content-Type, X-Requested-With' );
 

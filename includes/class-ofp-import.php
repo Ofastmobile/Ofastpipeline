@@ -24,6 +24,7 @@ class OFP_Import {
 
     const MAX_ROWS  = 5000;
     const MAX_BYTES = 5242880; // 5 MB
+    const MAX_UNZIPPED_BYTES = 31457280; // 30 MB: most one sheet part may unpack to (S2-28)
     const TTL       = 3600;
     const GATEWAY   = 'import';
 
@@ -116,7 +117,7 @@ class OFP_Import {
             $text = substr( $text, 3 );
         }
         if ( ! mb_check_encoding( $text, 'UTF-8' ) ) {
-            $text = function_exists( 'iconv' ) ? (string) iconv( 'Windows-1252', 'UTF-8//IGNORE', $text ) : utf8_encode( $text );
+            $text = (string) mb_convert_encoding( $text, 'UTF-8', 'Windows-1252' );
         }
         $text = str_replace( [ "\r\n", "\r" ], "\n", $text );
         if ( trim( $text ) === '' ) {
@@ -177,9 +178,21 @@ class OFP_Import {
             $zip->close();
             return new WP_Error( 'import_bad_xlsx', 'No sheet was found in the Excel file.' );
         }
-        $sheet  = (string) $zip->getFromName( $sheet_name );
-        $shared = (string) $zip->getFromName( 'xl/sharedStrings.xml' );
+        // Zip bomb guard: a small file can unpack to a huge one. Check the
+        // real unpacked size of the two parts we read BEFORE reading them.
+        foreach ( [ $sheet_name, 'xl/sharedStrings.xml' ] as $part ) {
+            $stat = $zip->statName( $part );
+            if ( $stat && (int) $stat['size'] > self::MAX_UNZIPPED_BYTES ) {
+                $zip->close();
+                return new WP_Error( 'import_too_big', 'The Excel file is too large inside. Save it as .csv and upload that.' );
+            }
+        }
+        $sheet  = (string) $zip->getFromName( $sheet_name, self::MAX_UNZIPPED_BYTES + 1 );
+        $shared = (string) $zip->getFromName( 'xl/sharedStrings.xml', self::MAX_UNZIPPED_BYTES + 1 );
         $zip->close();
+        if ( strlen( $sheet ) > self::MAX_UNZIPPED_BYTES || strlen( $shared ) > self::MAX_UNZIPPED_BYTES ) {
+            return new WP_Error( 'import_too_big', 'The Excel file is too large inside. Save it as .csv and upload that.' );
+        }
 
         return self::check_size( self::read_xlsx_xml( $sheet, $shared ) );
     }
@@ -753,6 +766,7 @@ class OFP_Import {
                 'lead_id'            => $lead_id,
                 'buyer_name'         => mb_substr( $first['name'], 0, 150 ),
                 'buyer_phone'        => $first['phone'],
+                'phone10'            => OFP_Security::phone_last10( (string) $first['phone'] ),
                 'buyer_email'        => $first['email'] !== '' ? $first['email'] : null,
                 'total_price'        => $total,
                 'amount_paid'        => $sum,

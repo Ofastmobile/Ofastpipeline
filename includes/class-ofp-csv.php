@@ -8,7 +8,7 @@
  *  3. rent_roll_{month}_{year}.csv         — tenant directory, rent rates, lease status
  *  4. inspections_{month}_{year}.csv       — inspection tour bookings & attendance
  *  5. transactions_{month}_{year}.csv      — unified financial receipts across all channels
- *  6. communications_{month}_{year}.csv    — all SMS, Voice, and Email interactions
+ *  6. communications_{month}_{year}.csv    — all SMS and Email interactions
  *
  * FILES ARE STORED IN:
  *  wp-content/uploads/ofp-archives/{client_id}/
@@ -876,13 +876,12 @@ class OFP_CSV {
                     $client_id
                 ) );
                 $sms_rem   = (float) ( $credits->sms_remaining ?? 0 );
-                $voice_rem = (float) ( $credits->voice_remaining ?? 0 );
 
                 $kpis = [
-                    [ 'title' => 'Messages Sent', 'value' => number_format( $total_msgs ), 'badge' => $year . ' SMS/Calls/Emails', 'color' => 'hero' ],
+                    [ 'title' => 'Messages Sent', 'value' => number_format( $total_msgs ), 'badge' => $year . ' SMS/Emails', 'color' => 'hero' ],
                     [ 'title' => 'Credit Spend', 'value' => '₦' . number_format( $total_spend, 2 ), 'badge' => $year . ' Total Cost', 'color' => 'blue' ],
                     [ 'title' => 'SMS Balance', 'value' => number_format( $sms_rem, 1 ), 'badge' => 'Credits Left', 'color' => 'green' ],
-                    [ 'title' => 'Voice Balance', 'value' => number_format( $voice_rem, 1 ), 'badge' => 'Minutes Left', 'color' => 'purple' ],
+                    [ 'title' => 'WhatsApp Balance', 'value' => 'Soon', 'badge' => 'Coming soon', 'color' => 'purple' ],
                 ];
                 break;
 

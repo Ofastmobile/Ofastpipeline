@@ -367,7 +367,7 @@ class OFP_Subscription {
                         'followup_1_type'        => 'sms',
                         'followup_1_message'     => get_option( 'ofp_default_followup_1', self::default_followup_sms() ),
                         'followup_2_delay_hours' => 24,
-                        'followup_2_type'        => 'voice',
+                        'followup_2_type'        => 'sms',
                         'followup_2_message'     => get_option( 'ofp_default_followup_2', '' ),
                         'followup_3_delay_hours' => 72,
                         'followup_3_type'        => 'sms',
@@ -692,7 +692,7 @@ class OFP_Subscription {
     /**
      * Record a confirmed payment and activate / renew the subscription.
      *
-     * Called by OFP_Monnify::handle_webhook() after a payment is verified,
+     * Called by the payment gateway (OFP_Gateway_Bachs) after a payment is verified,
      * and by OFP_Payment::confirm_subscription_checkout() (Phase 20).
      *
      * @param  int         $client_id      Client ID.
@@ -875,7 +875,7 @@ class OFP_Subscription {
         if ( $plan ) {
             return ucfirst( $plan['plan'] ) . ' plan, ' . self::period_label( $plan['months'] );
         }
-        return $channel === 'sms' ? 'SMS credit' : ( $channel === 'voice' ? 'Voice credit' : ucfirst( $channel ) );
+        return $channel === 'sms' ? 'SMS credit' : ucfirst( $channel );
     }
 
     /** Type and plan words for a payment row, in plain words, for every payment list. */

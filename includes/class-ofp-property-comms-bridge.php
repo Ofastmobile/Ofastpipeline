@@ -2,7 +2,6 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 class OFP_Property_Comms_Bridge {
-    const SMS_COST = 6.99;
 
     public static function init(): void {
         add_action( 'ofp_property_payment_rejected', [ __CLASS__, 'payment_rejected' ], 10, 2 );
@@ -206,18 +205,20 @@ class OFP_Property_Comms_Bridge {
     private static function sms_to( object $row, string $phone, string $message ): void {
         if ( $phone === '' || empty( $row->client_id ) || ! OFP_SMS::ready() ) return;
         $client_id = (int) $row->client_id;
-        if ( ! OFP_Credit::has_balance( $client_id, 'sms', self::SMS_COST ) ) return;
+        $cost      = OFP_Credit::sms_cost( $message );
+        if ( ! OFP_Credit::has_balance( $client_id, 'sms', $cost ) ) return;
         $sms    = OFP_SMS::for_client( (int) $client_id );
         $result = $sms->send( $phone, $message );
-        if ( ! empty( $result['success'] ) ) OFP_Credit::deduct( $client_id, 'sms', self::SMS_COST );
+        if ( ! empty( $result['success'] ) ) OFP_Credit::deduct( $client_id, 'sms', $cost );
     }
 
     private static function sms( object $row, string $message ): void {
         if ( empty( $row->buyer_phone ) || empty( $row->client_id ) || ! OFP_SMS::ready() ) return;
         $client_id = (int) $row->client_id;
-        if ( ! OFP_Credit::has_balance( $client_id, 'sms', self::SMS_COST ) ) return;
+        $cost      = OFP_Credit::sms_cost( $message );
+        if ( ! OFP_Credit::has_balance( $client_id, 'sms', $cost ) ) return;
         $sms = OFP_SMS::for_client( (int) $client_id );
         $result = $sms->send( $row->buyer_phone, $message );
-        if ( ! empty( $result['success'] ) ) OFP_Credit::deduct( $client_id, 'sms', self::SMS_COST );
+        if ( ! empty( $result['success'] ) ) OFP_Credit::deduct( $client_id, 'sms', $cost );
     }
 }

@@ -63,7 +63,7 @@ class OFP_Property_Payment_Entry_UI {
                 box.setAttribute('data-ofp-online-payment','1');
                 box.innerHTML=<?php echo wp_json_encode(
                     '<strong>Prefer to pay online?</strong>' .
-                    '<p>Use Paystack or Flutterwave for secure online payment. You do not need an account.</p>' .
+                    '<p>Pay securely online. You do not need an account.</p>' .
                     '<a class="ofp-payment-online-btn" href="' . esc_url( $checkout_url ) . '">Pay Online</a>'
                 ); ?>;
                 form.parentNode.insertBefore(box,form);

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /team-invite
  *

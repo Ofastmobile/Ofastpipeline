@@ -530,11 +530,31 @@ document.addEventListener('DOMContentLoaded', function () {
             if ( d.embedUrl ) {
                 videoWrap.style.display = 'block';
                 rawLink.href = d.videoUrl;
-                iframeHolder.innerHTML = '<iframe src="' + d.embedUrl + '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+                if ( /^https?:\/\//i.test( d.embedUrl ) ) {
+                    var frameEl = document.createElement('iframe');
+                    frameEl.src = d.embedUrl;
+                    frameEl.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+                    frameEl.setAttribute('allowfullscreen', '');
+                    iframeHolder.appendChild(frameEl);
+                }
             } else if ( d.videoUrl ) {
                 videoWrap.style.display = 'block';
                 rawLink.href = d.videoUrl;
-                iframeHolder.innerHTML = '<div style="padding:20px; color:#cbd5e1; text-align:center;">Video link provided: <a href="' + d.videoUrl + '" target="_blank" style="color:#38bdf8;">' + d.videoUrl + '</a></div>';
+                var noteEl = document.createElement('div');
+                noteEl.style.cssText = 'padding:20px; color:#cbd5e1; text-align:center;';
+                noteEl.appendChild(document.createTextNode('Video link provided: '));
+                if ( /^https?:\/\//i.test( d.videoUrl ) ) {
+                    var linkEl = document.createElement('a');
+                    linkEl.href = d.videoUrl;
+                    linkEl.target = '_blank';
+                    linkEl.rel = 'noopener noreferrer';
+                    linkEl.style.color = '#38bdf8';
+                    linkEl.textContent = d.videoUrl;
+                    noteEl.appendChild(linkEl);
+                } else {
+                    noteEl.appendChild(document.createTextNode(d.videoUrl));
+                }
+                iframeHolder.appendChild(noteEl);
             } else {
                 videoWrap.style.display = 'none';
             }

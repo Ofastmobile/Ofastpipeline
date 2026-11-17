@@ -157,9 +157,9 @@ if ( $filter_client ) { $lease_where[] = 'l.client_id = %d'; $lease_args[] = $fi
 if ( $filter_status ) { $lease_where[] = 'l.status = %s';    $lease_args[] = $filter_status; }
 $lease_where_sql = implode( ' AND ', $lease_where );
 
-$lease_total = (int) $wpdb->get_var( $wpdb->prepare(
+$lease_total = (int) $wpdb->get_var( OFP_Security::prepare_opt(
     "SELECT COUNT(*) FROM {$p}ofp_property_leases l WHERE {$lease_where_sql}",
-    ...$lease_args
+    $lease_args
 ) );
 $leases = $wpdb->get_results( $wpdb->prepare(
     "SELECT l.*, t.full_name AS tenant_name, t.phone AS tenant_phone,
@@ -179,9 +179,9 @@ $tenant_args  = [];
 if ( $filter_client ) { $tenant_where[] = 't.client_id = %d'; $tenant_args[] = $filter_client; }
 $tenant_where_sql = implode( ' AND ', $tenant_where );
 
-$tenant_total = (int) $wpdb->get_var( $wpdb->prepare(
+$tenant_total = (int) $wpdb->get_var( OFP_Security::prepare_opt(
     "SELECT COUNT(*) FROM {$p}ofp_property_tenants t WHERE {$tenant_where_sql}",
-    ...$tenant_args
+    $tenant_args
 ) );
 $tenants = $wpdb->get_results( $wpdb->prepare(
     "SELECT t.*, c.business_name,
@@ -223,14 +223,14 @@ if ( $pay_search !== '' ) {
 
 $pay_where_sql = implode( ' AND ', $pay_where );
 
-$pay_total = (int) $wpdb->get_var( $wpdb->prepare(
+$pay_total = (int) $wpdb->get_var( OFP_Security::prepare_opt(
     "SELECT COUNT(*) FROM {$p}ofp_property_lease_payments p
      JOIN {$p}ofp_property_leases l ON l.id = p.lease_id
      JOIN {$p}ofp_property_tenants t ON t.id = l.tenant_id
      LEFT JOIN {$p}ofp_properties pr ON pr.id = l.property_id
      LEFT JOIN {$p}ofp_clients c ON c.id = l.client_id
      WHERE {$pay_where_sql}",
-    ...$pay_args
+    $pay_args
 ) );
 $payments = $wpdb->get_results( $wpdb->prepare(
     "SELECT p.*, l.rent_period, l.custom_days, t.full_name AS tenant_name,

@@ -15,13 +15,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OFP_Property_Commerce {
 
-    const SCHEMA_VERSION = '1.0.4';
+    const SCHEMA_VERSION = '1.0.5';
 
     /**
      * Bootstrap the property-commerce layer.
      */
     public static function init(): void {
-        self::install_schema();
+        // Tables are made by OFP_Activator::run_helper_schemas() (P6.02).
     }
 
     /**
@@ -30,7 +30,7 @@ class OFP_Property_Commerce {
      * We deliberately keep this separate from existing subscription tables so
      * property payments can evolve without changing subscription entitlements.
      */
-    private static function install_schema(): void {
+    public static function install_schema(): void {
         $current_version = get_option( 'ofp_property_commerce_schema', '0.0.0' );
         if ( $current_version === self::SCHEMA_VERSION ) {
             return;
@@ -84,6 +84,7 @@ class OFP_Property_Commerce {
             offer_id              BIGINT UNSIGNED NULL,
             buyer_name            VARCHAR(150) NOT NULL,
             buyer_phone           VARCHAR(30)  NOT NULL,
+            phone10               VARCHAR(10)  NULL,
             buyer_email           VARCHAR(150) NULL,
             total_price           DECIMAL(14,2) NOT NULL,
             amount_paid           DECIMAL(14,2) NOT NULL DEFAULT 0.00,
@@ -111,6 +112,7 @@ class OFP_Property_Commerce {
             KEY lead_id (lead_id),
             KEY offer_id (offer_id),
             KEY status (status),
+            KEY phone10 (phone10),
             KEY payment_owner (payment_owner_type, payment_owner_id)
         ) {$charset_collate};" );
 
@@ -234,7 +236,7 @@ class OFP_Property_Commerce {
             return new WP_Error( 'offer_not_pending', 'This offer is no longer available for acceptance.' );
         }
 
-        if ( $offer->expires_at && strtotime( $offer->expires_at ) < current_time( 'timestamp' ) ) {
+        if ( $offer->expires_at && strtotime( $offer->expires_at ) < OFP_Security::site_now_ts() ) {
             $wpdb->update(
                 "{$p}ofp_property_offers",
                 [ 'status' => 'expired', 'updated_at' => current_time( 'mysql' ) ],
@@ -287,6 +289,39 @@ class OFP_Property_Commerce {
         $wpdb->query( 'START TRANSACTION' );
 
         try {
+            // P4.02: lock the property row first, so two accepts for the same property take turns.
+            $locked = $wpdb->get_row( $wpdb->prepare(
+                "SELECT id, status FROM {$p}ofp_properties WHERE id = %d LIMIT 1 FOR UPDATE",
+                (int) $offer->property_id
+            ) );
+
+            // Claim the offer in one query. Only one request can change it from pending.
+            $claimed = $wpdb->query( $wpdb->prepare(
+                "UPDATE {$p}ofp_property_offers SET status = 'accepted', accepted_at = %s, updated_at = %s WHERE id = %d AND status = 'pending'",
+                current_time( 'mysql' ),
+                current_time( 'mysql' ),
+                $offer_id
+            ) );
+            if ( 1 !== (int) $claimed ) {
+                $wpdb->query( 'ROLLBACK' );
+                return new WP_Error( 'offer_not_pending', 'This offer is no longer available for acceptance.' );
+            }
+
+            // Repeat the checks now that the property is locked.
+            $has_purchase_locked = (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$p}ofp_property_purchases WHERE property_id = %d AND status IN ('active', 'completed') FOR UPDATE",
+                (int) $offer->property_id
+            ) );
+            if ( ! $locked || 'taken' === $locked->status || $has_purchase_locked > 0 ) {
+                $wpdb->query( 'ROLLBACK' );
+                $wpdb->update(
+                    "{$p}ofp_property_offers",
+                    [ 'status' => 'expired', 'updated_at' => current_time( 'mysql' ) ],
+                    [ 'id' => $offer_id ]
+                );
+                return new WP_Error( 'property_unavailable', 'This property has already been sold or is no longer available.' );
+            }
+
             $inserted = $wpdb->insert(
                 "{$p}ofp_property_purchases",
                 [
@@ -296,6 +331,7 @@ class OFP_Property_Commerce {
                     'offer_id'            => $offer_id,
                     'buyer_name'          => sanitize_text_field( $offer->buyer_name ),
                     'buyer_phone'         => sanitize_text_field( $offer->buyer_phone ),
+                    'phone10'             => OFP_Security::phone_last10( (string) $offer->buyer_phone ),
                     'buyer_email'         => $offer->buyer_email ? sanitize_email( $offer->buyer_email ) : null,
                     'total_price'         => (float) $offer->total_price,
                     'amount_paid'         => 0,
@@ -333,7 +369,7 @@ class OFP_Property_Commerce {
             // amount due under the accepted agreement and becomes paid only
             // after a verified payment is allocated to it.
             if ( $initial > 0 ) {
-                $wpdb->insert(
+                $first_ok = $wpdb->insert(
                     "{$p}ofp_property_installments",
                     [
                         'purchase_id' => $purchase_id,
@@ -346,14 +382,19 @@ class OFP_Property_Commerce {
                         'updated_at' => current_time( 'mysql' ),
                     ]
                 );
+                // P4.26: a failed insert stops everything and rolls back.
+                if ( ! $first_ok ) {
+                    throw new Exception( 'Unable to create the installment schedule.' );
+                }
             }
 
             if ( $count > 0 && $monthly > 0 && $first ) {
                 $start_no = $initial > 0 ? 2 : 1;
                 for ( $i = 0; $i < $count; $i++ ) {
                     $no = $start_no + $i;
-                    $due = gmdate( 'Y-m-d', strtotime( $first . ' +' . ( $i + ( $initial > 0 ? 1 : 0 ) ) . ' month' ) );
-                    $wpdb->insert(
+                    // P4.24 / P4.25: the same helper as the manual path, so the offer frequency is used.
+                    $due = OFP_Property_Purchase_Service::calculate_due_date( (string) $first, $i + ( $initial > 0 ? 1 : 0 ), (string) $offer->frequency );
+                    $row_ok = $wpdb->insert(
                         "{$p}ofp_property_installments",
                         [
                             'purchase_id' => $purchase_id,
@@ -366,18 +407,13 @@ class OFP_Property_Commerce {
                             'updated_at' => current_time( 'mysql' ),
                         ]
                     );
+                    if ( ! $row_ok ) {
+                        throw new Exception( 'Unable to create the installment schedule.' );
+                    }
                 }
             }
 
-            $wpdb->update(
-                "{$p}ofp_property_offers",
-                [
-                    'status' => 'accepted',
-                    'accepted_at' => current_time( 'mysql' ),
-                    'updated_at' => current_time( 'mysql' ),
-                ],
-                [ 'id' => $offer_id ]
-            );
+            // The offer was already marked accepted by the claim at the top of the transaction.
 
             // Invalidate/expire all other pending offers for this property immediately
             $wpdb->query( $wpdb->prepare(
@@ -512,24 +548,34 @@ class OFP_Property_Commerce {
             return;
         }
 
+        // P6.10: three grouped queries for ALL the purchases, not three per purchase.
+        $ids_sql = implode( ',', array_map( 'intval', wp_list_pluck( $purchases, 'id' ) ) );
+        $payments_by = $allocations_by = $installments_by = [];
+        foreach ( (array) $wpdb->get_results(
+            "SELECT purchase_id, SUM(amount) AS total FROM {$p}ofp_property_payments
+             WHERE purchase_id IN ({$ids_sql}) AND status IN ('successful', 'verified') GROUP BY purchase_id"
+        ) as $row ) {
+            $payments_by[ (int) $row->purchase_id ] = (float) $row->total;
+        }
+        foreach ( (array) $wpdb->get_results(
+            "SELECT pmt.purchase_id, SUM(a.amount) AS total FROM {$p}ofp_property_payment_allocations a
+             INNER JOIN {$p}ofp_property_payments pmt ON pmt.id = a.payment_id
+             WHERE pmt.purchase_id IN ({$ids_sql}) AND pmt.status IN ('successful', 'verified') GROUP BY pmt.purchase_id"
+        ) as $row ) {
+            $allocations_by[ (int) $row->purchase_id ] = (float) $row->total;
+        }
+        foreach ( (array) $wpdb->get_results(
+            "SELECT purchase_id, SUM(amount_paid) AS total FROM {$p}ofp_property_installments
+             WHERE purchase_id IN ({$ids_sql}) GROUP BY purchase_id"
+        ) as $row ) {
+            $installments_by[ (int) $row->purchase_id ] = (float) $row->total;
+        }
+
         foreach ( $purchases as $pu ) {
-            $pid = (int) $pu->id;
-            $payments_total = (float) $wpdb->get_var( $wpdb->prepare(
-                "SELECT COALESCE(SUM(amount), 0) FROM {$p}ofp_property_payments
-                 WHERE purchase_id = %d AND status IN ('successful', 'verified')",
-                $pid
-            ) );
-            $allocations_total = (float) $wpdb->get_var( $wpdb->prepare(
-                "SELECT COALESCE(SUM(a.amount), 0) FROM {$p}ofp_property_payment_allocations a
-                 INNER JOIN {$p}ofp_property_payments pmt ON pmt.id = a.payment_id
-                 WHERE pmt.purchase_id = %d AND pmt.status IN ('successful', 'verified')",
-                $pid
-            ) );
-            $installments_total = (float) $wpdb->get_var( $wpdb->prepare(
-                "SELECT COALESCE(SUM(amount_paid), 0) FROM {$p}ofp_property_installments
-                 WHERE purchase_id = %d",
-                $pid
-            ) );
+            $pid                = (int) $pu->id;
+            $payments_total     = $payments_by[ $pid ] ?? 0.0;
+            $allocations_total  = $allocations_by[ $pid ] ?? 0.0;
+            $installments_total = $installments_by[ $pid ] ?? 0.0;
 
             $real_paid    = max( (float) $pu->amount_paid, $payments_total, $allocations_total, $installments_total );
             $total_price  = (float) $pu->total_price;

@@ -18,8 +18,7 @@
  * PROVIDER SELECTION:
  *  ONE provider is active for the whole platform. Admin chooses it in
  *  Settings, SMS tab (option ofp_sms_provider). Clients do not choose.
- *  Use OFP_SMS::for_client( $client_id ) everywhere. Voice calls are separate
- *  and always use Africa's Talking.
+ *  Use OFP_SMS::for_client( $client_id ) everywhere.
  *
  * ADDING NEW PROVIDERS:
  *  Add an entry in OFP_SMS::providers() (label, key_option, send) and the
@@ -90,16 +89,38 @@ class OFP_SMS {
     }
 
     /**
-     * How many SMS segments a message uses. One segment holds 160 characters.
-     * A longer message is split into pieces of 153 characters.
-     * This is an estimate for plain text messages.
+     * How many SMS pages a message uses (G8.02).
+     *
+     * Plain (GSM) text: 160 characters in one page, 153 per page when split.
+     * Any other character (Naira sign, emoji, curly quotes, letters like the
+     * Yoruba dotted ones) makes the whole message Unicode: 70 in one page,
+     * 67 per page when split.
+     * Characters ^ { } \ [ ~ ] | and the euro sign count as 2 in plain text.
      */
     public static function segments( string $message ): int {
-        $length = mb_strlen( $message );
-        if ( $length <= 160 ) {
-            return 1;
+        $basic = '@£$¥èéùìòÇ' . "\n" . 'Øø' . "\r" . 'ÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà';
+        $extra = '^{}\\[~]|€';
+
+        $units   = 0;
+        $unicode = false;
+        foreach ( preg_split( '//u', $message, -1, PREG_SPLIT_NO_EMPTY ) ?: [] as $ch ) {
+            if ( false !== mb_strpos( $basic, $ch ) ) {
+                $units++;
+            } elseif ( false !== mb_strpos( $extra, $ch ) ) {
+                $units += 2;
+            } else {
+                $unicode = true;
+                break;
+            }
         }
-        return (int) ceil( $length / 153 );
+
+        if ( $unicode ) {
+            // Unicode pages count UTF-16 units (an emoji is 2).
+            $units = (int) ( strlen( mb_convert_encoding( $message, 'UTF-16BE', 'UTF-8' ) ) / 2 );
+            return $units <= 70 ? 1 : (int) ceil( $units / 67 );
+        }
+
+        return $units <= 160 ? 1 : (int) ceil( $units / 153 );
     }
 
     /**
@@ -148,7 +169,7 @@ class OFP_SMS {
                 $phone,
                 'outbound',
                 $message,
-                ! empty( $result['success'] ) ? ( ( class_exists( 'OFP_Queue' ) ? OFP_Queue::SMS_COST : 6.99 ) * self::segments( $message ) ) : 0.00,
+                ! empty( $result['success'] ) ? ( OFP_Credit::sms_cost( $message ) ) : 0.00,
                 ! empty( $result['success'] ) ? 'sent' : 'failed',
                 $this->provider,
                 $result['provider_ref'] ?? null
@@ -161,6 +182,18 @@ class OFP_SMS {
     // ─────────────────────────────────────────────────────────────────────────
     // PROVIDERS
     // ─────────────────────────────────────────────────────────────────────────
+
+    /** P6.07: seconds to wait for an SMS provider before giving up. */
+    const HTTP_TIMEOUT = 8;
+
+    /** Clear message when the SMS provider does not answer in time; other errors keep WordPress's text. */
+    private static function http_error_text( WP_Error $error ): string {
+        $text = $error->get_error_message();
+        if ( false !== stripos( $text, 'timed out' ) || false !== stripos( $text, 'timeout' ) ) {
+            return 'The SMS provider did not answer within ' . self::HTTP_TIMEOUT . ' seconds. The message may not have been sent.';
+        }
+        return $text;
+    }
 
     /**
      * Send via Africa's Talking using OFP's global master account.
@@ -181,7 +214,7 @@ class OFP_SMS {
                     'message'  => $message,
                     'from'     => get_option( 'ofp_at_sender_id', 'OFastPipe' ),
                 ],
-                'timeout' => 15,
+                'timeout' => self::HTTP_TIMEOUT,
             ]
         );
 
@@ -189,7 +222,7 @@ class OFP_SMS {
             return [
                 'success'      => false,
                 'provider_ref' => '',
-                'error'        => $response->get_error_message(),
+                'error'        => self::http_error_text( $response ),
             ];
         }
 
@@ -224,7 +257,7 @@ class OFP_SMS {
                     'from' => get_option( 'ofp_bsmsn_sender_id', 'OFastPipe' ),
                     'body' => $message,
                 ] ),
-                'timeout' => 15,
+                'timeout' => self::HTTP_TIMEOUT,
             ]
         );
 
@@ -232,7 +265,7 @@ class OFP_SMS {
             return [
                 'success'      => false,
                 'provider_ref' => '',
-                'error'        => $response->get_error_message(),
+                'error'        => self::http_error_text( $response ),
             ];
         }
 
@@ -267,13 +300,13 @@ class OFP_SMS {
 
         $url = 'https://smartsmssolutions.com/api/json.php?' . http_build_query( $params );
 
-        $response = wp_remote_get( $url, [ 'timeout' => 30 ] );
+        $response = wp_remote_get( $url, [ 'timeout' => self::HTTP_TIMEOUT ] );
 
         if ( is_wp_error( $response ) ) {
             return [
                 'success'      => false,
                 'provider_ref' => '',
-                'error'        => $response->get_error_message(),
+                'error'        => self::http_error_text( $response ),
             ];
         }
 

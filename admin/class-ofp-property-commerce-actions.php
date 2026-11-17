@@ -335,6 +335,8 @@ class OFP_Property_Commerce_Actions {
         $portal_client = OFP_Auth::current_client();
         $client_id     = $portal_client ? (int) $portal_client->id : 0;
         if ( ! $client_id ) wp_die( esc_html__( 'Access denied.', 'ofast-pipeline' ) );
+        // This sends an email to the buyer, so keep it low.
+        OFP_Security::check_rate_limit( 'client:' . $client_id, 'client_resend_offer', 10, 600 );
 
         global $wpdb;
         $p = $wpdb->prefix;

@@ -13,7 +13,6 @@ OFP_Auth::require_active_subscription( $client );
 $stats   = OFP_Lead::get_stats( $client->id );
 $credits = OFP_Credit::get( $client->id );
 $sms_remaining = $credits->sms_remaining ?? 0;
-$voice_remaining = $credits->voice_remaining ?? 0;
 
 // Property & Real Estate Calculations
 $client_properties = class_exists( 'OFP_Property_CPT' ) ? OFP_Property_CPT::get_client_properties( (int) $client->id ) : [];
@@ -176,7 +175,7 @@ for ( $m = 1; $m <= 12; $m++ ) {
 $cf_six_labels = [];
 $cf_six_data   = [];
 for ( $i = 5; $i >= 0; $i-- ) {
-    $time_i = strtotime( "-{$i} months", current_time( 'timestamp' ) );
+    $time_i = strtotime( "-{$i} months", OFP_Security::site_now_ts() );
     $m_num  = (int) date( 'n', $time_i );
     $cf_six_labels[] = date( 'M', $time_i );
     $cf_six_data[]   = isset( $cf_year_data[ $m_num - 1 ] ) ? $cf_year_data[ $m_num - 1 ] : 0.0;
@@ -185,7 +184,7 @@ for ( $i = 5; $i >= 0; $i-- ) {
 // 6. Last 30 Days Net Cash Flow
 $cf_thirty_labels = [];
 $cf_thirty_data   = [];
-$thirty_days_ago  = date( 'Y-m-d H:i:s', strtotime( '-30 days', current_time( 'timestamp' ) ) );
+$thirty_days_ago  = date( 'Y-m-d H:i:s', strtotime( '-30 days', OFP_Security::site_now_ts() ) );
 
 $d_sales_rows = $wpdb->get_results( $wpdb->prepare(
     "SELECT DATE(created_at) AS dt, COALESCE(SUM(amount_paid), 0) AS val
@@ -225,7 +224,7 @@ foreach ( (array) $d_cost_rows as $dc ) {
 }
 
 for ( $d = 27; $d >= 0; $d -= 3 ) {
-    $dt_ts  = strtotime( "-{$d} days", current_time( 'timestamp' ) );
+    $dt_ts  = strtotime( "-{$d} days", OFP_Security::site_now_ts() );
     $dt_str = date( 'Y-m-d', $dt_ts );
     $lbl    = date( 'M j', $dt_ts );
     $inflow = ( $d_sales_map[ $dt_str ] ?? 0.0 ) + ( $d_rent_map[ $dt_str ] ?? 0.0 );
@@ -540,7 +539,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
                 </div>
                 <div class="ofp-chart-header-controls">
                     <select class="ofp-zentra-select" id="ofp-cashflow-period">
-                        <option value="1year">This Year (<?php echo date('Y'); ?>)</option>
+                        <option value="1year">This Year (<?php echo esc_html( OFP_Security::site_date( 'Y' ) ); ?>)</option>
                         <option value="6months">Last 6 Months</option>
                         <option value="30days">Last 30 Days</option>
                     </select>
@@ -554,7 +553,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
         <!-- Current Month Performance Breakdown -->
         <div class="ofp-zentra-card">
             <div class="ofp-zentra-card-header">
-                <div class="ofp-zentra-card-title"><?php echo date('F'); ?> Performance</div>
+                <div class="ofp-zentra-card-title"><?php echo esc_html( OFP_Security::site_date( 'F' ) ); ?> Performance</div>
             </div>
             
             <div class="ofp-breakdown-list">

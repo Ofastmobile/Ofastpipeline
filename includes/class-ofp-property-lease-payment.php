@@ -17,7 +17,10 @@ class OFP_Property_Lease_Payment {
 
         $lease = $wpdb->get_row( $wpdb->prepare( "SELECT l.*, t.full_name, t.phone FROM {$p}ofp_property_leases l INNER JOIN {$p}ofp_property_tenants t ON t.id = l.tenant_id WHERE l.id = %d LIMIT 1", $lease_id ) );
         if ( ! $lease ) return new WP_Error( 'lease_not_found', 'Lease not found.' );
-        if ( ! in_array( $lease->status, [ 'pending_offer', 'active' ], true ) || empty( $lease->accepted_at ) ) return new WP_Error( 'lease_not_payable', 'The tenant must accept an active lease offer before payment can be recorded.' );
+        // P4.23: an expired lease can still be paid while a balance is owed.
+        $payable_status = in_array( $lease->status, [ 'pending_offer', 'active' ], true )
+            || ( 'expired' === $lease->status && (float) $lease->balance > 0 );
+        if ( ! $payable_status || empty( $lease->accepted_at ) ) return new WP_Error( 'lease_not_payable', 'The tenant must accept an active lease offer before payment can be recorded.' );
         if ( $amount > (float) $lease->balance + 0.00001 ) return new WP_Error( 'lease_payment_exceeds_balance', 'Payment cannot exceed the current cycle balance.' );
 
         $gateway = ! empty( $data['gateway'] ) ? sanitize_key( $data['gateway'] ) : null;
@@ -56,14 +59,38 @@ class OFP_Property_Lease_Payment {
         if ( ! $payment ) return [ 'success' => false, 'error' => 'Lease payment not found.' ];
         if ( in_array( $payment->status, [ 'rejected', 'cancelled', 'failed' ], true ) ) return [ 'success' => false, 'error' => 'This payment cannot be verified.' ];
 
-        $newly_successful = $payment->status !== 'successful';
-        if ( $newly_successful ) {
-            $wpdb->update( "{$p}ofp_property_lease_payments", [
-                'status' => 'successful', 'verified_by' => $verified_by ?: null, 'verified_at' => current_time( 'mysql' ), 'updated_at' => current_time( 'mysql' ),
-            ], [ 'id' => $payment_id ] );
-        }
         $lease = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p}ofp_property_leases WHERE id = %d LIMIT 1", $payment->lease_id ) );
         if ( ! $lease ) return [ 'success' => false, 'error' => 'Lease not found.' ];
+
+        // P4.22: refuse a payment that is more than the balance left on the lease.
+        // Nothing is lost: the payment stays pending so the owner can reject it.
+        $over_message = 'This payment of NGN ' . number_format( (float) $payment->amount, 2 ) . ' is more than the balance left on the lease (NGN ' . number_format( (float) $lease->balance, 2 ) . '). Reject it, or ask the tenant to send the correct amount.';
+        if ( 'successful' !== $payment->status && (float) $payment->amount > (float) $lease->balance + 0.01 ) {
+            return [ 'success' => false, 'error' => $over_message ];
+        }
+
+        // P4.21: claim the payment with one conditional UPDATE. Only the request that
+        // really changes the row counts as newly successful, so receipt, SMS and
+        // email events fire once and the amount is added once.
+        $claimed = $wpdb->query( $wpdb->prepare(
+            "UPDATE {$p}ofp_property_lease_payments
+             SET status = 'successful', verified_by = NULLIF(%d, 0), verified_at = %s, updated_at = %s
+             WHERE id = %d AND status NOT IN ('successful', 'rejected', 'cancelled', 'failed')
+               AND amount <= ( SELECT balance + 0.01 FROM {$p}ofp_property_leases WHERE id = %d )",
+            $verified_by,
+            current_time( 'mysql' ),
+            current_time( 'mysql' ),
+            $payment_id,
+            (int) $payment->lease_id
+        ) );
+        $newly_successful = 1 === (int) $claimed;
+        if ( ! $newly_successful ) {
+            // Not claimed: either another request already approved it, or the balance changed just now.
+            $now_status = $wpdb->get_var( $wpdb->prepare( "SELECT status FROM {$p}ofp_property_lease_payments WHERE id = %d", $payment_id ) );
+            if ( 'successful' !== $now_status ) {
+                return [ 'success' => false, 'error' => $over_message ];
+            }
+        }
         if ( $lease->status === 'pending_offer' ) {
             $activation = OFP_Property_Rent::activate_lease( (int) $lease->id );
             if ( is_wp_error( $activation ) ) return [ 'success' => false, 'error' => $activation->get_error_message() ];
@@ -71,12 +98,19 @@ class OFP_Property_Lease_Payment {
 
         // A second call for the same already-successful record is idempotent.
         if ( $newly_successful ) {
-            $paid = min( (float) $lease->rent_amount, round( (float) $lease->amount_paid + (float) $payment->amount, 2 ) );
-            $wpdb->update( "{$p}ofp_property_leases", [
-                'amount_paid' => $paid,
-                'balance' => max( 0, round( (float) $lease->rent_amount - $paid, 2 ) ),
-                'updated_at' => current_time( 'mysql' ),
-            ], [ 'id' => $lease->id ] );
+            // One query adds to the amount already in the database, so two payments
+            // approved together are both counted (P4.21).
+            $wpdb->query( $wpdb->prepare(
+                "UPDATE {$p}ofp_property_leases
+                 SET balance     = GREATEST( 0, ROUND( rent_amount - LEAST( rent_amount, ROUND( amount_paid + %f, 2 ) ), 2 ) ),
+                     amount_paid = LEAST( rent_amount, ROUND( amount_paid + %f, 2 ) ),
+                     updated_at  = %s
+                 WHERE id = %d",
+                (float) $payment->amount,
+                (float) $payment->amount,
+                current_time( 'mysql' ),
+                (int) $lease->id
+            ) );
             do_action( 'ofp_property_lease_payment_processed', (int) $lease->id, $payment_id, (float) $payment->amount, (string) $payment->payment_method );
         }
         return [ 'success' => true ];

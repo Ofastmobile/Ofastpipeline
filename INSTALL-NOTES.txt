@@ -1,0 +1,43 @@
+OFast Pipeline - install notes
+
+=== 1. Nginx servers (P7.04) ===
+
+The plugin writes ".htaccess" files to keep private folders (uploaded
+receipts, CSV exports, import files) and the receipt template from being
+opened by link. Apache and LiteSpeed obey them. Nginx IGNORES .htaccess.
+
+If your site runs on Nginx, add these lines to the site config, then reload Nginx:
+
+    location ~* ^/wp-content/uploads/(ofp-private-receipts|ofp-archives|ofp-imports)/ { deny all; }
+    location = /wp-content/plugins/ofast-pipeline/Ofast_Pipeline_Universal_Receipt.html { deny all; }
+
+The three folders are made inside wp-content/uploads. If your uploads
+folder is somewhere else, change the path in the first line. Then try to open a private file link
+in a browser: it must show 403 or 404.
+
+
+=== 2. Scheduled jobs: use a real server cron (G9.03) ===
+
+The plugin sends SMS, installment and lease reminders, subscription checks
+and the monthly clean up through WordPress's own scheduler (WP-Cron). WP-Cron
+only runs when someone visits the site, so on a quiet site jobs run late.
+
+Better, run it from the server on a timer:
+
+ 1. In wp-config.php add:   define( 'DISABLE_WP_CRON', true );
+ 2. In your hosting panel (cPanel > Cron Jobs, or an uptime/ping service),
+    call this address every 2 minutes (the SMS queue is checked every 2 minutes):
+        https://YOUR-SITE.com/wp-cron.php?doing_wp_cron
+    or, on a server with command line access:
+        */2 * * * *  php /path/to/wordpress/wp-cron.php
+
+If you used Cloudflare to ping the site, that works too, but make sure the
+address above is the one being pinged. Do NOT set DISABLE_WP_CRON without
+setting up step 2, or no scheduled job will run at all.
+
+
+=== 3. Single site only (P7.08) ===
+
+OFast Pipeline works on ONE WordPress site. On a multisite network, do not
+use "Network Activate". The plugin stops that and shows a message. Activate it
+on the one site that needs it (Sites > that site > Plugins).

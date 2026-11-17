@@ -124,7 +124,7 @@ class OFP_Property_My_Payments {
 		$p     = $wpdb->prefix;
 		$where = $type === 'email'
 			? $wpdb->prepare( 'pu.buyer_email = %s', $ident )
-			: $wpdb->prepare( 'pu.buyer_phone LIKE %s', '%' . $wpdb->esc_like( $ident ) );
+			: $wpdb->prepare( 'pu.phone10 = %s', $ident );
 		return (array) $wpdb->get_results(
 			"SELECT pu.*, pr.title AS property_title, c.business_name, c.owner_name
 			 FROM {$p}ofp_property_purchases pu
@@ -140,7 +140,7 @@ class OFP_Property_My_Payments {
 		$p     = $wpdb->prefix;
 		$where = $type === 'email'
 			? $wpdb->prepare( 't.email = %s', $ident )
-			: $wpdb->prepare( 't.phone LIKE %s', '%' . $wpdb->esc_like( $ident ) );
+			: $wpdb->prepare( 't.phone10 = %s', $ident );
 		return (array) $wpdb->get_results(
 			"SELECT l.*, t.full_name, pr.title AS property_title, c.business_name, c.owner_name
 			 FROM {$p}ofp_property_leases l
@@ -175,8 +175,9 @@ class OFP_Property_My_Payments {
 
 	private static function receipt_url( string $type, int $payment_id ): string {
 		$ajax = admin_url( 'admin-ajax.php' );
-		if ( ! empty( $_SERVER['HTTP_HOST'] ) ) {
-			$ajax = ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . wp_parse_url( $ajax, PHP_URL_PATH );
+		$trusted_host = OFP_Security::trusted_request_host();
+		if ( '' !== $trusted_host ) {
+			$ajax = ( is_ssl() ? 'https://' : 'http://' ) . $trusted_host . wp_parse_url( $ajax, PHP_URL_PATH );
 		}
 		return add_query_arg( [
 			'action' => 'ofp_my_receipt',

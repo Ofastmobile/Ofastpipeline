@@ -2,11 +2,11 @@
 /**
  * OFP_Credit
  *
- * Manages SMS and voice credit balances for each client.
+ * Manages SMS credit balances for each client.
  *
  * CREDIT FLOW:
  *  - Admin tops up credit via wp-admin (manual for now, automated via payment in Phase 6)
- *  - Every SMS deducts NGN 6.99, every voice call deducts NGN 15.00
+ *  - Every SMS page deducts OFP_Credit::sms_price() (setting ofp_sms_price, default NGN 10.00)
  *  - When remaining balance drops below 20% → low warning email (once per cycle)
  *  - When remaining balance hits zero → paused = 1 → queue stops firing
  *  - Top-up resets paused = 0 and low_warned = 0 automatically
@@ -20,6 +20,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OFP_Credit {
 
+    /** Credit channels that exist. Column names are built only from this list (S2-02). */
+    const CHANNELS = [ 'sms' ];
+
+    /**
+     * The ONE place the price of one SMS page comes from (G8.01).
+     * Setting: ofp_sms_price. Default NGN 10.00.
+     */
+    public static function sms_price(): float {
+        $price = (float) get_option( 'ofp_sms_price', 10.00 );
+        return $price > 0 ? $price : 10.00;
+    }
+
+    /**
+     * What one SMS message costs: the price of one page times the pages the text uses (D-19).
+     */
+    public static function sms_cost( string $message ): float {
+        return round( self::sms_price() * OFP_SMS::segments( $message ), 2 );
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // BALANCE CHECKS
     // ─────────────────────────────────────────────────────────────────────────
@@ -28,7 +47,7 @@ class OFP_Credit {
      * Check if a client has sufficient balance for a given channel and amount.
      *
      * @param  int    $client_id  Client ID.
-     * @param  string $channel    'sms' or 'voice'.
+     * @param  string $channel    'sms'.
      * @param  float  $amount     Required amount in NGN.
      * @return bool
      */
@@ -40,7 +59,11 @@ class OFP_Credit {
             return true;
         }
 
-        $col       = sanitize_key( $channel ) . '_remaining';
+        if ( ! in_array( $channel, self::CHANNELS, true ) ) {
+            return false;
+        }
+
+        $col       = $channel . '_remaining';
         $remaining = (float) $wpdb->get_var(
             $wpdb->prepare(
                 "SELECT {$col} FROM {$wpdb->prefix}ofp_credits WHERE client_id = %d LIMIT 1",
@@ -76,14 +99,14 @@ class OFP_Credit {
      * Deduct credit from a client's balance after a successful send.
      *
      * Steps:
-     *  1. Verify balance still sufficient (race condition guard)
-     *  2. Update loaded/used/remaining columns atomically
+     *  1. One UPDATE that checks the balance and changes it (no check-then-write)
+     *  2. Stop if no row changed
      *  3. Insert transaction record
      *  4. Check if balance dropped below 20% → send warning
      *  5. Check if balance hit zero → set paused = 1
      *
      * @param  int    $client_id
-     * @param  string $channel    'sms' or 'voice'
+     * @param  string $channel    'sms'
      * @param  float  $amount
      * @return bool               False if insufficient balance.
      */
@@ -94,23 +117,28 @@ class OFP_Credit {
         if ( OFP_Platform::is_platform( $client_id ) ) {
             return true;
         }
-        $p   = $wpdb->prefix;
-        $col = sanitize_key( $channel );
-
-        if ( ! self::has_balance( $client_id, $channel, $amount ) ) {
+        if ( ! in_array( $channel, self::CHANNELS, true ) ) {
             return false;
         }
+        $p   = $wpdb->prefix;
+        $col = $channel;
 
-        $wpdb->query(
+        // One UPDATE that checks the balance itself. If two sends run together,
+        // only the ones that still fit get a changed row (S2-01).
+        $changed = $wpdb->query(
             $wpdb->prepare(
                 "UPDATE {$p}ofp_credits
                  SET {$col}_used      = {$col}_used + %f,
                      {$col}_remaining = {$col}_remaining - %f,
                      updated_at       = NOW()
-                 WHERE client_id = %d",
-                $amount, $amount, $client_id
+                 WHERE client_id = %d AND {$col}_remaining >= %f",
+                $amount, $amount, $client_id, $amount
             )
         );
+
+        if ( 1 !== (int) $changed ) {
+            return false;
+        }
 
         $updated = $wpdb->get_row(
             $wpdb->prepare(
@@ -141,8 +169,7 @@ class OFP_Credit {
             self::trigger_low_warning( $client_id, $channel, $remaining );
         }
 
-        // Pause the pipeline only when SMS credit runs out. Running out of voice
-        // credit must never stop SMS and email follow ups.
+        // Pause the pipeline when SMS credit runs out.
         if ( 'sms' === $channel && $remaining <= 0 ) {
             $wpdb->update(
                 $p . 'ofp_credits',
@@ -163,22 +190,49 @@ class OFP_Credit {
      * Resets paused and low_warned flags automatically.
      *
      * @param  int    $client_id
-     * @param  string $channel    'sms' or 'voice'
+     * @param  string $channel    'sms'
      * @param  float  $amount     Amount in NGN to add.
      * @param  string $reference  Payment reference for the transaction log.
-     * @return void
+     * @return bool               False when the channel is not allowed, or the reference was
+     *                            already credited (G4.01).
      */
     public static function topup(
         int $client_id,
         string $channel,
         float $amount,
         string $reference = ''
-    ): void {
+    ): bool {
         global $wpdb;
+        if ( ! in_array( $channel, self::CHANNELS, true ) ) {
+            return false;
+        }
         $p   = $wpdb->prefix;
-        $col = sanitize_key( $channel );
+        $col = $channel;
 
-        $wpdb->query(
+        // G4.01: with a reference, write the transaction row FIRST. The table has a
+        // UNIQUE KEY (reference, type), so only one request can win. The loser
+        // gets false and adds no credit.
+        $tx_id = 0;
+        if ( '' !== $reference ) {
+            $claimed = $wpdb->insert(
+                $p . 'ofp_credit_transactions',
+                [
+                    'client_id'     => $client_id,
+                    'channel'       => $channel,
+                    'type'          => 'topup',
+                    'amount'        => $amount,
+                    'balance_after' => 0,
+                    'reference'     => sanitize_text_field( $reference ),
+                    'created_at'    => current_time( 'mysql' ),
+                ]
+            );
+            if ( ! $claimed ) {
+                return false;
+            }
+            $tx_id = (int) $wpdb->insert_id;
+        }
+
+        $credited = $wpdb->query(
             $wpdb->prepare(
                 "UPDATE {$p}ofp_credits
                  SET {$col}_loaded    = {$col}_loaded + %f,
@@ -191,6 +245,14 @@ class OFP_Credit {
             )
         );
 
+        // No credit row to update: undo the claim so nothing is recorded without money moving.
+        if ( 1 !== (int) $credited ) {
+            if ( $tx_id ) {
+                $wpdb->delete( $p . 'ofp_credit_transactions', [ 'id' => $tx_id ] );
+            }
+            return false;
+        }
+
         $updated = $wpdb->get_row(
             $wpdb->prepare(
                 "SELECT {$col}_remaining FROM {$p}ofp_credits WHERE client_id = %d LIMIT 1",
@@ -198,18 +260,26 @@ class OFP_Credit {
             )
         );
 
-        $wpdb->insert(
-            $p . 'ofp_credit_transactions',
-            [
-                'client_id'     => $client_id,
-                'channel'       => $channel,
-                'type'          => 'topup',
-                'amount'        => $amount,
-                'balance_after' => $updated->{$col . '_remaining'},
-                'reference'     => sanitize_text_field( $reference ),
-                'created_at'    => current_time( 'mysql' ),
-            ]
-        );
+        if ( $tx_id ) {
+            $wpdb->update(
+                $p . 'ofp_credit_transactions',
+                [ 'balance_after' => $updated->{$col . '_remaining'} ],
+                [ 'id' => $tx_id ]
+            );
+        } else {
+            $wpdb->insert(
+                $p . 'ofp_credit_transactions',
+                [
+                    'client_id'     => $client_id,
+                    'channel'       => $channel,
+                    'type'          => 'topup',
+                    'amount'        => $amount,
+                    'balance_after' => $updated->{$col . '_remaining'},
+                    'reference'     => null,
+                    'created_at'    => current_time( 'mysql' ),
+                ]
+            );
+        }
 
         if ( class_exists( 'OFP_Logger' ) ) {
             OFP_Logger::log( ucfirst( $channel ) . ' credit topped up', $client_id, [
@@ -218,6 +288,8 @@ class OFP_Credit {
                 'reference' => $reference,
             ] );
         }
+
+        return true;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -237,7 +309,6 @@ class OFP_Credit {
         $clients = $wpdb->get_results(
             "SELECT cr.client_id,
                     cr.sms_loaded, cr.sms_remaining,
-                    cr.voice_loaded, cr.voice_remaining,
                     cr.low_warned
              FROM {$wpdb->prefix}ofp_credits cr
              JOIN {$wpdb->prefix}ofp_clients c ON c.id = cr.client_id
@@ -248,11 +319,6 @@ class OFP_Credit {
             if ( $c->sms_loaded > 0 &&
                  ( (float) $c->sms_remaining / (float) $c->sms_loaded ) < 0.20 ) {
                 self::trigger_low_warning( $c->client_id, 'sms', (float) $c->sms_remaining );
-            }
-
-            if ( $c->voice_loaded > 0 &&
-                 ( (float) $c->voice_remaining / (float) $c->voice_loaded ) < 0.20 ) {
-                self::trigger_low_warning( $c->client_id, 'voice', (float) $c->voice_remaining );
             }
         }
     }

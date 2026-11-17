@@ -351,7 +351,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                         </h3>
 
                         <p class="ofp-showcase-subhead">
-                            Done-for-you SMS pipelines, automated voice calls, buyer installment tracking, and unified real estate client portals.
+                            Done-for-you SMS pipelines, buyer installment tracking, and unified real estate client portals.
                         </p>
 
                         <!-- Key Metrics Grid -->

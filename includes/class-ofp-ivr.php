@@ -222,10 +222,10 @@ class OFP_IVR {
                 $wa_link   = 'https://wa.me/' . $wa_number;
                 $sms_msg   = 'Chat with ' . $client->business_name . ' on WhatsApp: ' . $wa_link;
 
-                if ( OFP_Credit::has_balance( $client_id, 'sms', OFP_Queue::SMS_COST ) ) {
+                if ( OFP_Credit::has_balance( $client_id, 'sms', OFP_Credit::sms_cost( $sms_msg ) ) ) {
                     $sms = OFP_SMS::for_client( (int) $client_id );
                     $sms->send( $lead->phone, $sms_msg );
-                    OFP_Credit::deduct( $client_id, 'sms', OFP_Queue::SMS_COST );
+                    OFP_Credit::deduct( $client_id, 'sms', OFP_Credit::sms_cost( $sms_msg ) );
                 }
 
                 echo self::say_and_hangup(

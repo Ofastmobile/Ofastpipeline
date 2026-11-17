@@ -2,7 +2,7 @@
 /**
  * Admin View: Unified Billing, Subscriptions & Credits Hub
  * Merges CRM Subscription Billing, Property Listing Subscriptions,
- * and SMS/Voice Credits management into a single, comprehensive backend interface.
+ * and SMS/WhatsApp Credits management into a single, comprehensive backend interface.
  *
  * @package OFast_Pipeline
  */
@@ -45,9 +45,8 @@ $month_rev = (float) $wpdb->get_var(
 $pending_cnt = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_subscriptions WHERE status = 'pending'" );
 $active_subs = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$p}ofp_subscriptions WHERE status = 'paid' AND (period_end IS NULL OR period_end >= CURDATE())" );
 
-// SMS and Voice circulation
+// SMS circulation
 $total_sms_circ   = (float) $wpdb->get_var( "SELECT COALESCE(SUM(sms_remaining), 0) FROM {$p}ofp_credits" );
-$total_voice_circ = (float) $wpdb->get_var( "SELECT COALESCE(SUM(voice_remaining), 0) FROM {$p}ofp_credits" );
 
 $clients = OFP_Client::all();
 
@@ -84,11 +83,11 @@ if ( $current_view !== 'credits' ) {
     $where_sql = implode( ' AND ', $where );
 
     $total_items = (int) $wpdb->get_var(
-        $wpdb->prepare(
+        OFP_Security::prepare_opt(
             "SELECT COUNT(s.id) FROM {$p}ofp_subscriptions s
              JOIN {$p}ofp_clients c ON c.id = s.client_id
              WHERE {$where_sql}",
-            ...$args
+            $args
         )
     );
 
@@ -172,7 +171,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
         <div class="ofp-stat-card">
             <span class="ofp-stat-number" style="font-size: 20px;">₦<?php echo esc_html( number_format( $total_sms_circ, 0 ) ); ?></span>
             <span class="ofp-stat-label">SMS Credits Pool</span>
-            <span style="font-size: 11.5px; color: #64748b; margin-top: 4px;">Voice: ₦<?php echo esc_html( number_format( $total_voice_circ, 0 ) ); ?></span>
+            <span style="font-size: 11.5px; color: #64748b; margin-top: 4px;">WhatsApp: Coming soon</span>
         </div>
     </div>
 
@@ -206,7 +205,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
 
             <a href="<?php echo esc_url( add_query_arg( [ 'view' => 'credits' ], $base_url ) ); ?>"
                class="ofp-ub-nav-tab <?php echo $current_view === 'credits' ? 'active' : ''; ?>">
-                <span>SMS & Voice Credits</span>
+                <span>SMS & WhatsApp Credits</span>
                 <span class="count-badge"><?php echo count( $clients ); ?> clients</span>
             </a>
         </div>
@@ -221,7 +220,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
         <div class="ofp-ub-card" style="margin-bottom: 24px;">
             <div class="ofp-ub-card-header">
                 <h3>Client Credit Balances & Automation Status</h3>
-                <p>Monitor real-time SMS and Voice credit allowances. When remaining balance reaches zero, automated campaigns pause.</p>
+                <p>Monitor real-time SMS credit allowances (WhatsApp is coming soon). When remaining balance reaches zero, automated campaigns pause.</p>
             </div>
 
             <div style="overflow-x: auto;">
@@ -231,7 +230,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                             <th>Client / Agency</th>
                             <th>Plan</th>
                             <th style="width: 240px;">SMS Credits Balance</th>
-                            <th style="width: 240px;">Voice Credits Balance</th>
+                            <th style="width: 240px;">WhatsApp Credits Balance</th>
                             <th>Automation Status</th>
                             <th style="text-align: right;">Action</th>
                         </tr>
@@ -244,10 +243,6 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                 $sms_rem   = (float) $cr->sms_remaining;
                                 $sms_load  = (float) $cr->sms_loaded;
                                 $sms_pct   = $sms_load > 0 ? min( 100, round( ( $sms_rem / $sms_load ) * 100 ) ) : 0;
-
-                                $voice_rem  = (float) $cr->voice_remaining;
-                                $voice_load = (float) $cr->voice_loaded;
-                                $voice_pct  = $voice_load > 0 ? min( 100, round( ( $voice_rem / $voice_load ) * 100 ) ) : 0;
                             ?>
                                 <tr>
                                     <td>
@@ -269,13 +264,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                                         </div>
                                     </td>
                                     <td>
-                                        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
-                                            <span><strong>₦<?php echo esc_html( number_format( $voice_rem, 2 ) ); ?></strong></span>
-                                            <span style="color:#64748b;"><?php echo esc_html( $voice_pct ); ?>% left</span>
-                                        </div>
-                                        <div class="ofp-progress-track">
-                                            <div class="ofp-progress-bar <?php echo $voice_pct < 20 ? 'bar-low' : 'bar-good'; ?>" style="width: <?php echo esc_attr( $voice_pct ); ?>%;"></div>
-                                        </div>
+                                        <span class="ofp-ub-status-badge status-review">Coming soon</span>
                                     </td>
                                     <td>
                                         <?php if ( ! empty( $cr->paused ) ) : ?>
@@ -303,7 +292,7 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
         <div class="ofp-ub-card">
             <div class="ofp-ub-card-header">
                 <h3>Recent Credit Transaction Log</h3>
-                <p>Audit trail of all SMS and Voice credit top-ups and deductions.</p>
+                <p>Audit trail of all SMS credit top-ups and deductions.</p>
             </div>
             <div style="overflow-x: auto;">
                 <table class="ofp-ub-table">
@@ -572,7 +561,6 @@ if ( ! $is_portal && file_exists( OFP_PATH . 'admin/views/partials/header.php' )
                 <label for="topup-channel">Channel</label>
                 <select name="channel" id="topup-channel" class="ofp-ub-select" style="width:100%;" required>
                     <option value="sms">SMS Credit Balance</option>
-                    <option value="voice">Voice Call Credit Balance</option>
                 </select>
             </div>
 

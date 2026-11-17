@@ -1224,7 +1224,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 
             <div class="ofp-field">
                 <label for="ofp-offer-expiry"><span>Offer Expiry Date</span></label>
-                <input type="date" name="offer_expires_at" id="ofp-offer-expiry" class="ofp-input" value="<?php echo esc_attr( date( 'Y-m-d', strtotime( '+7 days' ) ) ); ?>">
+                <input type="date" name="offer_expires_at" id="ofp-offer-expiry" class="ofp-input" value="<?php echo esc_attr( OFP_Security::site_date( 'Y-m-d', strtotime( '+7 days' ) ) ); ?>">
             </div>
 
             <div class="ofp-field">
@@ -1485,7 +1485,7 @@ include OFP_PATH . 'public/templates/partials/nav.php';
 
             <div class="ofp-field">
                 <label for="ofp-renew-expiry"><span>Renewal Offer Expiry Date</span></label>
-                <input type="date" name="offer_expires_at" id="ofp-renew-expiry" class="ofp-input" value="<?php echo esc_attr( date( 'Y-m-d', strtotime( '+14 days' ) ) ); ?>">
+                <input type="date" name="offer_expires_at" id="ofp-renew-expiry" class="ofp-input" value="<?php echo esc_attr( OFP_Security::site_date( 'Y-m-d', strtotime( '+14 days' ) ) ); ?>">
             </div>
 
             <div class="ofp-field">

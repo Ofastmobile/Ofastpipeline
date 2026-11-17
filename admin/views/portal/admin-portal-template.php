@@ -455,7 +455,7 @@ $titles = [
             <div class="ofp-portal-header-left">
                 <div class="ofp-nav-app-branding">
                     <span class="ofp-nav-app-name"><?php echo esc_html( class_exists( 'OFP_Brand' ) ? OFP_Brand::name() : 'App' ); ?></span>
-                    <span class="ofp-nav-app-version">v<?php echo esc_html( defined( 'OFP_VERSION' ) ? OFP_VERSION : '2.2.27' ); ?></span>
+                    <span class="ofp-nav-app-version">v<?php echo esc_html( OFP_VERSION ); ?></span>
                 </div>
                 <div class="ofp-portal-header-title-row">
                     <h3 class="ofp-page-title">
@@ -664,7 +664,7 @@ $titles = [
                         <div>
                             <span class="ofp-promo-tag">Platform Health</span>
                             <h3 class="ofp-promo-title">Priority Oversight</h3>
-                            <p class="ofp-promo-desc">Client compliance, and automated SMS/voice triggers are monitored 24/7.</p>
+                            <p class="ofp-promo-desc">Client compliance, and automated SMS triggers are monitored 24/7.</p>
                             
                             <div class="ofp-promo-stats">
                                 <div class="ofp-promo-stat-box">

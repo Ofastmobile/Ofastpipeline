@@ -3,7 +3,7 @@
  * OFP_Communications_Log
  *
  * Centralized logger and query service for all outgoing and incoming communications
- * (SMS, Email, Voice) across Leads, Transactions, Tenants, Inquiries, Broadcasts, and System Alerts.
+ * (SMS, Email) across Leads, Transactions, Tenants, Inquiries, Broadcasts, and System Alerts.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -46,7 +46,7 @@ class OFP_Communications_Log {
      *
      * @param int         $client_id    Client ID.
      * @param int|null    $lead_id      Lead ID (optional, null for transactions/tenants/direct).
-     * @param string      $type         Channel type: 'sms', 'email', 'voice'.
+     * @param string      $type         Channel type: 'sms', 'email'.
      * @param string      $recipient    Recipient identifier (Phone number or Email address).
      * @param string      $direction    'outbound' or 'inbound'.
      * @param string|null $message      Message body / content.
@@ -101,10 +101,8 @@ class OFP_Communications_Log {
      */
     /**
      * One time clean up of the double rows that older versions wrote for queued
-     * follow up SMS and voice calls (once by the sender, once by the queue).
+     * follow up SMS (once by the sender, once by the queue).
      *
-     *  Voice: keep the sender's row (it has the provider reference), copy the cost
-     *         from the queue's row onto it, and remove the queue's row.
      *  SMS:   keep the queue's row (it knows the lead), remove the sender's row that
      *         has no lead. Rows are only paired when the provider reference is the same.
      *
@@ -117,29 +115,7 @@ class OFP_Communications_Log {
         global $wpdb;
         $t = $wpdb->prefix . 'ofp_communications_log';
 
-        $voice_pairs = (array) $wpdb->get_results(
-            "SELECT a.id AS keep_id, b.id AS dup_id, b.cost AS dup_cost
-             FROM {$t} a
-             INNER JOIN {$t} b
-                ON b.client_id = a.client_id AND b.lead_id = a.lead_id AND b.id <> a.id
-               AND ABS( TIMESTAMPDIFF( SECOND, a.sent_at, b.sent_at ) ) <= 120
-             WHERE a.type = 'voice' AND b.type = 'voice'
-               AND a.lead_id IS NOT NULL
-               AND a.status = 'queued' AND a.cost = 0
-               AND b.status = 'sent' AND b.cost > 0
-               AND ( b.provider_ref IS NULL OR b.provider_ref = '' )
-             LIMIT 2000"
-        );
-
         $used = [];
-        foreach ( $voice_pairs as $pair ) {
-            if ( isset( $used[ $pair->keep_id ] ) || isset( $used[ $pair->dup_id ] ) ) {
-                continue;
-            }
-            $used[ $pair->keep_id ] = $used[ $pair->dup_id ] = true;
-            $wpdb->update( $t, [ 'cost' => $pair->dup_cost ], [ 'id' => (int) $pair->keep_id ] );
-            $wpdb->delete( $t, [ 'id' => (int) $pair->dup_id ] );
-        }
 
         $sms_pairs = (array) $wpdb->get_results(
             "SELECT a.id AS dup_id
@@ -206,7 +182,7 @@ class OFP_Communications_Log {
                             'status'       => 'pending',
                             'provider'     => null,
                             'provider_ref' => $pref,
-                            'cost'         => ( $pt->type === 'sms' ) ? 6.99 : 0.00,
+                            'cost'         => ( $pt->type === 'sms' ) ? OFP_Credit::sms_price() : 0.00,
                             'sent_at'      => $pt->scheduled_at ?: current_time( 'mysql' ),
                         ]
                     );
@@ -217,20 +193,18 @@ class OFP_Communications_Log {
         // 2. Fetch communication activity logs for this client that aren't already synced
         $like_sms   = '%' . $wpdb->esc_like( 'sms' ) . '%';
         $like_email = '%' . $wpdb->esc_like( 'email' ) . '%';
-        $like_voice = '%' . $wpdb->esc_like( 'voice' ) . '%';
         $like_mail  = '%' . $wpdb->esc_like( 'mail' ) . '%';
         $like_to    = '%' . $wpdb->esc_like( '"to":' ) . '%';
 
         $activities = $wpdb->get_results( $wpdb->prepare(
             "SELECT * FROM {$p}ofp_activity_logs 
               WHERE client_id = %d
-               AND (action LIKE %s OR action LIKE %s OR action LIKE %s OR action LIKE %s OR details LIKE %s)
+               AND (action LIKE %s OR action LIKE %s OR action LIKE %s OR details LIKE %s)
              ORDER BY created_at DESC 
              LIMIT 250",
             $client_id,
             $like_sms,
             $like_email,
-            $like_voice,
             $like_mail,
             $like_to
         ) );
@@ -257,8 +231,6 @@ class OFP_Communications_Log {
             $act_lower = strtolower( $act->action );
             if ( strpos( $act_lower, 'sms' ) !== false ) {
                 $type = 'sms';
-            } elseif ( strpos( $act_lower, 'voice' ) !== false || strpos( $act_lower, 'call' ) !== false ) {
-                $type = 'voice';
             } else {
                 $type = 'email';
             }
@@ -319,9 +291,9 @@ class OFP_Communications_Log {
                         'direction'    => 'outbound',
                         'message'      => $message,
                         'status'       => $status,
-                        'provider'     => $details['provider'] ?? ( $type === 'email' ? 'smtp' : ( $type === 'voice' ? 'africastalking' : 'smartsms' ) ),
+                        'provider'     => $details['provider'] ?? ( $type === 'email' ? 'smtp' : 'smartsms' ),
                         'provider_ref' => $pref,
-                        'cost'         => (float) ( $details['cost'] ?? ( $type === 'sms' && $status !== 'failed' ? 6.99 : 0.00 ) ),
+                        'cost'         => (float) ( $details['cost'] ?? ( $type === 'sms' && $status !== 'failed' ? OFP_Credit::sms_price() : 0.00 ) ),
                         'sent_at'      => $act->created_at ?: current_time( 'mysql' ),
                     ]
                 );
@@ -456,10 +428,7 @@ class OFP_Communications_Log {
 
                 $bg = 'rgba(139, 92, 246, 0.1)'; $ic = '#8b5cf6'; $type_label = 'SMS';
                 $svg_icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>';
-                if ( $comm->type === 'voice' ) {
-                    $bg = 'rgba(16, 185, 129, 0.1)'; $ic = '#10b981'; $type_label = 'Voice';
-                    $svg_icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>';
-                } elseif ( $comm->type === 'email' ) {
+                if ( $comm->type === 'email' ) {
                     $bg = 'rgba(245, 158, 11, 0.1)'; $ic = '#f59e0b'; $type_label = 'Email';
                     $svg_icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>';
                 }

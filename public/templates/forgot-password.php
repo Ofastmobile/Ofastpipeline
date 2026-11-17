@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template: /forgot-password — request a password reset link.
  *

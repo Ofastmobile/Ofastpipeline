@@ -18,10 +18,6 @@ class OFP_Cron_Handler {
 
         // Make sure every cron event exists, even after a plugin update with no reactivation.
         add_action( 'init', [ __CLASS__, 'ensure_schedules' ] );
-
-        // Add the new instant email columns once, then clean up removed voice follow ups once.
-        OFP_Queue::ensure_columns();
-        OFP_Queue::migrate_voice_followups_once();
     }
 
     /**
@@ -44,8 +40,39 @@ class OFP_Cron_Handler {
         if ( ! wp_next_scheduled( 'ofp_daily_credit_check' ) ) {
             wp_schedule_event( time() + 180, 'daily', 'ofp_daily_credit_check' );
         }
-        if ( ! wp_next_scheduled( 'ofp_monthly_archive' ) ) {
-            wp_schedule_event( strtotime( 'first day of next month 02:00:00' ), 'monthly', 'ofp_monthly_archive' );
+        // P4.01/P6.01: property table repair, once a day (it used to run on every request).
+        if ( ! wp_next_scheduled( 'ofp_daily_property_reconcile' ) ) {
+            wp_schedule_event( time() + 240, 'daily', 'ofp_daily_property_reconcile' );
+        }
+        // Monthly job: a single event on the 1st at 02:00 (site time) that books the
+        // next one when it finishes. The old 30 day repeating event drifted off the
+        // 1st, so it is replaced once (P4.05).
+        if ( wp_get_schedule( 'ofp_monthly_archive' ) ) {
+            wp_clear_scheduled_hook( 'ofp_monthly_archive' );
+        }
+        self::schedule_next_monthly();
+    }
+
+    /**
+     * Books the next monthly run: the 1st of next month, 02:00, site time.
+     * Does nothing if one is already booked.
+     */
+    public static function schedule_next_monthly(): void {
+        if ( wp_next_scheduled( 'ofp_monthly_archive' ) ) {
+            return;
+        }
+        $next = new DateTimeImmutable( 'first day of next month 02:00:00', wp_timezone() );
+        wp_schedule_single_event( $next->getTimestamp(), 'ofp_monthly_archive' );
+    }
+
+    /**
+     * Runs one job so that if it fails, the jobs after it still run (P4.06).
+     */
+    private static function run_safely( string $label, callable $job ): void {
+        try {
+            $job();
+        } catch ( \Throwable $e ) {
+            error_log( '[OFP_Cron_Handler] ' . $label . ' failed: ' . $e->getMessage() );
         }
     }
 
@@ -58,40 +85,53 @@ class OFP_Cron_Handler {
     }
 
     public function check_subscriptions(): void {
-        OFP_Subscription::run_daily_check();
-        OFP_Property_Installment_Reminders::run_daily();
-        OFP_Property_Lease_Reminders::run_daily();
+        self::run_safely( 'subscription check', [ 'OFP_Subscription', 'run_daily_check' ] );
+        self::run_safely( 'installment reminders', [ 'OFP_Property_Installment_Reminders', 'run_daily' ] );
+        self::run_safely( 'lease reminders', [ 'OFP_Property_Lease_Reminders', 'run_daily' ] );
 
         if ( class_exists( 'OFP_Logger' ) ) {
-            OFP_Logger::purge_old_logs( 30 );
+            self::run_safely( 'log purge', function (): void {
+                OFP_Logger::purge_old_logs( 30 );
+            } );
         }
     }
 
     public function check_credits(): void {
-        OFP_Credit::run_daily_check();
+        self::run_safely( 'credit check', [ 'OFP_Credit', 'run_daily_check' ] );
     }
 
     public function monthly_archive(): void {
         global $wpdb;
 
-        $clients = $wpdb->get_results( "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE status != 'cancelled'" );
-        $last_month = (int) gmdate( 'm', strtotime( 'last month' ) );
-        $last_year  = (int) gmdate( 'Y', strtotime( 'last month' ) );
+        // Book next month first, so one failure below can never stop the monthly job for good.
+        self::schedule_next_monthly();
 
+        // First day of LAST month. (strtotime('last month') on the 31st gives the wrong month.)
+        $last       = new DateTimeImmutable( 'first day of last month', wp_timezone() );
+        $last_month = (int) $last->format( 'n' );
+        $last_year  = (int) $last->format( 'Y' );
+
+        $clients = $wpdb->get_results( "SELECT id FROM {$wpdb->prefix}ofp_clients WHERE status != 'cancelled'" );
         foreach ( $clients as $client ) {
             if ( class_exists( 'OFP_CSV' ) && method_exists( 'OFP_CSV', 'generate_monthly_report' ) ) {
-                OFP_CSV::generate_monthly_report( $client->id, $last_month, $last_year );
+                self::run_safely( 'monthly report for client ' . (int) $client->id, function () use ( $client, $last_month, $last_year ): void {
+                    OFP_CSV::generate_monthly_report( $client->id, $last_month, $last_year );
+                } );
             }
         }
 
-        $wpdb->query( "DELETE FROM {$wpdb->prefix}ofp_trigger_queue WHERE status IN ('completed','cancelled','failed') AND created_at < DATE_SUB( NOW(), INTERVAL 90 DAY )" );
-        $wpdb->query( "DELETE FROM {$wpdb->prefix}ofp_rate_limits WHERE created_at < DATE_SUB( NOW(), INTERVAL 1 DAY )" );
+        self::run_safely( 'queue and rate limit clean up', function () use ( $wpdb ): void {
+            $wpdb->query( "DELETE FROM {$wpdb->prefix}ofp_trigger_queue WHERE status IN ('completed','cancelled','failed') AND created_at < DATE_SUB( NOW(), INTERVAL 90 DAY )" );
+            $wpdb->query( "DELETE FROM {$wpdb->prefix}ofp_rate_limits WHERE created_at < DATE_SUB( NOW(), INTERVAL 1 DAY )" );
+        } );
 
         if ( class_exists( 'OFP_Client' ) && method_exists( 'OFP_Client', 'purge_old_trash' ) ) {
-            $purged = OFP_Client::purge_old_trash();
-            if ( $purged > 0 ) error_log( "[OFP_Cron_Handler] Purged {$purged} client(s) from trash (30+ days old)." );
+            self::run_safely( 'trash purge', function (): void {
+                $purged = OFP_Client::purge_old_trash();
+                if ( $purged > 0 ) error_log( "[OFP_Cron_Handler] Purged {$purged} client(s) from trash (30+ days old)." );
+            } );
         }
 
-        OFP_Auth::purge_expired_sessions();
+        self::run_safely( 'session purge', [ 'OFP_Auth', 'purge_expired_sessions' ] );
     }
 }

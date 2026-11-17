@@ -1,0 +1,9 @@
+# Deny direct web access to the receipt template (S2-20). The plugin reads it from disk.
+<FilesMatch "^Ofast_Pipeline_Universal_Receipt\.html$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Deny from all
+    </IfModule>
+</FilesMatch>

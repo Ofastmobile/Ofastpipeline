@@ -372,7 +372,7 @@ class OFP_Property_Payment_Records {
 
                                 <select name="method" class="ofp-select ofp-txn-select">
                                     <option value="">All Methods</option>
-                                    <option value="checkout" <?php selected( $method, 'checkout' ); ?>>Online Checkout (Paystack)</option>
+                                    <option value="checkout" <?php selected( $method, 'checkout' ); ?>>Online Checkout</option>
                                     <option value="manual" <?php selected( $method, 'manual' ); ?>>Bank Transfer / Manual</option>
                                     <option value="bank_transfer" <?php selected( $method, 'bank_transfer' ); ?>>Direct Transfer</option>
                                     <option value="pos" <?php selected( $method, 'pos' ); ?>>POS</option>
@@ -717,6 +717,7 @@ class OFP_Property_Payment_Records {
         OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
         if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) wp_die( 'Access denied.' );
+        OFP_Security::check_rate_limit( 'client:' . (int) $client->id, 'client_payment_action', 30, 600 );
 
         global $wpdb;
         $owned = $wpdb->get_var( $wpdb->prepare(

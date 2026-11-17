@@ -33,11 +33,135 @@ if ( ! defined( 'ABSPATH' ) ) {
 class OFP_Activator {
 
     /**
+     * Version of the database layout (tables, columns, keys). Change this text
+     * whenever a table, column or key changes. On the next page load the plugin
+     * then runs the schema once (P4.04). It is NOT the plugin version, so a
+     * normal release that does not touch the tables does not re-run it.
+     */
+    const DB_VERSION = '2026.11.17-1';
+
+    /**
+     * Runs the schema once after a plugin update (a zip upload does not fire
+     * the activation hook). Safe on every request: one option read when
+     * nothing is to do. A 5 minute lock stops two visitors running it together.
+     * It does NOT seed the admin, make keys or touch cron: that stays in activate().
+     */
+    public static function maybe_upgrade_db(): void {
+        if ( get_option( 'ofp_db_version' ) === self::DB_VERSION ) {
+            return;
+        }
+
+        $lock    = 'ofp_db_upgrade_lock';
+        $started = (int) get_option( $lock, 0 );
+        if ( $started && ( time() - $started ) < 5 * MINUTE_IN_SECONDS ) {
+            return; // Another request is doing it.
+        }
+        if ( $started ) {
+            delete_option( $lock ); // Old lock left by a request that stopped half way.
+        }
+        // add_option fails if the row already exists, so only one request gets the lock.
+        if ( ! add_option( $lock, time(), '', 'no' ) ) {
+            return;
+        }
+
+        try {
+            self::create_tables();         // also saves ofp_db_version at its end
+            self::maybe_upgrade_schema();
+            self::run_helper_schemas();
+        } catch ( \Throwable $e ) {
+            error_log( 'OFP db upgrade failed: ' . $e->getMessage() );
+        }
+        delete_option( $lock );
+    }
+
+    /**
+     * P6.02/P4.08/P3.09: the schema helpers of the other classes run HERE, once,
+     * together with the DB_VERSION upgrade. They no longer run on every request.
+     * Order matters: commerce tables first, then the migration that adds columns to them.
+     * The field agent helper is frozen (D-17) and still runs from its own init.
+     * RULE: if you change any of these helpers (new column, new version number),
+     * also change OFP_Activator::DB_VERSION so this list runs again.
+     */
+    public static function run_helper_schemas(): void {
+        $jobs = [
+            [ 'OFP_Prembly',                    'ensure_client_schema' ],
+            [ 'OFP_Property_Commerce',          'install_schema' ],
+            [ 'OFP_Property_Commerce_Migration', 'migrate' ],
+            [ 'OFP_Property_Rent',              'ensure_schema' ],
+            [ 'OFP_Bank_Account',               'ensure_schema' ],
+            [ 'OFP_Property_Tenant_Transfer',   'ensure_schema' ],
+            [ 'OFP_Platform',                   'ensure_schema' ],
+            [ 'OFP_Watermark',                  'ensure_schema' ],
+            [ 'OFP_Property_Inquiry',           'ensure_schema' ],
+            [ 'OFP_Property_Admin_Rules',       'ensure_schema' ],
+            [ 'OFP_Communications_Log',         'ensure_schema' ],
+            [ 'OFP_Feedback',                   'ensure_schema' ],
+            [ 'OFP_Chat_Service',               'maybe_upgrade' ],
+            [ 'OFP_Queue',                      'ensure_columns' ],
+            [ 'OFP_Activator',                  'ensure_branding_schema' ],
+            [ 'OFP_Activator',                  'backfill_phone10' ],
+        ];
+        foreach ( $jobs as $job ) {
+            try {
+                if ( is_callable( $job ) ) {
+                    call_user_func( $job );
+                }
+            } catch ( \Throwable $e ) {
+                error_log( 'OFP schema helper ' . $job[0] . '::' . $job[1] . ' failed: ' . $e->getMessage() );
+            }
+        }
+    }
+
+    /**
+     * G6.01: fill phone10 (last 10 digits) for rows saved before the column existed.
+     * Runs once (flag ofp_phone10_backfilled), 200 rows at a time. Rows with no digits get ''
+     * so they are not read again. Safe to run twice.
+     */
+    public static function backfill_phone10(): void {
+        if ( get_option( 'ofp_phone10_backfilled' ) ) {
+            return;
+        }
+        global $wpdb;
+        $p      = $wpdb->prefix;
+        $jobs   = [
+            [ "{$p}ofp_property_purchases", 'buyer_phone' ],
+            [ "{$p}ofp_property_tenants",   'phone' ],
+        ];
+        foreach ( $jobs as $job ) {
+            list( $table, $col ) = $job;
+            // Skip quietly if the column is not there (schema step failed); flag stays unset.
+            if ( ! $wpdb->get_var( "SHOW COLUMNS FROM {$table} LIKE 'phone10'" ) ) {
+                return;
+            }
+            $guard = 0;
+            do {
+                $rows = $wpdb->get_results( "SELECT id, {$col} AS ph FROM {$table} WHERE phone10 IS NULL ORDER BY id ASC LIMIT 200" );
+                foreach ( (array) $rows as $r ) {
+                    $wpdb->update( $table, [ 'phone10' => OFP_Security::phone_last10( (string) $r->ph ) ], [ 'id' => (int) $r->id ] );
+                }
+                $guard++;
+            } while ( ! empty( $rows ) && $guard < 5000 );
+        }
+        update_option( 'ofp_phone10_backfilled', 1, false );
+    }
+
+    /**
      * Main activation entry point.
      */
-    public static function activate(): void {
+    public static function activate( $network_wide = false ): void {
+        // Single site only (P7.08). On a multisite network, stop the network activation.
+        if ( is_multisite() && $network_wide ) {
+            deactivate_plugins( OFP_PLUGIN_BASENAME, true, true );
+            wp_die(
+                esc_html__( 'OFast Pipeline works on a single site only. Please activate it on one site (Sites > the site > Plugins), not for the whole network.', 'ofast-pipeline' ),
+                esc_html__( 'Plugin not activated', 'ofast-pipeline' ),
+                [ 'back_link' => true ]
+            );
+        }
+
         self::create_tables();
         self::maybe_upgrade_schema();
+        self::run_helper_schemas();
         self::seed_super_admin();
         self::schedule_cron_events();
         self::generate_encryption_keys();
@@ -293,11 +417,12 @@ class OFP_Activator {
             ads_managed            TINYINT(1)      NOT NULL DEFAULT 0,
             created_at             DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at             DATETIME                 DEFAULT NULL,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             UNIQUE KEY  email (email),
             UNIQUE KEY  profile_slug (profile_slug),
             KEY         status (status),
-            KEY         business_category (business_category)
+            KEY         business_category (business_category),
+            KEY         subdomain (subdomain)
         ) {$charset_collate};" );
 
         // ── 3. ofp_leads ─────────────────────────────────────────────────────
@@ -317,11 +442,13 @@ class OFP_Activator {
             notes        TEXT                     DEFAULT NULL,
             converted_at DATETIME                 DEFAULT NULL,
             created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY client_id  (client_id),
             KEY property_id (property_id),
             KEY status     (status),
-            KEY created_at (created_at)
+            KEY created_at (created_at),
+            KEY client_status  (client_id, status),
+            KEY client_created (client_id, created_at)
         ) {$charset_collate};" );
 
         // ── 4. ofp_trigger_queue ─────────────────────────────────────────────
@@ -339,7 +466,7 @@ class OFP_Activator {
             last_attempt  DATETIME                 DEFAULT NULL,
             response_data TEXT                     DEFAULT NULL,
             created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY scheduled_status (scheduled_at, status),
             KEY client_lead      (client_id, lead_id)
         ) {$charset_collate};" );
@@ -358,9 +485,11 @@ class OFP_Activator {
             provider_ref VARCHAR(100)             DEFAULT NULL,
             cost         DECIMAL(10,4)   NOT NULL DEFAULT 0.0000,
             sent_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY client_id (client_id),
-            KEY lead_id   (lead_id)
+            KEY lead_id   (lead_id),
+            KEY type_sent   (type, sent_at),
+            KEY client_sent (client_id, sent_at)
         ) {$charset_collate};" );
 
         // ── 7. ofp_credits ───────────────────────────────────────────────────
@@ -378,7 +507,7 @@ class OFP_Activator {
             low_warned      TINYINT(1)      NOT NULL DEFAULT 0,
             paused          TINYINT(1)      NOT NULL DEFAULT 0,
             updated_at      DATETIME                 DEFAULT NULL,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             UNIQUE KEY client_id (client_id)
         ) {$charset_collate};" );
 
@@ -394,8 +523,9 @@ class OFP_Activator {
             reference     VARCHAR(100)             DEFAULT NULL,
             note          VARCHAR(255)             DEFAULT NULL,
             created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            KEY client_id (client_id)
+            PRIMARY KEY  (id),
+            KEY client_id (client_id),
+            UNIQUE KEY reference_type (reference, type)
         ) {$charset_collate};" );
 
         // ── 9. ofp_subscriptions  (v2.1: includes `type` column) ─────────────
@@ -415,7 +545,7 @@ class OFP_Activator {
             period_end     DATE                     DEFAULT NULL,
             paid_at        DATETIME                 DEFAULT NULL,
             created_at     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY client_id (client_id),
             KEY type      (type),
             KEY status    (status)
@@ -442,7 +572,7 @@ class OFP_Activator {
             transfer_phone         VARCHAR(20)              DEFAULT NULL,
             whatsapp_link          VARCHAR(255)             DEFAULT NULL,
             updated_at             DATETIME                 DEFAULT NULL,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             UNIQUE KEY client_id (client_id)
         ) {$charset_collate};" );
 
@@ -453,7 +583,7 @@ class OFP_Activator {
             ip         VARCHAR(45)     NOT NULL,
             action     VARCHAR(50)     NOT NULL,
             created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY ip_action  (ip, action),
             KEY created_at (created_at)
         ) {$charset_collate};" );
@@ -469,7 +599,7 @@ class OFP_Activator {
             download_token VARCHAR(64)              DEFAULT NULL,
             token_expires  DATETIME                 DEFAULT NULL,
             created_at     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY client_id (client_id)
         ) {$charset_collate};" );
 
@@ -485,7 +615,7 @@ class OFP_Activator {
             ip_address     VARCHAR(45)              DEFAULT NULL,
             expires_at     DATETIME        NOT NULL,
             created_at     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             UNIQUE KEY token     (token),
             KEY        client_id (client_id),
             KEY        team_member_id (team_member_id)
@@ -514,7 +644,7 @@ class OFP_Activator {
             wp_post_id     BIGINT UNSIGNED           DEFAULT NULL,
             created_at     DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at     DATETIME                  DEFAULT NULL,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY client_id (client_id),
             KEY status    (status),
             KEY wp_post_id (wp_post_id)
@@ -532,7 +662,7 @@ class OFP_Activator {
             preferred_viewing_date DATE                    DEFAULT NULL,
             message               TEXT                    DEFAULT NULL,
             created_at            DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY lead_id     (lead_id),
             KEY property_id (property_id),
             KEY client_id   (client_id)
@@ -547,7 +677,7 @@ class OFP_Activator {
             message     TEXT            NOT NULL,
             is_read     TINYINT(1)      NOT NULL DEFAULT 0,
             created_at  DATETIME        NOT NULL,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY idx_client_unread (client_id, is_read),
             KEY idx_client_created (client_id, created_at)
         ) {$charset_collate};" );
@@ -566,7 +696,7 @@ class OFP_Activator {
             reviewed_by      BIGINT UNSIGNED NULL,
             reviewed_at      DATETIME        NULL,
             created_at       DATETIME        NOT NULL,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY idx_client_id (client_id),
             KEY idx_status (status)
         ) {$charset_collate};" );
@@ -580,7 +710,7 @@ class OFP_Activator {
             action         VARCHAR(100)    NOT NULL,
             details        TEXT            NULL,
             created_at     DATETIME        NOT NULL,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY idx_client_id (client_id),
             KEY idx_admin_id (admin_id),
             KEY idx_team_member_id (team_member_id),
@@ -600,7 +730,7 @@ class OFP_Activator {
             role_name    VARCHAR(50)     NOT NULL DEFAULT 'Manager',
             permissions  TEXT                     DEFAULT NULL,
             created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY client_id (client_id),
             UNIQUE KEY invite_token (invite_token),
             KEY status (status)
@@ -615,7 +745,7 @@ class OFP_Activator {
             purpose     VARCHAR(20)     NOT NULL,
             expires_at  DATETIME        NOT NULL,
             created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY user_email (user_email),
             KEY user_phone (user_phone),
             KEY expires_at (expires_at)
@@ -631,7 +761,7 @@ class OFP_Activator {
             body        TEXT            NOT NULL,
             created_at  DATETIME        NOT NULL,
             updated_at  DATETIME        NOT NULL,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY client_id (client_id),
             KEY type (type)
         ) {$charset_collate};" );
@@ -652,14 +782,14 @@ class OFP_Activator {
             device_info TEXT                     DEFAULT NULL,
             created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY client_id (client_id),
             KEY type (type),
             KEY status (status)
         ) {$charset_collate};" );
 
-        // Store the schema version so future upgrades can run targeted migrations.
-        update_option( 'ofp_db_version', OFP_VERSION );
+        // Store the schema version. maybe_upgrade_db() compares it on every page load.
+        update_option( 'ofp_db_version', self::DB_VERSION );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -704,7 +834,7 @@ class OFP_Activator {
      */
     private static function schedule_cron_events(): void {
         if ( ! wp_next_scheduled( 'ofp_process_queue' ) ) {
-            wp_schedule_event( time(), 'ofp_five_minutes', 'ofp_process_queue' );
+            wp_schedule_event( time(), 'ofp_two_minutes', 'ofp_process_queue' );
         }
 
         if ( ! wp_next_scheduled( 'ofp_daily_subscription_check' ) ) {
@@ -715,11 +845,9 @@ class OFP_Activator {
             wp_schedule_event( time(), 'daily', 'ofp_daily_credit_check' );
         }
 
-        // Monthly archive fires on the 1st of next month at 2 AM.
-        if ( ! wp_next_scheduled( 'ofp_monthly_archive' ) ) {
-            $first_of_next_month = strtotime( 'first day of next month 02:00:00' );
-            wp_schedule_event( $first_of_next_month, 'monthly', 'ofp_monthly_archive' );
-        }
+        // Monthly archive: one event on the 1st of next month at 2 AM (site time).
+        // It books the next one itself when it runs (see OFP_Cron_Handler).
+        OFP_Cron_Handler::schedule_next_monthly();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

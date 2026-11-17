@@ -228,6 +228,10 @@ if ( $detail ) {
             <span style="font-size:12px;padding:3px 9px;border-radius:9999px;background:rgba(59,130,246,.12);color:var(--brand-color,#3b82f6);font-weight:600;"><?php echo (int) count( $all ); ?> Total</span>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
+            <a class="ofp-btn ofp-btn-primary" href="<?php echo esc_url( home_url( '/import' ) ); ?>" style="display:inline-flex;align-items:center;gap:6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                <span>Import Data</span>
+            </a>
             <a class="ofp-btn" href="<?php echo esc_url( home_url( '/leads' ) ); ?>">Leads</a>
             <a class="ofp-btn" href="<?php echo esc_url( add_query_arg( 'export', 1, $page_url ) ); ?>" download="customers-<?php echo gmdate( 'Y-m-d' ); ?>.csv" title="Download customers spreadsheet in CSV format" style="display:inline-flex;align-items:center;gap:6px;">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>

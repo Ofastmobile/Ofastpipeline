@@ -539,6 +539,7 @@ class OFP_Client_Portal {
         OFP_Auth::require_client_login();
         $client = OFP_Auth::current_client();
         if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) wp_send_json_error( 'Unauthorized' );
+        OFP_Security::check_rate_limit( 'client:' . (int) $client->id, 'portal_fetch_leads', 120, 600 );
 
         $filter_status = sanitize_text_field( $_POST['status'] ?? '' );
         global $wpdb;
@@ -625,6 +626,7 @@ class OFP_Client_Portal {
         if ( ! $client || ! OFP_Subscription::has_platform_access( $client->id ) ) {
             wp_send_json_error( 'Unauthorized' );
         }
+        OFP_Security::check_rate_limit( 'client:' . (int) $client->id, 'portal_fetch_comms', 120, 600 );
 
         $type   = sanitize_text_field( $_POST['type'] ?? '' );
         $status = sanitize_text_field( $_POST['status'] ?? '' );
@@ -988,7 +990,7 @@ class OFP_Client_Portal {
         $cost    = 0.00;
 
         if ( $channel === 'sms' ) {
-            $cost = 1.00; // Deduct 1 credit for SMS
+            $cost = OFP_Credit::sms_cost( (string) $body ); // NGN 10 per SMS page (D-19)
             if ( ! OFP_Credit::has_balance( $client->id, 'sms', $cost ) ) {
                 wp_send_json_error( 'Insufficient credit balance to send SMS.' );
             }
@@ -1026,22 +1028,15 @@ class OFP_Client_Portal {
                 $cost
             );
 
-            // Log Accountability Activity
-            $current_user = OFP_Auth::current_user();
-            $team_member_id = null;
-            if ( $current_user && $current_user->is_team_member ) {
-                // Determine team member ID by matching email
-                $team_member_id = $wpdb->get_var( $wpdb->prepare(
-                    "SELECT id FROM {$p}ofp_team_members WHERE client_id = %d AND email = %s",
-                    $client->id, $current_user->email
-                ) );
-            }
-
-            OFP_Activity_Log::log(
-                $client->id,
+            // Log Accountability Activity. OFP_Logger finds out by itself whether
+            // the client or a team member did it.
+            OFP_Logger::log(
                 "Sent manual {$channel} to " . ( $lead->name ?: $lead->phone ),
-                "To: " . ( $channel === 'sms' ? $lead->phone : $lead->email ) . "\n\n" . $body,
-                $team_member_id
+                (int) $client->id,
+                [
+                    'to'      => ( $channel === 'sms' ? $lead->phone : $lead->email ),
+                    'message' => $body,
+                ]
             );
 
             wp_send_json_success( 'Message sent successfully.' );
@@ -1130,7 +1125,7 @@ class OFP_Client_Portal {
         $failed = 0;
 
         if ( $channel === 'sms' ) {
-            $cost_per_sms = 1.00;
+            $cost_per_sms = OFP_Credit::sms_cost( (string) $body ); // NGN 10 per SMS page (D-19)
             $needed_cost  = count( $raw_list ) * $cost_per_sms;
             if ( ! OFP_Credit::has_balance( $client->id, 'sms', $needed_cost ) ) {
                 wp_send_json_error( 'Insufficient SMS credit balance. Required: ₦' . number_format( $needed_cost, 2 ) );

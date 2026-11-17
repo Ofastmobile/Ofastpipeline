@@ -32,7 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
  *  - send_subscription_reminder() daily expiry warnings for the 7-day renewal window.
  *  - send_free_plan_nudge() daily upgrade nudge for free-plan clients.
  *  - send_payment_confirmed()    Payment received, subscription renewed.
- *  - send_low_credit_warning()   SMS or voice balance below 20%.
+ *  - send_low_credit_warning()   SMS balance below 20%.
  *  - send_approval_notification() Self-serve signup approved by admin.
  *  - send_monthly_report()       CSV download link, monthly.
  *  - send_password_reset()       Password reset link for client.
@@ -512,14 +512,13 @@ class OFP_Mailer {
      * Send a welcome email to a newly onboarded client.
      *
      * Sent immediately after OFP_Client::create() completes.
-     * Contains the login details.
+     * Contains the set-password link (48 hours).
      *
      * @param  int    $client_id     Client ID in wp_ofp_clients.
-     * @param  string $temp_password Plaintext temporary password — emailed once,
-     *                               never stored in plain form anywhere.
+     * @param  string $set_password_url One-time link to /reset-password (works 48 hours).
      * @return void
      */
-    public static function send_welcome_email( int $client_id, string $temp_password ): void {
+    public static function send_welcome_email( int $client_id, string $set_password_url ): void {
         global $wpdb;
 
         $client = $wpdb->get_row(
@@ -539,7 +538,7 @@ class OFP_Mailer {
         $body = '
             <h2>Welcome to ' . esc_html( OFP_Brand::name() ) . ', ' . esc_html( $client->owner_name ) . '!</h2>
             <p>Your client account has been created and is ready to use.
-               Here are your login details — please keep them safe.</p>
+               Use the button below to choose your own password. No password is sent by email.</p>
 
             <div style="background:#f8fafc;border-radius:8px;padding:20px 24px;
                         margin:24px 0;border-left:4px solid #1a73e8;">
@@ -551,14 +550,11 @@ class OFP_Mailer {
                     <strong>Email:</strong> ' . esc_html( $client->email ) . '
                 </p>
                 <p style="margin:0;">
-                    <strong>Temporary Password:</strong>
-                    <code style="background:#e8f0fe;padding:3px 10px;border-radius:4px;
-                                 font-size:14px;">' . esc_html( $temp_password ) . '</code>
+                    <a href="' . esc_url( $set_password_url ) . '" style="display:inline-block;background:#1a73e8;color:#ffffff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Set your password</a>
                 </p>
             </div>
 
-            <p>⚠️ <strong>Please change your password</strong> after your first login
-               via My Account → Change Password.</p>
+            <p>This link works for 48 hours. After that, use <strong>Forgot password</strong> on the login page to get a new one.</p>
 
             <h3 style="margin-top:28px;">What Happens Next?</h3>
             <ol style="padding-left:20px;line-height:2.2;">
@@ -776,11 +772,11 @@ class OFP_Mailer {
     /**
      * Send a low credit warning email.
      *
-     * Called by OFP_Credit when a client's SMS or voice balance drops below 20%.
+     * Called by OFP_Credit when a client's SMS balance drops below 20%.
      * Only sent once per low-balance cycle (low_warned flag prevents repeats).
      *
      * @param  object $client    Full wp_ofp_clients row.
-     * @param  string $channel   'sms' or 'voice'.
+     * @param  string $channel   'sms'.
      * @param  float  $remaining Remaining balance in NGN.
      * @return void
      */
@@ -1077,7 +1073,7 @@ class OFP_Mailer {
                     </tr>
                     <tr style="border-bottom:1px solid #e5e7eb;">
                         <td style="padding:12px 16px; font-weight:600; color:#374151;">Automated Messaging</td>
-                        <td style="padding:12px 16px; text-align:right; color:#111827;"><strong>' . number_format( $comms_count ) . '</strong> SMS &amp; Voice Calls</td>
+                        <td style="padding:12px 16px; text-align:right; color:#111827;"><strong>' . number_format( $comms_count ) . '</strong> SMSs</td>
                     </tr>
                     <tr style="background:#ecfdf5; font-size:14px;">
                         <td style="padding:14px 16px; font-weight:700; color:#065f46;">Total Gross Inflow</td>
